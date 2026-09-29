@@ -15,12 +15,12 @@
 using namespace std;
 
 struct Point {
-    long x, y, z;
+  long x, y, z;
 };
 
 struct Node {
-    Point p;                 // el punto de este nodo (BST estándar, no solo hojas).
-    vector<Point> subtreeD1; // "copia de D1" satélite: puntos del subárbol de este nodo.
-    Node* left = nullptr;
-    Node* right = nullptr;
+  Point p;                  // el punto de este nodo (BST estándar, no solo hojas).
+  vector<Point> subtreeD1;  // "copia de D1" satélite: puntos del subárbol de este nodo.
+  Node* left = nullptr;
+  Node* right = nullptr;
 };

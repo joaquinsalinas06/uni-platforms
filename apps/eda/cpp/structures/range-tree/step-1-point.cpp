@@ -13,22 +13,22 @@
 #include <vector>
 using namespace std;
 
-using Point = vector<long>; // Point[i] = coordenada i.
+using Point = vector<long>;  // Point[i] = coordenada i.
 
 struct Node {
-    bool leaf = false;
-    Point pt;                    // válido solo si leaf: el punto completo.
-    long maxLeft = 0;            // válido solo si interno: delimitador (#26).
-    long loKey = 0, hiKey = 0;   // extremos (en la coordenada de este árbol)
-                                 // del subárbol; los usa range-query-1d/2d
-                                 // para la descomposición canónica.
-    int count = 0;               // hojas en el subárbol (existence-count, #37).
-    int leafIndex = -1;           // posición in-order; solo se llena en el
-                                   // árbol primario (predecessor-successor).
-    Node* left = nullptr;
-    Node* right = nullptr;
-    Node* nextDim = nullptr;      // range tree de la dimensión siguiente,
-                                   // colgado de este nodo (build-2d,
-                                   // d-dimensions); nullptr en la última
-                                   // dimensión.
+  bool leaf = false;
+  Point pt;                   // válido solo si leaf: el punto completo.
+  long maxLeft = 0;           // válido solo si interno: delimitador (#26).
+  long loKey = 0, hiKey = 0;  // extremos (en la coordenada de este árbol)
+                              // del subárbol; los usa range-query-1d/2d
+                              // para la descomposición canónica.
+  int count = 0;              // hojas en el subárbol (existence-count, #37).
+  int leafIndex = -1;         // posición in-order; solo se llena en el
+                              // árbol primario (predecessor-successor).
+  Node* left = nullptr;
+  Node* right = nullptr;
+  Node* nextDim = nullptr;  // range tree de la dimensión siguiente,
+                            // colgado de este nodo (build-2d,
+                            // d-dimensions); nullptr en la última
+                            // dimensión.
 };

@@ -11,19 +11,21 @@
 
 #include "step-2-range-tree-generic.cpp"
 
+using namespace std;
+
 // Localiza el nodo de separación de un árbol de rango 1D clásico: el punto
 // donde los caminos de búsqueda de `lo` y `hi` divergen (#40, heredado sin
 // cambios de D_3 a D_4 según el análisis).
 inline RangeTreeNode* locate_split_node(RangeTreeNode* root, double lo, double hi) {
-    RangeTreeNode* v = root;
-    while (v != nullptr) {
-        if (hi < v->key) {
-            v = v->left;
-        } else if (lo > v->key) {
-            v = v->right;
-        } else {
-            return v;  // lo <= v->key <= hi: los caminos ya divergieron aquí
-        }
+  RangeTreeNode* v = root;
+  while (v != nullptr) {
+    if (hi < v->key) {
+      v = v->left;
+    } else if (lo > v->key) {
+      v = v->right;
+    } else {
+      return v;  // lo <= v->key <= hi: los caminos ya divergieron aquí
     }
-    return nullptr;
+  }
+  return nullptr;
 }

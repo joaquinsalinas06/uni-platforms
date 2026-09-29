@@ -8,6 +8,6 @@
 using namespace std;
 
 struct Elem {
-    int value;
-    int bridge; // índice en L'{i+1}, o -1 si no fue promovido
+  int value;
+  int bridge;  // índice en L'{i+1}, o -1 si no fue promovido
 };

@@ -12,8 +12,8 @@
 using namespace std;
 
 struct Op {
-    double time;
-    int delta;
+  double time;
+  int delta;
 };
 
 vector<Op> timeline;
@@ -21,9 +21,8 @@ vector<Op> timeline;
 // Mantiene el invariante de orden por tiempo. O(m) por el desplazamiento de
 // insert() sobre un vector — el costo ingenuo del que habla el profesor.
 void insertRetroactive(double t, int delta) {
-    Op entry{t, delta};
-    auto pos = upper_bound(
-        timeline.begin(), timeline.end(), entry,
-        [](const Op& a, const Op& b) { return a.time < b.time; });
-    timeline.insert(pos, entry);
+  Op entry{t, delta};
+  auto pos = upper_bound(timeline.begin(), timeline.end(), entry,
+                         [](const Op& a, const Op& b) { return a.time < b.time; });
+  timeline.insert(pos, entry);
 }

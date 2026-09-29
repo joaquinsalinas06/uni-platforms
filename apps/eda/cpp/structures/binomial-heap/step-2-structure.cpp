@@ -5,18 +5,20 @@
 // n) — de ahí que Union se piense como una suma binaria con acarreo.
 #include <climits>
 
-struct Node {
-    int key;
-    int degree = 0;
-    Node* parent = nullptr;
-    Node* child = nullptr;
-    Node* sibling = nullptr;
+using namespace std;
 
-    explicit Node(int k) : key(k) {}
+struct Node {
+  int key;
+  int degree = 0;
+  Node* parent = nullptr;
+  Node* child = nullptr;
+  Node* sibling = nullptr;
+
+  explicit Node(int k) : key(k) {}
 };
 
 struct BinomialHeap {
-    // head de la lista de raíces, ordenada por grado ascendente. nullptr
-    // si el montículo está vacío (caso límite: ningún árbol).
-    Node* head = nullptr;
+  // head de la lista de raíces, ordenada por grado ascendente. nullptr
+  // si el montículo está vacío (caso límite: ningún árbol).
+  Node* head = nullptr;
 };

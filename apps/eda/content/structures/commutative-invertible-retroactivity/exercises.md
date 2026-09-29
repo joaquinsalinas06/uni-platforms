@@ -41,7 +41,7 @@ items:
       método `add(int delta)` que suma `delta` al total. Agrega
       `insert_retroactive(int delta)` (usa la equivalencia
       `Insert(t, op) ≡ Insert(ahora, op)`) y `delete_retroactive(int delta)`
-      (usa `op⁻¹` de `add`). Verifica con `assert` que insertar `+2`
+      (usa `op⁻¹` de `add`). Verifica con `if` que insertar `+2`
       retroactivamente y luego borrarlo devuelve el total a su valor
       original.
     hints:
@@ -53,7 +53,7 @@ items:
       delete_retroactive(int delta) { add(-delta); } int total() const {
       return total_; } private: int total_ = 0; };` — con `Accumulator a;
       a.add(4); int before = a.total(); a.insert_retroactive(2);
-      a.delete_retroactive(2); assert(a.total() == before);` el total
+      a.delete_retroactive(2); if (!(a.total() == before);` el total
       vuelve a su valor original porque `insert_retroactive(2)` y
       `delete_retroactive(2)` son operación e inversa exacta.
   - level: 4

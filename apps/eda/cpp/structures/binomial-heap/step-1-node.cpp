@@ -5,12 +5,14 @@
 // enlazada), y su grado (número de hijos).
 #include <climits>
 
-struct Node {
-    int key;
-    int degree = 0;
-    Node* parent = nullptr;
-    Node* child = nullptr;
-    Node* sibling = nullptr;
+using namespace std;
 
-    explicit Node(int k) : key(k) {}
+struct Node {
+  int key;
+  int degree = 0;
+  Node* parent = nullptr;
+  Node* child = nullptr;
+  Node* sibling = nullptr;
+
+  explicit Node(int k) : key(k) {}
 };

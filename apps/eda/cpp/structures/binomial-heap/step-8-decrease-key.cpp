@@ -6,34 +6,36 @@
 #include <climits>
 #include <utility>
 
-struct Node {
-    int key;
-    int degree = 0;
-    Node* parent = nullptr;
-    Node* child = nullptr;
-    Node* sibling = nullptr;
+using namespace std;
 
-    explicit Node(int k) : key(k) {}
+struct Node {
+  int key;
+  int degree = 0;
+  Node* parent = nullptr;
+  Node* child = nullptr;
+  Node* sibling = nullptr;
+
+  explicit Node(int k) : key(k) {}
 };
 
 struct BinomialHeap {
-    Node* head = nullptr;
+  Node* head = nullptr;
 };
 
 void binomialLink(Node* y, Node* z) {
-    y->parent = z;
-    y->sibling = z->child;
-    z->child = y;
-    z->degree++;
+  y->parent = z;
+  y->sibling = z->child;
+  z->child = y;
+  z->degree++;
 }
 
 void decreaseKey(Node* x, int newKey) {
-    x->key = newKey;
-    Node* y = x;
-    Node* z = y->parent;
-    while (z != nullptr && y->key < z->key) {
-        std::swap(y->key, z->key);
-        y = z;
-        z = y->parent;
-    }
+  x->key = newKey;
+  Node* y = x;
+  Node* z = y->parent;
+  while (z != nullptr && y->key < z->key) {
+    swap(y->key, z->key);
+    y = z;
+    z = y->parent;
+  }
 }

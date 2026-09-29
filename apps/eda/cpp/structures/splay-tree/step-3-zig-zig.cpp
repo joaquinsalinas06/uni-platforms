@@ -8,14 +8,16 @@
 
 #include "step-2-rotate.cpp"
 
+using namespace std;
+
 // x es hijo directo de la raíz: una sola rotación.
 void zig(Node*& root, Node* x) {
-    rotate(root, x);
+  rotate(root, x);
 }
 
 // x, p y a (abuelo) alineados del mismo lado.
 void zigZig(Node*& root, Node* x) {
-    Node* p = x->parent;
-    rotate(root, p);   // (p, a) PRIMERO — no (x, p)
-    rotate(root, x);   // (x, p) segundo
+  Node* p = x->parent;
+  rotate(root, p);  // (p, a) PRIMERO — no (x, p)
+  rotate(root, x);  // (x, p) segundo
 }

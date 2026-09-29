@@ -8,13 +8,15 @@
 
 #include <iostream>
 
+using namespace std;
+
 struct Point {
-    double x;
-    double y;
+  double x;
+  double y;
 };
 
 int main() {
-    Point p{9.0, 6.0};
-    std::cout << "Punto: (" << p.x << ", " << p.y << ")\n";
-    return 0;
+  Point p{9.0, 6.0};
+  cout << "Punto: (" << p.x << ", " << p.y << ")\n";
+  return 0;
 }

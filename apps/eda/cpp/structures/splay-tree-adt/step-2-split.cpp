@@ -6,34 +6,39 @@
 // Por eso el cuerpo entero es: UNA comparación y UN puntero a NULO.
 // Ninguna llamada propia a Splay — reutiliza la que ya hizo Buscar (#20).
 
+#include <utility>
+
 #include "step-1-base.cpp"
 
-#include <utility>
+using namespace std;
 
 // Devuelve (I, D): I con todo <= k, D con todo > k. Consume `root`: el
 // árbol original queda repartido entre los dos pedazos, así que se deja
 // en NULO para que ningún llamador lo siga usando por error.
-std::pair<Node*, Node*> split(Node*& root, int k) {
-    if (root == nullptr) return {nullptr, nullptr};
+pair<Node*, Node*> split(Node*& root, int k) {
+  if (root == nullptr)
+    return {nullptr, nullptr};
 
-    Node* r = root;
-    Node* I;
-    Node* D;
+  Node* r = root;
+  Node* I;
+  Node* D;
 
-    if (r->value <= k) {
-        // r pertenece al lado izquierdo; su subárbol derecho es todo > k.
-        I = r;
-        D = r->right;
-        r->right = nullptr;
-        if (D != nullptr) D->parent = nullptr;
-    } else {
-        // r pertenece al lado derecho; su subárbol izquierdo es todo <= k.
-        D = r;
-        I = r->left;
-        r->left = nullptr;
-        if (I != nullptr) I->parent = nullptr;
-    }
+  if (r->value <= k) {
+    // r pertenece al lado izquierdo; su subárbol derecho es todo > k.
+    I = r;
+    D = r->right;
+    r->right = nullptr;
+    if (D != nullptr)
+      D->parent = nullptr;
+  } else {
+    // r pertenece al lado derecho; su subárbol izquierdo es todo <= k.
+    D = r;
+    I = r->left;
+    r->left = nullptr;
+    if (I != nullptr)
+      I->parent = nullptr;
+  }
 
-    root = nullptr;
-    return {I, D};
+  root = nullptr;
+  return {I, D};
 }

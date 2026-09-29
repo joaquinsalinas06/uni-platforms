@@ -9,19 +9,21 @@
 #include <string>
 #include <vector>
 
+using namespace std;
+
 struct Point {
-    double x;
-    double y;
+  double x;
+  double y;
 };
 
 // Una cara del mapa planar: una etiqueta y su contorno como poligono simple
 // (lista ordenada de vertices). El contorno se recorre como si el ultimo
 // vertice se conectara de vuelta al primero.
 struct Face {
-    std::string label;
-    std::vector<Point> polygon;
+  string label;
+  vector<Point> polygon;
 };
 
 // Etiqueta reservada para la cara infinita (#64): el complemento de todas
 // las caras descritas.
-const std::string INFINITE_FACE = "region-infinita";
+const string INFINITE_FACE = "region-infinita";

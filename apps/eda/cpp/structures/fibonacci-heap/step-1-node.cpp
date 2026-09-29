@@ -15,15 +15,15 @@
 using namespace std;
 
 struct Node {
-    int key;
-    int degree = 0;
-    bool mark = false;
-    Node* parent = nullptr;
-    Node* child = nullptr;
-    Node* left;   // hermano circular a la izquierda
-    Node* right;  // hermano circular a la derecha
+  int key;
+  int degree = 0;
+  bool mark = false;
+  Node* parent = nullptr;
+  Node* child = nullptr;
+  Node* left;   // hermano circular a la izquierda
+  Node* right;  // hermano circular a la derecha
 
-    explicit Node(int k) : key(k) {
-        left = right = this; // recién creado: lista circular de un solo nodo
-    }
+  explicit Node(int k) : key(k) {
+    left = right = this;  // recién creado: lista circular de un solo nodo
+  }
 };

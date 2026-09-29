@@ -5,13 +5,15 @@
 
 #include <cstddef>
 
+using namespace std;
+
 struct Point3 {
-    double x, y, z;
+  double x, y, z;
 };
 
 struct RangeTreeNode {
-    double key;              // el valor de la coordenada elegida (y o z) en este nodo
-    Point3 point;            // el punto asociado a esa clave
-    RangeTreeNode* left = nullptr;
-    RangeTreeNode* right = nullptr;
+  double key;    // el valor de la coordenada elegida (y o z) en este nodo
+  Point3 point;  // el punto asociado a esa clave
+  RangeTreeNode* left = nullptr;
+  RangeTreeNode* right = nullptr;
 };

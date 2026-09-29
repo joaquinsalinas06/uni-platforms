@@ -14,25 +14,29 @@
 
 #include <vector>
 
+using namespace std;
+
 struct Point {
-    int x;
-    int y;
-    int id; // identifica el punto para los asserts de verificación
+  int x;
+  int y;
+  int id;  // identifica el punto para los asserts de verificación
 };
 
 struct Node {
-    int key = 0;         // la coordenada y que separa izquierda/derecha
-    Point point{};        // sólo tiene sentido si el nodo es hoja
-    Node* left = nullptr;
-    Node* right = nullptr;
+  int key = 0;    // la coordenada y que separa izquierda/derecha
+  Point point{};  // sólo tiene sentido si el nodo es hoja
+  Node* left = nullptr;
+  Node* right = nullptr;
 
-    // Satélites construidas en build (paso 2): puntos de cada subárbol,
-    // ordenados por x. rightSat = "D2 normal" (todo punto ahí ya cumple
-    // y >= a2 para cualquier a2 <= key de este nodo); leftSat = "D2'
-    // invertida" (todo punto ahí ya cumple y <= b2 para cualquier
-    // b2 > key de este nodo).
-    std::vector<Point> rightSat;
-    std::vector<Point> leftSat;
+  // Satélites construidas en build (paso 2): puntos de cada subárbol,
+  // ordenados por x. rightSat = "D2 normal" (todo punto ahí ya cumple
+  // y >= a2 para cualquier a2 <= key de este nodo); leftSat = "D2'
+  // invertida" (todo punto ahí ya cumple y <= b2 para cualquier
+  // b2 > key de este nodo).
+  vector<Point> rightSat;
+  vector<Point> leftSat;
 
-    bool isLeaf() const { return left == nullptr && right == nullptr; }
+  bool isLeaf() const {
+    return left == nullptr && right == nullptr;
+  }
 };

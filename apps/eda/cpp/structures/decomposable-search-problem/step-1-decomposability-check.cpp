@@ -8,17 +8,18 @@
 // Este paso verifica cuatro ejemplos (minimo, maximo, suma, existencia)
 // y un contraejemplo (cardinalidad con interseccion no vacia).
 
-#include <iostream>
-#include <vector>
-#include <set>
 #include <algorithm>
+#include <iostream>
+#include <set>
+#include <vector>
 
 using namespace std;
 
 int mini(const vector<int>& v) {
   int m = v[0];
   for (int x : v) {
-    if (x < m) m = x;
+    if (x < m)
+      m = x;
   }
   return m;
 }
@@ -26,20 +27,23 @@ int mini(const vector<int>& v) {
 int maxi(const vector<int>& v) {
   int m = v[0];
   for (int x : v) {
-    if (x > m) m = x;
+    if (x > m)
+      m = x;
   }
   return m;
 }
 
 int suma(const vector<int>& v) {
   int s = 0;
-  for (int x : v) s += x;
+  for (int x : v)
+    s += x;
   return s;
 }
 
 bool existe_par(const vector<int>& v) {
   for (int x : v) {
-    if (x % 2 == 0) return true;
+    if (x % 2 == 0)
+      return true;
   }
   return false;
 }
@@ -47,7 +51,7 @@ bool existe_par(const vector<int>& v) {
 void verificar_descomponibles() {
   vector<int> A = {5, 1, 8};
   vector<int> B = {3, 9, 2};
-  vector<int> AuB = {5, 1, 8, 3, 9, 2}; // A union B, disjuntos
+  vector<int> AuB = {5, 1, 8, 3, 9, 2};  // A union B, disjuntos
 
   // f = min
   if (mini(AuB) == min(mini(A), mini(B))) {
@@ -80,8 +84,8 @@ void verificar_contraejemplo_cardinalidad() {
   // Si probaramos f(|A|, |B|) = |A| + |B|:
   // |A| = 2, |B| = 2, suma = 4 != |AuB| = 3
   if (A.size() + B.size() != AuB.size()) {
-    cout << "Contraejemplo: Cardinalidad no es descomponible (|A|+|B|="
-         << (A.size() + B.size()) << " != |AuB|=" << AuB.size() << ")" << endl;
+    cout << "Contraejemplo: Cardinalidad no es descomponible (|A|+|B|=" << (A.size() + B.size())
+         << " != |AuB|=" << AuB.size() << ")" << endl;
   }
 }
 

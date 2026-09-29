@@ -7,21 +7,27 @@
 
 #include "step-4-insert.cpp"
 
+using namespace std;
+
 void remove(Node*& root, int k) {
-    if (!search(root, k)) return;  // k no está en el árbol
+  if (!search(root, k))
+    return;  // k no está en el árbol
 
-    Node* r = root;
-    Node* A = r->left;
-    Node* B = r->right;
-    if (A != nullptr) A->parent = nullptr;
-    if (B != nullptr) B->parent = nullptr;
+  Node* r = root;
+  Node* A = r->left;
+  Node* B = r->right;
+  if (A != nullptr)
+    A->parent = nullptr;
+  if (B != nullptr)
+    B->parent = nullptr;
 
-    root = join(A, B);
-    if (root != nullptr) root->parent = nullptr;
+  root = join(A, B);
+  if (root != nullptr)
+    root->parent = nullptr;
 
-    // El pseudocódigo no lo dice (no gestiona memoria); en C++ el nodo
-    // desenganchado hay que liberarlo.
-    r->left = nullptr;
-    r->right = nullptr;
-    delete r;
+  // El pseudocódigo no lo dice (no gestiona memoria); en C++ el nodo
+  // desenganchado hay que liberarlo.
+  r->left = nullptr;
+  r->right = nullptr;
+  delete r;
 }

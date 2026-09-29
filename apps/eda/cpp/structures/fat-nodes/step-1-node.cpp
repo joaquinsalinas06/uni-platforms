@@ -15,27 +15,27 @@ using namespace std;
 enum class Field { Value, Next };
 
 struct FatNode {
-    int id;
+  int id;
 
-    // Campos originales: "el valor original del nodo", al que se recurre
-    // si el registro no tiene ninguna entrada aplicable (pagina 24).
-    int originalValue;
-    FatNode* originalNext;
+  // Campos originales: "el valor original del nodo", al que se recurre
+  // si el registro no tiene ninguna entrada aplicable (pagina 24).
+  int originalValue;
+  FatNode* originalNext;
 
-    // Registro de modificaciones: tuplas (campo, valor nuevo, tiempo), en
-    // orden de insercion. Tamano acotado por 2p (paginas 25-26): p = numero
-    // maximo de punteros ENTRANTES a un nodo, p = O(1) por hipotesis.
-    struct Entry {
-        Field field;
-        long time;
-        int intVal = 0;
-        FatNode* ptrVal = nullptr;
-    };
-    vector<Entry> log;
+  // Registro de modificaciones: tuplas (campo, valor nuevo, tiempo), en
+  // orden de insercion. Tamano acotado por 2p (paginas 25-26): p = numero
+  // maximo de punteros ENTRANTES a un nodo, p = O(1) por hipotesis.
+  struct Entry {
+    Field field;
+    long time;
+    int intVal = 0;
+    FatNode* ptrVal = nullptr;
+  };
+  vector<Entry> log;
 
-    explicit FatNode(int id_, int value, FatNode* next = nullptr)
-        : id(id_), originalValue(value), originalNext(next) {}
+  explicit FatNode(int id_, int value, FatNode* next = nullptr)
+      : id(id_), originalValue(value), originalNext(next) {}
 };
 
-int P = 2;             // p = O(1) por hipotesis
-int MAX_LOG = 2 * P; // tamano acotado del registro
+int P = 2;            // p = O(1) por hipotesis
+int MAX_LOG = 2 * P;  // tamano acotado del registro

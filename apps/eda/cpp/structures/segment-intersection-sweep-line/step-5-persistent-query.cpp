@@ -16,42 +16,46 @@
 #include <algorithm>
 #include <vector>
 
+using namespace std;
+
 struct Seg {
   int id;
   double x0, y0, x1, y1;
 
   double y_at(double x) const {
-    if (x1 == x0) return y0;
+    if (x1 == x0)
+      return y0;
     double t = (x - x0) / (x1 - x0);
     return y0 + t * (y1 - y0);
   }
 };
 
 struct Version {
-  double x;                    // instante del barrido tras este evento
-  std::vector<int> active_ids;  // ids activos justo después de x
+  double x;                // instante del barrido tras este evento
+  vector<int> active_ids;  // ids activos justo después de x
 };
 
 // Construye una versión por cada x de evento (activación o desactivación),
 // en orden creciente de x.
-std::vector<Version> build_versions(const std::vector<Seg>& segs) {
+vector<Version> build_versions(const vector<Seg>& segs) {
   struct Ev {
     double x;
     int kind;  // 0 activar, 2 desactivar
     int id;
   };
-  std::vector<Ev> events;
+  vector<Ev> events;
   for (const Seg& s : segs) {
     events.push_back({s.x0, 0, s.id});
     events.push_back({s.x1, 2, s.id});
   }
-  std::sort(events.begin(), events.end(), [](const Ev& a, const Ev& b) {
-    if (a.x != b.x) return a.x < b.x;
+  sort(events.begin(), events.end(), [](const Ev& a, const Ev& b) {
+    if (a.x != b.x)
+      return a.x < b.x;
     return a.kind < b.kind;
   });
 
-  std::vector<Version> versions;
-  std::vector<int> active;
+  vector<Version> versions;
+  vector<int> active;
   std::size_t i = 0;
   while (i < events.size()) {
     double x = events[i].x;
@@ -68,19 +72,21 @@ std::vector<Version> build_versions(const std::vector<Seg>& segs) {
 }
 
 // Successor(y_i) sobre el conjunto activo, evaluado en la x de esa versión.
-int successor_in(const std::vector<Seg>& segs, const std::vector<int>& active_ids,
-                  double at_x, double y_query) {
-  std::vector<std::pair<double, int>> vals;
-  for (int id : active_ids) vals.push_back({segs[id].y_at(at_x), id});
-  std::sort(vals.begin(), vals.end());
+int successor_in(const vector<Seg>& segs, const vector<int>& active_ids, double at_x,
+                 double y_query) {
+  vector<pair<double, int>> vals;
+  for (int id : active_ids)
+    vals.push_back({segs[id].y_at(at_x), id});
+  sort(vals.begin(), vals.end());
   for (auto& [y, id] : vals)
-    if (y > y_query) return id;
+    if (y > y_query)
+      return id;
   return -1;
 }
 
 // Consulta persistente: usa la versión vigente en x_i (la última con x <= x_i).
-int persistent_query(const std::vector<Version>& versions, const std::vector<Seg>& segs,
-                      double x_i, double y_i) {
+int persistent_query(const vector<Version>& versions, const vector<Seg>& segs, double x_i,
+                     double y_i) {
   const Version* v = nullptr;
   for (const Version& ver : versions) {
     if (ver.x <= x_i)
@@ -88,16 +94,18 @@ int persistent_query(const std::vector<Version>& versions, const std::vector<Seg
     else
       break;
   }
-  if (!v) return -1;
+  if (!v)
+    return -1;
   return successor_in(segs, v->active_ids, x_i, y_i);
 }
 
 // Recomputo directo: qué segmentos estarían activos si el barrido se
 // detuviera exactamente en x_i, sin usar ninguna versión guardada. Es el
 // oráculo de esta operación.
-int recompute_at(const std::vector<Seg>& segs, double x_i, double y_i) {
-  std::vector<int> active;
+int recompute_at(const vector<Seg>& segs, double x_i, double y_i) {
+  vector<int> active;
   for (const Seg& s : segs)
-    if (s.x0 <= x_i && x_i <= s.x1) active.push_back(s.id);
+    if (s.x0 <= x_i && x_i <= s.x1)
+      active.push_back(s.id);
   return successor_in(segs, active, x_i, y_i);
 }

@@ -60,7 +60,7 @@ items:
     statement: >-
       Escribe en C++ una función `double phi(const vector<int>& sizes)` que,
       dada la lista de los tamaños s(x) de todos los nodos de un árbol,
-      devuelva Φ = Σ lg s(x). Verifica con asserts que para el árbol
+      devuelva Φ = Σ lg s(x). Verifica con `if` que para el árbol
       balanceado de 5 nodos del ejercicio 2 (tamaños {1,1,2,2,5}) da ≈ 4.32,
       y que para la cadena de 5 (tamaños {1,2,3,4,5}) da ≈ 6.91. Cuidado con
       una cosa que la librería estándar no te da directamente.
@@ -68,19 +68,19 @@ items:
       - >-
         `std::log2` es lg; `std::log` es logaritmo natural. Usar el segundo
         por descuido cambia todos los números por un factor constante y los
-        asserts fallan.
+        las comprobaciones fallan.
       - >-
         Comparar doubles con == nunca funciona. Usa `std::fabs(a - b) < 1e-2`
         con la tolerancia que te permita el redondeo a dos decimales del
         enunciado.
       - >-
         s(x) ≥ 1 siempre (todo nodo se cuenta a sí mismo), así que lg s(x) ≥
-        0 y Φ nunca es negativo — un buen assert extra sobre el resultado.
+        0 y Φ nunca es negativo — una buena comprobación extra sobre el resultado.
     solution: >-
       Una implementación directa. `double phi(const vector<int>& sizes) {
       double total = 0; for (int s : sizes) total += std::log2(s); return
-      total; }`. Verificación: `assert(std::fabs(phi({1,1,2,2,5}) - 4.32) <
-      1e-2);` y `assert(std::fabs(phi({1,2,3,4,5}) - 6.91) < 1e-2);`. El
+      total; }`. Verificación: `if (!(std::fabs(phi({1,1,2,2,5}) - 4.32) <
+      1e-2);` y `if (!(std::fabs(phi({1,2,3,4,5}) - 6.91) < 1e-2);`. El
       segundo caso es lg(5!) porque los tamaños de una cadena son exactamente
       1..n, y lg 1 + lg 2 + ... + lg n = lg(n!). Nota: no hay archivo en
       cpp/structures/access-lemma/ porque este tema no tiene código de

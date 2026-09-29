@@ -7,15 +7,16 @@
 using namespace std;
 
 struct Elem {
-    int value;
-    int bridge; // índice en L'{i+1}, o -1 si no fue promovido
+  int value;
+  int bridge;  // índice en L'{i+1}, o -1 si no fue promovido
 };
 
 using AugList = vector<Elem>;
 
 // Construye Elem "propios" (sin puente) a partir de una lista Li cruda.
 AugList own_elems(const vector<int>& Li) {
-    AugList out;
-    for (int v : Li) out.push_back({v, -1});
-    return out;
+  AugList out;
+  for (int v : Li)
+    out.push_back({v, -1});
+  return out;
 }

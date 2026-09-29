@@ -4,24 +4,26 @@
 // llave menor (z). Sólo mueve punteros: nunca copia ni recorre nodos.
 #include <climits>
 
-struct Node {
-    int key;
-    int degree = 0;
-    Node* parent = nullptr;
-    Node* child = nullptr;
-    Node* sibling = nullptr;
+using namespace std;
 
-    explicit Node(int k) : key(k) {}
+struct Node {
+  int key;
+  int degree = 0;
+  Node* parent = nullptr;
+  Node* child = nullptr;
+  Node* sibling = nullptr;
+
+  explicit Node(int k) : key(k) {}
 };
 
 struct BinomialHeap {
-    Node* head = nullptr;
+  Node* head = nullptr;
 };
 
 // Precondición: y, z son raíces del mismo grado y key(y) >= key(z).
 void binomialLink(Node* y, Node* z) {
-    y->parent = z;
-    y->sibling = z->child;
-    z->child = y;
-    z->degree++;
+  y->parent = z;
+  y->sibling = z->child;
+  z->child = y;
+  z->degree++;
 }

@@ -7,20 +7,22 @@
 
 #include "step-4-zig-zag.cpp"
 
+using namespace std;
+
 void splay(Node*& root, Node* x) {
-    while (x != root) {
-        Node* p = x->parent;
-        if (p == root) {
-            zig(root, x);
-        } else {
-            Node* g = p->parent;
-            bool xLeftOfP = (x == p->left);
-            bool pLeftOfG = (p == g->left);
-            if (xLeftOfP == pLeftOfG) {
-                zigZig(root, x);
-            } else {
-                zigZag(root, x);
-            }
-        }
+  while (x != root) {
+    Node* p = x->parent;
+    if (p == root) {
+      zig(root, x);
+    } else {
+      Node* g = p->parent;
+      bool xLeftOfP = (x == p->left);
+      bool pLeftOfG = (p == g->left);
+      if (xLeftOfP == pLeftOfG) {
+        zigZig(root, x);
+      } else {
+        zigZag(root, x);
+      }
     }
+  }
 }

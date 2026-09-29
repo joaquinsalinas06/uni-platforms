@@ -22,28 +22,28 @@
 //                              en su predecesor)
 //   c_i^ = O(p) + (-2p + p) = O(p) - p = O(1), pues p = O(1) por hipotesis.
 
-#include <vector>
 #include <utility>
+#include <vector>
 using namespace std;
 
 enum class Field { Value, Next };
 
 struct FatNode {
-    int id;
-    int originalValue;
-    FatNode* originalNext;
+  int id;
+  int originalValue;
+  FatNode* originalNext;
 
-    struct Entry {
-        Field field;
-        long time;
-        int intVal = 0;
-        FatNode* ptrVal = nullptr;
-    };
-    vector<Entry> log;
-    vector<pair<FatNode*, Field>> incoming;
+  struct Entry {
+    Field field;
+    long time;
+    int intVal = 0;
+    FatNode* ptrVal = nullptr;
+  };
+  vector<Entry> log;
+  vector<pair<FatNode*, Field>> incoming;
 
-    explicit FatNode(int id_, int value, FatNode* next = nullptr)
-        : id(id_), originalValue(value), originalNext(next) {}
+  explicit FatNode(int id_, int value, FatNode* next = nullptr)
+      : id(id_), originalValue(value), originalNext(next) {}
 };
 
 int P = 2;
@@ -51,68 +51,73 @@ int MAX_LOG = 2 * P;
 int nextId = 1;
 
 int readValue(const FatNode* node, long t) {
-    for (auto it = node->log.rbegin(); it != node->log.rend(); ++it) {
-        if (it->field == Field::Value && it->time <= t) return it->intVal;
-    }
-    return node->originalValue;
+  for (auto it = node->log.rbegin(); it != node->log.rend(); ++it) {
+    if (it->field == Field::Value && it->time <= t)
+      return it->intVal;
+  }
+  return node->originalValue;
 }
 
 FatNode* readNext(const FatNode* node, long t) {
-    for (auto it = node->log.rbegin(); it != node->log.rend(); ++it) {
-        if (it->field == Field::Next && it->time <= t) return it->ptrVal;
-    }
-    return node->originalNext;
+  for (auto it = node->log.rbegin(); it != node->log.rend(); ++it) {
+    if (it->field == Field::Next && it->time <= t)
+      return it->ptrVal;
+  }
+  return node->originalNext;
 }
 
 void trackIncoming(FatNode* target, FatNode* pred, Field f) {
-    if (target) target->incoming.push_back({pred, f});
+  if (target)
+    target->incoming.push_back({pred, f});
 }
 
 void untrackIncoming(FatNode* target, FatNode* pred, Field f) {
-    if (!target) return;
-    auto& v = target->incoming;
-    for (size_t i = 0; i < v.size(); ++i) {
-        if (v[i].first == pred && v[i].second == f) {
-            v.erase(v.begin() + i);
-            return;
-        }
+  if (!target)
+    return;
+  auto& v = target->incoming;
+  for (size_t i = 0; i < v.size(); ++i) {
+    if (v[i].first == pred && v[i].second == f) {
+      v.erase(v.begin() + i);
+      return;
     }
+  }
 }
 
 FatNode* nodeSplit(FatNode* node, Field field, int intVal, FatNode* ptrVal, long t);
 
 FatNode* writeField(FatNode* node, Field field, int intVal, FatNode* ptrVal, long t) {
-    if (node->log.size() < MAX_LOG) {
-        if (field == Field::Next) {
-            untrackIncoming(readNext(node, t), node, Field::Next);
-            trackIncoming(ptrVal, node, Field::Next);
-        }
-        node->log.push_back({field, t, intVal, ptrVal});
-        return node;
+  if (node->log.size() < MAX_LOG) {
+    if (field == Field::Next) {
+      untrackIncoming(readNext(node, t), node, Field::Next);
+      trackIncoming(ptrVal, node, Field::Next);
     }
-    return nodeSplit(node, field, intVal, ptrVal, t);
+    node->log.push_back({field, t, intVal, ptrVal});
+    return node;
+  }
+  return nodeSplit(node, field, intVal, ptrVal, t);
 }
 
 FatNode* nodeSplit(FatNode* node, Field field, int intVal, FatNode* ptrVal, long t) {
-    // Nodo nuevo, limpio, con los valores actuales (los que se leerian en
-    // t justo antes de esta escritura).
-    FatNode* fresh = new FatNode(nextId++, readValue(node, t), readNext(node, t));
+  // Nodo nuevo, limpio, con los valores actuales (los que se leerian en
+  // t justo antes de esta escritura).
+  FatNode* fresh = new FatNode(nextId++, readValue(node, t), readNext(node, t));
 
-    // Redirigir los p punteros entrantes: cada uno es una escritura sobre
-    // el predecesor, no una mutacion directa.
-    vector<pair<FatNode*, Field>> incoming = std::move(node->incoming);
-    node->incoming.clear();
-    for (auto& pf : incoming) {
-        writeField(pf.first, pf.second, 0, fresh, t);
-    }
-    fresh->incoming = std::move(incoming);
+  // Redirigir los p punteros entrantes: cada uno es una escritura sobre
+  // el predecesor, no una mutacion directa.
+  vector<pair<FatNode*, Field>> incoming = std::move(node->incoming);
+  node->incoming.clear();
+  for (auto& pf : incoming) {
+    writeField(pf.first, pf.second, 0, fresh, t);
+  }
+  fresh->incoming = std::move(incoming);
 
-    // La escritura que disparo el split siempre cabe en el nodo nuevo.
-    if (field == Field::Next) trackIncoming(ptrVal, fresh, Field::Next);
-    fresh->log.push_back({field, t, intVal, ptrVal});
+  // La escritura que disparo el split siempre cabe en el nodo nuevo.
+  if (field == Field::Next)
+    trackIncoming(ptrVal, fresh, Field::Next);
+  fresh->log.push_back({field, t, intVal, ptrVal});
 
-    // El nodo viejo NO se toca mas: queda congelado, y sigue siendo la
-    // respuesta correcta para cualquier lectura con tiempo anterior al
-    // split (ver examples.md).
-    return fresh;
+  // El nodo viejo NO se toca mas: queda congelado, y sigue siendo la
+  // respuesta correcta para cualquier lectura con tiempo anterior al
+  // split (ver examples.md).
+  return fresh;
 }

@@ -8,18 +8,24 @@
 
 #include <vector>
 
+using namespace std;
+
 struct Op {
   double t;   // tiempo en la línea de retroactividad (puede ser fraccionario)
   int delta;  // operación: sumar delta al contador. Inversa: sumar -delta.
 };
 
 class RollbackLog {
-public:
+ public:
   // Estado actual del contador tras aplicar todo el log en orden.
-  long long sum() const { return sum_; }
-  std::size_t size() const { return log_.size(); }
+  long long sum() const {
+    return sum_;
+  }
+  std::size_t size() const {
+    return log_.size();
+  }
 
-private:
-  std::vector<Op> log_;
+ private:
+  vector<Op> log_;
   long long sum_ = 0;
 };

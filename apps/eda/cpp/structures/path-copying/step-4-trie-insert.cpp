@@ -5,18 +5,18 @@
 // no retorna ahí, y sigue a c <- s[i], que indexa fuera de la cadena. Aquí
 // se agrega el "devolver nuevo" dentro del caso base, como corresponde.
 
-#include <vector>
 #include <string>
+#include <vector>
 using namespace std;
 
 constexpr int ALPHABET = 26;
 
 struct TrieNode {
-    bool isEnd;
-    vector<TrieNode*> children;
+  bool isEnd;
+  vector<TrieNode*> children;
 
-    // Constructor explícito: inicializa si es final de palabra y reserva los hijos en nullptr
-    TrieNode(bool end = false) : isEnd(end), children(ALPHABET, nullptr) {}
+  // Constructor explícito: inicializa si es final de palabra y reserva los hijos en nullptr
+  TrieNode(bool end = false) : isEnd(end), children(ALPHABET, nullptr) {}
 };
 
 // nuevo <- copia de nodo ;
@@ -29,15 +29,14 @@ struct TrieNode {
 //      nuevo.hijos[c] <- Insert(hijoViejo, s, i+1) ;
 //      devolver nuevo ;
 TrieNode* insert(TrieNode* nodo, const string& s, size_t i) {
-    auto base = nodo ? nodo : new TrieNode(); // "Trie vacío si no existe"
-    auto nuevo = new TrieNode(*base);
-    if (i == s.size()) {
-        nuevo->isEnd = true;
-        return nuevo;
-    }
-    int c = s[i] - 'a';
-    auto hijoViejo = nodo ? nodo->children[c] : nullptr;
-    nuevo->children[c] = insert(hijoViejo, s, i + 1);
+  auto base = nodo ? nodo : new TrieNode();  // "Trie vacío si no existe"
+  auto nuevo = new TrieNode(*base);
+  if (i == s.size()) {
+    nuevo->isEnd = true;
     return nuevo;
+  }
+  int c = s[i] - 'a';
+  auto hijoViejo = nodo ? nodo->children[c] : nullptr;
+  nuevo->children[c] = insert(hijoViejo, s, i + 1);
+  return nuevo;
 }
-

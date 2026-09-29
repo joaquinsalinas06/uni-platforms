@@ -33,7 +33,6 @@
 // fabricar un experimento que las "confirme".
 
 #include <algorithm>
-#include <cassert>
 #include <cmath>
 #include <cstdint>
 #include <iostream>
@@ -41,6 +40,8 @@
 #include <numeric>
 #include <random>
 #include <vector>
+
+using namespace std;
 
 // ---------------------------------------------------------------------
 // BST simple: sólo lo que hace falta para medir el costo de Buscar(x),
@@ -54,7 +55,7 @@ struct Node {
 };
 
 class StaticBST {
-public:
+ public:
   // Construye un BST "estático óptimo" aproximado: en cada rango
   // [lo, hi] de keys[] ordenadas por llave, el índice de mayor peso
   // (mayor frecuencia de búsqueda) se vuelve la raíz de ese subárbol, y el
@@ -62,12 +63,11 @@ public:
   // principio que un BST óptimo estático exacto (programación dinámica,
   // fuera de este mazo) pero con un heurístico voraz O(n log n): alcanza
   // para ilustrar la propiedad, no para ser la construcción óptima exacta.
-  static StaticBST build_frequency_shaped(const std::vector<int>& keys,
-                                           const std::vector<double>& weight) {
+  static StaticBST build_frequency_shaped(const vector<int>& keys, const vector<double>& weight) {
     StaticBST t;
-    std::vector<int> idx(keys.size());
-    std::iota(idx.begin(), idx.end(), 0);
-    t.root_ = build_range(keys, weight, idx, 0, static_cast<int>(idx.size()) - 1);
+    vector<int> idx(keys.size());
+    iota(idx.begin(), idx.end(), 0);
+    t.root_ = build_range(keys, weight, idx, 0, (int)(idx.size()) - 1);
     return t;
   }
 
@@ -78,24 +78,28 @@ public:
     int cost = 0;
     while (n) {
       ++cost;
-      if (key == n->key) return cost;
+      if (key == n->key)
+        return cost;
       n = (key < n->key) ? n->left.get() : n->right.get();
     }
     throw std::logic_error("clave no encontrada: viola la restriccion del modelo (#24)");
   }
 
-  int depth_of(int key) const { return search_cost(key) - 1; }
+  int depth_of(int key) const {
+    return search_cost(key) - 1;
+  }
 
-private:
+ private:
   std::unique_ptr<Node> root_;
 
-  static std::unique_ptr<Node> build_range(const std::vector<int>& keys,
-                                            const std::vector<double>& weight,
-                                            const std::vector<int>& idx, int lo, int hi) {
-    if (lo > hi) return nullptr;
+  static std::unique_ptr<Node> build_range(const vector<int>& keys, const vector<double>& weight,
+                                           const vector<int>& idx, int lo, int hi) {
+    if (lo > hi)
+      return nullptr;
     int best = lo;
     for (int i = lo + 1; i <= hi; ++i)
-      if (weight[idx[i]] > weight[idx[best]]) best = i;
+      if (weight[idx[i]] > weight[idx[best]])
+        best = i;
     auto node = std::make_unique<Node>(keys[idx[best]]);
     node->left = build_range(keys, weight, idx, lo, best - 1);
     node->right = build_range(keys, weight, idx, best + 1, hi);
@@ -106,10 +110,11 @@ private:
 // Corre una secuencia de búsquedas sobre el árbol y devuelve (costo total,
 // costo promedio) -- esto es literalmente "resolver todas las consultas"
 // (#30, #32, #34, #38, #45), la cantidad que las cinco propiedades acotan.
-static std::pair<long long, double> run_sequence(const StaticBST& t, const std::vector<int>& seq) {
+static pair<long long, double> run_sequence(const StaticBST& t, const vector<int>& seq) {
   long long total = 0;
-  for (int x : seq) total += t.search_cost(x);
-  double avg = static_cast<double>(total) / static_cast<double>(seq.size());
+  for (int x : seq)
+    total += t.search_cost(x);
+  double avg = (double)(total) / (double)(seq.size());
   return {total, avg};
 }
 
@@ -118,22 +123,24 @@ int main() {
   // la más frecuente es 1/2 de las búsquedas, la menos frecuente 1/255.
   // Es una distribución sesgada a propósito, la contraparte de "todas las
   // llaves igual de probables".
-  const std::vector<int> keys = {1, 2, 3, 4, 5, 6, 7, 8};
-  std::vector<double> weight(keys.size());
+  const vector<int> keys = {1, 2, 3, 4, 5, 6, 7, 8};
+  vector<double> weight(keys.size());
   double total_weight = 0.0;
   for (std::size_t i = 0; i < keys.size(); ++i) {
-    weight[i] = static_cast<double>(1ULL << (keys.size() - 1 - i)); // 128,64,...,1
+    weight[i] = (double)(1ULL << (keys.size() - 1 - i));  // 128,64,...,1
     total_weight += weight[i];
   }
-  std::vector<double> p(keys.size());
-  for (std::size_t i = 0; i < keys.size(); ++i) p[i] = weight[i] / total_weight;
+  vector<double> p(keys.size());
+  for (std::size_t i = 0; i < keys.size(); ++i)
+    p[i] = weight[i] / total_weight;
 
   // Entropía de Shannon de esa distribución: Σ p_k log2(1/p_k). El
   // profesor da la cota como "O(Σ_k p_k log(1/p_k)) por búsqueda" (#34).
   double entropy_bits = 0.0;
   for (double pk : p)
-    if (pk > 0.0) entropy_bits += pk * std::log2(1.0 / pk);
-  std::cout << "entropia de la distribucion de frecuencias: " << entropy_bits << " bits\n";
+    if (pk > 0.0)
+      entropy_bits += pk * std::log2(1.0 / pk);
+  cout << "entropia de la distribucion de frecuencias: " << entropy_bits << " bits\n";
 
   StaticBST tree = StaticBST::build_frequency_shaped(keys, weight);
 
@@ -141,64 +148,71 @@ int main() {
   // (profundidad 0) y la menos frecuente (peso 1) en la hoja más profunda:
   // así es como un árbol construido por frecuencia se distingue de uno
   // cualquiera.
-  assert(tree.depth_of(1) == 0);
-  assert(tree.depth_of(8) == static_cast<int>(keys.size()) - 1);
-  std::cout << "arbol construido por frecuencia: clave mas frecuente (1) en profundidad "
-            << tree.depth_of(1) << ", clave menos frecuente (8) en profundidad "
-            << tree.depth_of(8) << "\n";
+  if (!(tree.depth_of(1) == 0))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
+  if (!(tree.depth_of(8) == (int)(keys.size()) - 1))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
+  cout << "arbol construido por frecuencia: clave mas frecuente (1) en profundidad "
+       << tree.depth_of(1) << ", clave menos frecuente (8) en profundidad " << tree.depth_of(8)
+       << "\n";
 
   // Secuencia SESGADA: cada llave aparece exactamente weight[i] veces
   // (reproduce p_k exactamente), en orden mezclado con una semilla fija
   // para no depender de qué tan "acomodada" quede la secuencia.
-  std::vector<int> skewed_seq;
+  vector<int> skewed_seq;
   for (std::size_t i = 0; i < keys.size(); ++i)
-    for (int r = 0; r < static_cast<int>(weight[i]); ++r) skewed_seq.push_back(keys[i]);
-  std::mt19937 rng(12345); // semilla fija: reproducible, no un p-hack
+    for (int r = 0; r < (int)(weight[i]); ++r)
+      skewed_seq.push_back(keys[i]);
+  std::mt19937 rng(12345);  // semilla fija: reproducible, no un p-hack
   std::shuffle(skewed_seq.begin(), skewed_seq.end(), rng);
 
   // Secuencia ALEATORIA de contraste: mismo largo, mismas llaves, pero
   // muestreada de una distribución UNIFORME (ninguna llave más probable
   // que otra) -- la secuencia "sin patrón" con la que se compara.
-  std::vector<int> random_seq(skewed_seq.size());
-  std::uniform_int_distribution<int> uni(0, static_cast<int>(keys.size()) - 1);
-  for (auto& x : random_seq) x = keys[uni(rng)];
+  vector<int> random_seq(skewed_seq.size());
+  std::uniform_int_distribution<int> uni(0, (int)(keys.size()) - 1);
+  for (auto& x : random_seq)
+    x = keys[uni(rng)];
 
   auto [total_skewed, avg_skewed] = run_sequence(tree, skewed_seq);
   auto [total_random, avg_random] = run_sequence(tree, random_seq);
 
-  std::cout << "cota de entropia / optimalidad estatica -- MEDIDA sobre "
-            << skewed_seq.size() << " busquedas:\n"
-            << "  secuencia sesgada (coincide con las frecuencias del arbol): costo promedio = "
-            << avg_skewed << "\n"
-            << "  secuencia aleatoria uniforme (mismo arbol, sin relacion con sus frecuencias): costo promedio = "
-            << avg_random << "\n";
+  cout << "cota de entropia / optimalidad estatica -- MEDIDA sobre " << skewed_seq.size()
+       << " busquedas:\n"
+       << "  secuencia sesgada (coincide con las frecuencias del arbol): costo promedio = "
+       << avg_skewed << "\n"
+       << "  secuencia aleatoria uniforme (mismo arbol, sin relacion con sus frecuencias): costo "
+          "promedio = "
+       << avg_random << "\n";
 
   // El punto central de la propiedad: la secuencia sesgada, sobre el árbol
   // construido para ESA distribución, sale mas barata que la secuencia sin
   // patrón sobre el mismo árbol.
-  assert(avg_skewed < avg_random);
+  if (!(avg_skewed < avg_random))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
 
   // Y el costo promedio de la secuencia sesgada queda del orden de la
   // entropía (cota superior con una constante razonable, no una igualdad
   // exacta -- el mazo da una O grande, no una constante): la construcción
   // voraz no es la óptima exacta, así que se admite un factor de holgura.
-  assert(avg_skewed <= 2.0 * entropy_bits + 1.0);
+  if (!(avg_skewed <= 2.0 * entropy_bits + 1.0))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
 
-  std::cout << "OK: la secuencia sesgada por frecuencia cuesta menos que la aleatoria, "
-               "y su costo promedio queda acotado por O(entropia), como enuncia #34.\n";
+  cout << "OK: la secuencia sesgada por frecuencia cuesta menos que la aleatoria, "
+          "y su costo promedio queda acotado por O(entropia), como enuncia #34.\n";
 
   // --- Lo que NO se mide, y por qué (ver comentario del encabezado) ---
-  std::cout << "acceso secuencial: NO MEDIDA -- requiere un BST que se auto-ajuste "
-               "(Splay Tree, #29-30); en un BST estatico el costo de una busqueda "
-               "no depende del orden de la secuencia, solo de la profundidad fija de la llave.\n";
-  std::cout << "puntero dinamico: NO MEDIDA -- misma razon: la ventaja de que k_i "
-               "chico sea barato depende de que el arbol se reestructure hacia donde "
-               "se buscó la ultima vez (#32), lo que un BST estatico no hace.\n";
-  std::cout << "conjunto de trabajo: NO MEDIDA -- misma razon: que una repeticion "
-               "reciente salga barata (#38) depende de mover esa llave hacia arriba "
-               "al buscarla, no de su posicion fija en un arbol estatico.\n";
-  std::cout << "propiedad unificada: NO MEDIDA -- generaliza a las tres anteriores "
-               "(#45), que ya quedan fuera del alcance de un BST estatico.\n";
+  cout << "acceso secuencial: NO MEDIDA -- requiere un BST que se auto-ajuste "
+          "(Splay Tree, #29-30); en un BST estatico el costo de una busqueda "
+          "no depende del orden de la secuencia, solo de la profundidad fija de la llave.\n";
+  cout << "puntero dinamico: NO MEDIDA -- misma razon: la ventaja de que k_i "
+          "chico sea barato depende de que el arbol se reestructure hacia donde "
+          "se buscó la ultima vez (#32), lo que un BST estatico no hace.\n";
+  cout << "conjunto de trabajo: NO MEDIDA -- misma razon: que una repeticion "
+          "reciente salga barata (#38) depende de mover esa llave hacia arriba "
+          "al buscarla, no de su posicion fija en un arbol estatico.\n";
+  cout << "propiedad unificada: NO MEDIDA -- generaliza a las tres anteriores "
+          "(#45), que ya quedan fuera del alcance de un BST estatico.\n";
 
   return 0;
 }

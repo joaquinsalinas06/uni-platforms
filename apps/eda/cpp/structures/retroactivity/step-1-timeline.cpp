@@ -13,8 +13,8 @@
 using namespace std;
 
 struct Op {
-    double time; // el t del modelo; puede ser fraccionario para insertar "entre" dos operaciones
-    int delta;   // el efecto de add(delta) sobre el contador
+  double time;  // el t del modelo; puede ser fraccionario para insertar "entre" dos operaciones
+  int delta;    // el efecto de add(delta) sobre el contador
 };
 
-vector<Op> timeline; // invariante: siempre ordenado por time ascendente
+vector<Op> timeline;  // invariante: siempre ordenado por time ascendente

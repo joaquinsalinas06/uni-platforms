@@ -41,8 +41,8 @@ items:
     solution: >-
       `void zigZig(Node*& root, Node* x) { Node* p = x->parent;
       rotate(root, p); rotate(root, x); }` — el orden importa: `rotate(p)` primero
-      reacomoda (p, a) antes de que `rotate(x)` suba a x. El assert
-      `assert(x->parent == nullptr && p->parent == x)` verifica que x quedó
+      reacomoda (p, a) antes de que `rotate(x)` suba a x. La comprobación
+      `if (!(x->parent == nullptr && p->parent == x)` verifica que x quedó
       como raíz y p como su hijo directo, tal como en el diagrama #65 (no
       como un hijo de segundo nivel, que sería el resultado de
       move-to-root).

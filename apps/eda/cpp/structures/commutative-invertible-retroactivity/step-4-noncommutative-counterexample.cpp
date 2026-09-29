@@ -9,18 +9,22 @@
 #include <utility>
 #include <vector>
 
+using namespace std;
+
 class LastValueHistory {
-public:
+ public:
   // Registra la operacion real Assign(value) en el tiempo time.
-  void assign(int time, int value) { history_.push_back({time, value}); }
+  void assign(int time, int value) {
+    history_.push_back({time, value});
+  }
 
   // Valor correcto en el presente: rehacer la secuencia ordenada por
   // tiempo y quedarse con el ultimo Assign aplicado. Esto es exactamente
   // el costo O(m) que la tecnica de esta semana busca evitar -- y que SI
   // hace falta pagar cuando la operacion no conmuta.
   int correct_present_value() const {
-    std::vector<std::pair<int, int>> sorted = history_;
-    std::sort(sorted.begin(), sorted.end());
+    vector<pair<int, int>> sorted = history_;
+    sort(sorted.begin(), sorted.end());
     return sorted.empty() ? 0 : sorted.back().second;
   }
 
@@ -30,10 +34,12 @@ public:
   // insert_time deberia ganar -- y por eso puede dar una respuesta
   // incorrecta.
   int wrongly_applied_now_value() const {
-    if (history_.empty()) return 0;
-    return history_.back().second; // "aplicar ahora" = tomar el ultimo insertado, sin mirar tiempos
+    if (history_.empty())
+      return 0;
+    return history_.back()
+        .second;  // "aplicar ahora" = tomar el ultimo insertado, sin mirar tiempos
   }
 
-private:
-  std::vector<std::pair<int, int>> history_; // (tiempo, valor asignado)
+ private:
+  vector<pair<int, int>> history_;  // (tiempo, valor asignado)
 };

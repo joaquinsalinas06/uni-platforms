@@ -7,16 +7,21 @@
 
 #include "step-2-split.cpp"
 
+using namespace std;
+
 Node* join(Node* A, Node* B) {
-    if (A == nullptr) return B;
-    if (B == nullptr) return A;
+  if (A == nullptr)
+    return B;
+  if (B == nullptr)
+    return A;
 
-    Node* v = A;
-    while (v->right != nullptr) v = v->right;
+  Node* v = A;
+  while (v->right != nullptr)
+    v = v->right;
 
-    splay(A, v);  // v = m, ahora raíz de A — y sin hijo derecho.
+  splay(A, v);  // v = m, ahora raíz de A — y sin hijo derecho.
 
-    v->right = B;
-    B->parent = v;
-    return v;
+  v->right = B;
+  B->parent = v;
+  return v;
 }

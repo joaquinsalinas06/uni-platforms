@@ -8,35 +8,47 @@
 
 #include "step-5-splay.cpp"
 
+using namespace std;
+
 bool search(Node*& root, int k) {
-    Node* v = root;
-    Node* last = nullptr;
-    while (v != nullptr) {
-        last = v;
-        if (k == v->value) {
-            splay(root, v);
-            return true;
-        }
-        v = (k < v->value) ? v->left : v->right;
+  Node* v = root;
+  Node* last = nullptr;
+  while (v != nullptr) {
+    last = v;
+    if (k == v->value) {
+      splay(root, v);
+      return true;
     }
-    if (last != nullptr) splay(root, last);
-    return false;
+    v = (k < v->value) ? v->left : v->right;
+  }
+  if (last != nullptr)
+    splay(root, last);
+  return false;
 }
 
 // Andamiaje: inserción de BST sin balanceo, para construir árboles de
 // prueba con las llaves que hagan falta. No es la Insertar del TDA (ésa
 // está en /structures/splay-tree-adt, y se construye sobre Buscar+Splay).
 Node* insertPlain(Node* root, Node* node) {
-    if (root == nullptr) return node;
-    Node* v = root;
-    while (true) {
-        if (node->value < v->value) {
-            if (v->left == nullptr) { v->left = node; node->parent = v; break; }
-            v = v->left;
-        } else {
-            if (v->right == nullptr) { v->right = node; node->parent = v; break; }
-            v = v->right;
-        }
+  if (root == nullptr)
+    return node;
+  Node* v = root;
+  while (true) {
+    if (node->value < v->value) {
+      if (v->left == nullptr) {
+        v->left = node;
+        node->parent = v;
+        break;
+      }
+      v = v->left;
+    } else {
+      if (v->right == nullptr) {
+        v->right = node;
+        node->parent = v;
+        break;
+      }
+      v = v->right;
     }
-    return root;
+  }
+  return root;
 }

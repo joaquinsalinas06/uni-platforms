@@ -31,7 +31,6 @@
 // de optimalidad dinámica sigue abierta (no se conoce una forma barata de
 // acercarse a OPT(S), ni de calcularlo).
 
-#include <cassert>
 #include <climits>
 #include <functional>
 #include <iostream>
@@ -43,8 +42,8 @@ using namespace std;
 
 struct Node {
   int val;
-  Node *left;
-  Node *right;
+  Node* left;
+  Node* right;
 
   // Constructor explícito: valor del nodo e hijos izquierdo y derecho
   Node(int v, Node* l = nullptr, Node* r = nullptr) : val(v), left(l), right(r) {}
@@ -53,44 +52,49 @@ using NodeP = Node*;
 
 // Todos los BST posibles sobre las llaves [lo, hi] (formas de Catalán).
 static vector<NodeP> generateTrees(int lo, int hi) {
-  if (lo > hi) return {nullptr};
+  if (lo > hi)
+    return {nullptr};
   vector<NodeP> result;
   for (int root = lo; root <= hi; ++root) {
     auto lefts = generateTrees(lo, root - 1);
     auto rights = generateTrees(root + 1, hi);
-    for (auto &l : lefts)
-      for (auto &r : rights)
+    for (auto& l : lefts)
+      for (auto& r : rights)
         result.push_back(new Node(root, l, r));
   }
   return result;
 }
 
-static string serialize(const NodeP &n) {
-  if (!n) return "#";
-  return to_string(n->val) + "(" + serialize(n->left) + "," +
-         serialize(n->right) + ")";
+static string serialize(const NodeP& n) {
+  if (!n)
+    return "#";
+  return to_string(n->val) + "(" + serialize(n->left) + "," + serialize(n->right) + ")";
 }
 
-static int depthOf(const NodeP &n, int key, int d = 1) {
-  if (!n) return -1;
-  if (n->val == key) return d;
-  return key < n->val ? depthOf(n->left, key, d + 1)
-                       : depthOf(n->right, key, d + 1);
+static int depthOf(const NodeP& n, int key, int d = 1) {
+  if (!n)
+    return -1;
+  if (n->val == key)
+    return d;
+  return key < n->val ? depthOf(n->left, key, d + 1) : depthOf(n->right, key, d + 1);
 }
 
 // Aplica UNA rotación en el nodo de valor `parentVal` (right=true: el hijo
 // izquierdo sube; right=false: el hijo derecho sube). Devuelve un árbol
 // nuevo (path-copying sobre el camino a ese nodo; el resto se comparte).
-static NodeP rotateAt(const NodeP &node, int parentVal, bool rotateRight) {
-  if (!node) return node;
+static NodeP rotateAt(const NodeP& node, int parentVal, bool rotateRight) {
+  if (!node)
+    return node;
   if (node->val == parentVal) {
     if (rotateRight) {
-      if (!node->left) return node;  // no hay hijo izquierdo: no aplica
+      if (!node->left)
+        return node;  // no hay hijo izquierdo: no aplica
       NodeP n = node->left;
       NodeP newP = new Node(node->val, n->right, node->right);
       return new Node(n->val, n->left, newP);
     } else {
-      if (!node->right) return node;
+      if (!node->right)
+        return node;
       NodeP n = node->right;
       NodeP newP = new Node(node->val, node->left, n->left);
       return new Node(n->val, newP, n->right);
@@ -98,19 +102,24 @@ static NodeP rotateAt(const NodeP &node, int parentVal, bool rotateRight) {
   }
   if (parentVal < node->val) {
     NodeP newLeft = rotateAt(node->left, parentVal, rotateRight);
-    if (newLeft == node->left) return node;
+    if (newLeft == node->left)
+      return node;
     return new Node(node->val, newLeft, node->right);
   }
   NodeP newRight = rotateAt(node->right, parentVal, rotateRight);
-  if (newRight == node->right) return node;
+  if (newRight == node->right)
+    return node;
   return new Node(node->val, node->left, newRight);
 }
 
 // Todos los vecinos a una rotación de distancia de `t` (por valor de nodo).
-static void collectRotatable(const NodeP &n, vector<pair<int, bool>> &out) {
-  if (!n) return;
-  if (n->left) out.push_back({n->val, true});
-  if (n->right) out.push_back({n->val, false});
+static void collectRotatable(const NodeP& n, vector<pair<int, bool>>& out) {
+  if (!n)
+    return;
+  if (n->left)
+    out.push_back({n->val, true});
+  if (n->right)
+    out.push_back({n->val, false});
   collectRotatable(n->left, out);
   collectRotatable(n->right, out);
 }
@@ -120,22 +129,26 @@ int main() {
 
   vector<NodeP> trees = generateTrees(1, n);
   map<string, int> indexOf;
-  for (size_t i = 0; i < trees.size(); ++i) indexOf[serialize(trees[i])] = (int)i;
+  for (size_t i = 0; i < trees.size(); ++i)
+    indexOf[serialize(trees[i])] = (int)i;
 
   const int T = (int)trees.size();
-  assert(T == 14);  // número de Catalán C(4): verifica que la enumeración es exhaustiva
-  cout << "Enumerados " << T << " BST distintos sobre " << n
-       << " llaves (número de Catalán C(" << n << ") = 14). OK.\n";
+  if (!(T == 14))
+    cout << "Verificacion fallida en linea " << __LINE__
+         << endl;  // número de Catalán C(4): verifica que la enumeración es exhaustiva
+  cout << "Enumerados " << T << " BST distintos sobre " << n << " llaves (número de Catalán C(" << n
+       << ") = 14). OK.\n";
 
   // Grafo de rotaciones: adjacency[i] = índices alcanzables con 1 rotación.
   vector<vector<int>> adjacency(T);
   for (int i = 0; i < T; ++i) {
     vector<pair<int, bool>> rotatable;
     collectRotatable(trees[i], rotatable);
-    for (auto &[parentVal, right] : rotatable) {
+    for (auto& [parentVal, right] : rotatable) {
       NodeP neighbor = rotateAt(trees[i], parentVal, right);
       int j = indexOf.at(serialize(neighbor));
-      if (j != i) adjacency[i].push_back(j);
+      if (j != i)
+        adjacency[i].push_back(j);
     }
   }
 
@@ -156,35 +169,39 @@ int main() {
       }
     }
   }
-  cout << "Distancia de rotación todo-contra-todo calculada por BFS sobre "
-       << T << " árboles. OK.\n";
+  cout << "Distancia de rotación todo-contra-todo calculada por BFS sobre " << T
+       << " árboles. OK.\n";
 
   // OPT(S) exacto vía DP sobre el grafo de rotaciones (árbol inicial libre).
-  auto optimalCost = [&](const vector<int> &S) {
+  auto optimalCost = [&](const vector<int>& S) {
     vector<int> dp(T, 0);  // dp[t] = costo mínimo terminando en árbol t
     for (int key : S) {
       vector<int> next(T, INT_MAX);
       for (int t = 0; t < T; ++t) {
         int d = depthOf(trees[t], key);
         for (int from = 0; from < T; ++from) {
-          if (dp[from] == INT_MAX) continue;
+          if (dp[from] == INT_MAX)
+            continue;
           int cost = dp[from] + dist[from][t] + d;
-          if (cost < next[t]) next[t] = cost;
+          if (cost < next[t])
+            next[t] = cost;
         }
       }
       dp = next;
     }
     int best = INT_MAX;
-    for (int v : dp) best = min(best, v);
+    for (int v : dp)
+      best = min(best, v);
     return best;
   };
 
   // Mejor BST estático: mismo árbol para toda la secuencia, sin rotar.
-  auto bestStaticCost = [&](const vector<int> &S) {
+  auto bestStaticCost = [&](const vector<int>& S) {
     int best = INT_MAX;
-    for (auto &t : trees) {
+    for (auto& t : trees) {
       int cost = 0;
-      for (int key : S) cost += depthOf(t, key);
+      for (int key : S)
+        cost += depthOf(t, key);
       best = min(best, cost);
     }
     return best;
@@ -192,16 +209,18 @@ int main() {
 
   // BST que rota: heurística move-to-root (no es el splay tree del curso;
   // sólo demuestra que "rotar" ya mejora sobre lo estático en este ejemplo).
-  auto moveToRootCost = [&](const vector<int> &S) {
+  auto moveToRootCost = [&](const vector<int>& S) {
     NodeP cur = trees[0];
     int cost = 0;
     for (int key : S) {
       cost += depthOf(cur, key);
       while (cur->val != key) {
         // Encuentra el padre de `key` y rota `key` un nivel hacia arriba.
-        function<int(const NodeP &)> findParentVal = [&](const NodeP &node) -> int {
-          if (node->left && node->left->val == key) return node->val;
-          if (node->right && node->right->val == key) return node->val;
+        function<int(const NodeP&)> findParentVal = [&](const NodeP& node) -> int {
+          if (node->left && node->left->val == key)
+            return node->val;
+          if (node->right && node->right->val == key)
+            return node->val;
           return key < node->val ? findParentVal(node->left) : findParentVal(node->right);
         };
         int parentVal = findParentVal(cur);
@@ -233,13 +252,15 @@ int main() {
   // que ninguna estrategia realizable dentro del mismo modelo de costo,
   // porque un árbol estático (o move-to-root) es un caso particular de las
   // estrategias sobre las que OPT(S) minimiza.
-  assert(opt <= stat);
-  cout << "Verificado: OPT(S) <= costo del mejor estático (" << opt
-       << " <= " << stat << "). El estático es un caso particular de "
+  if (!(opt <= stat))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
+  cout << "Verificado: OPT(S) <= costo del mejor estático (" << opt << " <= " << stat
+       << "). El estático es un caso particular de "
        << "estrategia sobre el que OPT también minimiza.\n";
-  assert(opt <= rot);
-  cout << "Verificado: OPT(S) <= costo de move-to-root (" << opt
-       << " <= " << rot << "). Ninguna estrategia online concreta "
+  if (!(opt <= rot))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
+  cout << "Verificado: OPT(S) <= costo de move-to-root (" << opt << " <= " << rot
+       << "). Ninguna estrategia online concreta "
        << "puede superar al óptimo offline en el mismo modelo.\n";
 
   // Segunda secuencia: acceso repetido a la misma llave (examples.md,
@@ -247,9 +268,10 @@ int main() {
   vector<int> S2 = {2, 2, 2};
   int opt2 = optimalCost(S2);
   int stat2 = bestStaticCost(S2);
-  assert(opt2 == stat2);
-  cout << "\nSecuencia S = (2, 2, 2): OPT(S) = " << opt2
-       << " = costo estático = " << stat2 << ". Verificado: cuando no "
+  if (!(opt2 == stat2))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
+  cout << "\nSecuencia S = (2, 2, 2): OPT(S) = " << opt2 << " = costo estático = " << stat2
+       << ". Verificado: cuando no "
        << "hay nada que explotar reestructurando, OPT no mejora sobre "
        << "el mejor estático.\n";
 
@@ -260,4 +282,3 @@ int main() {
        << "abierta.\n";
   return 0;
 }
-

@@ -45,7 +45,7 @@ items:
     statement: >-
       Implementa `join(Node* A, Node* B)` en C++ sobre la base de
       `step-1-base.cpp` (nodo con punteros a padre/izq/der, `rotate` y
-      `splay`), siguiendo el pseudocódigo del #17. Verifica con `assert`
+      `splay`), siguiendo el pseudocódigo del #17. Verifica con `if`
       tres cosas sobre un caso concreto — por ejemplo `A` con las llaves
       {5, 10, 15, 20} y `B` con {40, 50, 60} — que el inorden del resultado
       es la concatenación del inorden de `A` con el de `B`; que la raíz del
@@ -57,15 +57,15 @@ items:
       - "El bucle del pseudocódigo es literal: `while (v->right != nullptr) v = v->right;`. No hace falta recursión ni comparar valores — el máximo de un BST es el final de la espina derecha."
       - "`splay(A, v)` toma la raíz por referencia: pásale la variable local `A`, no la raíz global. Después de esa llamada, `A == v`."
       - "El pseudocódigo no modela el puntero al padre; tu implementación sí tiene que hacer `B->parent = v` después de `v->right = B`, o el próximo splay dentro de B se romperá."
-      - "Para el assert del inorden, escribe un helper que vuelque el recorrido a un `std::vector<int>` y compara vectores. Para el conteo, resetea el contador a 0 justo antes de cada llamada a join."
+      - "Para la comprobación del inorden, escribe un helper que vuelque el recorrido a un `std::vector<int>` y compara vectores. Para el conteo, resetea el contador a 0 justo antes de cada llamada a join."
     solution: >-
       `Node* join(Node* A, Node* B) { if (A == nullptr) return B; if (B ==
       nullptr) return A; Node* v = A; while (v->right != nullptr) v =
       v->right; splay(A, v); v->right = B; B->parent = v; return v; }` —
-      exactamente `step-3-join.cpp`. Los asserts del caso concreto:
-      `assert(inorder(U) == esperado)` con `esperado` = {5,10,15,20,40,50,60},
-      `assert(U->value == 20)` (el máximo de A quedó en la raíz), y
-      `assert(splayCalls == 1)` con el contador reseteado antes de la
+      exactamente `step-3-join.cpp`. Las comprobaciones del caso concreto:
+      `if (!(inorder(U) == esperado)` con `esperado` = {5,10,15,20,40,50,60},
+      `if (!(U->value == 20)` (el máximo de A quedó en la raíz), y
+      `if (!(splayCalls == 1)` con el contador reseteado antes de la
       llamada. Los dos casos vacíos devuelven en las dos primeras líneas,
       antes de llegar a `splay`, así que `splayCalls` sigue en 0 — eso es
       lo que hace que `Eliminar` de una hoja cueste 1 y no 2. Está

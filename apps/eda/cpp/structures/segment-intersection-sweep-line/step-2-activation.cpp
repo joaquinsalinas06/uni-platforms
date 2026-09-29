@@ -6,8 +6,14 @@
 #include <algorithm>
 #include <vector>
 
-struct HSeg { int x1, x2, y; };
-struct VSeg { int x, y1, y2; };
+using namespace std;
+
+struct HSeg {
+  int x1, x2, y;
+};
+struct VSeg {
+  int x, y1, y2;
+};
 
 enum class EventKind { Activate = 0, Query = 1, Deactivate = 2 };
 
@@ -17,9 +23,8 @@ struct Event {
   int idx;
 };
 
-std::vector<Event> build_events(const std::vector<HSeg>& hsegs,
-                                 const std::vector<VSeg>& vsegs) {
-  std::vector<Event> events;
+vector<Event> build_events(const vector<HSeg>& hsegs, const vector<VSeg>& vsegs) {
+  vector<Event> events;
   for (int i = 0; i < (int)hsegs.size(); ++i) {
     events.push_back({hsegs[i].x1, EventKind::Activate, i});
     events.push_back({hsegs[i].x2, EventKind::Deactivate, i});
@@ -28,8 +33,9 @@ std::vector<Event> build_events(const std::vector<HSeg>& hsegs,
     events.push_back({vsegs[i].x, EventKind::Query, i});
   }
   std::stable_sort(events.begin(), events.end(), [](const Event& a, const Event& b) {
-    if (a.x != b.x) return a.x < b.x;
-    return static_cast<int>(a.kind) < static_cast<int>(b.kind);
+    if (a.x != b.x)
+      return a.x < b.x;
+    return (int)(a.kind) < (int)(b.kind);
   });
   return events;
 }
@@ -40,9 +46,10 @@ class Fenwick {
 
   // Activar/desactivar una posición y (segment-activation): +1 / -1 puntual.
   void update(int pos, int delta) {
-    for (++pos; pos < (int)tree_.size(); pos += pos & (-pos)) tree_[pos] += delta;
+    for (++pos; pos < (int)tree_.size(); pos += pos & (-pos))
+      tree_[pos] += delta;
   }
 
  private:
-  std::vector<int> tree_;
+  vector<int> tree_;
 };

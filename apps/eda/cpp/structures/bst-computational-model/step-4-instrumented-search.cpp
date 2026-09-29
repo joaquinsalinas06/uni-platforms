@@ -4,11 +4,12 @@
 
 #include "step-3-instrumented-rotate.cpp"
 
+using namespace std;
+
 Node* search(Node* root, int x, Cost& cost) {
-    Node* v = root;
-    while (v->value != x) {
-        v = (x < v->value) ? moverA(v, Dir::Left, cost)
-                            : moverA(v, Dir::Right, cost);
-    }
-    return v;
+  Node* v = root;
+  while (v->value != x) {
+    v = (x < v->value) ? moverA(v, Dir::Left, cost) : moverA(v, Dir::Right, cost);
+  }
+  return v;
 }

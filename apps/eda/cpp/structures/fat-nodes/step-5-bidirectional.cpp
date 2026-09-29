@@ -18,38 +18,38 @@
 // bidireccional pleno queda fuera del alcance de este mazo (ver
 // operations/bidirectional-fat-nodes.md, seccion "Casos limite").
 
-#include <vector>
 #include <utility>
+#include <vector>
 using namespace std;
 
 enum class Field { Value, Next };
 
 struct BiFatNode {
-    int id;
-    int originalValue;
-    BiFatNode* originalNext;
+  int id;
+  int originalValue;
+  BiFatNode* originalNext;
 
-    struct Entry {
-        Field field;
-        long time;
-        int intVal = 0;
-        BiFatNode* ptrVal = nullptr;
-    };
+  struct Entry {
+    Field field;
+    long time;
+    int intVal = 0;
+    BiFatNode* ptrVal = nullptr;
+  };
 
-    // Registro hacia adelante: igual que en la version unidireccional,
-    // modificaciones con tiempo >= tiempo de creacion del nodo.
-    vector<Entry> log;
+  // Registro hacia adelante: igual que en la version unidireccional,
+  // modificaciones con tiempo >= tiempo de creacion del nodo.
+  vector<Entry> log;
 
-    // Registro hacia atras: modificaciones que corresponden a versiones
-    // "anteriores" en el arbol de versiones desde la perspectiva de este
-    // nodo (diapositiva 20). Tamano tambien acotado (el profesor no da un
-    // numero distinto de 2p para este registro).
-    vector<Entry> backwardLog;
+  // Registro hacia atras: modificaciones que corresponden a versiones
+  // "anteriores" en el arbol de versiones desde la perspectiva de este
+  // nodo (diapositiva 20). Tamano tambien acotado (el profesor no da un
+  // numero distinto de 2p para este registro).
+  vector<Entry> backwardLog;
 
-    vector<pair<BiFatNode*, Field>> incoming;
+  vector<pair<BiFatNode*, Field>> incoming;
 
-    explicit BiFatNode(int id_, int value, BiFatNode* next = nullptr)
-        : id(id_), originalValue(value), originalNext(next) {}
+  explicit BiFatNode(int id_, int value, BiFatNode* next = nullptr)
+      : id(id_), originalValue(value), originalNext(next) {}
 };
 
 int P = 2;
@@ -57,18 +57,20 @@ int MAX_LOG = 2 * P;
 
 // Lectura hacia adelante: igual que read-field original.
 int readValueForward(const BiFatNode* node, long t) {
-    for (auto it = node->log.rbegin(); it != node->log.rend(); ++it) {
-        if (it->field == Field::Value && it->time <= t) return it->intVal;
-    }
-    return node->originalValue;
+  for (auto it = node->log.rbegin(); it != node->log.rend(); ++it) {
+    if (it->field == Field::Value && it->time <= t)
+      return it->intVal;
+  }
+  return node->originalValue;
 }
 
 // Lectura hacia atras: se revisa el registro de modificaciones "pasadas"
 // para versiones anteriores a la creacion del nodo -- la pieza que la
 // version unidireccional no puede resolver.
 int readValueBackward(const BiFatNode* node, long t) {
-    for (auto it = node->backwardLog.rbegin(); it != node->backwardLog.rend(); ++it) {
-        if (it->field == Field::Value && it->time >= t) return it->intVal;
-    }
-    return node->originalValue;
+  for (auto it = node->backwardLog.rbegin(); it != node->backwardLog.rend(); ++it) {
+    if (it->field == Field::Value && it->time >= t)
+      return it->intVal;
+  }
+  return node->originalValue;
 }

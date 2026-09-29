@@ -17,18 +17,19 @@
 #include <algorithm>
 #include <vector>
 
+using namespace std;
+
 struct Point {
-    double y, z;
-    int id;
+  double y, z;
+  int id;
 };
 
 struct Subdivision {
-    // puntos ordenados por y (una columna por punto, en ese orden)
-    std::vector<Point> porY;
+  // puntos ordenados por y (una columna por punto, en ese orden)
+  vector<Point> porY;
 };
 
-Subdivision construirSubdivision(std::vector<Point> puntos) {
-    std::sort(puntos.begin(), puntos.end(),
-              [](const Point& a, const Point& b) { return a.y < b.y; });
-    return Subdivision{std::move(puntos)};
+Subdivision construirSubdivision(vector<Point> puntos) {
+  sort(puntos.begin(), puntos.end(), [](const Point& a, const Point& b) { return a.y < b.y; });
+  return Subdivision{std::move(puntos)};
 }

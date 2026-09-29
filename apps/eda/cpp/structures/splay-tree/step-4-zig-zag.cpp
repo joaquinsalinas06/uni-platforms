@@ -5,7 +5,9 @@
 
 #include "step-3-zig-zig.cpp"
 
+using namespace std;
+
 void zigZag(Node*& root, Node* x) {
-    rotate(root, x);   // (x, p)
-    rotate(root, x);   // (x, a) — x ya está en la posición de p
+  rotate(root, x);  // (x, p)
+  rotate(root, x);  // (x, a) — x ya está en la posición de p
 }

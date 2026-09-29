@@ -10,9 +10,15 @@
 #include <vector>
 using namespace std;
 
-int parent(int i) { return i / 2; }
-int left(int i)   { return 2 * i; }
-int right(int i)  { return 2 * i + 1; }
+int parent(int i) {
+  return i / 2;
+}
+int left(int i) {
+  return 2 * i;
+}
+int right(int i) {
+  return 2 * i + 1;
+}
 
 // vals[0] es el centinela; los elementos reales viven en vals[1..n].
 vector<int> vals = {0};

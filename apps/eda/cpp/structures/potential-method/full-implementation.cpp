@@ -27,13 +27,14 @@
 // invariante Σĉᵢ ≥ Σcᵢ debe sostenerse en todo momento — eso es justo lo que
 // los asserts de main() verifican en cada paso, no sólo al final.
 
-#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <vector>
 
+using namespace std;
+
 class BinaryCounter {
-public:
+ public:
   explicit BinaryCounter(int num_bits) : bits_(num_bits, false) {}
 
   // Costo real de un Increment: 1 por cada bit que se voltea (los k bits en
@@ -49,7 +50,7 @@ public:
       ++i;
     }
     if (i < bits_.size()) {
-      bits_[i] = true; // enciende el primer 0 que encuentra
+      bits_[i] = true;  // enciende el primer 0 que encuentra
       ++flips;
     }
     // Si i == bits_.size(), es overflow: todos los bits estaban en 1 y
@@ -59,23 +60,26 @@ public:
 
   int potential() const {
     int ones = 0;
-    for (bool b : bits_) ones += b ? 1 : 0;
+    for (bool b : bits_)
+      ones += b ? 1 : 0;
     return ones;
   }
 
-  std::size_t capacity() const { return bits_.size(); }
+  std::size_t capacity() const {
+    return bits_.size();
+  }
 
-private:
-  std::vector<bool> bits_;
+ private:
+  vector<bool> bits_;
 };
 
 int main() {
-  const int kBits = 8; // contador de 8 bits: cuenta 0..255 antes de overflow
+  const int kBits = 8;  // contador de 8 bits: cuenta 0..255 antes de overflow
   BinaryCounter counter(kBits);
 
   long long total_real = 0;
   long long total_amortized = 0;
-  const int phi_initial = counter.potential(); // Φ(D₀) = 0
+  const int phi_initial = counter.potential();  // Φ(D₀) = 0
 
   // Caso normal: 300 increments consecutivos (incluye al menos un overflow
   // de 8 bits, 255 -> 0, que es el caso donde el costo real es máximo: los
@@ -90,7 +94,8 @@ int main() {
     // La condición de validez (Φ nunca cae bajo su valor inicial) implica
     // que Φ nunca es negativo aquí (Φ(D₀) = 0 y Φ es un conteo, así que ya
     // es ≥ 0 siempre) -- se verifica de todas formas, en cada paso.
-    assert(phi_after >= phi_initial);
+    if (!(phi_after >= phi_initial))
+      cout << "Verificacion fallida en linea " << __LINE__ << endl;
 
     // El resultado central del método: el costo amortizado de Increment es
     // O(1) -- acotado por 2, sin importar cuántos bits se apaguen en
@@ -101,7 +106,8 @@ int main() {
     // el caso límite de overflow de este contador acotado, todos los bits
     // se apagan y ninguno se enciende, así que ΔΦ es más negativo todavía y
     // ĉ queda por DEBAJO de 2 (nunca por encima: la cota sigue siendo O(1)).
-    assert(c_hat <= 2);
+    if (!(c_hat <= 2))
+      cout << "Verificacion fallida en linea " << __LINE__ << endl;
 
     total_real += c;
     total_amortized += c_hat;
@@ -109,12 +115,14 @@ int main() {
     // Invariante que debe sostenerse en TODO momento, no sólo al final: la
     // suma amortizada nunca puede subestimar la suma real acumulada. Si esto
     // fallara, el Φ elegido no cumpliría la condición de validez.
-    assert(total_amortized >= total_real);
+    if (!(total_amortized >= total_real))
+      cout << "Verificacion fallida en linea " << __LINE__ << endl;
   }
 
-  std::cout << "300 increments: costo real acumulado = " << total_real
-            << ", costo amortizado acumulado = " << total_amortized << "\n";
-  assert(total_amortized >= total_real);
+  cout << "300 increments: costo real acumulado = " << total_real
+       << ", costo amortizado acumulado = " << total_amortized << "\n";
+  if (!(total_amortized >= total_real))
+    cout << "Verificacion fallida en linea " << __LINE__ << endl;
 
   // Caso límite explícito: un contador ya lleno de 1s (el peor caso real de
   // una sola operación: cuesta kBits, no O(1)). Aquí el contador desborda
@@ -125,19 +133,26 @@ int main() {
   // borde exacto del contador acotado.
   {
     BinaryCounter full(4);
-    for (int i = 0; i < 15; ++i) full.increment_real_cost(); // 0b1111
-    assert(full.potential() == 4);
+    for (int i = 0; i < 15; ++i)
+      full.increment_real_cost();  // 0b1111
+    if (!(full.potential() == 4))
+      cout << "Verificacion fallida en linea " << __LINE__ << endl;
     int phi_before = full.potential();
-    int c = full.increment_real_cost(); // overflow: apaga 4 bits, cuesta 4
+    int c = full.increment_real_cost();  // overflow: apaga 4 bits, cuesta 4
     int phi_after = full.potential();
     int c_hat = c + (phi_after - phi_before);
-    assert(c == 4);      // costo real del peor caso individual
-    assert(c_hat == 0);  // el amortizado absorbe todo el pico y sobra
-    assert(c_hat <= 2);  // en particular, nunca por encima de la cota O(1)
-    std::cout << "overflow de 4 bits: costo real = " << c
-              << ", costo amortizado = " << c_hat << "\n";
+    if (!(c == 4))
+      cout << "Verificacion fallida en linea " << __LINE__
+           << endl;  // costo real del peor caso individual
+    if (!(c_hat == 0))
+      cout << "Verificacion fallida en linea " << __LINE__
+           << endl;  // el amortizado absorbe todo el pico y sobra
+    if (!(c_hat <= 2))
+      cout << "Verificacion fallida en linea " << __LINE__
+           << endl;  // en particular, nunca por encima de la cota O(1)
+    cout << "overflow de 4 bits: costo real = " << c << ", costo amortizado = " << c_hat << "\n";
   }
 
-  std::cout << "OK: el costo amortizado nunca subestimo el costo real.\n";
+  cout << "OK: el costo amortizado nunca subestimo el costo real.\n";
   return 0;
 }

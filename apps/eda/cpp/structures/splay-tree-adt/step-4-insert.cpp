@@ -4,18 +4,23 @@
 
 #include "step-3-join.cpp"
 
+using namespace std;
+
 void insert(Node*& root, int k) {
-    if (search(root, k)) return;  // k ya estaba en el árbol
+  if (search(root, k))
+    return;  // k ya estaba en el árbol
 
-    std::pair<Node*, Node*> parts = split(root, k);
-    Node* I = parts.first;
-    Node* D = parts.second;
+  pair<Node*, Node*> parts = split(root, k);
+  Node* I = parts.first;
+  Node* D = parts.second;
 
-    Node* x = new Node(k);
-    x->left = I;
-    if (I != nullptr) I->parent = x;
-    x->right = D;
-    if (D != nullptr) D->parent = x;
+  Node* x = new Node(k);
+  x->left = I;
+  if (I != nullptr)
+    I->parent = x;
+  x->right = D;
+  if (D != nullptr)
+    D->parent = x;
 
-    root = x;
+  root = x;
 }

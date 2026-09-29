@@ -5,47 +5,51 @@
 
 #include "step-2-instrumented-move.cpp"
 
+using namespace std;
+
 // Right Rotation(n): n sube, p baja a ser su hijo derecho.
 // Precondición: n es hijo izquierdo de su padre p.
 void rotateRight(Node* n, Node*& root, Cost& cost) {
-    Node* p = n->parent;
-    Node* B = n->right;
+  Node* p = n->parent;
+  Node* B = n->right;
 
-    n->right = p;
-    p->left = B;
-    if (B != nullptr) B->parent = p;
+  n->right = p;
+  p->left = B;
+  if (B != nullptr)
+    B->parent = p;
 
-    n->parent = p->parent;
-    if (p->parent == nullptr) {
-        root = n;
-    } else if (p->parent->left == p) {
-        p->parent->left = n;
-    } else {
-        p->parent->right = n;
-    }
-    p->parent = n;
+  n->parent = p->parent;
+  if (p->parent == nullptr) {
+    root = n;
+  } else if (p->parent->left == p) {
+    p->parent->left = n;
+  } else {
+    p->parent->right = n;
+  }
+  p->parent = n;
 
-    cost.rotations++;
+  cost.rotations++;
 }
 
 // Left Rotation(p): caso simétrico. Precondición: n es hijo derecho de p.
 void rotateLeft(Node* n, Node*& root, Cost& cost) {
-    Node* p = n->parent;
-    Node* B = n->left;
+  Node* p = n->parent;
+  Node* B = n->left;
 
-    n->left = p;
-    p->right = B;
-    if (B != nullptr) B->parent = p;
+  n->left = p;
+  p->right = B;
+  if (B != nullptr)
+    B->parent = p;
 
-    n->parent = p->parent;
-    if (p->parent == nullptr) {
-        root = n;
-    } else if (p->parent->left == p) {
-        p->parent->left = n;
-    } else {
-        p->parent->right = n;
-    }
-    p->parent = n;
+  n->parent = p->parent;
+  if (p->parent == nullptr) {
+    root = n;
+  } else if (p->parent->left == p) {
+    p->parent->left = n;
+  } else {
+    p->parent->right = n;
+  }
+  p->parent = n;
 
-    cost.rotations++;
+  cost.rotations++;
 }

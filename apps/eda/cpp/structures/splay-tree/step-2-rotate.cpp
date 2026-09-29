@@ -7,29 +7,33 @@
 
 #include "step-1-node.cpp"
 
+using namespace std;
+
 void rotate(Node*& root, Node* x) {
-    Node* p = x->parent;
-    Node* g = p->parent;
+  Node* p = x->parent;
+  Node* g = p->parent;
 
-    if (x == p->left) {
-        // Right rotation: x sube, p baja a ser hijo derecho de x.
-        p->left = x->right;
-        if (x->right != nullptr) x->right->parent = p;
-        x->right = p;
-    } else {
-        // Left rotation: caso simétrico.
-        p->right = x->left;
-        if (x->left != nullptr) x->left->parent = p;
-        x->left = p;
-    }
+  if (x == p->left) {
+    // Right rotation: x sube, p baja a ser hijo derecho de x.
+    p->left = x->right;
+    if (x->right != nullptr)
+      x->right->parent = p;
+    x->right = p;
+  } else {
+    // Left rotation: caso simétrico.
+    p->right = x->left;
+    if (x->left != nullptr)
+      x->left->parent = p;
+    x->left = p;
+  }
 
-    p->parent = x;
-    x->parent = g;
-    if (g == nullptr) {
-        root = x;
-    } else if (g->left == p) {
-        g->left = x;
-    } else {
-        g->right = x;
-    }
+  p->parent = x;
+  x->parent = g;
+  if (g == nullptr) {
+    root = x;
+  } else if (g->left == p) {
+    g->left = x;
+  } else {
+    g->right = x;
+  }
 }

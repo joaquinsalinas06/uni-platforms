@@ -13,61 +13,65 @@
 #include <iostream>
 #include <vector>
 
+using namespace std;
+
 struct Point {
-    double x;
-    double y;
+  double x;
+  double y;
 };
 
 struct Box {
-    double xl, xr;
-    double yl, yr;
+  double xl, xr;
+  double yl, yr;
 };
 
 bool in_box(const Point& p, const Box& b) {
-    return p.x >= b.xl && p.x <= b.xr &&
-           p.y >= b.yl && p.y <= b.yr;
+  return p.x >= b.xl && p.x <= b.xr && p.y >= b.yl && p.y <= b.yr;
 }
 
 // Existencia: O(n) peor caso (podria cortar en el primer hallazgo, pero
 // sigue siendo O(n) en el peor caso, cuando la caja esta vacia).
-bool existence(const std::vector<Point>& pts, const Box& b) {
-    for (const auto& p : pts) {
-        if (in_box(p, b)) return true;
-    }
-    return false;
+bool existence(const vector<Point>& pts, const Box& b) {
+  for (const auto& p : pts) {
+    if (in_box(p, b))
+      return true;
+  }
+  return false;
 }
 
 // Conteo: O(n), revisa cada punto exactamente una vez.
-int count(const std::vector<Point>& pts, const Box& b) {
-    int c = 0;
-    for (const auto& p : pts) {
-        if (in_box(p, b)) ++c;
-    }
-    return c;
+int count(const vector<Point>& pts, const Box& b) {
+  int c = 0;
+  for (const auto& p : pts) {
+    if (in_box(p, b))
+      ++c;
+  }
+  return c;
 }
 
 // Enumeracion: O(n), revisa cada punto exactamente una vez (no O(k):
 // no hay forma de saltar directo a los puntos de la respuesta sin orden).
-std::vector<Point> enumeration(const std::vector<Point>& pts, const Box& b) {
-    std::vector<Point> result;
-    for (const auto& p : pts) {
-        if (in_box(p, b)) result.push_back(p);
-    }
-    return result;
+vector<Point> enumeration(const vector<Point>& pts, const Box& b) {
+  vector<Point> result;
+  for (const auto& p : pts) {
+    if (in_box(p, b))
+      result.push_back(p);
+  }
+  return result;
 }
 
 int main() {
-    std::vector<Point> pts = {
-        {3, 10}, {4, 7}, {7, 11}, {9, 6}, {13, 0}, {15, -2}, {18, 3}, {27, 1},
-    };
-    Box b{5, 16, -3, 8};
+  vector<Point> pts = {
+      {3, 10}, {4, 7}, {7, 11}, {9, 6}, {13, 0}, {15, -2}, {18, 3}, {27, 1},
+  };
+  Box b{5, 16, -3, 8};
 
-    std::cout << "existencia: " << (existence(pts, b) ? "si" : "no") << "\n";
-    std::cout << "conteo: " << count(pts, b) << "\n";
-    std::cout << "enumeracion: ";
-    for (const auto& p : enumeration(pts, b)) {
-        std::cout << "(" << p.x << "," << p.y << ") ";
-    }
-    std::cout << "\n";
-    return 0;
+  cout << "existencia: " << (existence(pts, b) ? "si" : "no") << "\n";
+  cout << "conteo: " << count(pts, b) << "\n";
+  cout << "enumeracion: ";
+  for (const auto& p : enumeration(pts, b)) {
+    cout << "(" << p.x << "," << p.y << ") ";
+  }
+  cout << "\n";
+  return 0;
 }

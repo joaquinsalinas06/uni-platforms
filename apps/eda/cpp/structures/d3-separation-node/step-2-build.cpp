@@ -9,63 +9,67 @@
 #include <algorithm>
 #include <vector>
 
+using namespace std;
+
 struct Point {
-    int x;
-    int y;
-    int id;
+  int x;
+  int y;
+  int id;
 };
 
 struct Node {
-    int key = 0;
-    Point point{};
-    Node* left = nullptr;
-    Node* right = nullptr;
-    std::vector<Point> rightSat;
-    std::vector<Point> leftSat;
-    bool isLeaf() const { return left == nullptr && right == nullptr; }
+  int key = 0;
+  Point point{};
+  Node* left = nullptr;
+  Node* right = nullptr;
+  vector<Point> rightSat;
+  vector<Point> leftSat;
+  bool isLeaf() const {
+    return left == nullptr && right == nullptr;
+  }
 };
 
 // Recolecta todos los puntos de un subárbol.
-static void collectPoints(Node* v, std::vector<Point>& out) {
-    if (!v) return;
-    if (v->isLeaf()) {
-        out.push_back(v->point);
-        return;
-    }
-    collectPoints(v->left, out);
-    collectPoints(v->right, out);
+static void collectPoints(Node* v, vector<Point>& out) {
+  if (!v)
+    return;
+  if (v->isLeaf()) {
+    out.push_back(v->point);
+    return;
+  }
+  collectPoints(v->left, out);
+  collectPoints(v->right, out);
 }
 
 // Construye recursivamente el árbol de rango sobre y (mediana como raíz)
 // y, en cada nodo interno, sus dos satélites.
-static Node* build(std::vector<Point> pts) {
-    std::sort(pts.begin(), pts.end(),
-              [](const Point& a, const Point& b) { return a.y < b.y; });
+static Node* build(vector<Point> pts) {
+  sort(pts.begin(), pts.end(), [](const Point& a, const Point& b) { return a.y < b.y; });
 
-    if (pts.size() == 1) {
-        Node* leaf = new Node();
-        leaf->key = pts[0].y;
-        leaf->point = pts[0];
-        return leaf;
-    }
+  if (pts.size() == 1) {
+    Node* leaf = new Node();
+    leaf->key = pts[0].y;
+    leaf->point = pts[0];
+    return leaf;
+  }
 
-    size_t mid = pts.size() / 2;
-    std::vector<Point> leftPts(pts.begin(), pts.begin() + mid);
-    std::vector<Point> rightPts(pts.begin() + mid, pts.end());
+  size_t mid = pts.size() / 2;
+  vector<Point> leftPts(pts.begin(), pts.begin() + mid);
+  vector<Point> rightPts(pts.begin() + mid, pts.end());
 
-    Node* v = new Node();
-    v->key = leftPts.back().y; // mayor y del lado izquierdo: el divisor
-    v->left = build(leftPts);
-    v->right = build(rightPts);
+  Node* v = new Node();
+  v->key = leftPts.back().y;  // mayor y del lado izquierdo: el divisor
+  v->left = build(leftPts);
+  v->right = build(rightPts);
 
-    // Las dos satélites: izquierda(v) ya cumple y <= key(v), derecha(v)
-    // ya cumple y > key(v). Se guardan ordenadas por x, como haría un D2.
-    collectPoints(v->right, v->rightSat);
-    collectPoints(v->left, v->leftSat);
-    std::sort(v->rightSat.begin(), v->rightSat.end(),
-              [](const Point& a, const Point& b) { return a.x < b.x; });
-    std::sort(v->leftSat.begin(), v->leftSat.end(),
-              [](const Point& a, const Point& b) { return a.x < b.x; });
+  // Las dos satélites: izquierda(v) ya cumple y <= key(v), derecha(v)
+  // ya cumple y > key(v). Se guardan ordenadas por x, como haría un D2.
+  collectPoints(v->right, v->rightSat);
+  collectPoints(v->left, v->leftSat);
+  sort(v->rightSat.begin(), v->rightSat.end(),
+       [](const Point& a, const Point& b) { return a.x < b.x; });
+  sort(v->leftSat.begin(), v->leftSat.end(),
+       [](const Point& a, const Point& b) { return a.x < b.x; });
 
-    return v;
+  return v;
 }

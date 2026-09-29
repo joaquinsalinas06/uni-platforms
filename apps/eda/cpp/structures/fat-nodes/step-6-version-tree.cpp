@@ -11,11 +11,12 @@
 using namespace std;
 
 struct VersionTree {
-    vector<vector<int>> children; // children[v] = hijos de v (1-indexado)
+  vector<vector<int>> children;  // children[v] = hijos de v (1-indexado)
 };
 
 void eulerTour(const VersionTree& tree, int v, vector<string>& out) {
-    out.push_back("(" + to_string(v));
-    for (int c : tree.children[v]) eulerTour(tree, c, out);
-    out.push_back(")" + to_string(v));
+  out.push_back("(" + to_string(v));
+  for (int c : tree.children[v])
+    eulerTour(tree, c, out);
+  out.push_back(")" + to_string(v));
 }
