@@ -3,10 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev:eda": "pnpm --filter eda-platform dev",
-    "dev:cpd": "pnpm --filter cpd-platform dev",
-    "dev:iot": "pnpm --filter iot-platform dev",
+    "dev:eda": "pnpm --filter eda-platform dev --port 4321",
+    "dev:cpd": "pnpm --filter cpd-platform dev --port 4322",
+    "dev:iot": "pnpm --filter iot-platform dev --port 4323",
+    "dev:template": "pnpm --filter course-template dev --port 4324",
     "build": "pnpm -r run build"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@9.15.0",
+  "devDependencies": {
+    "turbo": "^2.11.5"
+  }
 }
