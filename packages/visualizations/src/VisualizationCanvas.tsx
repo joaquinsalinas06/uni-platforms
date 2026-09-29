@@ -34,6 +34,49 @@ export type { CanvasNode, CanvasEdge, CanvasGroup, CanvasText, CanvasStep };
 /** Renderiza fragmentos `$...$` de un texto plano como KaTeX real. El resto
  * del sitio usa remark-math/rehype-katex, pero `step.note` no pasa por el
  * pipeline de markdown, así que hay que invocar KaTeX a mano acá. */
+
+function IconChevronLeft({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="15 18 9 12 15 6" />
+    </svg>
+  );
+}
+
+function IconChevronRight({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
+function IconPlay({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <polygon points="6 4 20 12 6 20 6 4" />
+    </svg>
+  );
+}
+
+function IconPause({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <rect x="6" y="4" width="4" height="16" rx="1.5" />
+      <rect x="14" y="4" width="4" height="16" rx="1.5" />
+    </svg>
+  );
+}
+
+function IconRepeat({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <polyline points="3 3 3 8 8 8" />
+    </svg>
+  );
+}
+
 function renderInlineMath(text: string): string {
   return text.replace(/\$([^$]+)\$/g, (_, formula) => {
     try {
@@ -199,23 +242,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
     [last],
   );
 
-  // Arranca sola la primera vez que entra en pantalla: si no, el usuario ve un
-  // diagrama estático y nunca descubre que hay pasos.
-  useEffect(() => {
-    const el = box.current;
-    if (!el || isStatic) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setPlaying(true);
-          io.disconnect();
-        }
-      },
-      { threshold: 0.55 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  // Inicialmente en pausa (no autoplay): el usuario decide cuándo reproducir con el botón Play.
 
   useEffect(() => {
     if (!playing) return;
@@ -237,6 +264,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
     if (e.key === 'Home') { e.preventDefault(); setPlaying(false); setI(0); }
     if (e.key === 'End') { e.preventDefault(); setPlaying(false); setI(last); }
+    if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); setPlaying((p) => !p); }
   };
 
   const pos = new Map(step.nodes.map((n) => [n.id, n]));
@@ -746,54 +774,108 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
       </div>
 
       <figcaption className="border-t border-[var(--rule)]">
-        <p
+        {/* Contenedor de notas con CSS Grid: todas las notas comparten la misma celda (col-1/row-1)
+            para que el alto se fije automáticamente al paso más largo, evitando cualquier salto de altura (Layout Shift) */}
+        <div
           hidden={isStatic && !step.note}
-          className={`${isStatic ? '' : 'min-h-[3.25rem]'} px-5 py-3.5 text-[0.9375rem] leading-snug`}
+          className="grid grid-cols-1 px-5 py-3.5 text-[0.9375rem] leading-relaxed"
           aria-live="polite"
-          dangerouslySetInnerHTML={{ __html: useMemo(() => renderInlineMath(step.note ?? ''), [step.note]) }}
-        />
+        >
+          {steps.map((s, idx) => (
+            <div
+              key={idx}
+              className={`col-start-1 row-start-1 transition-opacity duration-200 ${
+                idx === i
+                  ? 'visible opacity-100'
+                  : 'invisible pointer-events-none opacity-0 select-none'
+              }`}
+              dangerouslySetInnerHTML={{
+                __html: renderInlineMath(s.note ?? ''),
+              }}
+            />
+          ))}
+        </div>
 
-        {!isStatic && <div className="flex items-center gap-1 border-t border-[var(--rule)] bg-[var(--fill)] px-3 py-2">
-          <button
-            onClick={() => go(-1)}
-            disabled={i === 0}
-            className="rounded px-2.5 py-1 text-sm transition-colors hover:bg-[var(--sunken)] disabled:opacity-25 disabled:hover:bg-transparent"
-            aria-label="Paso anterior"
-          >
-            ←
-          </button>
-          <button
-            onClick={() => (i >= last ? (setI(0), setPlaying(true)) : setPlaying((p) => !p))}
-            className="rounded px-3 py-1 text-[0.8125rem] font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent-wash)]"
-          >
-            {playing ? 'pausa' : i >= last ? 'repetir' : 'reproducir'}
-          </button>
-          <button
-            onClick={() => go(1)}
-            disabled={i === last}
-            className="rounded px-2.5 py-1 text-sm transition-colors hover:bg-[var(--sunken)] disabled:opacity-25 disabled:hover:bg-transparent"
-            aria-label="Paso siguiente"
-          >
-            →
-          </button>
+        {!isStatic && (
+          <div className="flex items-center gap-2 border-t border-[var(--rule)] bg-[var(--fill)] px-3.5 py-2">
+            {/* Botón Anterior */}
+            <button
+              onClick={() => { setPlaying(false); go(-1); }}
+              disabled={i === 0}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--sunken)] disabled:opacity-20 disabled:hover:bg-transparent"
+              aria-label="Paso anterior"
+              title="Paso anterior (←)"
+            >
+              <IconChevronLeft className="h-4 w-4" />
+            </button>
 
-          <div className="ml-3 flex items-center gap-1.5">
-            {steps.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => { setPlaying(false); setI(idx); }}
-                aria-label={`Paso ${idx + 1}`}
-                className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                  idx === i ? 'w-5 bg-[var(--accent)]' : 'w-1.5 bg-[var(--rule)] hover:bg-[var(--muted)]'
-                }`}
-              />
-            ))}
+            {/* Botón Play / Pausa / Repetir con iconos claros */}
+            <button
+              onClick={() => {
+                if (i >= last) {
+                  setI(0);
+                  setPlaying(true);
+                } else {
+                  setPlaying((p) => !p);
+                }
+              }}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 ${
+                playing
+                  ? 'bg-[var(--accent)] text-white shadow-sm ring-2 ring-[var(--accent-wash)]'
+                  : 'border border-[var(--rule)] bg-[var(--paper)] text-[var(--ink)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+              }`}
+              aria-label={playing ? 'Pausar animación' : i >= last ? 'Repetir animación' : 'Reproducir animación'}
+              title={playing ? 'Pausar (Espacio)' : i >= last ? 'Repetir desde el inicio' : 'Reproducir automáticamente'}
+            >
+              {playing ? (
+                <>
+                  <IconPause className="h-3.5 w-3.5" />
+                  <span className="text-[0.6875rem] uppercase tracking-wider font-mono">Pausa</span>
+                </>
+              ) : i >= last ? (
+                <>
+                  <IconRepeat className="h-3.5 w-3.5" />
+                  <span className="text-[0.6875rem] uppercase tracking-wider font-mono">Repetir</span>
+                </>
+              ) : (
+                <>
+                  <IconPlay className="h-3.5 w-3.5 ml-0.5" />
+                  <span className="text-[0.6875rem] uppercase tracking-wider font-mono">Play</span>
+                </>
+              )}
+            </button>
+
+            {/* Botón Siguiente */}
+            <button
+              onClick={() => { setPlaying(false); go(1); }}
+              disabled={i === last}
+              className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--sunken)] disabled:opacity-20 disabled:hover:bg-transparent"
+              aria-label="Paso siguiente"
+              title="Paso siguiente (→)"
+            >
+              <IconChevronRight className="h-4 w-4" />
+            </button>
+
+            {/* Indicadores de pasos (dots) */}
+            <div className="ml-2 flex items-center gap-1.5">
+              {steps.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => { setPlaying(false); setI(idx); }}
+                  aria-label={`Ir al paso ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
+                    idx === i ? 'w-5 bg-[var(--accent)]' : 'w-1.5 bg-[var(--rule)] hover:bg-[var(--muted)]'
+                  }`}
+                />
+              ))}
+            </div>
+
+            {/* Contador de paso */}
+            <span className="ml-auto font-mono text-[0.6875rem] tracking-widest whitespace-nowrap text-[var(--faint)] uppercase">
+              paso {i + 1}/{steps.length}
+            </span>
           </div>
-
-          <span className="ml-auto font-mono text-[0.6875rem] tracking-widest whitespace-nowrap text-[var(--faint)] uppercase">
-            paso {i + 1}/{steps.length}
-          </span>
-        </div>}
+        )}
       </figcaption>
     </figure>
   );
