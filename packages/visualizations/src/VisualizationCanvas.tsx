@@ -227,6 +227,26 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
   const arrowId = useId();
   // Pieza bajo el mouse: la escena y el panel de ecuaciones se iluminan juntos.
   const [hover, setHover] = useState<string | null>(null);
+  const [minNoteHeight, setMinNoteHeight] = useState<number>(0);
+  const noteMeasurerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      if (!noteMeasurerRef.current || !box.current) return;
+      noteMeasurerRef.current.style.width = `${box.current.clientWidth}px`;
+      const children = Array.from(noteMeasurerRef.current.children) as HTMLElement[];
+      if (children.length === 0) return;
+      const maxH = Math.max(...children.map((c) => c.offsetHeight));
+      if (maxH > 0) {
+        setMinNoteHeight(maxH);
+      }
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [steps]);
+
   const hasPanel = steps.some((s) => (s.panel?.rows.length ?? 0) > 0);
   // Un dibujo ancho no comparte fila con el panel: el panel va debajo. El
   // panel (19rem) sólo va al lado si a la figura le queda sitio para el dibujo
@@ -774,27 +794,43 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
       </div>
 
       <figcaption className="border-t border-[var(--rule)]">
-        {/* Contenedor de notas con CSS Grid: todas las notas comparten la misma celda (col-1/row-1)
-            para que el alto se fije automáticamente al paso más largo, evitando cualquier salto de altura (Layout Shift) */}
+        {/* Medidor invisible fuera de pantalla para calcular la altura máxima de las notas y evitar saltos (Layout Shift) */}
         <div
-          hidden={isStatic && !step.note}
-          className="grid grid-cols-1 px-5 py-3.5 text-[0.9375rem] leading-relaxed"
-          aria-live="polite"
+          ref={noteMeasurerRef}
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            zIndex: -1,
+            left: '-9999px',
+            top: '-9999px',
+            width: '100%',
+          }}
         >
           {steps.map((s, idx) => (
             <div
               key={idx}
-              className={`col-start-1 row-start-1 transition-opacity duration-200 ${
-                idx === i
-                  ? 'visible opacity-100'
-                  : 'invisible pointer-events-none opacity-0 select-none'
-              }`}
+              className="px-5 py-3.5 text-[0.9375rem] leading-relaxed"
               dangerouslySetInnerHTML={{
                 __html: renderInlineMath(s.note ?? ''),
               }}
             />
           ))}
         </div>
+
+        {/* Única nota visible: sólo la del paso activo 'step.note' */}
+        <div
+          hidden={isStatic && !step.note}
+          style={{
+            minHeight: minNoteHeight > 0 ? `${minNoteHeight}px` : undefined,
+          }}
+          className="px-5 py-3.5 text-[0.9375rem] leading-relaxed transition-opacity duration-200"
+          aria-live="polite"
+          dangerouslySetInnerHTML={{
+            __html: renderInlineMath(step.note ?? ''),
+          }}
+        />
 
         {!isStatic && (
           <div className="flex items-center gap-2 border-t border-[var(--rule)] bg-[var(--fill)] px-3.5 py-2">
@@ -809,7 +845,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
               <IconChevronLeft className="h-4 w-4" />
             </button>
 
-            {/* Botón Play / Pausa / Repetir con iconos claros */}
+            {/* Botón Play / Pausa / Repetir con icono SVG limpio y circular */}
             <button
               onClick={() => {
                 if (i >= last) {
@@ -819,29 +855,20 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
                   setPlaying((p) => !p);
                 }
               }}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-all duration-200 ${
+              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
                 playing
-                  ? 'bg-[var(--accent)] text-white shadow-sm ring-2 ring-[var(--accent-wash)]'
-                  : 'border border-[var(--rule)] bg-[var(--paper)] text-[var(--ink)] hover:border-[var(--accent)] hover:text-[var(--accent)]'
+                  ? 'bg-[var(--accent)] text-white hover:opacity-90'
+                  : 'text-[var(--ink)] hover:bg-[var(--sunken)]'
               }`}
-              aria-label={playing ? 'Pausar animación' : i >= last ? 'Repetir animación' : 'Reproducir animación'}
-              title={playing ? 'Pausar (Espacio)' : i >= last ? 'Repetir desde el inicio' : 'Reproducir automáticamente'}
+              aria-label={playing ? 'Pausar' : i >= last ? 'Repetir' : 'Reproducir'}
+              title={playing ? 'Pausar (Espacio)' : i >= last ? 'Repetir' : 'Reproducir (Espacio)'}
             >
               {playing ? (
-                <>
-                  <IconPause className="h-3.5 w-3.5" />
-                  <span className="text-[0.6875rem] uppercase tracking-wider font-mono">Pausa</span>
-                </>
+                <IconPause className="h-4 w-4" />
               ) : i >= last ? (
-                <>
-                  <IconRepeat className="h-3.5 w-3.5" />
-                  <span className="text-[0.6875rem] uppercase tracking-wider font-mono">Repetir</span>
-                </>
+                <IconRepeat className="h-4 w-4" />
               ) : (
-                <>
-                  <IconPlay className="h-3.5 w-3.5 ml-0.5" />
-                  <span className="text-[0.6875rem] uppercase tracking-wider font-mono">Play</span>
-                </>
+                <IconPlay className="h-4 w-4 ml-0.5" />
               )}
             </button>
 
