@@ -1,0 +1,64 @@
+---
+kind: theory
+title: "Actuadores en el laboratorio: PWM, motor y relé"
+---
+
+## Idea
+
+El laboratorio de esta semana conecta una señal de control de bajo voltaje
+(la que puede generar un Arduino) con un actuador de alta potencia (un motor
+DC o una bomba). Para lograrlo hacen falta dos ideas: **PWM**, la técnica que
+permite simular un valor analógico con una señal digital, y una **interfaz de
+potencia** (relé o driver) que separe al microcontrolador del actuador. Cada
+una se desarrolla en su propio subtema.
+
+## Conceptos
+
+Un **actuador** es un dispositivo que convierte una señal eléctrica (u otro
+tipo de señal) en movimiento físico o acción mecánica: motores, válvulas,
+relés o servomecanismos son actuadores. Dentro de los actuadores eléctricos,
+el laboratorio trabaja con:
+
+- **Motores DC**: convierten energía eléctrica en movimiento rotativo; su
+  sentido de giro depende de la polaridad aplicada.
+- **Relés**: interruptores electromecánicos controlados eléctricamente, que
+  permiten abrir o cerrar un circuito de alta potencia con una señal de baja
+  potencia.
+- **Drivers**: circuitos de interfaz de potencia que, además de aislar al
+  microcontrolador, permiten controlar sentido de giro y velocidad mediante
+  PWM.
+
+Y para regular *cuánta* potencia entrega el Arduino a esos actuadores sin
+tener una salida analógica real, se usa **PWM** (modulación por ancho de
+pulso): ver [PWM](/topics/lab-actuators/subtopics/pwm).
+
+La forma de conectar todo esto — Arduino, relé (con sus terminales NO/COM/NC)
+o driver, fuente de alimentación del actuador y el motor o bomba — se
+desarrolla wire por wire en
+[Motor, relé y driver](/topics/lab-actuators/subtopics/motor-rele-driver).
+
+Como información adicional del laboratorio, el **sensor de humedad de suelo
+YL-69** (con su módulo comparador YL-38/LM393) no es un actuador, pero
+aparece en la misma sesión: mide humedad de suelo mediante la resistencia
+que ésta genera entre sus terminales, y entrega una salida analógica (`A0`,
+tensión proporcional a la humedad) y una digital (`D0`, umbral ajustable con
+un potenciómetro).
+
+## Método paso a paso
+
+No aplica a este panorama: el procedimiento de cálculo (PWM) y el de
+conexión (motor/relé/driver) se detallan en cada subtema.
+
+## Ejemplo resuelto
+
+Ver los ejemplos resueltos en cada subtema.
+
+## Errores típicos
+
+Ver "Errores típicos" en cada subtema.
+
+## Pregunta tipo examen
+
+Ver las preguntas tipo examen en [PWM](/topics/lab-actuators/subtopics/pwm)
+y en
+[Motor, relé y driver](/topics/lab-actuators/subtopics/motor-rele-driver).

@@ -1,0 +1,25 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+// Todo el contenido (semanas como ##, enunciado + ExerciseBlock con la solución
+// paso a paso como hijos) vive en content/practica.mdx.
+const entry = await getEntry('practica', 'practica');
+const Content = entry ? (await render(entry)).Content : null;
+---
+
+<Base title="Ejemplos y ejercicios" crumb="práctica">
+  <header class="stagger mb-12">
+    <p class="tag">práctica</p>
+    <h1 class="mt-2 max-w-[24ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      Ejemplos y ejercicios de laboratorio
+    </h1>
+    <p class="mt-5 max-w-[62ch] text-[1.0625rem] leading-relaxed text-[var(--muted)]">
+      Los ejercicios propuestos de las slides, del más fácil al más difícil. Primero las
+      pistas, después la solución.
+    </p>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  {Content ? <div class="prose max-w-none"><Content /></div> : <p class="tag">todavía no hay ejercicios cargados en content/practica.mdx</p>}
+</Base>

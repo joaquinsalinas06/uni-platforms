@@ -1,0 +1,51 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import { getEntry } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import CodeEditor from '../components/CodeEditor';
+import ExerciseBlock from '../components/ExerciseBlock';
+
+const entry = await getEntry('practica', 'practica');
+const items = entry?.data.items ?? [];
+
+const CPP_DIR = path.resolve(process.cwd(), 'cpp/practica');
+function readCpp(file: string) {
+  const full = path.join(CPP_DIR, file);
+  if (!fs.existsSync(full)) throw new Error(`falta cpp/practica/${file}`);
+  return [{ label: file.replace(/\.cpp$/, ''), code: fs.readFileSync(full, 'utf8') }];
+}
+---
+
+<Base title="Ejemplos y ejercicios" crumb="práctica">
+  <header class="stagger mb-12">
+    <p class="tag">práctica</p>
+    <h1 class="mt-2 max-w-[24ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      Ejemplos y ejercicios de laboratorio
+    </h1>
+    <p class="mt-5 max-w-[62ch] text-[1.0625rem] leading-relaxed text-[var(--muted)]">
+      El código de laboratorio del profesor y los ejercicios de participación en un solo
+      lugar — sin repetir este patrón en cada tema.
+    </p>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  {
+    items.length === 0 && (
+      <p class="tag">todavía no hay ejercicios cargados en content/practica.md</p>
+    )
+  }
+
+  <div class="space-y-10">
+    {
+      items
+        .sort((a, b) => a.level - b.level)
+        .map((item) => (
+          <div>
+            <ExerciseBlock client:visible exercise={item} />
+            {item.cppFile && <CodeEditor client:only="react" steps={readCpp(item.cppFile)} />}
+          </div>
+        ))
+    }
+  </div>
+</Base>

@@ -1,0 +1,317 @@
+---
+kind: operation
+title: Localización del nodo de separación
+order: 2
+cppSteps:
+  - step-1-node.cpp
+  - step-2-build.cpp
+  - step-3-locate-separation-node.cpp
+  - full-implementation.cpp
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Árbol de rango sobre y = {1,3,4,6,8,9,11}: raíz 6, hijos 3 y 9,
+        nietos 1/4 y 8/11. Consulta [a2,b2] = [1,4]. La pregunta que este
+        diagrama responde paso a paso: ¿dónde dejan de coincidir el camino
+        de a2=1 y el camino de b2=4 al bajar desde la raíz? *(derivado para
+        este diagrama; distinto del ejemplo de examples.md)*.
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6 }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        En la raíz (6) se comprueba la condición de bifurcación:
+        ¿b2=4 ≤ 6? Sí. Como b2 ya cae a la izquierda de la clave, y a2=1 es
+        aún menor que b2, a2 también cae a la izquierda — ambos extremos
+        siguen yendo juntos, así que todavía no hay separación.
+      highlight: [r6]
+      nodes:
+        - { id: r6, value: 6, parent: null, state: active }
+        - { id: n3, value: 3, parent: r6 }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        Los dos caminos bajan juntos hacia el hijo izquierdo de la raíz (el
+        nodo 3): todavía es un único camino compartido, no dos. Esto es lo
+        que el profesor llama "bajar juntos" — mientras a2 y b2 caigan del
+        mismo lado, el descenso es indistinguible de una búsqueda de un solo
+        valor.
+      highlight: [n3]
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6, state: active }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        En el nodo 3 se repite la misma comprobación: ¿b2=4 ≤ 3? No. ¿a2=1 >
+        3? Tampoco. Ninguna de las dos condiciones de "seguir juntos por un
+        solo lado" se cumple — es la primera vez que a2 y b2 quedan en lados
+        distintos de la clave del nodo actual (a2 iría a la izquierda,
+        b2 iría a la derecha). Por definición del algoritmo, aquí es donde
+        los caminos se separan.
+      highlight: [n3]
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6, state: active, tag: v_split }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        v_split = 3. Es el nodo MÁS PROFUNDO donde ambos caminos todavía
+        coincidían — no cualquier nodo donde a2 y b2 difieran, sino el
+        último antes de que difieran. Esa profundidad máxima es justo la
+        propiedad que hace útiles a las satélites construidas en build: si
+        se hubiera parado un nivel antes (en la raíz), derecha(raíz) y
+        izquierda(raíz) todavía mezclarían puntos que no cumplen las cotas
+        automáticamente.
+      highlight: [n3]
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        Por qué derecha(v_split) ya está resuelto por el lado de a2: el
+        camino de a2=1 en v_split=3 se fue a la izquierda (no a la derecha),
+        así que todo punto en derecha(v_split) — aquí, el nodo 4 — tiene
+        y > clave(v_split)=3 ≥ a2=1. La cota y ≥ a2 queda gratis, sin
+        comparar nada más.
+      highlight: [n4]
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3, state: active }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        Simétricamente, por qué izquierda(v_split) ya está resuelto por el
+        lado de b2: el camino de b2=4 en v_split=3 se fue a la derecha (no a
+        la izquierda), así que todo punto en izquierda(v_split) — aquí, el
+        nodo 1 — tiene y ≤ clave(v_split)=3 < b2=4. La cota y ≤ b2 también
+        queda gratis. Por eso alcanza con una D₂ normal a la derecha y una
+        D₂′ invertida a la izquierda: cada una sólo resuelve la mitad de la
+        condición que le falta.
+      highlight: [n1]
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
+        - { id: n9, value: 9, parent: r6 }
+        - { id: n1, value: 1, parent: n3, state: active }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9 }
+        - { id: n11, value: 11, parent: n9 }
+    - note: >-
+        A partir de v_split ya no hace falta seguir bajando (#45): el resto
+        del árbol (nodos 9, 8, 11) ni siquiera se visita para esta consulta
+        — todo lo que aportaba a2 y b2 al descenso quedó resuelto en un
+        único nodo, no en O(lg n) nodos canónicos como habría pasado con una
+        descomposición canónica en y.
+      caption: "v_split = 3 — de aquí en adelante, dos consultas satélite, no más descenso"
+      nodes:
+        - { id: r6, value: 6, parent: null }
+        - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
+        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n1, value: 1, parent: n3 }
+        - { id: n4, value: 4, parent: n3 }
+        - { id: n8, value: 8, parent: n9, state: muted }
+        - { id: n11, value: 11, parent: n9, state: muted }
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Dada una consulta $[a_2,b_2]$ sobre y, encuentra el nodo $v_{\text{split}}$ del árbol
+de rango donde los caminos de búsqueda de $a_2$ y de $b_2$ dejan de coincidir.
+Es la operación central de $D_3$: todo lo demás (la construcción de las
+satélites, la consulta de dos disparos) existe en función de este nodo.
+
+## Intuición
+
+Mientras se busca $a_2$ y $b_2$ bajando desde la raíz, mientras ambos caigan
+del mismo lado de la clave del nodo actual, van juntos por el mismo camino.
+En el momento en que uno va a la izquierda y el otro a la derecha, se
+separan — y no vuelven a juntarse nunca (por la propiedad de orden del BST).
+Textual del profesor: "Al buscar $a_2$ y $b_2$ en el árbol de y, sus caminos
+coinciden hasta un nodo $v_{\text{split}}$ donde se separan — exactamente como en un
+árbol de rangos 1D clásico." (#40).
+
+La propiedad que hace útil a $v_{\text{split}}$ (y que el C++ de esta operación
+verifica explícitamente, no sólo la afirma): es el nodo **más profundo**
+donde ambos caminos todavía coinciden. Por construcción del árbol, eso
+implica:
+
+- todo punto en `derecha(v_split)` tiene $y > \text{clave}(v_{\text{split}}) \ge a_2$ (porque el
+  camino de $a_2$ no se fue a la derecha en $v_{\text{split}}$) — $y \ge a_2$ ya
+  garantizado;
+- todo punto en `izquierda(v_split)` tiene $y \le \text{clave}(v_{\text{split}}) < b_2$ (porque
+  el camino de $b_2$ no se fue a la izquierda en $v_{\text{split}}$) — $y \le b_2$ ya
+  garantizado.
+
+Por eso alcanza con las satélites $D_2$ (normal, a la derecha) y $D_2'$ (invertida,
+a la izquierda) construidas en `build`: cada una sólo tiene que resolver la
+mitad de la condición que le falta. Ver el diagrama paso a paso de la
+separación más arriba.
+
+### Por qué tiene que ser ese nivel exacto
+
+*(derivado de la propiedad anterior; no aparece en las diapositivas)* La
+garantía de arriba depende de una palabra que es fácil pasar por alto:
+$v_{\text{split}}$ es el nodo **más profundo** donde los caminos coinciden — no
+cualquier nodo donde ya se sepa que van a divergir, ni cualquier nodo por
+donde el descenso siga pasando después. Un nivel antes o un nivel después,
+la garantía deja de sostenerse, por razones distintas:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: "Recapitulando el resultado correcto: v_split=3 es el nodo más profundo donde a2=1 y b2=4 coincidían. Sus dos mitades: derecha(v_split)={4}, garantizada y≥a2=1 sin comparar nada más; izquierda(v_split)={1}, garantizada y≤b2=4 sin comparar nada más. El resto del árbol (raíz, subárbol de 9) ni se visita. Ahora: ¿qué pasa si se elige un nodo distinto como split?",
+      highlight: ["n3", "n4", "n1"],
+      nodes: [
+        { id: "r6", value: 6, parent: null, state: "muted" },
+        { id: "n3", value: 3, parent: "r6", state: "marked", tag: "v_split" },
+        { id: "n9", value: 9, parent: "r6", state: "muted" },
+        { id: "n1", value: 1, parent: "n3", state: "answer" },
+        { id: "n4", value: 4, parent: "n3", state: "answer" },
+        { id: "n8", value: 8, parent: "n9", state: "muted" },
+        { id: "n11", value: 11, parent: "n9", state: "muted" },
+      ],
+    },
+    {
+      note: "Hipótesis A — un nivel ANTES: ¿y si el descenso se hubiera detenido en la raíz (6)? En la raíz, b2=4 ≤ 6, así que a2 y b2 TODAVÍA van juntos hacia la izquierda — no hay divergencia ahí. La raíz no cumple la condición que define a v_split (que a2 y b2 caigan en lados distintos); tratarla como si la cumpliera es el error que se examina.",
+      highlight: ["r6"],
+      nodes: [
+        { id: "r6", value: 6, parent: null, state: "active" },
+        { id: "n3", value: 3, parent: "r6" },
+        { id: "n9", value: 9, parent: "r6" },
+        { id: "n1", value: 1, parent: "n3" },
+        { id: "n4", value: 4, parent: "n3" },
+        { id: "n8", value: 8, parent: "n9" },
+        { id: "n11", value: 11, parent: "n9" },
+      ],
+    },
+    {
+      note: "Consecuencia: tomar la raíz como split obligaría a aceptar derecha(raíz) = subárbol de 9 = {9, 8, 11} como mitad ya resuelta. Pero la garantía de v_split protege un solo extremo a la vez, y aquí falla el que hacía falta: y≤b2=4 NO se cumple para ninguno de los tres (9, 8 y 11 son todos mayores que b2=4). La mitad \"gratis\" mezclaría puntos que la consulta [1,4] no pidió — justo lo que v_split existe para evitar.",
+      highlight: ["n9", "n8", "n11"],
+      nodes: [
+        { id: "r6", value: 6, parent: null, state: "marked" },
+        { id: "n3", value: 3, parent: "r6" },
+        { id: "n9", value: 9, parent: "r6", state: "active" },
+        { id: "n1", value: 1, parent: "n3" },
+        { id: "n4", value: 4, parent: "n3" },
+        { id: "n8", value: 8, parent: "n9", state: "active" },
+        { id: "n11", value: 11, parent: "n9", state: "active" },
+      ],
+    },
+    {
+      note: "Hipótesis B — un nivel DESPUÉS: ¿y si el descenso hubiera seguido un paso más allá de v_split, hasta su hijo derecho (el nodo 4), tratando a ESE como el split? Seguir bajando obliga a comprometerse con un solo lado — aquí, el derecho. La mitad izquierda de v_split, {1}, no se pierde por violar ninguna cota: se pierde porque, a partir de ahí, nadie vuelve a descender hacia ese lado.",
+      highlight: ["n4", "n1"],
+      nodes: [
+        { id: "r6", value: 6, parent: null, state: "muted" },
+        { id: "n3", value: 3, parent: "r6", state: "marked", tag: "v_split" },
+        { id: "n9", value: 9, parent: "r6", state: "muted" },
+        { id: "n1", value: 1, parent: "n3", state: "muted" },
+        { id: "n4", value: 4, parent: "n3", state: "active" },
+        { id: "n8", value: 8, parent: "n9", state: "muted" },
+        { id: "n11", value: 11, parent: "n9", state: "muted" },
+      ],
+    },
+    {
+      note: "Por eso v_split tiene que ser exactamente el nodo más profundo de coincidencia: ni un nivel antes (mezcla puntos que no cumplen la otra cota, como 8/9/11 aquí) ni un nivel después (descarta un subárbol canónico entero, como {1} aquí). Es la única profundidad donde las dos mitades quedan completas y cada una resuelta por una sola cota, sin comparar de más ni perder nada.",
+      caption: "v_split = 3 es el único nivel correcto: ni antes, ni después",
+      highlight: ["n3"],
+      nodes: [
+        { id: "r6", value: 6, parent: null, state: "muted" },
+        { id: "n3", value: 3, parent: "r6", state: "marked", tag: "v_split" },
+        { id: "n9", value: 9, parent: "r6", state: "muted" },
+        { id: "n1", value: 1, parent: "n3", state: "answer" },
+        { id: "n4", value: 4, parent: "n3", state: "answer" },
+        { id: "n8", value: 8, parent: "n9", state: "muted" },
+        { id: "n11", value: 11, parent: "n9", state: "muted" },
+      ],
+    },
+  ],
+}} />
+
+Pie del profesor (#45): "Los caminos de $a_2$ y $b_2$ se separan en $v_{\text{split}}$; de ahí
+en adelante ya no hace falta seguir bajando."
+
+## Algoritmo
+
+No hay pseudocódigo propio del profesor para esta sección; el algoritmo es el
+descenso estándar de nodo de separación de un árbol de rango 1D, que el
+profesor invoca por nombre ("exactamente como en un árbol de rangos 1D
+clásico", #40) sin repetirlo — se referencia
+[range-tree](/structures/range-tree), no se reexplica.
+
+1. Empezar en la raíz.
+2. Mientras $a_2$ y $b_2$ sigan cayendo del mismo lado de la clave del nodo
+   actual (ambos $\le$ o ambos $>$), bajar juntos por ese lado.
+3. En cuanto uno cae a la izquierda y el otro a la derecha (o uno coincide
+   exactamente con la clave), el nodo actual es $v_{\text{split}}$.
+
+## Pseudocódigo
+
+```
+función localizarNodoDeSeparacion(raiz, a2, b2):
+    v = raiz
+    mientras v no sea hoja:
+        si b2 <= clave(v):
+            v = hijoIzquierdo(v)
+        si_no si a2 > clave(v):
+            v = hijoDerecho(v)
+        si_no:
+            devolver v          # a2 y b2 caen en lados distintos: se separan aquí
+    devolver v
+```
+
+## C++
+
+Ver `step-3-locate-separation-node.cpp` en el editor de arriba. El
+`full-implementation.cpp` agrega un assert que recalcula ambos caminos
+(raíz→a2 y raíz→b2) de forma independiente y comprueba que `v_split` es
+exactamente el nodo más profundo donde coinciden — no basta con que el
+descenso "diga" que encontró el nodo, hay que confirmar la propiedad.
+
+## Complejidad temporal
+
+El profesor no da una cota propia aquí, pero la iguala explícitamente a un
+caso ya conocido: "exactamente como en un árbol de rangos 1D clásico" (#40),
+que es el mismo descenso de altura acotada que ya usa
+[range-tree](/structures/range-tree) para `predecessor-successor`. No se
+inventa un número nuevo; se referencia el ya establecido.
+
+## Complejidad espacial
+
+No aplica más allá del árbol ya construido en `build`: la localización no
+reserva estructuras nuevas, sólo desciende.
+
+## Casos límite
+
+- `a2 == b2`: ambos caminos son literalmente el mismo, así que $v_{\text{split}}$ es
+  el nodo donde se encontraría esa clave (o la hoja donde terminaría la
+  búsqueda). El profesor no discute este caso; es la lectura directa del
+  algoritmo.
+- $v_{\text{split}}$ es una hoja: mencionado como implícito y no discutido por el
+  profesor (el material no dice qué pasa "si v_split es una hoja, o si $a_2$ y
+  $b_2$ caen del mismo lado"). En la implementación, una hoja no tiene
+  satélites propias (ver [Casos límite de Construcción](/structures/d3-separation-node/operations/build)),
+  así que la consulta sobre ese nodo debe tratarse como caso base.

@@ -1,0 +1,19 @@
+id: fourier-dft
+title: Transformada de Fourier y DFT
+type: method
+unit: s4
+prerequisites: [signals-domains]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Transformada Discreta de Fourier (DFT)
+    tex: "X[k] = \\sum_{n=0}^{N-1} x[n]\\, e^{-i 2\\pi k n / N}"
+    reasoning: "No aparece escrita en las slides (que solo muestran el código np.fft.fft(x)), pero es la definición estándar que ese código implementa: descompone las N muestras de x[n] en N coeficientes de frecuencia X[k]."
+    source: "Sem4_IoTT-SignalRepr#36 (Nota de apoyo)"
+  - name: Frecuencia angular y frecuencia en Hz
+    tex: "\\omega = 2\\pi f \\quad\\Longleftrightarrow\\quad f = \\dfrac{\\omega}{2\\pi}"
+    reasoning: "Relación necesaria para pasar del eje de frecuencia angular (rad/s), en el que suelen escribirse las señales tipo sin(ωt), al eje en Hz que a veces se pide en el espectro."
+    source: "Sem4_IoTT-SignalRepr#36 (Nota de apoyo)"

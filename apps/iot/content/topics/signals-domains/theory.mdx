@@ -1,0 +1,225 @@
+---
+kind: theory
+title: Señales y dominios
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un sistema IoT vive de traducir el mundo físico a números. Antes de hablar de ADC o de
+Fourier hay que ponerse de acuerdo en el vocabulario: qué tipo de energía trae la
+información, cómo se le llama "señal" a esa variación, y en qué **dominio** (tiempo o
+frecuencia, continuo o discreto) conviene mirarla según lo que se quiera hacer con ella.
+
+## Conceptos
+
+### Formas de energía que cargan información
+
+Cualquier magnitud física puede transportar información si fluctúa de forma medible.
+La tabla clásica de formas de energía y sus variables asociadas:
+
+| Energía | Variable (fluctuación específica) | Mediciones comunes |
+|---|---|---|
+| Química | Actividad y/o concentración química | Iones en sangre, O₂, CO₂, pH, concentraciones hormonales |
+| Mecánica | Posición; fuerza, torque o presión | Movimiento muscular, presión cardiovascular, sonidos de válvulas |
+| Eléctrica | Voltaje (energía potencial de portadores de carga); corriente (flujo de portadores de carga) | EEG, ECG, EMG, EOG, ERG, EGG, GSR |
+| Térmica | Temperatura | Temperatura corporal, termografía |
+
+### Transductores de entrada
+
+Un **transductor** convierte energía de una forma a otra. En un sistema de medición,
+todos los transductores usados son *transductores de entrada*: convierten energía no
+eléctrica en una señal electrónica. El objetivo no es transformar energía por sí misma,
+sino **transferir información** (por eso importa más la fidelidad de la conversión que
+la eficiencia energética).
+
+> **Nota de apoyo** (no está en el material): en la semana 3 (tema *sensores*) ya se vio
+> la clasificación general de sensores; aquí el foco es solo el rol del transductor como
+> "traductor de energía a señal eléctrica" previo a representar esa señal.
+
+### Señales 1D y 2D
+
+- **Señales unidimensionales**: la dimensión suele ser el tiempo. Ej.: voltaje de un
+  sensor de temperatura a lo largo del tiempo.
+- **Señales bidimensionales**: las dimensiones suelen ser espaciales. Ej.: una imagen.
+
+### Los cuatro dominios de representación
+
+Una señal se representa en el dominio **continuo o discreto**, y en el dominio
+**temporal o frecuencial**. Son dos ejes independientes, así que hay cuatro combinaciones
+posibles (continuo-tiempo, discreto-tiempo, continuo-frecuencia, discreto-frecuencia).
+
+- Continuo = analógico. Discreto = digital.
+- **Transformaciones entre tiempo y frecuencia son exactas**: no hay pérdida de
+  información en la transferencia (se puede ir y volver sin perder nada).
+- **Transformaciones entre continuo y discreto son aproximadas, y solo se hacen en el
+  dominio del tiempo** (es decir: se muestrea la señal en el tiempo; no existe un paso
+  directo de "continuo en frecuencia" a "discreto en frecuencia" sin pasar antes por el
+  muestreo temporal).
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Dominio continuo vs discreto (mismo x(t))',
+  steps: [{
+    note: 'x(t) = f(t) es una función continua del tiempo (izquierda). Al muestrear cada Ts segundos se obtiene x[n], una serie discreta de números (derecha): son aproximaciones, no la misma señal.',
+    series: [
+      { id: 'xt', label: 'x(t) continua', kind: 'line', fn: 'sin(1.3*x)+0.4*sin(4*x)', domain: [0, 10] },
+      { id: 'xn', label: 'x[n] muestreada', kind: 'samples', fn: 'sin(1.3*x)+0.4*sin(4*x)', domain: [0, 10], samples: 0.5, tone: 'current' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'x' },
+  }],
+}} />
+
+### Señal analógica: codificación por amplitud
+
+Una señal analógica codifica información como fluctuaciones en el tiempo: $x(t) = f(t)$,
+donde $f(t)$ puede ser tan compleja como se necesite (para una señal electrónica, el
+valor de voltaje o corriente en cada instante). Muchas veces esa codificación es una
+relación **lineal** entre la variable física y el voltaje.
+
+### Codificación lineal: ejemplo del sensor de temperatura
+
+Un transductor de temperatura entrega esta tabla de conversión:
+
+| Temperatura (°C) | Voltaje (V) |
+|---|---|
+| −10 | 0.0 |
+| 0 | 5.0 |
+| +10 | 10.0 |
+| +20 | 15.0 |
+
+La relación es lineal: $T = 2V - 10$ (ver deducción en *Método paso a paso*).
+
+### Espectros de magnitud y fase
+
+En el dominio de la frecuencia, una señal se representa con **dos** funciones de
+frecuencia: la magnitud y la fase. Por eso se habla de **espectro de magnitud** y
+**espectro de fase**. Ambas representaciones (tiempo y frecuencia) contienen la misma
+información, solo que no la "guardan" de la misma forma — una puede ser más útil que
+la otra según qué se busque (p. ej. un EEG muestra picos de magnitud en 1–3 Hz, 7–8 Hz
+y 16–18 Hz que un neurólogo reconoce de inmediato, algo que no salta a la vista en el
+dominio del tiempo).
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Espectro de magnitud (ilustrativo, tipo EEG)',
+  steps: [{
+    note: 'El eje de frecuencia muestra picos donde hay energía concentrada; el resto es casi plano. Esto es lo que se lee fácil en frecuencia y es difícil de ver directamente en x(t).',
+    series: [{ id: 'mag', label: '|X(f)|', kind: 'stem', points: [[1, 0.4], [2, 0.6], [3, 0.3], [7, 1], [8, 0.8], [16, 0.35], [17, 0.4], [18, 0.2]] }],
+    x: { label: 'f (Hz)', min: 0, max: 20 },
+    y: { label: '|X(f)|' },
+  }],
+}} />
+
+## Método paso a paso
+
+Para derivar una ecuación de codificación lineal a partir de una tabla temperatura↔voltaje:
+
+1. Toma dos pares $(T_1, V_1)$ y $(T_2, V_2)$ de la tabla.
+2. Calcula la pendiente de $V$ respecto a $T$: $m = \dfrac{V_2 - V_1}{T_2 - T_1}$.
+3. Escribe $V = mT + b$ y despeja $b$ con un punto conocido.
+4. Invierte la ecuación para obtener $T$ en función de $V$ (o dilo directamente si el
+   enunciado pide la codificación en el otro sentido): $T = \dfrac{V - b}{m}$.
+
+## Ejemplo resuelto
+
+Con la tabla de la sección anterior: tomando $(T_1,V_1) = (-10, 0)$ y $(T_2,V_2) = (0, 5)$:
+
+$$m = \frac{5 - 0}{0 - (-10)} = \frac{5}{10} = 0.5 \ \text{V/°C}$$
+
+Con $T=0 \Rightarrow V=5$: $5 = 0.5(0) + b \Rightarrow b = 5$. Entonces $V = 0.5T + 5$.
+Verificación con $T=20$: $V = 0.5(20)+5=15$ ✓ (coincide con la tabla).
+
+Despejando $T$: $T = \dfrac{V-5}{0.5} = 2V - 10$, que es exactamente la ecuación de
+codificación que da el material.
+
+## Errores típicos
+
+- Pensar que "digitalizar" (continuo → discreto) es una operación exacta como pasar de
+  tiempo a frecuencia: **no lo es**, es solo una aproximación.
+- Olvidar que el par continuo/discreto se resuelve **solo en el dominio del tiempo**
+  (muestreo); la conversión a frecuencia se hace después, sobre la señal ya discreta.
+- Confundir la señal en sí con su representación: $x(t)$ y $X(f)$ describen la misma
+  señal, no son "dos señales distintas".
+- Invertir mal la recta de codificación (despejar $T$ en función de $V$ cuando el dato
+  tabulado ya daba $V$ en función de $T$, sin resolver el sistema correctamente).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un sensor de humedad relativa entrega esta tabla: $0\\,\\%\\text{RH} \\to 0.5$ V; $50\\,\\%\\text{RH} \\to 2.5$ V; $100\\,\\%\\text{RH} \\to 4.5$ V. (a) Encuentra la ecuación lineal que da el voltaje en función de la humedad. (b) ¿Qué humedad relativa corresponde a una lectura de $3.5$ V? (derivado, no está en las slides)",
+  hints: [
+    "Calcula la pendiente con dos puntos de la tabla y verifica con el tercero.",
+    "Recuerda invertir la ecuación $V(H)$ para obtener $H(V)$ antes de evaluar en $3.5$ V.",
+  ],
+}}>
+
+**1. Pendiente.** Con los extremos de la tabla ($H=0\to V=0.5$, $H=100\to V=4.5$):
+
+$$m = \frac{V_2 - V_1}{H_2 - H_1} = \frac{4.5 - 0.5}{100 - 0} = 0.04\ \text{V por \%RH}$$
+
+**2. Ordenada al origen.** Con $H=0 \Rightarrow V=0.5$:
+
+$$V = mH + b \;\Rightarrow\; 0.5 = 0.04(0) + b \;\Rightarrow\; b = 0.5$$
+
+$$V(H) = \boxed{0.04H + 0.5}\ \text{[V]}$$
+
+Verificación con el punto medio: $V(50) = 0.04(50)+0.5 = 2.5$ V ✓ (coincide con la tabla).
+
+**3. Invertir para $H(V)$:**
+
+$$H = \frac{V - 0.5}{0.04} = 25V - 12.5$$
+
+**4. Evaluar en $V = 3.5$ V:**
+
+$$H = 25(3.5) - 12.5 = 87.5 - 12.5 = \boxed{75\,\%\text{RH}}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Codificación V(H) y lectura de 3.5 V',
+  steps: [{
+    note: 'La recta V(H) = 0.04H + 0.5; la lectura de 3.5 V corta la recta en H = 75 %RH.',
+    series: [{ id: 'V', label: 'V(H)', kind: 'line', fn: '0.04*x+0.5', domain: [0, 100] }],
+    x: { label: 'H (%RH)', min: 0, max: 100 },
+    y: { label: 'V (V)' },
+    hlines: [{ at: 3.5, label: 'V = 3.5 V', state: 'answer' }],
+    vlines: [{ at: 75, label: 'H = 75 %RH', state: 'answer' }],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explica por qué se dice que las transformaciones tiempo↔frecuencia son 'exactas' pero las transformaciones continuo↔discreto son 'aproximadas'. ¿En qué dominio ocurre siempre esta última conversión?",
+  hints: [
+    "Piensa en si se puede reconstruir la señal original sin pérdida en cada caso.",
+    "El muestreo (continuo→discreto) siempre pasa por una variable en particular.",
+  ],
+}}>
+
+**1. Tiempo ↔ frecuencia es exacta.** La transformada de Fourier (o su versión discreta,
+la DFT) es **invertible**: aplicando la transformada inversa se recupera exactamente la
+misma señal, sin perder ni un dato. Es un cambio de representación, no una aproximación.
+
+**2. Continuo ↔ discreto es aproximada.** El muestreo solo conserva los valores de
+$x(t)$ en los instantes $t = nT_s$; entre esos instantes la función original se pierde.
+No existe una operación inversa que reconstruya $x(t)$ con exactitud a partir de
+$x[n]$ (a lo sumo se puede *interpolar* una aproximación).
+
+**3. Dominio en el que ocurre.** Esa conversión continuo↔discreto sucede
+$\boxed{\text{siempre en el dominio del tiempo}}$: se muestrea $x(t)$ para obtener
+$x[n]$; no hay un paso directo de "espectro continuo" a "espectro discreto" sin pasar
+antes por el muestreo temporal.
+
+**Comprobación:** por eso el orden correcto de trabajo es siempre muestrear primero
+(tiempo continuo → tiempo discreto) y recién después transformar (tiempo discreto →
+frecuencia discreta, vía DFT); invertir ese orden no tiene una operación equivalente.
+
+</ExerciseBlock>

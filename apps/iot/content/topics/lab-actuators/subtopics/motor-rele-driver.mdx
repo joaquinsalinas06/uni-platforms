@@ -1,0 +1,361 @@
+---
+kind: subtopic
+order: 2
+title: "Motor, relé y driver"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un Arduino puede *decidir* cuándo encender un motor o una bomba, pero no
+puede *alimentarlo*: sus pines no entregan ni la corriente ni el voltaje que
+un motor necesita. Se necesita un elemento intermedio — un **relé** o un
+**driver** — que reciba una señal de control de bajo voltaje y conmute (o
+regule) la potencia real que llega al actuador.
+
+## Conceptos
+
+### Motor DC
+
+Un **motor DC** (corriente continua) es un actuador electromecánico que
+convierte energía eléctrica en movimiento rotativo. El **sentido de giro**
+depende de la **dirección de la corriente** en sus terminales: al invertir
+la polaridad, el campo magnético se invierte y el rotor gira en sentido
+opuesto.
+
+### Relé
+
+Un **relé** es un interruptor electromecánico controlado eléctricamente que
+permite abrir o cerrar circuitos de **alta potencia** mediante una señal de
+**baja potencia**. Funciona con una **bobina**: al energizarla, genera un
+campo magnético que mueve mecánicamente un contacto. Un relé típico expone
+tres terminales de conmutación:
+
+- **COM** (común): el punto que se conecta a la fuente que se quiere
+  conmutar.
+- **NO** (normalmente abierto / *NA*): desconectado de COM en reposo; se
+  conecta a COM cuando la bobina se energiza.
+- **NC** (normalmente cerrado): conectado a COM en reposo; se desconecta de
+  COM cuando la bobina se energiza.
+
+Tal como lo resume el material: *"al meter corriente por la bobina los
+contactos abiertos se cierran y los cerrados se abren"*. Es decir, energizar
+la bobina **invierte** el estado de ambos contactos a la vez.
+
+### Driver
+
+Un **driver** hace falta para trabajar con un motor DC desde Arduino porque
+el microcontrolador **no puede suministrar directamente** la corriente y el
+voltaje que el motor requiere. Además, el driver:
+
+- actúa como **interfaz de potencia**, protegiendo al Arduino de sobrecargas;
+- permite controlar **sentido de giro y velocidad** mediante señales de
+  control de bajo voltaje (típicamente PWM — ver [PWM](/topics/lab-actuators/subtopics/pwm)).
+
+La diferencia frente a un relé simple: el relé solo **abre/cierra** (un
+interruptor todo-o-nada); un driver de motor (p. ej. un puente H como el
+L298N) además permite invertir la polaridad de forma controlada y modular la
+velocidad con PWM.
+
+**Especificaciones relevantes del laboratorio** (motor DC de 6 V y Arduino
+MEGA), que explican por qué no se puede prescindir del driver/relé:
+
+| Parámetro | Motor DC (a 6 V) | Arduino MEGA |
+|---|---|---|
+| Corriente típica | 130–150 mA | máx. 40 mA por pin I/O |
+| Corriente total | — | máx. 200 mA por Vcc/GND |
+| Voltaje máximo de operación | 6 V (según la tabla del motor) | 6.0 V (máximo absoluto) |
+
+Un pin digital de Arduino MEGA entrega **como máximo 40 mA**; el motor puede
+pedir hasta **150 mA**: intentar alimentarlo directo desde el pin lo dañaría
+(y probablemente al Arduino también). De ahí la necesidad del relé o el
+driver como interfaz de potencia.
+
+### Diagrama de bloques: relé vs. driver
+
+<Visualization viz={{
+  type: 'flow',
+  title: 'Relé (on/off) vs. driver (PWM, velocidad y sentido)',
+  static: true,
+  steps: [{
+    note: 'Con un relé, el Arduino solo decide encendido/apagado. Con un driver, además puede variar velocidad y sentido de giro mediante PWM.',
+    shapes: [
+      { id: 'mcu1', kind: 'block', label: 'MCU (Arduino)' },
+      { id: 'rel', kind: 'block', label: 'RELAY' },
+      { id: 'm1', kind: 'block', label: 'M (motor)' },
+      { id: 'mcu2', kind: 'block', label: 'MCU (Arduino)' },
+      { id: 'drv', kind: 'block', label: 'Driver' },
+      { id: 'm2', kind: 'block', label: 'M (motor)' },
+    ],
+    arrows: [
+      { from: 'mcu1', to: 'rel', label: 'señal digital (40 mA)', kind: 'data' },
+      { from: 'rel', to: 'm1', label: 'alimentación', kind: 'power' },
+      { from: 'mcu2', to: 'drv', label: 'señal PWM', kind: 'data' },
+      { from: 'drv', to: 'm2', label: 'alimentación (velocidad + sentido)', kind: 'power' },
+    ],
+  }],
+}} />
+
+## Método paso a paso
+
+Para dibujar la conexión Arduino + módulo de 2 relés + fuente de protoboard +
+motor/bomba (como pide el parcial):
+
+1. **Alimentar el módulo de relés**: VCC del módulo al 5 V del Arduino, GND
+   del módulo al GND del Arduino (referencia común obligatoria).
+2. **Conectar el pin de control**: un pin digital del Arduino (`OUTPUT`) al
+   pin `IN` del canal de relé que se va a usar. Ese pin es el que decide,
+   con HIGH/LOW, si el relé conmuta.
+3. **Conectar la parte de potencia, aislada del Arduino**: la fuente que
+   alimenta al motor/bomba (protoboard) va a **COM**; el motor se conecta
+   entre **NO** y el otro polo de esa misma fuente. Así, la corriente del
+   motor **nunca** pasa por el Arduino: solo pasa por el contacto del relé.
+4. **NC queda libre** en este uso (no se conecta), salvo que se quiera que el
+   motor arranque encendido en reposo y se apague al energizar el relé (ver
+   "Comportamiento alternativo con NC" más abajo).
+5. Verificar que las corrientes en juego no excedan los límites: el pin de
+   control solo mueve la bobina del relé (unos pocos mA), nunca la corriente
+   del motor.
+
+## Ejemplo resuelto
+
+**Parcial EP-2026I / EP-2025II, pregunta de actuadores (a)**: dibuje un
+diagrama de conexión para encender la bomba de agua (o motor DC) con los
+elementos: fuente para protoboard, módulo de 2 relés (NO/COM/NC) y motor
+DC/bomba. Indique en el control del relé las señales o pines que conectaría
+del Arduino.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Arduino + relé (NO/COM/NC) + fuente de protoboard + motor/bomba',
+  steps: [
+    {
+      note: 'Diagrama completo: el Arduino solo controla la bobina del relé (lado izquierdo); la fuente de protoboard y el motor forman un circuito aparte, que el relé cierra o abre (lado derecho).',
+      circuit: {
+        variant: 'wiring',
+        nodes: [
+          { id: 'ard_vcc', x: 0, y: 0, label: 'Arduino 5V' },
+          { id: 'ard_pin', x: 0, y: 5, label: 'Arduino pin digital (ej. D8)' },
+          { id: 'ard_gnd', x: 0, y: 10, label: 'Arduino GND' },
+          { id: 'rel_vcc', x: 6, y: 0, label: 'Módulo relé VCC' },
+          { id: 'rel_in', x: 6, y: 5, label: 'Módulo relé IN' },
+          { id: 'rel_gnd', x: 6, y: 10, label: 'Módulo relé GND' },
+          { id: 'rel_com', x: 6, y: 16, label: 'Relé COM' },
+          { id: 'rel_no', x: 11, y: 16, label: 'Relé NO' },
+          { id: 'rel_nc', x: 11, y: 21, label: 'Relé NC (sin usar)' },
+          { id: 'mot_p', x: 16, y: 16, label: 'Motor/bomba +' },
+          { id: 'mot_m', x: 16, y: 21, label: 'Motor/bomba −' },
+          { id: 'sup_p', x: 11, y: 26, label: 'Fuente protoboard +' },
+          { id: 'sup_m', x: 6, y: 26, label: 'Fuente protoboard −' },
+        ],
+        parts: [
+          { id: 'w_vcc', kind: 'wire', from: 'ard_vcc', to: 'rel_vcc', label: '5V' },
+          { id: 'w_gnd', kind: 'wire', from: 'ard_gnd', to: 'rel_gnd', label: 'GND común' },
+          { id: 'w_ctrl', kind: 'wire', from: 'ard_pin', to: 'rel_in', label: 'señal control' },
+          { id: 'K1_coil', kind: 'relay', from: 'rel_in', to: 'rel_gnd', label: 'K1 (bobina)' },
+          { id: 'K1_sw', kind: 'switch', from: 'rel_com', to: 'rel_no', label: 'K1 (contacto NA)' },
+          { id: 'w_com', kind: 'wire', from: 'sup_p', to: 'rel_com', label: 'COM ← V+ fuente' },
+          { id: 'w_no_motor', kind: 'wire', from: 'rel_no', to: 'mot_p', label: 'NO → motor +' },
+          { id: 'w_motor_sup', kind: 'wire', from: 'mot_m', to: 'sup_m', label: 'motor − → V− fuente' },
+          { id: 'M1', kind: 'motor', from: 'mot_p', to: 'mot_m', label: 'M (motor/bomba)' },
+          { id: 'Vs', kind: 'vsource', from: 'sup_m', to: 'sup_p', value: 5, label: 'Fuente protoboard' },
+        ],
+      },
+    },
+    {
+      note: 'Lado de CONTROL (aislado, baja potencia): el Arduino alimenta el módulo (VCC/GND) y decide con su pin digital cuándo energizar la bobina K1. Por aquí solo circula la corriente de la bobina, nunca la del motor.',
+      circuit: {
+        variant: 'wiring',
+        nodes: [
+          { id: 'ard_vcc', x: 0, y: 0, label: 'Arduino 5V' },
+          { id: 'ard_pin', x: 0, y: 5, label: 'Arduino pin digital (ej. D8)' },
+          { id: 'ard_gnd', x: 0, y: 10, label: 'Arduino GND' },
+          { id: 'rel_vcc', x: 6, y: 0, label: 'Módulo relé VCC' },
+          { id: 'rel_in', x: 6, y: 5, label: 'Módulo relé IN' },
+          { id: 'rel_gnd', x: 6, y: 10, label: 'Módulo relé GND' },
+          { id: 'rel_com', x: 6, y: 16, label: 'Relé COM' },
+          { id: 'rel_no', x: 11, y: 16, label: 'Relé NO' },
+          { id: 'rel_nc', x: 11, y: 21, label: 'Relé NC (sin usar)' },
+          { id: 'mot_p', x: 16, y: 16, label: 'Motor/bomba +' },
+          { id: 'mot_m', x: 16, y: 21, label: 'Motor/bomba −' },
+          { id: 'sup_p', x: 11, y: 26, label: 'Fuente protoboard +' },
+          { id: 'sup_m', x: 6, y: 26, label: 'Fuente protoboard −' },
+        ],
+        parts: [
+          { id: 'w_vcc', kind: 'wire', from: 'ard_vcc', to: 'rel_vcc', label: '5V', state: 'active' },
+          { id: 'w_gnd', kind: 'wire', from: 'ard_gnd', to: 'rel_gnd', label: 'GND común', state: 'active' },
+          { id: 'w_ctrl', kind: 'wire', from: 'ard_pin', to: 'rel_in', label: 'señal control', state: 'active' },
+          { id: 'K1_coil', kind: 'relay', from: 'rel_in', to: 'rel_gnd', label: 'K1 (bobina)', state: 'active' },
+          { id: 'K1_sw', kind: 'switch', from: 'rel_com', to: 'rel_no', label: 'K1 (contacto NA)' },
+          { id: 'w_com', kind: 'wire', from: 'sup_p', to: 'rel_com', label: 'COM ← V+ fuente' },
+          { id: 'w_no_motor', kind: 'wire', from: 'rel_no', to: 'mot_p', label: 'NO → motor +' },
+          { id: 'w_motor_sup', kind: 'wire', from: 'mot_m', to: 'sup_m', label: 'motor − → V− fuente' },
+          { id: 'M1', kind: 'motor', from: 'mot_p', to: 'mot_m', label: 'M (motor/bomba)' },
+          { id: 'Vs', kind: 'vsource', from: 'sup_m', to: 'sup_p', value: 5, label: 'Fuente protoboard' },
+        ],
+      },
+    },
+    {
+      note: 'Lado de POTENCIA (aislado del Arduino): la fuente de protoboard alimenta COM; cuando K1 conmuta (bobina energizada), COM se conecta a NO y la corriente del motor circula por ahí. El Arduino nunca toca esta parte del circuito.',
+      circuit: {
+        variant: 'wiring',
+        nodes: [
+          { id: 'ard_vcc', x: 0, y: 0, label: 'Arduino 5V' },
+          { id: 'ard_pin', x: 0, y: 5, label: 'Arduino pin digital (ej. D8)' },
+          { id: 'ard_gnd', x: 0, y: 10, label: 'Arduino GND' },
+          { id: 'rel_vcc', x: 6, y: 0, label: 'Módulo relé VCC' },
+          { id: 'rel_in', x: 6, y: 5, label: 'Módulo relé IN' },
+          { id: 'rel_gnd', x: 6, y: 10, label: 'Módulo relé GND' },
+          { id: 'rel_com', x: 6, y: 16, label: 'Relé COM' },
+          { id: 'rel_no', x: 11, y: 16, label: 'Relé NO' },
+          { id: 'rel_nc', x: 11, y: 21, label: 'Relé NC (sin usar)' },
+          { id: 'mot_p', x: 16, y: 16, label: 'Motor/bomba +' },
+          { id: 'mot_m', x: 16, y: 21, label: 'Motor/bomba −' },
+          { id: 'sup_p', x: 11, y: 26, label: 'Fuente protoboard +' },
+          { id: 'sup_m', x: 6, y: 26, label: 'Fuente protoboard −' },
+        ],
+        parts: [
+          { id: 'w_vcc', kind: 'wire', from: 'ard_vcc', to: 'rel_vcc', label: '5V' },
+          { id: 'w_gnd', kind: 'wire', from: 'ard_gnd', to: 'rel_gnd', label: 'GND común' },
+          { id: 'w_ctrl', kind: 'wire', from: 'ard_pin', to: 'rel_in', label: 'señal control' },
+          { id: 'K1_coil', kind: 'relay', from: 'rel_in', to: 'rel_gnd', label: 'K1 (bobina)' },
+          { id: 'K1_sw', kind: 'switch', from: 'rel_com', to: 'rel_no', label: 'K1 (contacto NA)', state: 'active' },
+          { id: 'w_com', kind: 'wire', from: 'sup_p', to: 'rel_com', label: 'COM ← V+ fuente', state: 'active' },
+          { id: 'w_no_motor', kind: 'wire', from: 'rel_no', to: 'mot_p', label: 'NO → motor +', state: 'active' },
+          { id: 'w_motor_sup', kind: 'wire', from: 'mot_m', to: 'sup_m', label: 'motor − → V− fuente', state: 'active' },
+          { id: 'M1', kind: 'motor', from: 'mot_p', to: 'mot_m', label: 'M (motor/bomba)', state: 'active' },
+          { id: 'Vs', kind: 'vsource', from: 'sup_m', to: 'sup_p', value: 5, label: 'Fuente protoboard', state: 'active' },
+        ],
+      },
+    },
+  ],
+}} />
+
+**Lectura del diagrama, cable por cable**:
+
+- `Arduino 5V → Módulo relé VCC`: alimenta la electrónica del módulo (el
+  optoacoplador y la bobina), **no** al motor.
+- `Arduino GND → Módulo relé GND`: referencia común entre Arduino y módulo,
+  imprescindible para que la señal de control tenga sentido.
+- `Arduino pin digital → Módulo relé IN`: el `HIGH`/`LOW` que decide si K1
+  conmuta. Es la única señal de "decisión" que sale del Arduino.
+- `Fuente protoboard (+) → COM`: la energía que va a mover al motor entra
+  por COM, **no** pasa por el Arduino.
+- `NO → Motor +`: cuando K1 conmuta, COM se conecta a NO y la corriente
+  fluye hacia el motor.
+- `Motor − → Fuente protoboard (−)`: cierra la malla de potencia.
+- `NC`: sin usar en esta conexión (ver más abajo el comportamiento
+  alternativo).
+
+## Comportamiento alternativo con NC
+
+Si el motor/bomba se conecta a **NC** en vez de a **NO** (fuente en COM,
+motor en NC), el comportamiento se invierte: el motor queda **encendido en
+reposo** (bobina sin energizar, NC cerrado con COM) y se **apaga** al activar
+el relé (bobina energizada abre NC). Es útil cuando se quiere un
+comportamiento "normalmente activo" con apagado remoto, o como mecanismo de
+seguridad (si se corta la alimentación del Arduino, el actuador conectado a
+NC queda en el estado que se considere seguro).
+
+## Errores típicos
+
+- Conectar el motor directo a un pin digital del Arduino: el pin entrega
+  máximo 40 mA y el motor puede pedir 130–150 mA — se daña el pin (y
+  probablemente el motor no gira).
+- Olvidar el GND común entre Arduino y el módulo de relé: sin referencia
+  común, la señal de control no conmuta de forma confiable.
+- Confundir NO con NC: NO está abierto en reposo (el motor arranca *apagado*
+  y se enciende al energizar la bobina); NC está cerrado en reposo (el motor
+  arranca *encendido* y se apaga al energizar la bobina).
+- Alimentar el módulo de relés con la misma fuente de potencia del motor:
+  conviene separar la alimentación lógica (Arduino/módulo) de la alimentación
+  de potencia (motor), que es justo lo que logra el relé al aislar ambos
+  circuitos.
+- Usar un relé simple cuando se necesita variar velocidad o invertir sentido
+  de giro con PWM: para eso hace falta un driver (puente H), no un relé
+  on/off.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Se conecta una bomba de agua a la salida NC de un relé de un solo canal (en vez de NO), con la fuente de protoboard en COM. ¿En qué estado arranca la bomba apenas se energiza el circuito (Arduino sin haber enviado ninguna señal al relé), y qué pasa cuando el Arduino pone el pin de control en HIGH?",
+  hints: [
+    "NC está conectado a COM en reposo (bobina sin energizar).",
+    "Energizar la bobina invierte el estado de NO y NC a la vez.",
+  ],
+}}>
+
+**1. Conexión** (bomba en NC en vez de NO):
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Bomba conectada a NC (comportamiento invertido)',
+  steps: [{
+    note: 'En reposo (bobina sin energizar), NC está cerrado con COM: la fuente ya está conectada a la bomba. Al energizar la bobina (pin en HIGH), NC se abre y la bomba se apaga.',
+    circuit: {
+      variant: 'wiring',
+      nodes: [
+        { id: 'ard_pin', x: 0, y: 5, label: 'Arduino pin digital' },
+        { id: 'ard_gnd', x: 0, y: 10, label: 'Arduino GND' },
+        { id: 'rel_in', x: 6, y: 5, label: 'Módulo relé IN' },
+        { id: 'rel_gnd', x: 6, y: 10, label: 'Módulo relé GND' },
+        { id: 'rel_com', x: 6, y: 16, label: 'Relé COM' },
+        { id: 'rel_nc', x: 11, y: 21, label: 'Relé NC' },
+        { id: 'mot_p', x: 16, y: 21, label: 'Bomba +' },
+        { id: 'mot_m', x: 16, y: 26, label: 'Bomba −' },
+        { id: 'sup_p', x: 11, y: 16, label: 'Fuente protoboard +' },
+        { id: 'sup_m', x: 6, y: 26, label: 'Fuente protoboard −' },
+      ],
+      parts: [
+        { id: 'w_ctrl', kind: 'wire', from: 'ard_pin', to: 'rel_in', label: 'señal control' },
+        { id: 'w_gnd', kind: 'wire', from: 'ard_gnd', to: 'rel_gnd', label: 'GND común' },
+        { id: 'K1_coil', kind: 'relay', from: 'rel_in', to: 'rel_gnd', label: 'K1 (bobina)' },
+        { id: 'K1_sw', kind: 'switch', from: 'rel_com', to: 'rel_nc', label: 'K1 (contacto NC)', state: 'answer' },
+        { id: 'w_com', kind: 'wire', from: 'sup_p', to: 'rel_com', label: 'COM ← V+ fuente' },
+        { id: 'w_nc_motor', kind: 'wire', from: 'rel_nc', to: 'mot_p', label: 'NC → bomba +' },
+        { id: 'w_motor_sup', kind: 'wire', from: 'mot_m', to: 'sup_m', label: 'bomba − → V− fuente' },
+        { id: 'M1', kind: 'motor', from: 'mot_p', to: 'mot_m', label: 'M (bomba)' },
+      ],
+    },
+  }],
+}} />
+
+**2. Pin por pin:**
+
+| Conexión | Estado en reposo (bobina sin energizar) | Al poner el pin en HIGH |
+|---|---|---|
+| Fuente protoboard + → COM | Conectada | Conectada (COM no cambia) |
+| COM ↔ NC | Cerrado (contacto normalmente cerrado) | Se abre (bobina energizada) |
+| NC → Bomba + | Circuito cerrado → bomba alimentada | Circuito abierto → bomba sin alimentación |
+
+$$\boxed{\text{Reposo: bomba ENCENDIDA} \qquad \text{HIGH: bomba se APAGA}}$$
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un estudiante quiere controlar la velocidad de un motor DC de $6$ V ($130$–$150$ mA) desde un Arduino MEGA, usando solo un relé de un canal. Explique por qué esto no funciona y qué debería usar en su lugar.",
+  hints: [
+    "Un relé solo tiene dos estados (contacto abierto o cerrado): no hay ningún punto intermedio.",
+    "¿Qué componente del laboratorio sí acepta una señal PWM y con ella modula el voltaje entregado al motor?",
+  ],
+}}>
+
+**1. Qué puede hacer cada componente:**
+
+| | Relé | Driver (puente H) |
+|---|---|---|
+| Estados posibles | 2 (abierto / cerrado) | Continuo (PWM) |
+| Controla velocidad | ❌ todo-o-nada | ✅ modula $V_{avg}$ con $D$ |
+| Controla sentido de giro | ❌ | ✅ invierte polaridad |
+| Entrada de control | HIGH/LOW | Señal PWM |
+
+**2. Conclusión.** El relé es un interruptor: no tiene ningún estado "a medias" que dé una velocidad intermedia.
+
+$$\boxed{\text{Un relé no sirve para variar velocidad — se necesita un driver (puente H) con entrada PWM}}$$
+
+</ExerciseBlock>

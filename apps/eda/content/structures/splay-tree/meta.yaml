@@ -1,0 +1,67 @@
+id: splay-tree
+title: Splay tree
+type: structure
+week: week-05
+
+prerequisites: [bst-computational-model, dynamic-optimality, balanced-bst]
+buildsOn: [bst-computational-model]
+usedBy: [splay-tree-adt, access-lemma]
+
+complexity:
+  rotate:
+    worst: O(1)
+    reasoning: >-
+      Costo real: es la primitiva única de la que se arman los tres casos —
+      "rotar un nodo v con su padre, para que v suba un nivel" (Sem6 #8) — y
+      es exactamente el rotate ya postulado como O(1) en
+      /structures/bst-computational-model: una cantidad constante de
+      reasignaciones de punteros, sin importar el tamaño de los subárboles
+      que cuelgan.
+    source: Sem6_Dynamic_Optimality_II.pdf#8
+  zig:
+    worst: O(1)
+    reasoning: >-
+      Costo real, no amortizado: es una única rotación (#64), y rotate ya
+      está postulado como O(1) en /structures/bst-computational-model — una
+      cantidad constante de reasignaciones de punteros sin importar el
+      tamaño de los subárboles A, B, C.
+    source: Sem5_Dynamic_Optimality_I.pdf#64
+  zig-zig:
+    worst: O(1)
+    reasoning: >-
+      Costo real, no amortizado: son dos rotaciones (#65), cada una O(1) por
+      el mismo argumento que zig. El costo real de un zig-zig aislado es
+      constante; lo amortizado es una propiedad de la secuencia completa de
+      pasos de un splay, no de este paso solo.
+    source: Sem5_Dynamic_Optimality_I.pdf#65
+  zig-zag:
+    worst: O(1)
+    reasoning: >-
+      Costo real, no amortizado: también dos rotaciones (#66), O(1) cada
+      una. Igual que zig-zig, la constante es el costo real de este paso;
+      no es donde vive la cota amortizada de la operación completa.
+    source: Sem5_Dynamic_Optimality_I.pdf#66
+  splay:
+    worst: O(log n) amortizado
+    reasoning: >-
+      "Complejidad amortizada de O(log n) por búsqueda" (#63). Splay aplica
+      una secuencia de zig/zig-zig/zig-zag (cada uno O(1) real) hasta que x
+      llega a la raíz; el costo real total de una llamada individual puede
+      ser O(n) (un camino largo), pero promediado sobre cualquier secuencia
+      de operaciones el costo por llamada es O(log n) — la palabra
+      "amortizado" está en la definición misma de Splay, no es un adorno.
+    source: Sem5_Dynamic_Optimality_I.pdf#63
+  search:
+    worst: O(log n) amortizado
+    reasoning: >-
+      "Cada operación toma O(log n) (amortizado)" (#68). Buscar en un splay
+      tree es Buscar del modelo BST (costo real = profundidad de x, hasta
+      O(n) en el peor caso real) seguido de Splay(x); el profesor da la cota
+      sólo para el promedio sobre una secuencia, nunca para una búsqueda
+      aislada.
+    source: Sem5_Dynamic_Optimality_I.pdf#68
+
+professorAnalysisStyle: amortized
+hasVisualization: true
+visualizationType: tree
+placeholder: false

@@ -1,0 +1,253 @@
+---
+kind: theory
+title: "Modelos de transmisión: cliente-servidor y pub/sub"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Elegida la tecnología de radio (tema anterior), falta decidir **cómo conversan** los
+dispositivos: ¿cada "thing" le pide datos a un servidor cuando los necesita (cliente-servidor),
+o publica lo que mide y deja que quien esté interesado se suscriba (publicar/suscribir)? Son
+dos modelos de transmisión distintos, con distinta forma de escalar cuando el sistema crece
+de unos pocos sensores a miles.
+
+## Conceptos
+
+### Cliente-servidor
+
+Estructura de aplicación distribuida que reparte el trabajo entre servidores y clientes: el
+**cliente inicia la comunicación**, el servidor responde. En la web esto se implementa con
+**HTTP** y sus métodos (`GET`, `POST`, `PUT`, `DELETE`), que combinados con otras convenciones
+forman un **servicio RESTful (REST API)**.
+
+| Método | Uso típico en IoT |
+|---|---|
+| `GET` | Leer el valor actual de un sensor |
+| `POST` | Crear un nuevo recurso (registrar un dispositivo, enviar una lectura nueva) |
+| `PUT` | Actualizar un recurso existente (cambiar el estado de un actuador) |
+| `DELETE` | Eliminar un recurso (dar de baja un dispositivo) |
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'REST sobre HTTP: un cliente habla con un servidor',
+  steps: [{
+    note: 'El cliente siempre inicia; el servidor solo responde a lo que le piden.',
+    actors: [{ id: 'c', label: 'Cliente (app)' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /sensores/1' },
+      { from: 's', to: 'c', label: '200 OK', flags: 'temp = 24 °C' },
+      { from: 'c', to: 's', label: 'POST /actuadores/rele' },
+      { from: 's', to: 'c', label: '201 Created' },
+      { from: 'c', to: 's', label: 'PUT /actuadores/rele/1', flags: 'estado = ON' },
+      { from: 's', to: 'c', label: '200 OK' },
+      { from: 'c', to: 's', label: 'DELETE /actuadores/rele/1' },
+      { from: 's', to: 'c', label: '204 No Content' },
+    ],
+  }],
+}} />
+
+**Pros**: concentra el procesamiento en el servidor; los clientes solo hablan con uno o varios
+servidores de confianza (modelo simple de entender y asegurar).
+
+**Cons**: la heterogeneidad de los "things" y la escalabilidad en IoT generan sobrecarga — el
+servidor debe mantener muchas conexiones simultáneas. **Escenario de escalamiento**: ¿qué pasa
+con este paradigma cuando crecen los sensores, actuadores y datos?
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'El problema de escalar cliente-servidor',
+  steps: [{
+    note: 'Con pocos clientes el servidor responde sin problema. Al crecer a miles de sensores, todos abriendo conexión directa al mismo servidor, este se vuelve un cuello de botella: más conexiones simultáneas, más carga, más latencia.',
+    processes: [
+      { id: 'srv', label: 'Servidor', state: 'marked' },
+      { id: 's1', label: 'sensor 1' }, { id: 's2', label: 'sensor 2' }, { id: 's3', label: 'sensor 3' },
+      { id: 's4', label: 'sensor …' }, { id: 's5', label: 'sensor N' },
+    ],
+    dataFlow: [
+      { from: 's1', to: 'srv' }, { from: 's2', to: 'srv' }, { from: 's3', to: 'srv' },
+      { from: 's4', to: 'srv' }, { from: 's5', to: 'srv' },
+    ],
+  }],
+}} />
+
+### Publicar/suscribir (pub/sub)
+
+Modelo de mensajería donde los editores (**publishers**) no programan mensajes hacia clientes
+específicos: **categorizan los mensajes publicados en clases (topics)**, sin que el
+suscriptor tenga que pedir nada primero. Un **evento** ocurre cuando el publisher postea un
+mensaje y los subscribers quedan notificados del contenido nuevo — el publisher usa un canal
+de comunicación y el mensaje se copia a cada suscriptor.
+
+En un proyecto IoT:
+- **Broker**: puede ser una función del gateway local o estar en la nube. Recibe información
+  de los clientes y la redirige o procesa.
+- **Publisher**: se conecta al broker para publicar datos (ej. un sensor).
+- **Subscriber**: dispositivos, aplicaciones o servicios que necesitan los datos; se conectan
+  al broker para que les avisen de contenido nuevo.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Pub/sub: un sensor de humedad y dos suscriptores',
+  steps: [{
+    note: 'Los suscriptores se suscriben al topic "humedad" una sola vez; después reciben cada publicación sin volver a pedirla.',
+    actors: [
+      { id: 'sen', label: 'Sensor (publisher)' },
+      { id: 'b', label: 'Broker (gateway/nube)' },
+      { id: 'a1', label: 'Analítica local' },
+      { id: 'a2', label: 'Analítica en la nube' },
+    ],
+    msgs: [
+      { from: 'a1', to: 'b', label: 'SUBSCRIBE', flags: 'topic: humedad' },
+      { from: 'a2', to: 'b', label: 'SUBSCRIBE', flags: 'topic: humedad' },
+      { from: 'sen', to: 'b', label: 'PUBLISH', flags: 'topic: humedad, valor: 32 %' },
+      { from: 'b', to: 'a1', label: 'evento', flags: 'humedad = 32 %' },
+      { from: 'b', to: 'a2', label: 'evento', flags: 'humedad = 32 %' },
+    ],
+  }],
+}} />
+
+El broker puede vivir en distintos lugares de la arquitectura IoT:
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'Pub/sub con broker en la nube',
+  steps: [{
+    note: 'El sensor publica una sola vez al broker; el broker se encarga de copiar el mensaje a todos los suscriptores interesados en ese topic — el publisher nunca necesita saber quiénes son.',
+    processes: [
+      { id: 'sen', label: 'Sensor (publisher)' },
+      { id: 'brk', label: 'MQTT Broker', state: 'active' },
+      { id: 'app', label: 'App móvil (subscriber)' },
+      { id: 'lap', label: 'Dashboard (subscriber)' },
+    ],
+    dataFlow: [
+      { from: 'sen', to: 'brk', label: 'publish' },
+      { from: 'brk', to: 'app', label: 'subscribe/notifica' },
+      { from: 'brk', to: 'lap', label: 'subscribe/notifica' },
+    ],
+  }],
+}} />
+
+### Alternativas al cliente-servidor puro
+
+Frente al problema de escalar cliente-servidor, en IoT se usan tres alternativas (no
+excluyentes entre sí):
+
+- **Publicar/suscribir (ej. MQTT)**: los dispositivos no dependen directamente de un servidor
+  fijo; mejor escalabilidad porque el broker desacopla a quién publica de quién consume.
+- **Computación en el borde (Edge/Fog)**: se procesan los datos cerca del dispositivo,
+  reduciendo la carga que llega a la nube.
+- **Modelos híbridos o P2P**: evitan un único punto de falla, combinando procesamiento local
+  con la nube según haga falta.
+
+## Método paso a paso
+
+**Cómo elegir el modelo de transmisión para un subsistema IoT**:
+
+1. **¿Quién necesita iniciar la conversación?** Si el cliente pide datos puntuales bajo
+   demanda (ej. una app que consulta el estado de un sensor cuando el usuario abre la
+   pantalla) → cliente-servidor / REST. Si son muchos dispositivos que generan datos todo el
+   tiempo y varios interesados en consumirlos → pub/sub.
+2. **¿Cuántos consumidores va a tener el mismo dato?** Uno o pocos, conocidos de antemano →
+   cliente-servidor directo. Varios, que pueden cambiar con el tiempo (se agregan
+   dashboards, alertas, analítica) → pub/sub, así el publisher no cambia cuando cambian los
+   suscriptores.
+3. **¿Cómo va a escalar?** Si el número de dispositivos va a crecer mucho, evita que todos
+   abran conexión directa a un único servidor: usa un broker (pub/sub) o procesa parte de los
+   datos en el borde (edge/fog) antes de que lleguen a la nube.
+4. **¿Dónde vive el broker/servidor?** Si la latencia importa y hay conectividad local
+   confiable, ponlo en el gateway; si no hay restricción de latencia y se quiere centralizar
+   el análisis, ponlo en la nube.
+
+## Ejemplo resuelto
+
+Un invernadero tiene 200 sensores de humedad publicando cada 30 segundos, y tres consumidores:
+el panel de control local, una app móvil y un servicio de analítica en la nube.
+
+- **Con cliente-servidor puro**: cada uno de los 200 sensores tendría que saber la dirección
+  de cada consumidor y abrir una conexión con cada uno — 200 × 3 = 600 conexiones a mantener,
+  y si se agrega un cuarto consumidor hay que reprogramar los 200 sensores.
+- **Con pub/sub**: cada sensor publica una sola vez al topic `invernadero/humedad/<id>` en el
+  broker del gateway. Los tres consumidores se suscriben a ese topic. Si mañana se agrega un
+  cuarto consumidor, solo se suscribe al broker — ningún sensor cambia. El broker en el
+  gateway también permite que el panel de control local reciba el dato sin depender de que
+  haya Internet en ese momento (edge).
+
+## Errores típicos
+
+- Confundir "REST" con "HTTP": REST es un estilo arquitectónico que se construye combinando
+  métodos HTTP con convenciones (recursos, URIs, códigos de estado); HTTP es el protocolo de
+  transporte que lo hace posible.
+- Pensar que pub/sub elimina el problema de escalar: el broker sigue siendo un punto que hay
+  que dimensionar (aunque desacopla publishers de subscribers, no los hace infinitos).
+- Meter el broker en la nube "por defecto" cuando el proyecto necesita baja latencia local:
+  si el control tiene que ser rápido y no puede depender de Internet, el broker debe vivir en
+  el gateway.
+- Olvidar que en cliente-servidor **el cliente siempre inicia**: un servidor no puede "avisar"
+  a un cliente si este no abre la conexión (por eso pub/sub resuelve mejor el caso de
+  notificaciones espontáneas).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un sistema de $500$ sensores de temperatura en una fábrica reporta datos cada $5$ segundos a un único servidor central mediante peticiones HTTP POST. Los operadores notan que el servidor empieza a caerse cuando se conectan más líneas de producción. a) ¿Qué modelo de transmisión se usó y cuál es su problema de fondo? b) Propone una alternativa y justifica por qué escala mejor.",
+  hints: [
+    "Cuenta cuántas conexiones simultáneas debe sostener el servidor.",
+    "Piensa en qué cambia si en vez de 'pedir/responder' los sensores solo publican.",
+  ],
+}}>
+
+**1. Modelo usado y su problema.**
+
+| | Cliente-servidor (actual) | Pub/sub (propuesto) |
+|---|---|---|
+| Quién inicia | Cada sensor abre conexión HTTP | Cada sensor publica una vez |
+| Conexiones al crecer | $500$ directas al servidor, por cada línea | Todas van al broker, que las reparte |
+| Punto de falla | El servidor único (cuello de botella) | El broker (dimensionable, desacoplado) |
+| Agregar un consumidor | Hay que reprogramar los $500$ sensores | El nuevo consumidor solo se suscribe |
+
+$$\boxed{\text{a) Cliente-servidor — no escala: el servidor concentra todas las conexiones}}$$
+
+**2. Arquitectura propuesta.**
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'De cliente-servidor a pub/sub con broker',
+  steps: [
+    {
+      note: 'Actual: cada sensor abre su propia conexión HTTP directa al servidor — al crecer las líneas de producción, el servidor no da abasto.',
+      processes: [
+        { id: 'srv', label: 'Servidor central', state: 'marked' },
+        { id: 's1', label: 'sensor 1' }, { id: 's2', label: 'sensor 2' },
+        { id: 's3', label: 'sensor …' }, { id: 's4', label: 'sensor 500' },
+      ],
+      dataFlow: [
+        { from: 's1', to: 'srv' }, { from: 's2', to: 'srv' },
+        { from: 's3', to: 'srv' }, { from: 's4', to: 'srv' },
+      ],
+    },
+    {
+      note: 'Propuesta: cada línea de producción tiene su propio broker (edge/gateway) que desacopla a los sensores del servidor central, que ahora solo recibe datos ya agregados.',
+      processes: [
+        { id: 'brk', label: 'Broker (gateway de línea)', state: 'active' },
+        { id: 's1', label: 'sensor 1' }, { id: 's2', label: 'sensor 2' },
+        { id: 's3', label: 'sensor …' }, { id: 's4', label: 'sensor 500' },
+        { id: 'srv', label: 'Servidor central' },
+      ],
+      dataFlow: [
+        { from: 's1', to: 'brk' }, { from: 's2', to: 'brk' },
+        { from: 's3', to: 'brk' }, { from: 's4', to: 'brk' },
+        { from: 'brk', to: 'srv', label: 'reporte agregado' },
+      ],
+    },
+  ],
+}} />
+
+$$\boxed{\text{b) Pub/sub (MQTT) con broker por gateway de línea (edge)}}$$
+
+</ExerciseBlock>

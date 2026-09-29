@@ -1,0 +1,92 @@
+id: range-tree
+title: Range tree
+type: structure
+week: week-04
+
+prerequisites: [orthogonal-range-search, balanced-bst]
+buildsOn: [balanced-bst]
+usedBy: [layered-range-tree, d2-bound-x, d3-separation-node]
+
+complexity:
+  build-1d:
+    worst: O(n log n)
+    space: O(n)
+    reasoning: >-
+      Ordenar los n puntos por su llave (para colocarlos como hojas en
+      orden) cuesta O(n log n) (Sem4_Orthogonal_Range_Search.pdf#55); el
+      árbol en sí tiene O(n) nodos (un árbol binario casi completo con n
+      hojas tiene a lo más 2n-1 nodos, Sem4_Orthogonal_Range_Search.pdf#28).
+      Domina el ordenamiento, no la construcción del árbol.
+    source: Sem4_Orthogonal_Range_Search.pdf#24-28,55
+  predecessor-successor:
+    worst: O(log n)
+    reasoning: >-
+      Un único descenso desde la raíz hasta una hoja, acotado por la altura
+      del árbol balanceado subyacente — mismo argumento de altura que
+      balanced-bst, adaptado a que las llaves sólo viven en las hojas
+      (Sem4_Orthogonal_Range_Search.pdf#31).
+    source: Sem4_Orthogonal_Range_Search.pdf#31
+  range-query-1d:
+    worst: O(log n + k)
+    reasoning: >-
+      Conteo estructural: encontrar el nodo P = LCA y descender por los dos
+      caminos hasta los delimitadores cuesta O(log n) (dos caminos de altura
+      O(log n)); en cada paso de esos caminos se agrega a lo más un
+      subárbol canónico, así que hay O(log n) subárboles en la respuesta, y
+      recorrerlos para producir la salida cuesta O(k) adicional
+      (Sem4_Orthogonal_Range_Search.pdf#20,33-35).
+    source: Sem4_Orthogonal_Range_Search.pdf#20,33-35
+  existence-count:
+    worst: O(log n)
+    reasoning: >-
+      Cada nodo guarda la cantidad de hojas de su subárbol, así que una vez
+      identificados los O(log n) subárboles canónicos de la consulta, sumar
+      (o comparar contra cero) sus contadores es O(1) por subárbol: O(log n)
+      total, sin tocar las hojas (Sem4_Orthogonal_Range_Search.pdf#37).
+    source: Sem4_Orthogonal_Range_Search.pdf#37
+  enumeration:
+    worst: O(log n + k)
+    reasoning: >-
+      Mismo O(log n) para hallar los subárboles canónicos que range-query-1d,
+      más recorrer las hojas de cada uno para listarlas: la suma de hojas
+      de subárboles disjuntos que caen en la respuesta es exactamente k
+      (Sem4_Orthogonal_Range_Search.pdf#38).
+    source: Sem4_Orthogonal_Range_Search.pdf#38
+  build-2d:
+    worst: O(n log n)
+    space: O(n log n)
+    reasoning: >-
+      Argumento de multiplicidad: cada árbol secundario de un subárbol se
+      construye en O(n) a partir de sus dos hijos ya construidos
+      (Sem4_Orthogonal_Range_Search.pdf#54), y cada punto vive en O(log n)
+      árboles secundarios (uno por nivel del árbol primario en X) — de ahí
+      el espacio total O(n log n) (Sem4_Orthogonal_Range_Search.pdf#49); el
+      tiempo lo domina el mismo O(n log n) de ordenar por X.
+    source: Sem4_Orthogonal_Range_Search.pdf#49,54-55
+  range-query-2d:
+    worst: O(log² n + k)
+    reasoning: >-
+      Multiplicidad: una consulta de rango en X halla O(log n) subárboles
+      canónicos (como en range-query-1d), y en cada uno hay que resolver
+      una consulta de rango en Y sobre su árbol secundario, que cuesta
+      O(log n) — O(log n) consultas de O(log n) da O(log² n), más O(k) de
+      salida (Sem4_Orthogonal_Range_Search.pdf#50).
+    source: Sem4_Orthogonal_Range_Search.pdf#50
+  d-dimensions:
+    worst: O(log^d n + k)
+    space: O(n log^(d-1) n)
+    reasoning: >-
+      Extiende la misma multiplicidad un nivel por dimensión: anidar un
+      range tree de la dimensión (k+1) en cada nodo de la dimensión k
+      multiplica la consulta y el espacio por un factor O(log n) adicional
+      por cada dimensión más allá de la primera
+      (Sem4_Orthogonal_Range_Search.pdf#52,56-57). El profesor cierra
+      notando que el factor log n de las consultas se puede mejorar para
+      d≥2 sin decir cómo (queda para fractional cascading, semana 5)
+      (Sem4_Orthogonal_Range_Search.pdf#58-59).
+    source: Sem4_Orthogonal_Range_Search.pdf#52,55-59
+
+professorAnalysisStyle: conteo estructural / multiplicidad
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

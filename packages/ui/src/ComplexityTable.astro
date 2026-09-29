@@ -1,0 +1,98 @@
+---
+import type { Meta } from '../lib/schemas';
+import { growthWeight } from '../lib/complexity';
+
+interface Props {
+  meta: Meta;
+}
+const { meta } = Astro.props;
+const rows = Object.entries(meta.complexity);
+const HEAP_FAMILY = ['binary-heap', 'binomial-heap', 'fibonacci-heap'];
+const comparable = HEAP_FAMILY.includes(meta.id);
+---
+
+{
+  rows.length > 0 && (
+    <section class="reveal my-12">
+      <div class="mb-4 flex items-baseline justify-between gap-4">
+        <h2 class="tag">Complejidad</h2>
+        <div class="flex items-baseline gap-4">
+          {comparable && (
+            <a href="/compare" class="tag no-underline hover:text-[var(--accent)]">
+              comparar con otros montículos ↗
+            </a>
+          )}
+          <span class="tag">{meta.professorAnalysisStyle}</span>
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded-lg border border-[var(--rule)]">
+        <div class="overflow-x-auto">
+          <table class="w-full border-collapse">
+            <thead>
+              <tr class="bg-[var(--fill)]">
+                {['op', 'mejor', 'promedio', 'peor', 'espacio', ''].map((h) => (
+                  <th class="tag border-b border-[var(--rule)] px-4 py-2.5 text-left font-medium whitespace-nowrap">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([op, c]) => (
+                <tr class="border-b border-[var(--rule)] last:border-0 hover:bg-[var(--fill)]">
+                  <td class="px-4 py-3.5 font-mono text-[0.9375rem] font-medium whitespace-nowrap">
+                    {op}
+                  </td>
+                  {/* Celda vacía = el profesor no dio esa cota. No se rellena. */}
+                  {[c.best, c.avg].map((v) => (
+                    <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-nowrap">
+                      {v ? (
+                        <span class="text-[var(--muted)]">{v}</span>
+                      ) : (
+                        <span class="text-[var(--faint)]" title="el profesor no da esta cota">
+                          —
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                  {/* El peor caso es el número que importa: va en grande. */}
+                  <td class="px-4 py-3.5 font-mono text-[1.0625rem] font-medium whitespace-nowrap">
+                    {c.worst}
+                  </td>
+                  <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-nowrap">
+                    {c.space ? (
+                      <span class="text-[var(--muted)]">{c.space}</span>
+                    ) : (
+                      <span class="text-[var(--faint)]" title="el profesor no da esta cota">
+                        —
+                      </span>
+                    )}
+                  </td>
+                  <td class="w-28 px-4 py-3.5">
+                    <span class="flex h-1.5 w-24 overflow-hidden rounded-full bg-[var(--sunken)]">
+                      <span
+                        class="h-full rounded-full bg-[var(--accent)]"
+                        style={`width:${growthWeight(c.worst) * 10}%`}
+                      />
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* El brief prohíbe la notación sin su razonamiento: el schema lo exige, esto lo muestra. */}
+      <div class="mt-5 space-y-4">
+        {rows.map(([op, c]) => (
+          <div class="reveal rounded-r border-l-2 border-[var(--accent)] bg-[var(--accent-wash)] py-3 pr-4 pl-4">
+            <p class="tag mb-1">por qué · {op}{c.source && ` · ${c.source}`}</p>
+            <p class="max-w-[72ch] text-[0.9375rem] leading-relaxed">{c.reasoning}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}

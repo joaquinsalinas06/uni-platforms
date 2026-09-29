@@ -1,0 +1,269 @@
+---
+kind: theory
+title: "Método de rollback"
+visualization:
+  type: persistent
+  steps:
+    - note: >-
+        El log completo: m = 5 operaciones op₁..op₅ aplicadas en orden. Se
+        quiere insertar un cambio en el tiempo t, que cae entre op₂ y op₃ —
+        hay r = 3 operaciones posteriores a t (op₃, op₄, op₅).
+      caption: "log completo, m=5, insertar en t"
+      nodes:
+        - { id: op1, value: "op₁", parent: null }
+        - { id: op2, value: "op₂", parent: op1 }
+        - { id: op3, value: "op₃", parent: op2 }
+        - { id: op4, value: "op₄", parent: op3 }
+        - { id: op5, value: "op₅", parent: op4 }
+    - note: >-
+        Se delimita la frontera en t: las r = 3 operaciones posteriores
+        (op₃, op₄, op₅) quedan marcadas — son las únicas que hace falta
+        tocar, nada antes de t se ve afectado.
+      caption: "frontera en t — marcar r=3 operaciones"
+      highlight: ["op3", "op4", "op5"]
+      nodes:
+        - { id: op1, value: "op₁", parent: null }
+        - { id: op2, value: "op₂", parent: op1 }
+        - { id: op3, value: "op₃", parent: op2, state: marked }
+        - { id: op4, value: "op₄", parent: op3, state: marked }
+        - { id: op5, value: "op₅", parent: op4, state: marked }
+    - note: >-
+        Deshacer (rollback): se recorren en orden inverso — primero op₅,
+        luego op₄, luego op₃ — y se retiran de la estructura. Sin este paso
+        no hay forma de aplicar un cambio en un punto intermedio del log.
+      caption: "deshacer op₅, op₄, op₃ (orden inverso)"
+      highlight: ["op3", "op4", "op5"]
+      nodes:
+        - { id: op1, value: "op₁", parent: null }
+        - { id: op2, value: "op₂", parent: op1 }
+        - { id: op3, value: "op₃", parent: op2, state: muted }
+        - { id: op4, value: "op₄", parent: op3, state: muted }
+        - { id: op5, value: "op₅", parent: op4, state: muted }
+    - note: >-
+        Con la estructura rebobinada hasta justo antes de t, se aplica el
+        cambio pedido: una nueva operación opₜ. op₃, op₄ y op₅ siguen
+        pendientes de rehacerse, ahora colgando después de opₜ.
+      caption: "aplicar opₜ"
+      highlight: ["opt"]
+      nodes:
+        - { id: op1, value: "op₁", parent: null }
+        - { id: op2, value: "op₂", parent: op1 }
+        - { id: opt, value: "opₜ", parent: op2, state: active }
+        - { id: op3, value: "op₃", parent: opt, state: muted }
+        - { id: op4, value: "op₄", parent: op3, state: muted }
+        - { id: op5, value: "op₅", parent: op4, state: muted }
+    - note: >-
+        Rehacer (replay): se reaplican op₃, op₄ y op₅ en el mismo orden
+        original. Ninguna cambia de efecto porque el orden entre ellas es
+        el mismo — sólo cambió qué operación las precede.
+      caption: "rehacer op₃, op₄, op₅ (mismo orden)"
+      highlight: ["op3", "op4", "op5"]
+      nodes:
+        - { id: op1, value: "op₁", parent: null }
+        - { id: op2, value: "op₂", parent: op1 }
+        - { id: opt, value: "opₜ", parent: op2, state: active }
+        - { id: op3, value: "op₃", parent: opt, state: copied }
+        - { id: op4, value: "op₄", parent: op3, state: copied }
+        - { id: op5, value: "op₅", parent: op4, state: copied }
+    - note: >-
+        Log final, con opₜ ya insertado en su lugar. Costo total: r
+        deshechas + 1 aplicada + r rehechas = O(r) — el precio de no exigir
+        conmutatividad: hay que rehacer en orden todo lo posterior a t.
+      caption: "log final: O(r) operaciones tocadas, r=3"
+      nodes:
+        - { id: op1, value: "op₁", parent: null }
+        - { id: op2, value: "op₂", parent: op1 }
+        - { id: opt, value: "opₜ", parent: op2 }
+        - { id: op3, value: "op₃", parent: opt }
+        - { id: op4, value: "op₄", parent: op3 }
+        - { id: op5, value: "op₅", parent: op4 }
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Las dos técnicas anteriores de esta semana ([retroactividad conmutativa e
+invertible](/structures/commutative-invertible-retroactivity) y los
+problemas de búsqueda descomponibles) sólo aplican cuando la estructura
+cumple una propiedad fuerte (conmutatividad + invertibilidad, o
+descomponibilidad). El método de rollback es la respuesta a "¿y si no
+cumple ninguna de las dos?" — textual: "**Cuando nada de lo anterior
+aplica.** Guardamos la secuencia completa de operaciones (un log). Para
+`Insert(t, op)` o `Delete(t)`: deshacemos (rollback) todas las operaciones
+posteriores a t, aplicamos el cambio, y las rehacemos en orden."
+
+Es la técnica bruta pero general: no exige nada de la estructura salvo que
+cada operación (y su inversa) sea reversible y barata. Por eso el interés
+del método no está en cómo funciona — es la idea de deshacer y rehacer, la
+más obvia posible — sino en **cuánto cuesta hacerlo así**.
+
+## Intuición
+
+Se guarda el [modelo de retroactividad](/structures/retroactivity) completo
+como un log de operaciones ordenado en el tiempo. Para cambiar el pasado en
+el tiempo `t`, no hay ningún atajo algebraico disponible: hay que
+literalmente "rebobinar" la estructura hasta `t`, deshaciendo cada operación
+posterior una por una (en orden inverso), aplicar ahí el cambio, y luego
+"reproducir" de nuevo esas mismas operaciones en orden hacia adelante.
+
+## Estructura interna
+
+- **El log**: la secuencia completa de operaciones aplicadas, ordenada por
+  tiempo. Es la misma noción de línea de tiempo del
+  [modelo de retroactividad](/structures/retroactivity), pero aquí se
+  materializa explícitamente como una lista que se puede recorrer en ambos
+  sentidos.
+- **Invertibilidad de cada operación**: el método reutiliza exactamente la
+  noción de invertibilidad definida en
+  [retroactividad conmutativa e invertible](/structures/commutative-invertible-retroactivity)
+  — "existe una operación `opₓ⁻¹` tal que aplicar `opₓ` y luego `opₓ⁻¹` deja
+  la estructura exactamente como estaba" — pero aquí **no se exige además
+  conmutatividad**. Esa es la diferencia entre las dos técnicas: la anterior
+  necesita ambas propiedades para volverse casi gratis; ésta sólo necesita
+  invertibilidad, y paga el precio de no tener conmutatividad rehaciendo
+  todo en orden.
+- **El requisito de costo por operación** (página 40): "Que cada operación
+  (y su inversa) sea $O(1)$ u $O(\lg n)$ — cualquier estructura eficiente y
+  reversible sirve." El método no impone una estructura subyacente
+  particular: cualquiera que sea reversible y eficiente por operación
+  individual funciona.
+
+## Operaciones
+
+- [Deshacer y rehacer (rollback-replay)](/structures/rollback-method/operations/rollback-replay) —
+  el mecanismo de `Insert(t, op)` y `Delete(t)` retroactivos.
+- [El costo amortizado del método (amortized-cost)](/structures/rollback-method/operations/amortized-cost) —
+  no es una operación ejecutable, sino el análisis de cuánto cuesta el
+  mecanismo anterior: el conteo directo del trabajo rehecho y la cota
+  inferior que lo acompaña.
+
+## Análisis de complejidad
+
+Ver el desglose completo en
+[amortized-cost](/structures/rollback-method/operations/amortized-cost) — el
+análisis ES el contenido de esta técnica, no un apéndice. En resumen: el
+costo de `Insert(t, op)` o `Delete(t)` es $O(r)$ veces el costo de una
+operación individual, con `r` = número de operaciones posteriores a `t` en
+el log; y el profesor da además una cota inferior $\Omega(r)$ que muestra que, en
+general, no se puede hacer mejor sin explotar alguna propiedad extra de la
+estructura.
+
+La cota $O(r)$ es sobre **una** llamada retroactiva. Pero el argumento
+amortizado es sobre una **secuencia**: no importa cuántas operaciones ya
+tenga el log — cada una costó $O(1)$ al construirse — el precio de meter un
+cambio en el medio no vuelve a tocar esas operaciones más que una vez cada
+una (una vez al deshacerlas, una vez al rehacerlas). El siguiente diagrama
+usa el ejemplo "Normal" de [examples.md](/structures/rollback-method/examples)
+(cuatro operaciones ya en el log, `Insert(t=2.5, +4)` con `r=2`) para llevar
+una cuenta corriente del costo a lo largo de toda la secuencia — construir el
+log, deshacer, aplicar, rehacer — y así anclar el reclamo amortizado en un
+número concreto en vez de sólo en la fórmula. El argumento completo, con la
+cota general y el caso peor `r ≈ m`, está en
+[amortized-cost](/structures/rollback-method/operations/amortized-cost).
+
+<Visualization viz={{
+  type: 'persistent',
+  steps: [
+    {
+      note: 'Secuencia de m=4 operaciones ya aplicadas en orden (ejemplo "Normal" de examples.md): +5, −2, +10, +1. Cada aplicación cuesta O(1) individual — el costo acumulado de construir el log es 4.',
+      caption: 'log construido, costo acumulado = 4',
+      nodes: [
+        { id: 't1', value: '+5', parent: null },
+        { id: 't2', value: '−2', parent: 't1' },
+        { id: 't3', value: '+10', parent: 't2' },
+        { id: 't4', value: '+1', parent: 't3' },
+      ],
+    },
+    {
+      note: 'Se pide Insert(t=2.5, +4). Quedan marcadas las r=2 operaciones posteriores a t (+10 y +1) — las únicas que la modificación retroactiva va a tocar; nada del costo acumulado de construir el log se repite.',
+      caption: 'frontera en t=2.5 — marcar r=2',
+      highlight: ['t3', 't4'],
+      nodes: [
+        { id: 't1', value: '+5', parent: null },
+        { id: 't2', value: '−2', parent: 't1' },
+        { id: 't3', value: '+10', parent: 't2', state: 'marked' },
+        { id: 't4', value: '+1', parent: 't3', state: 'marked' },
+      ],
+    },
+    {
+      note: 'Deshacer (rollback) las r=2 marcadas, en orden inverso: primero +1, luego +10. Costo += 2 → acumulado 4+2=6.',
+      caption: 'deshacer r=2 → acumulado = 6',
+      highlight: ['t3', 't4'],
+      nodes: [
+        { id: 't1', value: '+5', parent: null },
+        { id: 't2', value: '−2', parent: 't1' },
+        { id: 't3', value: '+10', parent: 't2', state: 'muted' },
+        { id: 't4', value: '+1', parent: 't3', state: 'muted' },
+      ],
+    },
+    {
+      note: 'Aplicar el cambio pedido, +4, sobre el log ya rebobinado hasta justo antes de t=2.5. Costo += 1 → acumulado 6+1=7.',
+      caption: 'aplicar +4 → acumulado = 7',
+      highlight: ['t25'],
+      nodes: [
+        { id: 't1', value: '+5', parent: null },
+        { id: 't2', value: '−2', parent: 't1' },
+        { id: 't25', value: '+4', parent: 't2', state: 'active' },
+      ],
+    },
+    {
+      note: 'Rehacer (replay) las mismas r=2 operaciones, en el mismo orden original: +10, luego +1. Costo += 2 → acumulado final 7+2=9.',
+      caption: 'rehacer r=2 → acumulado = 9',
+      highlight: ['t3', 't4'],
+      nodes: [
+        { id: 't1', value: '+5', parent: null },
+        { id: 't2', value: '−2', parent: 't1' },
+        { id: 't25', value: '+4', parent: 't2', state: 'active' },
+        { id: 't3', value: '+10', parent: 't25', state: 'copied' },
+        { id: 't4', value: '+1', parent: 't3', state: 'copied' },
+      ],
+    },
+    {
+      note: 'Sobre esta secuencia de m+1=5 operaciones en el log, el costo total tocado fue 4 (construir) + 5 (2r+1 de la retroactiva) = 9 — no O(r) repetido por cada operación del log, sino una sola vez por operación tocada. Ese es el reclamo amortizado: repartido sobre toda la secuencia, el costo por operación se mantiene acotado salvo que t caiga sistemáticamente cerca del principio (r ≈ m, el peor caso — ver amortized-cost).',
+      caption: 'costo total = 9 sobre 5 operaciones — argumento completo en amortized-cost',
+      nodes: [
+        { id: 't1', value: '+5', parent: null },
+        { id: 't2', value: '−2', parent: 't1' },
+        { id: 't25', value: '+4', parent: 't2' },
+        { id: 't3', value: '+10', parent: 't25' },
+        { id: 't4', value: '+1', parent: 't3' },
+      ],
+    },
+  ],
+}} />
+
+## Tabla de complejidad
+
+| operación | peor caso | de dónde sale |
+| --- | --- | --- |
+| `Insert(t, op)` / `Delete(t)` | `O(r) × (costo de una operación individual)`, `r` = operaciones después de `t` | conteo directo: deshacer `r`, aplicar 1, rehacer `r` |
+| cota inferior | $\Omega(r)$ | argumento de adversario informal (ver amortized-cost) |
+
+El profesor no cuantifica el costo en espacio del log (queda implícito: hay
+que guardarlo completo).
+
+## Ejemplos
+
+Ver [examples.md](/structures/rollback-method/examples) — el profesor no da
+ningún ejemplo numérico en esta sección, así que los ejemplos ahí están
+derivados y marcados como tales.
+
+## Comparación con estructuras relacionadas
+
+| | [retroactividad conmutativa e invertible](/structures/commutative-invertible-retroactivity) | método de rollback |
+| --- | --- | --- |
+| qué exige | conmutatividad **e** invertibilidad | sólo invertibilidad |
+| costo retroactivo | $O(1)$ — igual que la operación original | `O(r)` × costo de una operación, con `r` = operaciones después de `t` |
+| por qué | la posición temporal es irrelevante por conmutatividad; borrar es aplicar la inversa | no hay atajo: hay que rehacer todo lo posterior en orden |
+| alcance | sólo estructuras cuyas operaciones cumplen ambas propiedades | cualquier estructura con operaciones reversibles y eficientes — el piso genérico |
+
+El profesor lo posiciona explícitamente como ese piso: "las técnicas
+especializadas (como la de la siguiente sección) son valiosas: **rompen esta
+barrera** aprovechando propiedades específicas del problema" — la
+[cola de prioridad retroactiva](/structures/retroactive-priority-queue) cita
+este método dos veces como la cota a superar.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/rollback-method/mastery-check).

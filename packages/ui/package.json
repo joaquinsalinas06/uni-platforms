@@ -1,0 +1,17 @@
+{
+  "name": "@uni/ui",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "dependencies": {
+    "@uni/visualizations": "workspace:*",
+    "@codemirror/lang-cpp": "^6.0.3",
+    "@uiw/react-codemirror": "^4.25.11",
+    "katex": "^0.18.7",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "astro": "^7.3.2"
+  }
+}

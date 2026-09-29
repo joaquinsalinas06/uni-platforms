@@ -1,0 +1,12 @@
+id: iot-intro
+title: "¿Qué es IoT?"
+type: concept
+unit: s1
+prerequisites: []
+buildsOn: []
+usedBy:
+  - iot-architecture
+hasVisualization: true
+visualizationType: dag
+placeholder: false
+formulas: []

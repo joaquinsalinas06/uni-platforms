@@ -1,0 +1,51 @@
+id: layered-range-tree
+title: Layered range tree
+type: structure
+week: week-05
+
+prerequisites: [range-tree, fractional-cascading]
+buildsOn: [range-tree, fractional-cascading]
+usedBy: []
+
+complexity:
+  sorted-array-replacement:
+    worst: O(n log n)
+    space: O(n log n)
+    reasoning: >-
+      Mismo argumento de multiplicidad que build-2d de range-tree, ahora con
+      arreglos en vez de BSTs secundarios: cada punto vive en O(log n)
+      niveles del árbol primario, y cada nivel se llena con un merge de
+      costo O(tamaño del nivel); sumando los O(log n) niveles queda
+      O(n log n) en tiempo y en espacio — el mismo total que la estructura
+      ingenua, tal como lo afirma la tabla del profesor
+      (CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#29,37-40).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#29,37-40"
+  bridge-build:
+    worst: O(n log n)
+    reasoning: >-
+      Conteo directo: los puentes pL y pR de cada nodo se calculan con dos
+      punteros que avanzan monótonamente sobre el arreglo de cada hijo
+      mientras se recorre una sola vez el arreglo ya mezclado del padre —
+      el mismo O(tamaño del nodo) del merge, no un factor extra. Sumado
+      sobre todos los nodos da el mismo O(n log n) agregado de
+      sorted-array-replacement: los puentes no cuestan más que la
+      construcción que ya se estaba haciendo
+      (CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#29-31).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#29-31"
+  range-query-2d:
+    worst: O(log n)
+    reasoning: >-
+      Conteo directo de pasos, el estilo declarado del profesor para este
+      tema: al descender por el árbol primario hacia los O(lg n) nodos
+      canónicos de [x1,x2], se hace una única búsqueda binaria real de y1
+      en la raíz — O(lg n) — y en cada nodo canónico restante el puente ya
+      calculado da la posición equivalente en O(1). O(lg n) nodos × O(1)
+      cada uno, en vez de × O(lg n) de una búsqueda binaria nueva por nodo:
+      ese cambio de × a + es todo el ahorro
+      (CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#34-36).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#34-36"
+
+professorAnalysisStyle: conteo directo de pasos
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

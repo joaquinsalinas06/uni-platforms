@@ -1,0 +1,19 @@
+id: persistence-levels
+title: "Niveles de persistencia"
+type: concept
+week: week-03
+
+prerequisites: ["pointer-machine"]
+buildsOn: []
+usedBy: ["fat-nodes", "path-copying"]
+
+# Es una taxonomía de cuatro niveles (parcial, total, confluente, funcional),
+# no una estructura con operaciones que costar. El profesor no da
+# complejidades en esta sección: eso llega con las técnicas que implementan
+# cada nivel (nodos gordos en fat-nodes, path copying en path-copying). Se
+# deja vacío a propósito, no por omisión.
+complexity: {}
+
+professorAnalysisStyle: "taxonomía / definición por niveles"
+hasVisualization: true
+placeholder: false

@@ -1,0 +1,1017 @@
+---
+kind: subtopic
+order: 2
+title: "Reducción serie-paralelo"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Antes de poder aplicar Kirchhoff (o incluso para evitar tener que hacerlo), conviene
+reducir un circuito de muchas resistencias a una única resistencia equivalente
+$R_{eq}$ vista entre dos nodos. Esto es exactamente lo que pide siempre la primera
+parte del examen parcial: "reducir la resistencia entre A y B". La dificultad no
+está en la fórmula (serie/paralelo), sino en **identificar correctamente los
+nodos** — sobre todo cuando hay cables que unen puntos que a simple vista parecen
+distintos, o ramas que quedan "en cortocircuito" sin aportar nada.
+
+## Conceptos
+
+### Identificar nodos
+
+Un **nodo** es un punto del circuito donde la tensión es la misma en todas
+partes — todo tramo de **cable** (sin componente) entre dos puntos hace que esos
+dos puntos sean **el mismo nodo**, aunque se dibujen en lugares distintos del
+esquema. Esto incluye:
+
+- Puntos unidos directamente por un cable recto.
+- Puntos unidos por un cable que da vueltas o cruza el dibujo (la forma no importa,
+  solo la conexión).
+- Un caso especial y muy común en los exámenes: una rama cuyos DOS extremos
+  terminan en el mismo nodo (por ejemplo, porque un cable "puentea" directamente
+  ese nodo con otro). Esa rama queda en **cortocircuito**: no importa cuánto valgan
+  sus resistencias, no circula corriente por ella y **no aporta nada** a $R_{eq}$.
+  Reconocer esto es, muchas veces, la clave para resolver rápido un circuito que
+  a primera vista parece enorme.
+
+### Serie vs. paralelo
+
+- **Serie**: dos elementos están en serie cuando comparten un nodo por el que
+  **no sale ninguna otra rama** (el nodo tiene exactamente esas dos conexiones).
+  La misma corriente los atraviesa a ambos.
+
+$$
+R_T = \sum_{i=1}^{n} R_i
+$$
+
+- **Paralelo**: dos elementos están en paralelo cuando comparten **los dos**
+  nodos (ambos extremos coinciden). La misma tensión cae sobre los dos.
+
+$$
+R_T = \dfrac{1}{\sum_{i=1}^{n} \frac{1}{R_i}} \qquad \left(\text{para dos: } R_T = \dfrac{R_1 R_2}{R_1+R_2}\right)
+$$
+
+## Método paso a paso
+
+1. Redibuja mentalmente (o marca) qué puntos son en realidad el mismo nodo
+   (cables, cortocircuitos).
+2. Busca el nodo intermedio "más simple": uno que solo tenga dos conexiones →
+   esas dos están en serie. Fusiónalas en una sola resistencia.
+3. Busca dos resistencias (o combinaciones ya fusionadas) que compartan
+   **ambos** nodos → están en paralelo. Fusiónalas.
+4. Repite 2-3 hasta que quede una sola resistencia entre los dos nodos pedidos:
+   esa es $R_{eq}$.
+5. Si en algún punto una rama completa queda con sus dos extremos en el mismo
+   nodo, elimínala del análisis (no aporta, aunque sí puedes dejarla dibujada).
+
+## Ejemplo resuelto — Reducción 1
+
+Halla $R_{eq}$ entre A y B: $R_1=820\ \Omega$, $R_2=560\ \Omega$, $R_3=680\ \Omega$,
+$R_4=2.7\text{ k}\Omega$, $R_5=4.7\text{ k}\Omega$, $R_6=2.2\text{ k}\Omega$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Reducción 1: entre A y B',
+  steps: [
+    {
+      note: 'El nodo entre R2 y R3 solo tiene esas dos conexiones: están en serie. Abajo, R5 y R6 comparten sus DOS nodos (los dos puntos azules): están en paralelo, no en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 4, label: 'A' }, { id: 'n1', x: 4, y: 4 }, { id: 'n2', x: 4, y: 0 },
+          { id: 'bTop', x: 12, y: 0 }, { id: 'B', x: 12, y: 4, label: 'B' },
+          { id: 'a2', x: 0, y: 8 }, { id: 'p', x: 2, y: 8 }, { id: 'q', x: 10, y: 8 }, { id: 'b2', x: 12, y: 8 },
+        ],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'n1', value: 820, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n1', to: 'n2', value: 560, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'n2', to: 'bTop', value: 680, label: 'R3' },
+          { id: 'wBtop', kind: 'wire', from: 'bTop', to: 'B' },
+          { id: 'R4', kind: 'resistor', from: 'n1', to: 'B', value: 2700, label: 'R4' },
+          { id: 'wA2', kind: 'wire', from: 'A', to: 'a2' },
+          { id: 'wp', kind: 'wire', from: 'a2', to: 'p' },
+          { id: 'R5', kind: 'resistor', from: 'p', to: 'q', value: 4700, label: 'R5' },
+          { id: 'R6', kind: 'resistor', from: 'p', to: 'q', value: 2200, label: 'R6', via: [[2, 11], [10, 11]] },
+          { id: 'wq', kind: 'wire', from: 'q', to: 'b2' },
+          { id: 'wB2', kind: 'wire', from: 'b2', to: 'B' },
+        ],
+        groups: [
+          { parts: ['R2', 'R3'], tone: 'series', label: 'serie' },
+          { parts: ['R5', 'R6'], tone: 'parallel', label: 'paralelo' },
+        ],
+      },
+      expect: { 'Req(A,B)': 789.76 },
+    },
+    {
+      note: 'R23 = R2+R3 = 1240 Ω, ahora en paralelo con R4 (comparten n1 y B). R56 = R5‖R6 ≈ 1498.6 Ω, y por los cables ya conecta A con B directo.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 4, label: 'A' }, { id: 'n1', x: 4, y: 4 }, { id: 'B', x: 12, y: 4, label: 'B' },
+          { id: 'a2', x: 0, y: 8 }, { id: 'b2', x: 12, y: 8 },
+        ],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'n1', value: 820, label: 'R1' },
+          { id: 'R23', kind: 'resistor', from: 'n1', to: 'B', label: 'R23', mergedFrom: ['R2', 'R3'], mergeKind: 'series', via: [[4, 1], [12, 1]] },
+          { id: 'R4', kind: 'resistor', from: 'n1', to: 'B', value: 2700, label: 'R4' },
+          { id: 'wA2', kind: 'wire', from: 'A', to: 'a2' },
+          { id: 'R56', kind: 'resistor', from: 'a2', to: 'b2', label: 'R56', mergedFrom: ['R5', 'R6'], mergeKind: 'parallel' },
+          { id: 'wB2', kind: 'wire', from: 'b2', to: 'B' },
+        ],
+        groups: [{ parts: ['R23', 'R4'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'R234 = R23‖R4 ≈ 849.7 Ω. El nodo n1 ahora solo conecta a R1 y a R234: están en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 4, label: 'A' }, { id: 'n1', x: 4, y: 4 }, { id: 'B', x: 12, y: 4, label: 'B' },
+          { id: 'a2', x: 0, y: 8 }, { id: 'b2', x: 12, y: 8 },
+        ],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'n1', value: 820, label: 'R1' },
+          { id: 'R234', kind: 'resistor', from: 'n1', to: 'B', label: 'R234', mergedFrom: ['R23', 'R4'], mergeKind: 'parallel' },
+          { id: 'wA2', kind: 'wire', from: 'A', to: 'a2' },
+          { id: 'R56', kind: 'resistor', from: 'a2', to: 'b2', label: 'R56', mergedFrom: ['R5', 'R6'], mergeKind: 'parallel' },
+          { id: 'wB2', kind: 'wire', from: 'b2', to: 'B' },
+        ],
+        groups: [{ parts: ['R1', 'R234'], tone: 'series', label: 'serie' }],
+      },
+    },
+    {
+      note: 'R1234 = R1+R234 ≈ 1669.7 Ω, y ya conecta A con B. Ahora R1234 y R56 comparten A y B: en paralelo. Es la última reducción.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 4, label: 'A' }, { id: 'B', x: 12, y: 4, label: 'B' },
+          { id: 'a2', x: 0, y: 8 }, { id: 'b2', x: 12, y: 8 },
+        ],
+        parts: [
+          { id: 'R1234', kind: 'resistor', from: 'A', to: 'B', label: 'R1234', mergedFrom: ['R1', 'R234'], mergeKind: 'series' },
+          { id: 'wA2', kind: 'wire', from: 'A', to: 'a2' },
+          { id: 'R56', kind: 'resistor', from: 'a2', to: 'b2', label: 'R56', mergedFrom: ['R5', 'R6'], mergeKind: 'parallel' },
+          { id: 'wB2', kind: 'wire', from: 'b2', to: 'B' },
+        ],
+        groups: [{ parts: ['R1234', 'R56'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Req(A,B) = R1234 ‖ R56 ≈ 789.8 Ω.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 4, label: 'A' }, { id: 'B', x: 12, y: 4, label: 'B' }],
+        parts: [{ id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['R1234', 'R56'], mergeKind: 'parallel', state: 'answer' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 789.75 },
+    },
+  ],
+}} />
+
+## Ejemplo resuelto — Reducción 2
+
+Halla $R_{eq}$ entre A y B: tres ramas totalmente independientes entre los mismos
+dos nodos. $R_8=1\text{ k}\Omega$, $R_{13}=2.2\text{ k}\Omega$, $R_9=1.5\text{ k}\Omega$
+(arco superior); $R_{12}=4.7\text{ k}\Omega$ (rama directa); $R_{10}=2\text{ k}\Omega$,
+$R_{14}=4.4\text{ k}\Omega$, $R_{11}=3\text{ k}\Omega$ (arco inferior).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Reducción 2: tres ramas en paralelo',
+  steps: [
+    {
+      note: 'El arco superior (R8-R13-R9) es una cadena serie: cada nodo intermedio solo conecta dos resistencias. Lo mismo en el arco inferior (R10-R14-R11).',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 4, label: 'A' }, { id: 'p1', x: 4, y: 0 }, { id: 'p2', x: 8, y: 0 }, { id: 'B', x: 12, y: 4, label: 'B' },
+          { id: 'q1', x: 4, y: 8 }, { id: 'q2', x: 8, y: 8 },
+        ],
+        parts: [
+          { id: 'R8', kind: 'resistor', from: 'A', to: 'p1', value: 1000, label: 'R8' },
+          { id: 'R13', kind: 'resistor', from: 'p1', to: 'p2', value: 2200, label: 'R13' },
+          { id: 'R9', kind: 'resistor', from: 'p2', to: 'B', value: 1500, label: 'R9' },
+          { id: 'R12', kind: 'resistor', from: 'A', to: 'B', value: 4700, label: 'R12' },
+          { id: 'R10', kind: 'resistor', from: 'A', to: 'q1', value: 2000, label: 'R10' },
+          { id: 'R14', kind: 'resistor', from: 'q1', to: 'q2', value: 4400, label: 'R14' },
+          { id: 'R11', kind: 'resistor', from: 'q2', to: 'B', value: 3000, label: 'R11' },
+        ],
+        groups: [
+          { parts: ['R8', 'R13', 'R9'], tone: 'series', label: 'serie' },
+          { parts: ['R10', 'R14', 'R11'], tone: 'series', label: 'serie' },
+        ],
+      },
+      expect: { 'Req(A,B)': 1880 },
+    },
+    {
+      note: 'Rtop = 1000+2200+1500 = 4700 Ω. Rbot = 2000+4400+3000 = 9400 Ω. Ahora Rtop, R12 y Rbot comparten A y B: las tres en paralelo.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 4, label: 'A' }, { id: 'B', x: 12, y: 4, label: 'B' }],
+        parts: [
+          { id: 'Rtop', kind: 'resistor', from: 'A', to: 'B', label: 'Rtop', mergedFrom: ['R8', 'R13', 'R9'], mergeKind: 'series' },
+          { id: 'R12', kind: 'resistor', from: 'A', to: 'B', value: 4700, label: 'R12' },
+          { id: 'Rbot', kind: 'resistor', from: 'A', to: 'B', label: 'Rbot', mergedFrom: ['R10', 'R14', 'R11'], mergeKind: 'series' },
+        ],
+        groups: [{ parts: ['Rtop', 'R12', 'Rbot'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Req(A,B) = Rtop ‖ R12 ‖ Rbot = 1880 Ω.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 4, label: 'A' }, { id: 'B', x: 12, y: 4, label: 'B' }],
+        parts: [{ id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['Rtop', 'R12', 'Rbot'], mergeKind: 'parallel', state: 'answer' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 1880 },
+    },
+  ],
+}} />
+
+## Ejemplo resuelto — Reducción 3
+
+Halla $R_{eq}$ entre A y B: $R_1=3\text{k}$, $R_2=3\text{k}$, $R_3=6\text{k}$,
+$R_4=6\text{k}$, $R_5=2\text{k}$, $R_6=10\text{k}$, $R_7=10\text{k}$ (todo en $\Omega \times 10^3$).
+Aquí el punto clave es notar que el nodo D (extremo de R6‖R7) está unido por un
+cable directo al nodo B: **D y B son el mismo nodo**.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Reducción 3: identificar el cable D=B',
+  steps: [
+    {
+      note: 'R3 y R4 comparten los mismos dos nodos (B y M): en paralelo. R6 y R7 también (C y D) — y D está unido a B por un cable, así que D=B.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 8 }, { id: 'aTop', x: 0, y: 0 }, { id: 'aMid', x: 0, y: 4 },
+          { id: 'B', x: 16, y: 0, label: 'B' }, { id: 'M', x: 16, y: 4 },
+          { id: 'C', x: 8, y: 8 }, { id: 'D', x: 16, y: 8 },
+        ],
+        parts: [
+          { id: 'wA1', kind: 'wire', from: 'A', to: 'aTop' },
+          { id: 'wA2', kind: 'wire', from: 'A', to: 'aMid' },
+          { id: 'R1', kind: 'resistor', from: 'aTop', to: 'B', value: 3000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'aMid', to: 'M', value: 3000, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'B', to: 'M', value: 6000, label: 'R3' },
+          { id: 'R4', kind: 'resistor', from: 'B', to: 'M', value: 6000, label: 'R4' },
+          { id: 'R5', kind: 'resistor', from: 'A', to: 'C', value: 2000, label: 'R5' },
+          { id: 'R6', kind: 'resistor', from: 'C', to: 'D', value: 10000, label: 'R6' },
+          { id: 'R7', kind: 'resistor', from: 'C', to: 'D', value: 10000, label: 'R7', via: [[8, 12], [16, 12]] },
+          { id: 'wD', kind: 'wire', from: 'D', to: 'B', via: [[20, 8], [20, 0]] },
+        ],
+        groups: [
+          { parts: ['R3', 'R4'], tone: 'parallel', label: 'paralelo' },
+          { parts: ['R6', 'R7'], tone: 'parallel', label: 'paralelo' },
+        ],
+      },
+      expect: { 'Req(A,B)': 1555.6 },
+    },
+    {
+      note: 'R34 = R3‖R4 = 3 kΩ. R67 = R6‖R7 = 5 kΩ. M solo conecta a R2 y R34: en serie. C solo conecta a R5 y R67 (que ya llega directo a B): en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 8 }, { id: 'aTop', x: 0, y: 0 }, { id: 'aMid', x: 0, y: 4 },
+          { id: 'B', x: 16, y: 0, label: 'B' }, { id: 'M', x: 16, y: 4 }, { id: 'C', x: 8, y: 8 },
+        ],
+        parts: [
+          { id: 'wA1', kind: 'wire', from: 'A', to: 'aTop' },
+          { id: 'wA2', kind: 'wire', from: 'A', to: 'aMid' },
+          { id: 'R1', kind: 'resistor', from: 'aTop', to: 'B', value: 3000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'aMid', to: 'M', value: 3000, label: 'R2' },
+          { id: 'R34', kind: 'resistor', from: 'B', to: 'M', label: 'R34', mergedFrom: ['R3', 'R4'], mergeKind: 'parallel' },
+          { id: 'R5', kind: 'resistor', from: 'A', to: 'C', value: 2000, label: 'R5' },
+          { id: 'R67', kind: 'resistor', from: 'C', to: 'B', label: 'R67', mergedFrom: ['R6', 'R7'], mergeKind: 'parallel' },
+        ],
+        groups: [
+          { parts: ['R2', 'R34'], tone: 'series', label: 'serie' },
+          { parts: ['R5', 'R67'], tone: 'series', label: 'serie' },
+        ],
+      },
+    },
+    {
+      note: 'R234 = R2+R34 = 6 kΩ. R567 = R5+R67 = 7 kΩ. Ahora R1, R234 y R567 comparten A y B: las tres en paralelo.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 8, label: 'A' }, { id: 'B', x: 16, y: 0, label: 'B' }],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'B', value: 3000, label: 'R1' },
+          { id: 'R234', kind: 'resistor', from: 'A', to: 'B', label: 'R234', mergedFrom: ['R2', 'R34'], mergeKind: 'series' },
+          { id: 'R567', kind: 'resistor', from: 'A', to: 'B', label: 'R567', mergedFrom: ['R5', 'R67'], mergeKind: 'series' },
+        ],
+        groups: [{ parts: ['R1', 'R234', 'R567'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Req(A,B) = R1 ‖ R234 ‖ R567 = 14/9 kΩ ≈ 1555.6 Ω.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 8, label: 'A' }, { id: 'B', x: 16, y: 0, label: 'B' }],
+        parts: [{ id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['R1', 'R234', 'R567'], mergeKind: 'parallel', state: 'answer' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 1555.6 },
+    },
+  ],
+}} />
+
+## Ejemplo resuelto — EX PARCIAL 24-2
+
+Este circuito (tomado tal cual del examen parcial 2024-2) parece enorme, pero A es
+todo el riel superior y B todo el riel inferior: son **tres columnas** colgando entre
+los dos rieles, y cada una se reduce por separado (cada una da 12 kΩ). Ojo: R24 y R25
+**no** están en cortocircuito; las dos van de Y1 a B, en paralelo.
+Valores en $\Omega \times 10^3$: $R_{23}=6$, $R_{24}=9$, $R_{25}=18$, $R_{20}=3$,
+$R_{17}=3$, $R_{21}=6$, $R_{22}=6$, $R_{30}=10$, $R_{26}=16$, $R_{27}=11$, $R_{29}=5$,
+$R_{28}=4$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'EX PARCIAL 24-2: Req(A,B)',
+  steps: [
+    {
+      note: 'A es todo el riel superior y B todo el riel inferior. R24 y R25 van las DOS de Y1 a B: paralelo (no hay ningún cable que una Y1 con B). R21‖R22 comparten Y2 y Z. R27 y R29 están en serie (su nodo de esquina no tiene otra rama).',
+      circuit: {
+        nodes: [
+          { id: 'A', x: -4, y: 0, label: 'A' }, { id: 't23', x: 4, y: 0 }, { id: 't20', x: 8, y: 0 }, { id: 't17', x: 12, y: 0 },
+          { id: 't26', x: 16, y: 0 }, { id: 'c27', x: 20, y: 0 }, { id: 'Y1', x: 4, y: 6 }, { id: 'y1l', x: 0, y: 6 },
+          { id: 'Y2', x: 8, y: 6 }, { id: 'Z', x: 12, y: 6 }, { id: 'X', x: 16, y: 6 }, { id: 'c29', x: 20, y: 6 },
+          { id: 'y2d', x: 8, y: 10 }, { id: 'z2', x: 12, y: 10 }, { id: 'B', x: -4, y: 16, label: 'B' }, { id: 'b25', x: 0, y: 16 },
+          { id: 'b23', x: 4, y: 16 }, { id: 'b30', x: 12, y: 16 }, { id: 'b28', x: 16, y: 16 },
+        ],
+        parts: [
+          { id: 'wt_A_t23', kind: 'wire', from: 'A', to: 't23' },
+          { id: 'wt_t23_t20', kind: 'wire', from: 't23', to: 't20' },
+          { id: 'wt_t20_t17', kind: 'wire', from: 't20', to: 't17' },
+          { id: 'wt_t17_t26', kind: 'wire', from: 't17', to: 't26' },
+          { id: 'wb_B_b25', kind: 'wire', from: 'B', to: 'b25' },
+          { id: 'wb_b25_b23', kind: 'wire', from: 'b25', to: 'b23' },
+          { id: 'wb_b23_b30', kind: 'wire', from: 'b23', to: 'b30' },
+          { id: 'wb_b30_b28', kind: 'wire', from: 'b30', to: 'b28' },
+          { id: 'R23', kind: 'resistor', from: 't23', to: 'Y1', value: 6000, label: 'R23' },
+          { id: 'wy1', kind: 'wire', from: 'Y1', to: 'y1l' },
+          { id: 'R24', kind: 'resistor', from: 'Y1', to: 'b23', value: 9000, label: 'R24' },
+          { id: 'R25', kind: 'resistor', from: 'y1l', to: 'b25', value: 18000, label: 'R25' },
+          { id: 'R20', kind: 'resistor', from: 't20', to: 'Y2', value: 3000, label: 'R20' },
+          { id: 'R21', kind: 'resistor', from: 'Y2', to: 'Z', value: 6000, label: 'R21' },
+          { id: 'wy2', kind: 'wire', from: 'Y2', to: 'y2d' },
+          { id: 'R22', kind: 'resistor', from: 'y2d', to: 'z2', value: 6000, label: 'R22' },
+          { id: 'wz2', kind: 'wire', from: 'Z', to: 'z2' },
+          { id: 'R17', kind: 'resistor', from: 't17', to: 'Z', value: 3000, label: 'R17' },
+          { id: 'R30', kind: 'resistor', from: 'z2', to: 'b30', value: 10000, label: 'R30' },
+          { id: 'R26', kind: 'resistor', from: 't26', to: 'X', value: 16000, label: 'R26' },
+          { id: 'R27', kind: 'resistor', from: 't26', to: 'c27', value: 11000, label: 'R27' },
+          { id: 'w27', kind: 'wire', from: 'c27', to: 'c29' },
+          { id: 'R29', kind: 'resistor', from: 'c29', to: 'X', value: 5000, label: 'R29' },
+          { id: 'R28', kind: 'resistor', from: 'X', to: 'b28', value: 4000, label: 'R28' },
+        ],
+        groups: [{ parts: ['R24', 'R25'], tone: 'parallel', label: 'paralelo' }, { parts: ['R21', 'R22'], tone: 'parallel', label: 'paralelo' }, { parts: ['R27', 'R29'], tone: 'series', label: 'serie' }],
+      },
+      expect: { 'Req(A,B)': 4000 },
+    },
+    {
+      note: 'R2425 = R24‖R25 = 6 kΩ; R2122 = R21‖R22 = 3 kΩ; R2729 = R27+R29 = 16 kΩ. Ahora Y1 solo toca R23 y R2425 (serie), Y2 solo toca R20 y R2122 (serie), y R26‖R2729 comparten el riel A y X.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: -4, y: 0, label: 'A' }, { id: 't23', x: 4, y: 0 }, { id: 't20', x: 8, y: 0 }, { id: 't17', x: 12, y: 0 },
+          { id: 't26', x: 16, y: 0 }, { id: 'Y1', x: 4, y: 6 }, { id: 'Y2', x: 8, y: 6 }, { id: 'Z', x: 12, y: 6 },
+          { id: 'X', x: 16, y: 6 }, { id: 'B', x: -4, y: 16, label: 'B' }, { id: 'b23', x: 4, y: 16 }, { id: 'b30', x: 12, y: 16 },
+          { id: 'b28', x: 16, y: 16 },
+        ],
+        parts: [
+          { id: 'wt_A_t23', kind: 'wire', from: 'A', to: 't23' },
+          { id: 'wt_t23_t20', kind: 'wire', from: 't23', to: 't20' },
+          { id: 'wt_t20_t17', kind: 'wire', from: 't20', to: 't17' },
+          { id: 'wt_t17_t26', kind: 'wire', from: 't17', to: 't26' },
+          { id: 'wb_B_b23', kind: 'wire', from: 'B', to: 'b23' },
+          { id: 'wb_b23_b30', kind: 'wire', from: 'b23', to: 'b30' },
+          { id: 'wb_b30_b28', kind: 'wire', from: 'b30', to: 'b28' },
+          { id: 'R23', kind: 'resistor', from: 't23', to: 'Y1', value: 6000, label: 'R23' },
+          { id: 'R2425', kind: 'resistor', from: 'Y1', to: 'b23', label: 'R2425', mergedFrom: ['R24', 'R25'], mergeKind: 'parallel' },
+          { id: 'R20', kind: 'resistor', from: 't20', to: 'Y2', value: 3000, label: 'R20' },
+          { id: 'R2122', kind: 'resistor', from: 'Y2', to: 'Z', label: 'R2122', mergedFrom: ['R21', 'R22'], mergeKind: 'parallel' },
+          { id: 'R17', kind: 'resistor', from: 't17', to: 'Z', value: 3000, label: 'R17' },
+          { id: 'R30', kind: 'resistor', from: 'Z', to: 'b30', value: 10000, label: 'R30' },
+          { id: 'R26', kind: 'resistor', from: 't26', to: 'X', value: 16000, label: 'R26' },
+          { id: 'R2729', kind: 'resistor', from: 't26', to: 'X', label: 'R2729', mergedFrom: ['R27', 'R29'], mergeKind: 'series', via: [[20, 0], [20, 6]] },
+          { id: 'R28', kind: 'resistor', from: 'X', to: 'b28', value: 4000, label: 'R28' },
+        ],
+        groups: [{ parts: ['R23', 'R2425'], tone: 'series', label: 'serie' }, { parts: ['R20', 'R2122'], tone: 'series', label: 'serie' }, { parts: ['R26', 'R2729'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Rc1 = R23+R2425 = 12 kΩ, ya une A con B. R2022 = R20+R2122 = 6 kΩ, en paralelo con R17 (ambas de A a Z). R2629 = R26‖R2729 = 8 kΩ, en serie con R28 (X solo toca esas dos).',
+      circuit: {
+        nodes: [
+          { id: 'A', x: -4, y: 0, label: 'A' }, { id: 't23', x: 4, y: 0 }, { id: 't20', x: 8, y: 0 }, { id: 't17', x: 12, y: 0 },
+          { id: 't26', x: 16, y: 0 }, { id: 'Z', x: 12, y: 6 }, { id: 'X', x: 16, y: 6 }, { id: 'B', x: -4, y: 16, label: 'B' },
+          { id: 'b23', x: 4, y: 16 }, { id: 'b30', x: 12, y: 16 }, { id: 'b28', x: 16, y: 16 },
+        ],
+        parts: [
+          { id: 'wt_A_t23', kind: 'wire', from: 'A', to: 't23' },
+          { id: 'wt_t23_t20', kind: 'wire', from: 't23', to: 't20' },
+          { id: 'wt_t20_t17', kind: 'wire', from: 't20', to: 't17' },
+          { id: 'wt_t17_t26', kind: 'wire', from: 't17', to: 't26' },
+          { id: 'wb_B_b23', kind: 'wire', from: 'B', to: 'b23' },
+          { id: 'wb_b23_b30', kind: 'wire', from: 'b23', to: 'b30' },
+          { id: 'wb_b30_b28', kind: 'wire', from: 'b30', to: 'b28' },
+          { id: 'Rc1', kind: 'resistor', from: 't23', to: 'b23', label: 'Rc1', mergedFrom: ['R23', 'R2425'], mergeKind: 'series' },
+          { id: 'R2022', kind: 'resistor', from: 't20', to: 'Z', label: 'R2022', mergedFrom: ['R20', 'R2122'], mergeKind: 'series', via: [[8, 6]] },
+          { id: 'R17', kind: 'resistor', from: 't17', to: 'Z', value: 3000, label: 'R17' },
+          { id: 'R30', kind: 'resistor', from: 'Z', to: 'b30', value: 10000, label: 'R30' },
+          { id: 'R2629', kind: 'resistor', from: 't26', to: 'X', label: 'R2629', mergedFrom: ['R26', 'R2729'], mergeKind: 'parallel' },
+          { id: 'R28', kind: 'resistor', from: 'X', to: 'b28', value: 4000, label: 'R28' },
+        ],
+        groups: [{ parts: ['R17', 'R2022'], tone: 'parallel', label: 'paralelo' }, { parts: ['R2629', 'R28'], tone: 'series', label: 'serie' }],
+      },
+    },
+    {
+      note: 'R1722 = R17‖R2022 = 2 kΩ. Rc3 = R2629+R28 = 12 kΩ. Z solo toca ya R1722 y R30: en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: -4, y: 0, label: 'A' }, { id: 't23', x: 4, y: 0 }, { id: 't17', x: 12, y: 0 }, { id: 't26', x: 16, y: 0 },
+          { id: 'Z', x: 12, y: 6 }, { id: 'B', x: -4, y: 16, label: 'B' }, { id: 'b23', x: 4, y: 16 }, { id: 'b30', x: 12, y: 16 },
+          { id: 'b28', x: 16, y: 16 },
+        ],
+        parts: [
+          { id: 'wt_A_t23', kind: 'wire', from: 'A', to: 't23' },
+          { id: 'wt_t23_t17', kind: 'wire', from: 't23', to: 't17' },
+          { id: 'wt_t17_t26', kind: 'wire', from: 't17', to: 't26' },
+          { id: 'wb_B_b23', kind: 'wire', from: 'B', to: 'b23' },
+          { id: 'wb_b23_b30', kind: 'wire', from: 'b23', to: 'b30' },
+          { id: 'wb_b30_b28', kind: 'wire', from: 'b30', to: 'b28' },
+          { id: 'Rc1', kind: 'resistor', from: 't23', to: 'b23', label: 'Rc1', mergedFrom: ['R23', 'R2425'], mergeKind: 'series' },
+          { id: 'R1722', kind: 'resistor', from: 't17', to: 'Z', label: 'R1722', mergedFrom: ['R17', 'R2022'], mergeKind: 'parallel' },
+          { id: 'R30', kind: 'resistor', from: 'Z', to: 'b30', value: 10000, label: 'R30' },
+          { id: 'Rc3', kind: 'resistor', from: 't26', to: 'b28', label: 'Rc3', mergedFrom: ['R2629', 'R28'], mergeKind: 'series' },
+        ],
+        groups: [{ parts: ['R1722', 'R30'], tone: 'series', label: 'serie' }],
+      },
+    },
+    {
+      note: 'Rc2 = R1722+R30 = 12 kΩ. Quedan tres columnas de 12 kΩ, todas entre el riel A y el riel B: en paralelo.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: -4, y: 0, label: 'A' }, { id: 't23', x: 4, y: 0 }, { id: 't17', x: 12, y: 0 }, { id: 't26', x: 16, y: 0 },
+          { id: 'B', x: -4, y: 16, label: 'B' }, { id: 'b23', x: 4, y: 16 }, { id: 'b30', x: 12, y: 16 }, { id: 'b28', x: 16, y: 16 },
+        ],
+        parts: [
+          { id: 'wt_A_t23', kind: 'wire', from: 'A', to: 't23' },
+          { id: 'wt_t23_t17', kind: 'wire', from: 't23', to: 't17' },
+          { id: 'wt_t17_t26', kind: 'wire', from: 't17', to: 't26' },
+          { id: 'wb_B_b23', kind: 'wire', from: 'B', to: 'b23' },
+          { id: 'wb_b23_b30', kind: 'wire', from: 'b23', to: 'b30' },
+          { id: 'wb_b30_b28', kind: 'wire', from: 'b30', to: 'b28' },
+          { id: 'Rc1', kind: 'resistor', from: 't23', to: 'b23', label: 'Rc1', mergedFrom: ['R23', 'R2425'], mergeKind: 'series' },
+          { id: 'Rc2', kind: 'resistor', from: 't17', to: 'b30', label: 'Rc2', mergedFrom: ['R1722', 'R30'], mergeKind: 'series' },
+          { id: 'Rc3', kind: 'resistor', from: 't26', to: 'b28', label: 'Rc3', mergedFrom: ['R2629', 'R28'], mergeKind: 'series' },
+        ],
+        groups: [{ parts: ['Rc1', 'Rc2', 'Rc3'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Req(A,B) = 12k ‖ 12k ‖ 12k = 4 kΩ.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: -4, y: 0, label: 'A' }, { id: 'B', x: -4, y: 16, label: 'B' },
+        ],
+        parts: [
+          { id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['Rc1', 'Rc2', 'Rc3'], mergeKind: 'parallel', state: 'answer' },
+        ],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 4000 },
+    },
+  ],
+}} />
+
+## Ejemplo resuelto — EX PARCIAL 25-2
+
+Este es el circuito más grande del curso (20 resistencias) y también el más
+instructivo: escondido en el medio hay un **puente de Wheatstone balanceado**
+(mismo truco que pregunta el examen 2026-1). Igual que en el 24-2, A es todo el riel
+superior y B todo el riel inferior: hay **cuatro bloques** en paralelo entre los rieles
+(10 kΩ, 10 kΩ, 6 kΩ y 10 kΩ). Valores en $\Omega \times 10^3$:
+$R_1{=}10,R_2{=}9,R_3{=}8,R_4{=}8,R_5{=}18,R_6{=}5,R_7{=}1,R_8{=}12.5,R_9{=}10,
+R_{10}{=}15,R_{11}{=}6,R_{12}{=}12,R_{13}{=}4.8,R_{14}{=}6,R_{15}{=}8,R_{16}{=}12.3,
+R_{17}{=}11.9,R_{18}{=}0.75,R_{19}{=}1.7,R_{20}{=}8.3$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'EX PARCIAL 25-2: Req(A,B)',
+  steps: [
+    {
+      note: 'A es TODO el riel superior y B TODO el riel inferior: hay 4 bloques colgando entre los dos rieles. Bloque 1: R2‖R5 (ambas de T a Q) y R3‖R4 (ambas de P a Q). Bloque 2: R8+R9 en serie. Bloque 3: R13‖R15 (de T a K). Bloque 4: R19+R20 en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't2', x: 8, y: 0 }, { id: 't3', x: 12, y: 0 },
+          { id: 't4', x: 16, y: 0 }, { id: 't5', x: 24, y: 0 }, { id: 't6', x: 38, y: 0 }, { id: 't7', x: 42, y: 0 },
+          { id: 't8', x: 46, y: 0 }, { id: 'c19', x: 50, y: 0 }, { id: 'P', x: 4, y: 8, label: 'P' }, { id: 'Q', x: 8, y: 8, label: 'Q' },
+          { id: 'q5', x: 12, y: 8 }, { id: 'p4', x: 4, y: 11 }, { id: 'q4', x: 8, y: 11 }, { id: 'M', x: 16, y: 8, label: 'M' },
+          { id: 'm8', x: 20, y: 8 }, { id: 'N', x: 24, y: 10, label: 'N' }, { id: 'nl', x: 27, y: 10 }, { id: 'nu', x: 27, y: 6 },
+          { id: 's', x: 31, y: 6 }, { id: 'ku', x: 35, y: 6 }, { id: 'kr', x: 35, y: 10 }, { id: 'K', x: 38, y: 10, label: 'K' },
+          { id: 'k15', x: 42, y: 10 }, { id: 'B', x: 0, y: 20, label: 'B' }, { id: 'b1', x: 4, y: 20 }, { id: 'b10', x: 16, y: 20 },
+          { id: 'b9', x: 20, y: 20 }, { id: 'b12', x: 24, y: 20 }, { id: 'b14', x: 38, y: 20 }, { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t2', kind: 'wire', from: 't1', to: 't2' },
+          { id: 'wt_t2_t3', kind: 'wire', from: 't2', to: 't3' },
+          { id: 'wt_t3_t4', kind: 'wire', from: 't3', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t6', kind: 'wire', from: 't5', to: 't6' },
+          { id: 'wt_t6_t7', kind: 'wire', from: 't6', to: 't7' },
+          { id: 'wt_t7_t8', kind: 'wire', from: 't7', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b9', kind: 'wire', from: 'b10', to: 'b9' },
+          { id: 'wb_b9_b12', kind: 'wire', from: 'b9', to: 'b12' },
+          { id: 'wb_b12_b14', kind: 'wire', from: 'b12', to: 'b14' },
+          { id: 'wb_b14_b20', kind: 'wire', from: 'b14', to: 'b20' },
+          { id: 'R1', kind: 'resistor', from: 't1', to: 'P', value: 10000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 't2', to: 'Q', value: 9000, label: 'R2' },
+          { id: 'R5', kind: 'resistor', from: 't3', to: 'q5', value: 18000, label: 'R5' },
+          { id: 'wq5', kind: 'wire', from: 'q5', to: 'Q' },
+          { id: 'R3', kind: 'resistor', from: 'P', to: 'Q', value: 8000, label: 'R3' },
+          { id: 'wp4', kind: 'wire', from: 'P', to: 'p4' },
+          { id: 'wq4', kind: 'wire', from: 'Q', to: 'q4' },
+          { id: 'R4', kind: 'resistor', from: 'p4', to: 'q4', value: 8000, label: 'R4' },
+          { id: 'R6', kind: 'resistor', from: 'p4', to: 'b1', value: 5000, label: 'R6' },
+          { id: 'R7', kind: 'resistor', from: 't4', to: 'M', value: 1000, label: 'R7' },
+          { id: 'R10', kind: 'resistor', from: 'M', to: 'b10', value: 15000, label: 'R10' },
+          { id: 'R8', kind: 'resistor', from: 'M', to: 'm8', value: 12500, label: 'R8' },
+          { id: 'R9', kind: 'resistor', from: 'm8', to: 'b9', value: 10000, label: 'R9' },
+          { id: 'R11', kind: 'resistor', from: 't5', to: 'N', value: 6000, label: 'R11' },
+          { id: 'R12', kind: 'resistor', from: 'N', to: 'b12', value: 12000, label: 'R12' },
+          { id: 'wn', kind: 'wire', from: 'N', to: 'nl' },
+          { id: 'wnu', kind: 'wire', from: 'nl', to: 'nu' },
+          { id: 'R16', kind: 'resistor', from: 'nu', to: 's', value: 12300, label: 'R16' },
+          { id: 'R17', kind: 'resistor', from: 's', to: 'ku', value: 11900, label: 'R17' },
+          { id: 'wku', kind: 'wire', from: 'ku', to: 'kr' },
+          { id: 'R18', kind: 'resistor', from: 'nl', to: 'kr', value: 750, label: 'R18' },
+          { id: 'wk', kind: 'wire', from: 'kr', to: 'K' },
+          { id: 'R13', kind: 'resistor', from: 't6', to: 'K', value: 4800, label: 'R13' },
+          { id: 'R15', kind: 'resistor', from: 't7', to: 'k15', value: 8000, label: 'R15' },
+          { id: 'wk15', kind: 'wire', from: 'k15', to: 'K' },
+          { id: 'R14', kind: 'resistor', from: 'K', to: 'b14', value: 6000, label: 'R14' },
+          { id: 'R19', kind: 'resistor', from: 't8', to: 'c19', value: 1700, label: 'R19' },
+          { id: 'R20', kind: 'resistor', from: 'c19', to: 'b20', value: 8300, label: 'R20' },
+        ],
+        groups: [{ parts: ['R2', 'R5'], tone: 'parallel', label: 'paralelo' }, { parts: ['R3', 'R4'], tone: 'parallel', label: 'paralelo' }, { parts: ['R8', 'R9'], tone: 'series', label: 'serie' }, { parts: ['R13', 'R15'], tone: 'parallel', label: 'paralelo' }, { parts: ['R19', 'R20'], tone: 'series', label: 'serie' }],
+      },
+      expect: { 'Req(A,B)': 2142.857 },
+    },
+    {
+      note: 'R25 = R2‖R5 = 6 kΩ; R34 = R3‖R4 = 4 kΩ; R89 = R8+R9 = 22.5 kΩ; R1315 = R13‖R15 = 3 kΩ; R1920 = R19+R20 = 10 kΩ. Ahora Q solo toca R25 y R34 (serie), y R10‖R89 comparten M y B. El bloque 3 es un puente: se analiza aparte.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't2', x: 8, y: 0 }, { id: 't4', x: 16, y: 0 },
+          { id: 't5', x: 24, y: 0 }, { id: 't6', x: 38, y: 0 }, { id: 't8', x: 46, y: 0 }, { id: 'P', x: 4, y: 8, label: 'P' },
+          { id: 'Q', x: 8, y: 8, label: 'Q' }, { id: 'M', x: 16, y: 8, label: 'M' }, { id: 'N', x: 24, y: 10, label: 'N' }, { id: 'nl', x: 27, y: 10 },
+          { id: 'nu', x: 27, y: 6 }, { id: 's', x: 31, y: 6 }, { id: 'ku', x: 35, y: 6 }, { id: 'kr', x: 35, y: 10 },
+          { id: 'K', x: 38, y: 10, label: 'K' }, { id: 'B', x: 0, y: 20, label: 'B' }, { id: 'b1', x: 4, y: 20 }, { id: 'b10', x: 16, y: 20 },
+          { id: 'b9', x: 20, y: 20 }, { id: 'b12', x: 24, y: 20 }, { id: 'b14', x: 38, y: 20 }, { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t2', kind: 'wire', from: 't1', to: 't2' },
+          { id: 'wt_t2_t4', kind: 'wire', from: 't2', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t6', kind: 'wire', from: 't5', to: 't6' },
+          { id: 'wt_t6_t8', kind: 'wire', from: 't6', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b9', kind: 'wire', from: 'b10', to: 'b9' },
+          { id: 'wb_b9_b12', kind: 'wire', from: 'b9', to: 'b12' },
+          { id: 'wb_b12_b14', kind: 'wire', from: 'b12', to: 'b14' },
+          { id: 'wb_b14_b20', kind: 'wire', from: 'b14', to: 'b20' },
+          { id: 'R1', kind: 'resistor', from: 't1', to: 'P', value: 10000, label: 'R1' },
+          { id: 'R25', kind: 'resistor', from: 't2', to: 'Q', label: 'R25', mergedFrom: ['R2', 'R5'], mergeKind: 'parallel' },
+          { id: 'R34', kind: 'resistor', from: 'P', to: 'Q', label: 'R34', mergedFrom: ['R3', 'R4'], mergeKind: 'parallel' },
+          { id: 'R6', kind: 'resistor', from: 'P', to: 'b1', value: 5000, label: 'R6' },
+          { id: 'R7', kind: 'resistor', from: 't4', to: 'M', value: 1000, label: 'R7' },
+          { id: 'R10', kind: 'resistor', from: 'M', to: 'b10', value: 15000, label: 'R10' },
+          { id: 'R89', kind: 'resistor', from: 'M', to: 'b9', label: 'R89', mergedFrom: ['R8', 'R9'], mergeKind: 'series', via: [[20, 8]] },
+          { id: 'R11', kind: 'resistor', from: 't5', to: 'N', value: 6000, label: 'R11' },
+          { id: 'R12', kind: 'resistor', from: 'N', to: 'b12', value: 12000, label: 'R12' },
+          { id: 'wn', kind: 'wire', from: 'N', to: 'nl' },
+          { id: 'wnu', kind: 'wire', from: 'nl', to: 'nu' },
+          { id: 'R16', kind: 'resistor', from: 'nu', to: 's', value: 12300, label: 'R16' },
+          { id: 'R17', kind: 'resistor', from: 's', to: 'ku', value: 11900, label: 'R17' },
+          { id: 'wku', kind: 'wire', from: 'ku', to: 'kr' },
+          { id: 'R18', kind: 'resistor', from: 'nl', to: 'kr', value: 750, label: 'R18' },
+          { id: 'wk', kind: 'wire', from: 'kr', to: 'K' },
+          { id: 'R1315', kind: 'resistor', from: 't6', to: 'K', label: 'R1315', mergedFrom: ['R13', 'R15'], mergeKind: 'parallel' },
+          { id: 'R14', kind: 'resistor', from: 'K', to: 'b14', value: 6000, label: 'R14' },
+          { id: 'R1920', kind: 'resistor', from: 't8', to: 'b20', label: 'R1920', mergedFrom: ['R19', 'R20'], mergeKind: 'series', via: [[50, 0]] },
+        ],
+        groups: [{ parts: ['R25', 'R34'], tone: 'series', label: 'serie' }, { parts: ['R10', 'R89'], tone: 'parallel', label: 'paralelo' }, { parts: ['R11', 'R12', 'R1315', 'R14', 'R16', 'R17', 'R18'], tone: 'bridge', label: 'puente' }],
+      },
+    },
+    {
+      note: 'R2534 = R25+R34 = 10 kΩ, en paralelo con R1 (las dos van de T a P). R8910 = R10‖R89 = 9 kΩ, en serie con R7 (M solo toca esas dos). Puente: R11/R12 = 6/12 = 0.5 y R1315/R14 = 3/6 = 0.5. ¡Balanceado!',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't2', x: 8, y: 0 }, { id: 't4', x: 16, y: 0 },
+          { id: 't5', x: 24, y: 0 }, { id: 't6', x: 38, y: 0 }, { id: 't8', x: 46, y: 0 }, { id: 'P', x: 4, y: 8, label: 'P' },
+          { id: 'M', x: 16, y: 8, label: 'M' }, { id: 'N', x: 24, y: 10, label: 'N' }, { id: 'nl', x: 27, y: 10 }, { id: 'nu', x: 27, y: 6 },
+          { id: 's', x: 31, y: 6 }, { id: 'ku', x: 35, y: 6 }, { id: 'kr', x: 35, y: 10 }, { id: 'K', x: 38, y: 10, label: 'K' },
+          { id: 'B', x: 0, y: 20, label: 'B' }, { id: 'b1', x: 4, y: 20 }, { id: 'b10', x: 16, y: 20 }, { id: 'b12', x: 24, y: 20 },
+          { id: 'b14', x: 38, y: 20 }, { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t2', kind: 'wire', from: 't1', to: 't2' },
+          { id: 'wt_t2_t4', kind: 'wire', from: 't2', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t6', kind: 'wire', from: 't5', to: 't6' },
+          { id: 'wt_t6_t8', kind: 'wire', from: 't6', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b12', kind: 'wire', from: 'b10', to: 'b12' },
+          { id: 'wb_b12_b14', kind: 'wire', from: 'b12', to: 'b14' },
+          { id: 'wb_b14_b20', kind: 'wire', from: 'b14', to: 'b20' },
+          { id: 'R1', kind: 'resistor', from: 't1', to: 'P', value: 10000, label: 'R1' },
+          { id: 'R2534', kind: 'resistor', from: 't2', to: 'P', label: 'R2534', mergedFrom: ['R25', 'R34'], mergeKind: 'series', via: [[8, 8]] },
+          { id: 'R6', kind: 'resistor', from: 'P', to: 'b1', value: 5000, label: 'R6' },
+          { id: 'R7', kind: 'resistor', from: 't4', to: 'M', value: 1000, label: 'R7' },
+          { id: 'R8910', kind: 'resistor', from: 'M', to: 'b10', label: 'R8910', mergedFrom: ['R10', 'R89'], mergeKind: 'parallel' },
+          { id: 'R11', kind: 'resistor', from: 't5', to: 'N', value: 6000, label: 'R11' },
+          { id: 'R12', kind: 'resistor', from: 'N', to: 'b12', value: 12000, label: 'R12' },
+          { id: 'wn', kind: 'wire', from: 'N', to: 'nl' },
+          { id: 'wnu', kind: 'wire', from: 'nl', to: 'nu' },
+          { id: 'R16', kind: 'resistor', from: 'nu', to: 's', value: 12300, label: 'R16' },
+          { id: 'R17', kind: 'resistor', from: 's', to: 'ku', value: 11900, label: 'R17' },
+          { id: 'wku', kind: 'wire', from: 'ku', to: 'kr' },
+          { id: 'R18', kind: 'resistor', from: 'nl', to: 'kr', value: 750, label: 'R18' },
+          { id: 'wk', kind: 'wire', from: 'kr', to: 'K' },
+          { id: 'R1315', kind: 'resistor', from: 't6', to: 'K', label: 'R1315', mergedFrom: ['R13', 'R15'], mergeKind: 'parallel' },
+          { id: 'R14', kind: 'resistor', from: 'K', to: 'b14', value: 6000, label: 'R14' },
+          { id: 'R1920', kind: 'resistor', from: 't8', to: 'b20', label: 'R1920', mergedFrom: ['R19', 'R20'], mergeKind: 'series', via: [[50, 0]] },
+        ],
+        groups: [{ parts: ['R1', 'R2534'], tone: 'parallel', label: 'paralelo' }, { parts: ['R7', 'R8910'], tone: 'series', label: 'serie' }, { parts: ['R11', 'R12', 'R1315', 'R14', 'R16', 'R17', 'R18'], tone: 'bridge', label: 'puente' }],
+      },
+    },
+    {
+      note: 'Puente balanceado: N y K quedan al MISMO potencial, así que por la rama central (R16+R17)‖R18 no circula corriente, valga lo que valga. Se puede quitar.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't2', x: 8, y: 0 }, { id: 't4', x: 16, y: 0 },
+          { id: 't5', x: 24, y: 0 }, { id: 't6', x: 38, y: 0 }, { id: 't8', x: 46, y: 0 }, { id: 'P', x: 4, y: 8, label: 'P' },
+          { id: 'M', x: 16, y: 8, label: 'M' }, { id: 'N', x: 24, y: 10, label: 'N' }, { id: 'nl', x: 27, y: 10 }, { id: 'nu', x: 27, y: 6 },
+          { id: 's', x: 31, y: 6 }, { id: 'ku', x: 35, y: 6 }, { id: 'kr', x: 35, y: 10 }, { id: 'K', x: 38, y: 10, label: 'K' },
+          { id: 'B', x: 0, y: 20, label: 'B' }, { id: 'b1', x: 4, y: 20 }, { id: 'b10', x: 16, y: 20 }, { id: 'b12', x: 24, y: 20 },
+          { id: 'b14', x: 38, y: 20 }, { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t2', kind: 'wire', from: 't1', to: 't2' },
+          { id: 'wt_t2_t4', kind: 'wire', from: 't2', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t6', kind: 'wire', from: 't5', to: 't6' },
+          { id: 'wt_t6_t8', kind: 'wire', from: 't6', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b12', kind: 'wire', from: 'b10', to: 'b12' },
+          { id: 'wb_b12_b14', kind: 'wire', from: 'b12', to: 'b14' },
+          { id: 'wb_b14_b20', kind: 'wire', from: 'b14', to: 'b20' },
+          { id: 'R1', kind: 'resistor', from: 't1', to: 'P', value: 10000, label: 'R1' },
+          { id: 'R2534', kind: 'resistor', from: 't2', to: 'P', label: 'R2534', mergedFrom: ['R25', 'R34'], mergeKind: 'series', via: [[8, 8]] },
+          { id: 'R6', kind: 'resistor', from: 'P', to: 'b1', value: 5000, label: 'R6' },
+          { id: 'R7', kind: 'resistor', from: 't4', to: 'M', value: 1000, label: 'R7' },
+          { id: 'R8910', kind: 'resistor', from: 'M', to: 'b10', label: 'R8910', mergedFrom: ['R10', 'R89'], mergeKind: 'parallel' },
+          { id: 'R11', kind: 'resistor', from: 't5', to: 'N', value: 6000, label: 'R11' },
+          { id: 'R12', kind: 'resistor', from: 'N', to: 'b12', value: 12000, label: 'R12' },
+          { id: 'wn', kind: 'wire', from: 'N', to: 'nl' },
+          { id: 'wnu', kind: 'wire', from: 'nl', to: 'nu' },
+          { id: 'R16', kind: 'resistor', from: 'nu', to: 's', value: 12300, label: 'R16', state: 'muted' },
+          { id: 'R17', kind: 'resistor', from: 's', to: 'ku', value: 11900, label: 'R17', state: 'muted' },
+          { id: 'wku', kind: 'wire', from: 'ku', to: 'kr' },
+          { id: 'R18', kind: 'resistor', from: 'nl', to: 'kr', value: 750, label: 'R18', state: 'muted' },
+          { id: 'wk', kind: 'wire', from: 'kr', to: 'K' },
+          { id: 'R1315', kind: 'resistor', from: 't6', to: 'K', label: 'R1315', mergedFrom: ['R13', 'R15'], mergeKind: 'parallel' },
+          { id: 'R14', kind: 'resistor', from: 'K', to: 'b14', value: 6000, label: 'R14' },
+          { id: 'R1920', kind: 'resistor', from: 't8', to: 'b20', label: 'R1920', mergedFrom: ['R19', 'R20'], mergeKind: 'series', via: [[50, 0]] },
+        ],
+        groups: [{ parts: ['R11', 'R12', 'R1315', 'R14', 'R16', 'R17', 'R18'], tone: 'bridge', label: 'puente' }],
+      },
+    },
+    {
+      note: 'Ra = R1‖R2534 = 5 kΩ, en serie con R6 (P solo toca esas dos). Rb2 = R7+R8910 = 10 kΩ. Sin la rama central, el puente son dos cadenas serie: R11+R12 y R1315+R14.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't4', x: 16, y: 0 }, { id: 't5', x: 24, y: 0 },
+          { id: 't6', x: 38, y: 0 }, { id: 't8', x: 46, y: 0 }, { id: 'P', x: 4, y: 8, label: 'P' }, { id: 'M', x: 16, y: 8, label: 'M' },
+          { id: 'N', x: 24, y: 10, label: 'N' }, { id: 'K', x: 38, y: 10, label: 'K' }, { id: 'B', x: 0, y: 20, label: 'B' }, { id: 'b1', x: 4, y: 20 },
+          { id: 'b10', x: 16, y: 20 }, { id: 'b12', x: 24, y: 20 }, { id: 'b14', x: 38, y: 20 }, { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t4', kind: 'wire', from: 't1', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t6', kind: 'wire', from: 't5', to: 't6' },
+          { id: 'wt_t6_t8', kind: 'wire', from: 't6', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b12', kind: 'wire', from: 'b10', to: 'b12' },
+          { id: 'wb_b12_b14', kind: 'wire', from: 'b12', to: 'b14' },
+          { id: 'wb_b14_b20', kind: 'wire', from: 'b14', to: 'b20' },
+          { id: 'Ra', kind: 'resistor', from: 't1', to: 'P', label: 'Ra', mergedFrom: ['R1', 'R2534'], mergeKind: 'parallel' },
+          { id: 'R6', kind: 'resistor', from: 'P', to: 'b1', value: 5000, label: 'R6' },
+          { id: 'Rb2', kind: 'resistor', from: 't4', to: 'b10', label: 'Rb2', mergedFrom: ['R7', 'R8910'], mergeKind: 'series' },
+          { id: 'R11', kind: 'resistor', from: 't5', to: 'N', value: 6000, label: 'R11' },
+          { id: 'R12', kind: 'resistor', from: 'N', to: 'b12', value: 12000, label: 'R12' },
+          { id: 'R1315', kind: 'resistor', from: 't6', to: 'K', label: 'R1315', mergedFrom: ['R13', 'R15'], mergeKind: 'parallel' },
+          { id: 'R14', kind: 'resistor', from: 'K', to: 'b14', value: 6000, label: 'R14' },
+          { id: 'R1920', kind: 'resistor', from: 't8', to: 'b20', label: 'R1920', mergedFrom: ['R19', 'R20'], mergeKind: 'series', via: [[50, 0]] },
+        ],
+        groups: [{ parts: ['Ra', 'R6'], tone: 'series', label: 'serie' }, { parts: ['R11', 'R12'], tone: 'series', label: 'serie' }, { parts: ['R1315', 'R14'], tone: 'series', label: 'serie' }],
+      },
+    },
+    {
+      note: 'Rb1 = Ra+R6 = 10 kΩ. R1112 = R11+R12 = 18 kΩ y R1314 = R1315+R14 = 9 kΩ: las dos van del riel A al riel B, en paralelo.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't4', x: 16, y: 0 }, { id: 't5', x: 24, y: 0 },
+          { id: 't6', x: 38, y: 0 }, { id: 't8', x: 46, y: 0 }, { id: 'M', x: 16, y: 8, label: 'M' }, { id: 'B', x: 0, y: 20, label: 'B' },
+          { id: 'b1', x: 4, y: 20 }, { id: 'b10', x: 16, y: 20 }, { id: 'b12', x: 24, y: 20 }, { id: 'b14', x: 38, y: 20 },
+          { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t4', kind: 'wire', from: 't1', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t6', kind: 'wire', from: 't5', to: 't6' },
+          { id: 'wt_t6_t8', kind: 'wire', from: 't6', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b12', kind: 'wire', from: 'b10', to: 'b12' },
+          { id: 'wb_b12_b14', kind: 'wire', from: 'b12', to: 'b14' },
+          { id: 'wb_b14_b20', kind: 'wire', from: 'b14', to: 'b20' },
+          { id: 'Rb1', kind: 'resistor', from: 't1', to: 'b1', label: 'Rb1', mergedFrom: ['Ra', 'R6'], mergeKind: 'series' },
+          { id: 'Rb2', kind: 'resistor', from: 't4', to: 'b10', label: 'Rb2', mergedFrom: ['R7', 'R8910'], mergeKind: 'series' },
+          { id: 'R1112', kind: 'resistor', from: 't5', to: 'b12', label: 'R1112', mergedFrom: ['R11', 'R12'], mergeKind: 'series' },
+          { id: 'R1314', kind: 'resistor', from: 't6', to: 'b14', label: 'R1314', mergedFrom: ['R1315', 'R14'], mergeKind: 'series' },
+          { id: 'R1920', kind: 'resistor', from: 't8', to: 'b20', label: 'R1920', mergedFrom: ['R19', 'R20'], mergeKind: 'series', via: [[50, 0]] },
+        ],
+        groups: [{ parts: ['R1112', 'R1314'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Rb3 = R1112‖R1314 = 6 kΩ. Quedan los 4 bloques, todos entre el riel A y el riel B: 10k ‖ 10k ‖ 6k ‖ 10k.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't1', x: 4, y: 0 }, { id: 't4', x: 16, y: 0 }, { id: 't5', x: 24, y: 0 },
+          { id: 't8', x: 46, y: 0 }, { id: 'M', x: 16, y: 8, label: 'M' }, { id: 'B', x: 0, y: 20, label: 'B' }, { id: 'b1', x: 4, y: 20 },
+          { id: 'b10', x: 16, y: 20 }, { id: 'b12', x: 24, y: 20 }, { id: 'b20', x: 50, y: 20 },
+        ],
+        parts: [
+          { id: 'wt_A_t1', kind: 'wire', from: 'A', to: 't1' },
+          { id: 'wt_t1_t4', kind: 'wire', from: 't1', to: 't4' },
+          { id: 'wt_t4_t5', kind: 'wire', from: 't4', to: 't5' },
+          { id: 'wt_t5_t8', kind: 'wire', from: 't5', to: 't8' },
+          { id: 'wb_B_b1', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'wb_b1_b10', kind: 'wire', from: 'b1', to: 'b10' },
+          { id: 'wb_b10_b12', kind: 'wire', from: 'b10', to: 'b12' },
+          { id: 'wb_b12_b20', kind: 'wire', from: 'b12', to: 'b20' },
+          { id: 'Rb1', kind: 'resistor', from: 't1', to: 'b1', label: 'Rb1', mergedFrom: ['Ra', 'R6'], mergeKind: 'series' },
+          { id: 'Rb2', kind: 'resistor', from: 't4', to: 'b10', label: 'Rb2', mergedFrom: ['R7', 'R8910'], mergeKind: 'series' },
+          { id: 'Rb3', kind: 'resistor', from: 't5', to: 'b12', label: 'Rb3', mergedFrom: ['R1112', 'R1314'], mergeKind: 'parallel' },
+          { id: 'R1920', kind: 'resistor', from: 't8', to: 'b20', label: 'R1920', mergedFrom: ['R19', 'R20'], mergeKind: 'series', via: [[50, 0]] },
+        ],
+        groups: [{ parts: ['Rb1', 'Rb2', 'Rb3', 'R1920'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Req(A,B) = 1 / (1/10k + 1/10k + 1/6k + 1/10k) ≈ 2142.9 Ω.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 'B', x: 0, y: 20, label: 'B' },
+        ],
+        parts: [
+          { id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['Rb1', 'Rb2', 'Rb3', 'R1920'], mergeKind: 'parallel', state: 'answer' },
+        ],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 2142.857 },
+    },
+  ],
+}} />
+
+## Errores típicos
+
+- Fusionar dos resistencias como si fueran serie cuando, en realidad, el nodo que
+  comparten tiene una tercera conexión (romperías la corriente que se iba por esa
+  otra rama).
+- No notar que dos puntos dibujados lejos en el papel son, eléctricamente, el
+  mismo nodo (por un cable) — y por lo tanto perderse un cortocircuito o un
+  paralelo evidente.
+- En un puente (Wheatstone), intentar reducirlo como serie/paralelo puro sin antes
+  comprobar si está **balanceado** (relación de brazos igual): si lo está, el
+  elemento central no lleva corriente y se puede quitar directamente.
+- Arrastrar una resistencia "muerta" (en cortocircuito) en los cálculos, en lugar
+  de descartarla en cuanto se detecta.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Puente del enunciado: A arriba, B abajo; R5 es el quinto elemento entre M y N.',
+    circuit: {
+      nodes: [
+        { id: 'A', x: 8, y: 0, label: 'A' }, { id: 'aL', x: 4, y: 0 }, { id: 'aR', x: 12, y: 0 },
+        { id: 'M', x: 4, y: 6, label: 'M' }, { id: 'N', x: 12, y: 6, label: 'N' },
+        { id: 'bL', x: 4, y: 12 }, { id: 'B', x: 8, y: 12, label: 'B' }, { id: 'bR', x: 12, y: 12 },
+      ],
+      parts: [
+        { id: 'w1', kind: 'wire', from: 'aL', to: 'A' }, { id: 'w2', kind: 'wire', from: 'A', to: 'aR' },
+        { id: 'R1', kind: 'resistor', from: 'aL', to: 'M', value: 6000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'M', to: 'bL', value: 12000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'aR', to: 'N', value: 4000, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'N', to: 'bR', value: 8000, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 'M', to: 'N', value: 10000, label: 'R5', tone: 'bridge' },
+        { id: 'w3', kind: 'wire', from: 'bL', to: 'B' }, { id: 'w4', kind: 'wire', from: 'B', to: 'bR' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "En el puente de la figura, la rama izquierda tiene $R_1 = 6\\,\\text{k}\\Omega$ (de $A$ a $M$) y $R_2 = 12\\,\\text{k}\\Omega$ (de $M$ a $B$); la derecha tiene $R_3 = 4\\,\\text{k}\\Omega$ (de $A$ a $N$) y $R_4 = 8\\,\\text{k}\\Omega$ (de $N$ a $B$). Un quinto elemento $R_5$ conecta $M$ con $N$. ¿Circula corriente por $R_5$? Justifica sin resolver el circuito completo.",
+  hints: [
+    "Un puente está balanceado cuando la razón de los dos brazos de un lado es igual a la del otro lado: $R_1/R_2 = R_3/R_4$.",
+    "Si está balanceado, $M$ y $N$ quedan al mismo potencial sin importar qué haya entre ellos.",
+  ],
+}}>
+
+**1. Condición de balance.** Se comparan las razones de los brazos de cada lado:
+
+$$
+\frac{R_1}{R_2} = \frac{6}{12} = 0.5 \qquad \frac{R_3}{R_4} = \frac{4}{8} = 0.5 \qquad\Rightarrow\qquad \frac{R_1}{R_2} = \frac{R_3}{R_4}
+$$
+
+**2. Consecuencia.** Con cualquier tensión $V_{AB}$, cada lado es un divisor con la misma
+proporción, así que $M$ y $N$ quedan al mismo potencial:
+
+$$
+V_M = V_{AB}\,\frac{R_2}{R_1 + R_2} = \tfrac{2}{3}\,V_{AB} \qquad V_N = V_{AB}\,\frac{R_4}{R_3 + R_4} = \tfrac{2}{3}\,V_{AB}
+$$
+
+**3. Conclusión.** Sin diferencia de potencial no hay corriente, sea $R_5$ una resistencia,
+un cable o un galvanómetro, y valga lo que valga:
+
+$$
+V_{MN} = 0 \;\Rightarrow\; I_{R_5} = \boxed{0\,\text{A}}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Con una fuente de prueba E = 12 V entre A y B: V_M = V_N = 8 V, así que por R5 no pasa nada.',
+    circuit: {
+      nodes: [
+        { id: 't', x: -4, y: 0 }, { id: 'g', x: -4, y: 12, ground: true },
+        { id: 'A', x: 8, y: 0, label: 'A' }, { id: 'aL', x: 4, y: 0 }, { id: 'aR', x: 12, y: 0 },
+        { id: 'M', x: 4, y: 6, label: 'M', showPotential: true }, { id: 'N', x: 12, y: 6, label: 'N', showPotential: true },
+        { id: 'bL', x: 4, y: 12 }, { id: 'B', x: 8, y: 12, label: 'B' }, { id: 'bR', x: 12, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 12, label: 'E' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'aL' }, { id: 'w5', kind: 'wire', from: 'g', to: 'bL' },
+        { id: 'w1', kind: 'wire', from: 'aL', to: 'A' }, { id: 'w2', kind: 'wire', from: 'A', to: 'aR' },
+        { id: 'R1', kind: 'resistor', from: 'aL', to: 'M', value: 6000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'M', to: 'bL', value: 12000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'aR', to: 'N', value: 4000, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'N', to: 'bR', value: 8000, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 'M', to: 'N', value: 10000, label: 'R5', state: 'answer' },
+        { id: 'w3', kind: 'wire', from: 'bL', to: 'B' }, { id: 'w4', kind: 'wire', from: 'B', to: 'bR' },
+      ],
+      groups: [{ parts: ['R1', 'R2', 'R3', 'R4'], tone: 'bridge', label: 'balanceado' }],
+      currents: [{ part: 'R1', label: 'I_1', showValue: true }, { part: 'R3', label: 'I_3', showValue: true }, { part: 'R5', label: 'I_5', showValue: true }],
+    },
+    expect: { 'I(R5)': 0, 'V(M,N)': 0, 'V(M)': 8, 'V(N)': 8, 'I(R1)': 0.000667, 'I(R3)': 0.001 },
+  }],
+}} />
+
+**Comprobación — KCL en $M$:** entra $I_1 = 12/18\text{k} = 0.667$ mA por $R_1$ y sale
+exactamente lo mismo por $R_2$ ($8\text{ V}/12\text{ k}\Omega = 0.667$ mA): no sobra nada para $R_5$ ✓.
+
+</ExerciseBlock>
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Tres bloques colgados del riel A. Sigue con el dedo a dónde llega el extremo inferior de cada uno.',
+    circuit: {
+      nodes: [
+        { id: 'A', x: 0, y: 0, label: 'A' }, { id: 'a1', x: 6, y: 0 }, { id: 'a2', x: 12, y: 0 }, { id: 'a3', x: 18, y: 0 },
+        { id: 'm', x: 6, y: 4 }, { id: 'c', x: 12, y: 6 },
+        { id: 'B', x: 0, y: 8, label: 'B' }, { id: 'b1', x: 6, y: 8 },
+      ],
+      parts: [
+        { id: 'w1', kind: 'wire', from: 'A', to: 'a1' }, { id: 'w2', kind: 'wire', from: 'a1', to: 'a2' }, { id: 'w3', kind: 'wire', from: 'a2', to: 'a3' },
+        { id: 'R1', kind: 'resistor', from: 'A', to: 'B', value: 6000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'a1', to: 'm', value: 1000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'm', to: 'b1', value: 2000, label: 'R3' },
+        { id: 'w4', kind: 'wire', from: 'B', to: 'b1' },
+        { id: 'R4', kind: 'resistor', from: 'a2', to: 'c', value: 4000, label: 'R4' },
+        { id: 'w5', kind: 'wire', from: 'c', to: 'a3', via: [[18, 6]] },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "En el circuito de la figura (estilo del examen parcial) hay tres bloques colgados del riel $A$: $R_1 = 6\\,\\text{k}\\Omega$; $R_2 = 1\\,\\text{k}\\Omega$ en serie con $R_3 = 2\\,\\text{k}\\Omega$; y $R_4 = 4\\,\\text{k}\\Omega$. Calcula $R_{eq}$ entre $A$ y $B$. ¿Qué debe verificar primero un estudiante antes de sumar conductancias?",
+  hints: [
+    "Verifica, para cada bloque, si sus dos terminales realmente caen en nodos **distintos** ($A$ y $B$).",
+    "Si un bloque tiene sus dos terminales en el mismo nodo (por un cable que los une), no participa en $R_{eq}$: se descarta antes de calcular el paralelo de los demás.",
+  ],
+}}>
+
+**1. Verificar los extremos de cada bloque** (lo que hay que hacer *antes* de
+$\tfrac{1}{R_{eq}} = \sum \tfrac{1}{R_k}$):
+
+| Bloque | Extremo superior | Extremo inferior | ¿Cuenta? |
+|---|---|---|---|
+| $R_1$ | $A$ | $B$ | sí |
+| $R_2 + R_3$ | $A$ | $B$ | sí |
+| $R_4$ | $A$ | $A$ (el cable vuelve al riel) | **no** |
+
+$R_4$ tiene sus dos terminales en el mismo nodo: $V_{R_4} = 0$, no lleva corriente y se quita.
+
+**2. Serie $R_2 + R_3$.** El nodo intermedio sólo toca a $R_2$ y $R_3$:
+
+$$
+R_{23} = R_2 + R_3 = 1 + 2 = 3\,\text{k}\Omega
+$$
+
+**3. Paralelo $R_1 \parallel R_{23}$** (ambas entre $A$ y $B$):
+
+$$
+R_{eq} = \frac{R_1\,R_{23}}{R_1 + R_{23}} = \frac{6 \cdot 3}{6 + 3} = \boxed{2\,\text{k}\Omega}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Resuelto: descartar, serie, paralelo',
+  steps: [
+    {
+      note: 'R4 empieza y termina en el riel A: está en cortocircuito y no participa. R2 y R3 están en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 'a1', x: 6, y: 0 }, { id: 'a2', x: 12, y: 0 }, { id: 'a3', x: 18, y: 0 },
+          { id: 'm', x: 6, y: 4 }, { id: 'c', x: 12, y: 6 },
+          { id: 'B', x: 0, y: 8, label: 'B' }, { id: 'b1', x: 6, y: 8 },
+        ],
+        parts: [
+          { id: 'w1', kind: 'wire', from: 'A', to: 'a1' }, { id: 'w2', kind: 'wire', from: 'a1', to: 'a2' }, { id: 'w3', kind: 'wire', from: 'a2', to: 'a3' },
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'B', value: 6000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'a1', to: 'm', value: 1000, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'm', to: 'b1', value: 2000, label: 'R3' },
+          { id: 'w4', kind: 'wire', from: 'B', to: 'b1' },
+          { id: 'R4', kind: 'resistor', from: 'a2', to: 'c', value: 4000, label: 'R4', state: 'muted' },
+          { id: 'w5', kind: 'wire', from: 'c', to: 'a3', via: [[18, 6]], state: 'muted' },
+        ],
+        groups: [{ parts: ['R2', 'R3'], tone: 'series', label: 'serie' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 2000 },
+    },
+    {
+      note: 'Sin R4, y con R23 = R2 + R3 = 3 kΩ: R1 y R23 comparten los nodos A y B, están en paralelo.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 'a1', x: 6, y: 0 },
+          { id: 'B', x: 0, y: 8, label: 'B' }, { id: 'b1', x: 6, y: 8 },
+        ],
+        parts: [
+          { id: 'w1', kind: 'wire', from: 'A', to: 'a1' },
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'B', value: 6000, label: 'R1' },
+          { id: 'R23', kind: 'resistor', from: 'a1', to: 'b1', label: 'R23', mergedFrom: ['R2', 'R3'], mergeKind: 'series' },
+          { id: 'w4', kind: 'wire', from: 'B', to: 'b1' },
+        ],
+        groups: [{ parts: ['R1', 'R23'], tone: 'parallel', label: 'paralelo' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 2000 },
+    },
+    {
+      note: 'Req = R1 ‖ R23 = 6k ‖ 3k = 2 kΩ.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 0, label: 'A' }, { id: 'B', x: 0, y: 8, label: 'B' }],
+        parts: [{ id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['R1', 'R23'], mergeKind: 'parallel', state: 'answer' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 2000 },
+    },
+  ],
+}} />
+
+**Comprobación — conductancias:** $\tfrac{1}{6} + \tfrac{1}{3} = \tfrac{1}{2}\ \text{mS}$ ⇒
+$R_{eq} = 2\,\text{k}\Omega$ ✓. Si por error se hubiera sumado $R_4$: $\tfrac{1}{6} + \tfrac{1}{3} + \tfrac{1}{4} = \tfrac{3}{4}$ ⇒ $1.33\,\text{k}\Omega$ ✗.
+
+Mismo cuidado en los parciales: la rama central del puente balanceado del EX PARCIAL 25-2
+tampoco aporta (sus extremos quedan al mismo potencial); y al revés, en el EX PARCIAL 24-2,
+$R_{24}$ y $R_{25}$ *parecen* colgadas pero van de $Y_1$ a $B$ y sí cuentan.
+
+</ExerciseBlock>

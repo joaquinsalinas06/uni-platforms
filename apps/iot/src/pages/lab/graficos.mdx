@@ -1,0 +1,651 @@
+import Base from '../../layouts/Base.astro';
+import Visualization from '../../components/Visualization.astro';
+import ExerciseBlock from '../../components/ExerciseBlock';
+
+<Base title="Galería de gráficos" crumb="lab/graficos">
+
+<p class="tag">laboratorio · no es contenido del curso</p>
+
+# Galería: xy-chart · sequence · flow
+
+Banco de pruebas visual de las familias `xy-chart`, `sequence` y `flow` (y del
+markdown + KaTeX de `ExerciseBlock`). Cada figura es una spec real, tal como la
+escribiría un tema. Revisar a 1280 px y a 375 px, en claro y oscuro.
+
+## xy-chart
+
+### 1 · Señal en el tiempo — $f(t) = \sin 2t + 4\sin 5t$
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'Suma de dos senoides: la de ω = 5 rad/s domina (amplitud 4).',
+    series: [{ id: 'f', label: 'f(t)', fn: 'sin(2*x)+4*sin(5*x)', domain: [0, 12.6] }],
+    x: { label: 't (s)' }, y: { label: 'f(t)' },
+  }],
+}} />
+
+### 2 · Espectro — dos picos limpios en ω = 2 y ω = 5
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'La transformada de $\\sin 2t + 4\\sin 5t$ sólo tiene energía en ω = 2 (amplitud 1) y ω = 5 (amplitud 4).',
+    series: [{ id: 'F', label: '|F(ω)|', kind: 'stem', points: [[2, 1], [5, 4]] }],
+    x: { label: 'ω (rad/s)', min: 0, max: 7 }, y: { label: '|F(ω)|' },
+  }],
+}} />
+
+### 3 · Muestreo — la misma señal con dos $T_s$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: '$T_s = 0.25$ s: muchas muestras por período, la forma se reconoce.',
+      series: [{ id: 'x', label: 'x[n] = x(nTs)', kind: 'samples', fn: 'sin(2*x)+0.5*sin(5*x)', domain: [0, 6], samples: 0.25 }],
+      x: { label: 't (s)' }, y: { label: 'x' },
+    },
+    {
+      note: '$T_s = 0.8$ s: pocas muestras; unirlas ya no reproduce la señal (aliasing).',
+      series: [{ id: 'x', label: 'x[n] = x(nTs)', kind: 'samples', fn: 'sin(2*x)+0.5*sin(5*x)', domain: [0, 6], samples: 0.8 }],
+      x: { label: 't (s)' }, y: { label: 'x' },
+    },
+  ],
+}} />
+
+### 4 · Cuantización de un ADC de 3 bits
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: 'Señal analógica 0–5 V.',
+      series: [
+        { id: 'a', label: 'analógica', fn: '2.5+2.2*sin(x)', domain: [0, 6.3] },
+      ],
+      x: { label: 't (ms)' }, y: { label: 'V', min: 0, max: 5 },
+    },
+    {
+      note: 'Con 3 bits hay $2^3 = 8$ niveles: cada lectura cae al escalón de 0.625 V más cercano por abajo.',
+      series: [
+        { id: 'a', label: 'analógica', fn: '2.5+2.2*sin(x)', domain: [0, 6.3], state: 'muted' },
+        { id: 'q', label: 'cuantizada (3 bits)', kind: 'step', fn: 'floor((2.5+2.2*sin(x))/0.625)*0.625', domain: [0, 6.3], state: 'active' },
+      ],
+      x: { label: 't (ms)' }, y: { label: 'V', min: 0, max: 5 },
+      hlines: [{ at: 0.625, label: '1 LSB = 0.625 V' }],
+    },
+  ],
+}} />
+
+### 5 · PWM — el promedio sigue al ciclo de trabajo
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    { note: 'Duty 25 %: $V_{prom} = 0.25 \\cdot 5 = 1.25$ V.', series: [{ id: 'p', label: 'PWM', kind: 'step', fn: 'pwm(x, 0.25, 2, 0, 5)', domain: [0, 8], samples: 800 }], x: { label: 't (ms)' }, y: { label: 'V', min: 0, max: 6 }, hlines: [{ at: 1.25, label: 'V_prom = 1.25 V', state: 'active' }] },
+    { note: 'Duty 50 %: $V_{prom} = 2.5$ V.', series: [{ id: 'p', label: 'PWM', kind: 'step', fn: 'pwm(x, 0.5, 2, 0, 5)', domain: [0, 8], samples: 800 }], x: { label: 't (ms)' }, y: { label: 'V', min: 0, max: 6 }, hlines: [{ at: 2.5, label: 'V_prom = 2.5 V', state: 'active' }] },
+    { note: 'Duty 75 %: $V_{prom} = 3.75$ V.', series: [{ id: 'p', label: 'PWM', kind: 'step', fn: 'pwm(x, 75, 2, 0, 5)', domain: [0, 8], samples: 800 }], x: { label: 't (ms)' }, y: { label: 'V', min: 0, max: 6 }, hlines: [{ at: 3.75, label: 'V_prom = 3.75 V', state: 'active' }] },
+  ],
+}} />
+
+### 6 · Carga RC — τ y el 63.2 %
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'En $t = \\tau = RC$ el capacitor llega al 63.2 % de $V_s$; tras 5τ se considera cargado.',
+    series: [{ id: 'v', label: 'v_C(t)', kind: 'area', fn: '5*(1-exp(-x))', domain: [0, 6] }],
+    x: { label: 't / τ' }, y: { label: 'v_C (V)', min: 0, max: 5.5 },
+    hlines: [{ at: 3.16, label: '63.2 % de V_s' }, { at: 5, label: 'V_s = 5 V' }],
+    vlines: [{ at: 1, label: 'τ = RC', state: 'active' }, { at: 5, label: '5τ' }],
+    bands: [{ from: 5, to: 6, label: 'régimen' }],
+  }],
+}} />
+
+### 7 · Pasa-bajos RC en eje log — $|H(f)|$ y $f_c$
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'Por debajo de $f_c = 1/(2\\pi RC)$ pasa casi todo; en $f_c$ queda $1/\\sqrt 2 \\approx 0.707$.',
+    series: [{ id: 'h', label: '|H(f)|', fn: '1/sqrt(1+pow(x/159,2))', domain: [1, 100000] }],
+    x: { label: 'f (Hz)', log: true }, y: { label: '|H|', min: 0, max: 1.1 },
+    vlines: [{ at: 159, label: 'f_c = 159 Hz', state: 'active' }],
+    hlines: [{ at: 0.707, label: '0.707' }],
+  }],
+}} />
+
+### 8 · Alcance de las tecnologías inalámbricas (eje log)
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'Del contacto (NFC) a kilómetros (LoRaWAN): cinco órdenes de magnitud, por eso el eje es logarítmico.',
+    series: [{ id: 'r', label: 'alcance', kind: 'bars', bars: [
+      { label: 'NFC', from: 0.01, to: 0.1 },
+      { label: 'RFID', from: 0.1, to: 10 },
+      { label: 'BLE', from: 1, to: 50 },
+      { label: 'Zigbee', from: 10, to: 100 },
+      { label: 'Wi-Fi', from: 20, to: 150 },
+      { label: 'LoRaWAN', from: 2000, to: 15000 },
+    ] }],
+    x: { label: 'alcance (m)', log: true },
+  }],
+}} />
+
+### 9 · Cobertura por área con umbral de campo
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'Un campo de 15 km² sólo lo cubre una tecnología LPWAN con una puerta de enlace.',
+    series: [{ id: 'c', label: 'cobertura', kind: 'bars', tone: 'mesh2', bars: [
+      { label: 'Wi-Fi (1 AP)', from: 0.001, to: 0.05 },
+      { label: 'Zigbee (malla)', from: 0.01, to: 1 },
+      { label: 'LoRaWAN (1 gateway)', from: 10, to: 700 },
+    ] }],
+    x: { label: 'área cubierta (km²)', log: true },
+    vlines: [{ at: 15, label: '15 km² campo', state: 'marked' }],
+  }],
+}} />
+
+### 10 · Valores negativos y área
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'Área con signo: lo que queda bajo cero se rellena hacia el eje, no hacia el borde.',
+    series: [{ id: 'g', label: 'g(t)', kind: 'area', fn: '3*sin(x)-1', domain: [0, 12.6], tone: 'mesh1' }],
+    x: { label: 't' }, y: { label: 'g(t)' },
+    hlines: [{ at: -1, label: 'componente DC = −1' }],
+  }],
+}} />
+
+### 11 · Varias series — onda cuadrada y su serie de Fourier
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: 'Primer armónico: $\\tfrac{4}{\\pi}\\sin t$.',
+      series: [
+        { id: 'sq', label: 'square(t)', fn: 'square(x)', domain: [0, 12.6], samples: 1200 },
+        { id: 'h1', label: '1 armónico', fn: '4/PI*sin(x)', domain: [0, 12.6] },
+      ],
+      x: { label: 't' }, highlight: ['h1'],
+    },
+    {
+      note: 'Tres armónicos impares: la suma se acerca a la cuadrada.',
+      series: [
+        { id: 'sq', label: 'square(t)', fn: 'square(x)', domain: [0, 12.6], samples: 1200 },
+        { id: 'h1', label: '1 armónico', fn: '4/PI*sin(x)', domain: [0, 12.6] },
+        { id: 'h3', label: '3 armónicos', fn: '4/PI*(sin(x)+sin(3*x)/3+sin(5*x)/5)', domain: [0, 12.6] },
+      ],
+      x: { label: 't' }, highlight: ['h3'],
+    },
+  ],
+}} />
+
+### 12 · Espectro de una cuadrada — muchos stems y puntos explícitos
+
+<Visualization viz={{
+  type: 'xy-chart', static: true,
+  steps: [{
+    note: 'Sólo armónicos impares, con amplitud $4/(\\pi k)$.',
+    series: [{ id: 'k', label: 'b_k', kind: 'stem', points: [[1, 1.27], [2, 0], [3, 0.42], [4, 0], [5, 0.25], [6, 0], [7, 0.18], [8, 0], [9, 0.14], [10, 0], [11, 0.12]] }],
+    x: { label: 'k (armónico)' }, y: { label: 'b_k' },
+  }],
+}} />
+
+## sequence
+
+### 13 · CONNECT / CONNACK y SUBSCRIBE / SUBACK (paso a paso)
+
+<Visualization viz={{
+  type: 'sequence',
+  steps: [
+    { note: 'El cliente abre la sesión MQTT.', actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }], msgs: [{ from: 'c', to: 'b', label: 'CONNECT', flags: 'clientId=s1 · keepAlive=60' }] },
+    { note: 'El broker acepta.', actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }], msgs: [{ from: 'c', to: 'b', label: 'CONNECT', flags: 'clientId=s1 · keepAlive=60' }, { from: 'b', to: 'c', label: 'CONNACK', flags: 'rc = 0 (aceptado)' }] },
+    { note: 'Se suscribe a un tópico con comodín.', actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }], msgs: [{ from: 'c', to: 'b', label: 'CONNECT', flags: 'clientId=s1 · keepAlive=60' }, { from: 'b', to: 'c', label: 'CONNACK', flags: 'rc = 0 (aceptado)' }, { from: 'c', to: 'b', label: 'SUBSCRIBE', flags: 'casa/+/temp · QoS 1' }] },
+    { note: 'SUBACK confirma el QoS otorgado.', actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }], msgs: [{ from: 'c', to: 'b', label: 'CONNECT', flags: 'clientId=s1 · keepAlive=60' }, { from: 'b', to: 'c', label: 'CONNACK', flags: 'rc = 0 (aceptado)' }, { from: 'c', to: 'b', label: 'SUBSCRIBE', flags: 'casa/+/temp · QoS 1' }, { from: 'b', to: 'c', label: 'SUBACK', flags: 'QoS otorgado = 1' }] },
+  ],
+}} />
+
+### 14 · QoS 0, 1 y 2 — publisher ↔ broker ↔ subscriber
+
+<Visualization viz={{
+  type: 'sequence',
+  steps: [
+    {
+      note: 'QoS 0: un envío por tramo, sin ack.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [{ from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 0' }, { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 0' }],
+    },
+    {
+      note: 'QoS 1: cada tramo se confirma con PUBACK.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [{ from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 1' }, { from: 'b', to: 'p', label: 'PUBACK' }, { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 1' }, { from: 's', to: 'b', label: 'PUBACK' }],
+    },
+    {
+      note: 'QoS 2: handshake de 4 partes en cada tramo; cada extremo guarda el mensaje hasta cerrar su parte.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2', store: 'guarda msg' },
+        { from: 'b', to: 'p', label: 'PUBREC' },
+        { from: 'p', to: 'b', label: 'PUBREL' },
+        { from: 'b', to: 'p', label: 'PUBCOMP', store: 'borra msg' },
+        { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 2', store: 'guarda msg' },
+        { from: 's', to: 'b', label: 'PUBREC' },
+        { from: 'b', to: 's', label: 'PUBREL' },
+        { from: 's', to: 'b', label: 'PUBCOMP', store: 'borra msg' },
+      ],
+    },
+  ],
+}} />
+
+### 15 · QoS 1 — PUBACK perdido y retransmisión con DUP = 1
+
+<Visualization viz={{
+  type: 'sequence', static: true,
+  steps: [{
+    note: 'El PUBLISH llegó, pero el PUBACK se perdió: el cliente reenvía con DUP=1 y el broker puede entregarlo dos veces.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'c', to: 'b', label: 'PUBLISH "Temperature=25°C"', flags: 'QoS 1 · DUP=0', store: 'entrega a suscriptores' },
+      { from: 'b', to: 'c', label: 'PUBACK', lost: true, flags: 'se pierde en la red' },
+      { from: 'c', to: 'c', label: 'timeout', flags: 'sin PUBACK' },
+      { from: 'c', to: 'b', label: 'PUBLISH "Temperature=25°C"', flags: 'QoS 1 · DUP=1 (retransmisión)', state: 'active' },
+      { from: 'b', to: 'c', label: 'PUBACK' },
+    ],
+  }],
+}} />
+
+### 16 · QoS 2 — publisher ↔ broker ↔ subscriber, paso a paso
+
+<Visualization viz={{
+  type: 'sequence',
+  steps: [
+    { note: 'PUBLISH QoS 2: el broker guarda el mensaje (packetId 7).', actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }], msgs: [{ from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2 · id=7', store: 'guarda id=7' }] },
+    { note: 'PUBREC: "lo recibí".', actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }], msgs: [{ from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2 · id=7', store: 'guarda id=7' }, { from: 'b', to: 'p', label: 'PUBREC', flags: 'id=7' }] },
+    { note: 'PUBREL: el publisher libera.', actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }], msgs: [{ from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2 · id=7', store: 'guarda id=7' }, { from: 'b', to: 'p', label: 'PUBREC', flags: 'id=7' }, { from: 'p', to: 'b', label: 'PUBREL', flags: 'id=7' }] },
+    { note: 'PUBCOMP cierra el tramo publisher ↔ broker; el broker reenvía al subscriber.', actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }], msgs: [{ from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2 · id=7', store: 'guarda id=7' }, { from: 'b', to: 'p', label: 'PUBREC', flags: 'id=7' }, { from: 'p', to: 'b', label: 'PUBREL', flags: 'id=7' }, { from: 'b', to: 'p', label: 'PUBCOMP', flags: 'id=7' }, { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 2 · id=3' }] },
+  ],
+}} />
+
+### 17 · Mensaje retenido entregado al suscribirse
+
+<Visualization viz={{
+  type: 'sequence', static: true,
+  steps: [{
+    note: 'Con retain=1 el broker guarda el último valor del tópico y se lo entrega a quien se suscriba después.',
+    actors: [{ id: 'p', label: 'Sensor' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'App móvil' }],
+    msgs: [
+      { from: 'p', to: 'b', label: 'PUBLISH casa/temp', flags: '25 °C · retain=1', store: 'retiene último valor' },
+      { from: 'p', to: 's', label: '10 min después', divider: true },
+      { from: 's', to: 'b', label: 'SUBSCRIBE casa/temp' },
+      { from: 'b', to: 's', label: 'SUBACK' },
+      { from: 'b', to: 's', label: 'PUBLISH casa/temp', flags: '25 °C · retain=1 (sin esperar)', state: 'active' },
+    ],
+  }],
+}} />
+
+### 18 · Last Will tras una desconexión inesperada
+
+<Visualization viz={{
+  type: 'sequence', static: true,
+  steps: [{
+    note: 'El testamento se registra en CONNECT; el broker lo publica sólo si el cliente cae sin DISCONNECT.',
+    actors: [{ id: 'n', label: 'Nodo' }, { id: 'b', label: 'Broker' }, { id: 'm', label: 'Monitor' }],
+    msgs: [
+      { from: 'm', to: 'b', label: 'SUBSCRIBE nodos/+/estado' },
+      { from: 'n', to: 'b', label: 'CONNECT', flags: 'will: nodos/n1/estado = "offline"', store: 'guarda el will' },
+      { from: 'n', to: 'b', label: 'batería agotada: sin DISCONNECT', divider: true },
+      { from: 'b', to: 'b', label: '1.5 × keepAlive', flags: 'sin paquetes del nodo' },
+      { from: 'b', to: 'm', label: 'PUBLISH nodos/n1/estado', flags: '"offline" (Last Will)', state: 'active' },
+    ],
+  }],
+}} />
+
+### 19 · Sesión persistente — mensajes en cola al reconectar
+
+<Visualization viz={{
+  type: 'sequence', static: true,
+  steps: [{
+    note: 'Con cleanSession=0 el broker encola los QoS ≥ 1 mientras el suscriptor no está y los entrega al volver.',
+    actors: [{ id: 's', label: 'Suscriptor' }, { id: 'b', label: 'Broker' }, { id: 'p', label: 'Publicador' }],
+    msgs: [
+      { from: 's', to: 'b', label: 'CONNECT', flags: 'cleanSession=0' },
+      { from: 's', to: 'b', label: 'SUBSCRIBE alarma', flags: 'QoS 1' },
+      { from: 's', to: 'b', label: 'suscriptor desconectado', divider: true },
+      { from: 'p', to: 'b', label: 'PUBLISH alarma', flags: 'QoS 1 · "gas"', store: 'encola #1' },
+      { from: 'p', to: 'b', label: 'PUBLISH alarma', flags: 'QoS 1 · "humo"', store: 'encola #2' },
+      { from: 's', to: 'b', label: 'reconexión', divider: true },
+      { from: 's', to: 'b', label: 'CONNECT', flags: 'cleanSession=0' },
+      { from: 'b', to: 's', label: 'CONNACK', flags: 'sessionPresent=1' },
+      { from: 'b', to: 's', label: 'PUBLISH alarma "gas"', state: 'active' },
+      { from: 'b', to: 's', label: 'PUBLISH alarma "humo"', state: 'active' },
+    ],
+  }],
+}} />
+
+### 20 · Keep-alive — PINGREQ / PINGRESP
+
+<Visualization viz={{
+  type: 'sequence', static: true,
+  steps: [{
+    note: 'Si no hay tráfico durante keepAlive, el cliente envía PINGREQ para demostrar que sigue vivo.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'c', to: 'b', label: 'PUBLISH', flags: 'QoS 0' },
+      { from: 'c', to: 'b', label: '60 s sin tráfico', divider: true },
+      { from: 'c', to: 'b', label: 'PINGREQ' },
+      { from: 'b', to: 'c', label: 'PINGRESP' },
+      { from: 'c', to: 'b', label: '60 s sin tráfico', divider: true },
+      { from: 'c', to: 'b', label: 'PINGREQ' },
+      { from: 'b', to: 'c', label: 'PINGRESP' },
+    ],
+  }],
+}} />
+
+### 21 · HTTP vs WebSocket vs CoAP
+
+<Visualization viz={{
+  type: 'sequence',
+  steps: [
+    {
+      note: 'HTTP: cada dato exige una petición del cliente (polling); el servidor no puede empujar.',
+      actors: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor HTTP' }],
+      msgs: [
+        { from: 'c', to: 's', label: 'GET /temp', flags: 'TCP + cabeceras' },
+        { from: 's', to: 'c', label: '200 OK', flags: '{"t": 25}' },
+        { from: 'c', to: 's', label: 'GET /temp', flags: '5 s después' },
+        { from: 's', to: 'c', label: '200 OK', flags: '{"t": 25}' },
+      ],
+    },
+    {
+      note: 'WebSocket: un upgrade y luego un canal full-duplex; el servidor empuja cuando cambia el dato.',
+      actors: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor WS' }],
+      msgs: [
+        { from: 'c', to: 's', label: 'GET /ws', flags: 'Upgrade: websocket' },
+        { from: 's', to: 'c', label: '101 Switching Protocols' },
+        { from: 's', to: 'c', label: 'frame {"t": 26}', state: 'active' },
+        { from: 'c', to: 's', label: 'frame {"cmd": "on"}' },
+        { from: 's', to: 'c', label: 'frame {"t": 27}', state: 'active' },
+      ],
+    },
+    {
+      note: 'CoAP: UDP, mensaje confirmable (CON) con ACK; con Observe el servidor notifica cambios.',
+      actors: [{ id: 'c', label: 'Cliente CoAP' }, { id: 's', label: 'Nodo CoAP' }],
+      msgs: [
+        { from: 'c', to: 's', label: 'CON GET /temp', flags: 'Observe: 0 · MID 0x7d34' },
+        { from: 's', to: 'c', label: 'ACK 2.05 Content', flags: '25 °C' },
+        { from: 's', to: 'c', label: 'CON 2.05 (notificación)', flags: '26 °C', state: 'active' },
+        { from: 'c', to: 's', label: 'ACK' },
+      ],
+    },
+  ],
+}} />
+
+### 22 · Caso límite — seis actores, rótulos largos, auto-mensajes
+
+<Visualization viz={{
+  type: 'sequence', static: true,
+  steps: [{
+    note: 'Seis líneas de vida: el lienzo se ensancha y se escala; los rótulos largos abren su hueco.',
+    actors: [{ id: 's', label: 'Sensor\nDHT22' }, { id: 'm', label: 'ESP32' }, { id: 'g', label: 'Gateway' }, { id: 'b', label: 'Broker' }, { id: 'd', label: 'Base de\ndatos' }, { id: 'u', label: 'Dashboard' }],
+    msgs: [
+      { from: 'm', to: 's', label: 'pulso de inicio' },
+      { from: 's', to: 'm', label: '40 bits', flags: 'humedad · temperatura · checksum' },
+      { from: 'm', to: 'm', label: 'valida checksum' },
+      { from: 'm', to: 'g', label: 'LoRa uplink', flags: 'SF7 · 12 bytes' },
+      { from: 'g', to: 'b', label: 'PUBLISH campo/n1/clima', flags: 'QoS 1' },
+      { from: 'b', to: 'd', label: 'PUBLISH (suscripción del ingestor)', store: 'INSERT fila' },
+      { from: 'b', to: 'u', label: 'PUBLISH campo/n1/clima', flags: 'WebSocket', state: 'active' },
+      { from: 'u', to: 'm', label: 'comando: intervalo = 30 s (downlink en la próxima ventana)', state: 'muted' },
+    ],
+  }],
+}} />
+
+## flow
+
+### 23 · Termostato básico (guía de diagramas, figura 1)
+
+<Visualization viz={{
+  type: 'flow', static: true,
+  steps: [{
+    note: 'Ciclo continuo: leer, decidir, actuar y volver a leer.',
+    shapes: [
+      { id: 'i', kind: 'start', label: 'Inicio' },
+      { id: 'cfg', kind: 'process', label: 'Configurar pines\ny Monitor Serial' },
+      { id: 'leer', kind: 'io', label: 'Lectura del sensor\nde Temperatura' },
+      { id: 'd', kind: 'decision', label: '¿Temp > 27 °C?' },
+      { id: 'on', kind: 'process', label: 'Activar Relé\n(Ventilador ON)' },
+      { id: 'off', kind: 'process', label: 'Desactivar Relé\n(Ventilador OFF)' },
+    ],
+    arrows: [
+      { from: 'i', to: 'cfg' }, { from: 'cfg', to: 'leer' }, { from: 'leer', to: 'd' },
+      { from: 'd', to: 'on', label: 'V' }, { from: 'd', to: 'off', label: 'F' },
+      { from: 'on', to: 'leer' }, { from: 'off', to: 'leer' },
+    ],
+  }],
+}} />
+
+### 24 · Aforo + gas (guía de diagramas, figura 4)
+
+<Visualization viz={{
+  type: 'flow',
+  steps: [
+    {
+      note: 'Prioridad máxima: el gas se evalúa antes que el aforo en cada vuelta.',
+      shapes: [
+        { id: 'i', kind: 'start', label: 'Inicio' },
+        { id: 'cfg', kind: 'process', label: 'Configurar I/O, LCD\nAforo = 0' },
+        { id: 'gas', kind: 'io', label: 'Leer Sensor Gas (MQ2)' },
+        { id: 'dg', kind: 'decision', label: '¿Nivel > Umbral?', state: 'active' },
+        { id: 'pel', kind: 'process', label: 'LCD: «PELIGRO: EVACUAR»\nBuzzer ON\nParpadear LED Rojo' },
+        { id: 'da', kind: 'decision', label: '¿Aforo ≥ 50?' },
+        { id: 'comp', kind: 'process', label: 'LCD: «AFORO COMPLETO»\nLED Rojo Fijo\nIgnorar PIR' },
+        { id: 'pir', kind: 'io', label: 'Encender LED Verde\nLeer PIR (Ingreso)' },
+        { id: 'dm', kind: 'decision', label: '¿Movimiento?' },
+        { id: 'inc', kind: 'process', label: 'Aforo = Aforo + 1\nDelay 5s (Debounce)' },
+        { id: 'btn', kind: 'io', label: 'Leer Botón (Salida)' },
+        { id: 'db', kind: 'decision', label: '¿Presionado\ny Aforo > 0?' },
+        { id: 'dec', kind: 'process', label: 'Aforo = Aforo - 1' },
+        { id: 'lcd', kind: 'process', label: 'Mostrar en LCD:\n«AFORO: XX»' },
+      ],
+      arrows: [
+        { from: 'i', to: 'cfg' }, { from: 'cfg', to: 'gas' }, { from: 'gas', to: 'dg' },
+        { from: 'dg', to: 'pel', label: 'V' }, { from: 'dg', to: 'da', label: 'F' }, { from: 'pel', to: 'gas' },
+        { from: 'da', to: 'comp', label: 'V' }, { from: 'da', to: 'pir', label: 'F' }, { from: 'comp', to: 'btn' },
+        { from: 'pir', to: 'dm' }, { from: 'dm', to: 'inc', label: 'V' }, { from: 'dm', to: 'btn', label: 'F' }, { from: 'inc', to: 'btn' },
+        { from: 'btn', to: 'db' }, { from: 'db', to: 'dec', label: 'V' }, { from: 'db', to: 'lcd', label: 'F' }, { from: 'dec', to: 'lcd' },
+        { from: 'lcd', to: 'gas' },
+      ],
+    },
+    {
+      note: 'Si el ambiente es seguro se evalúa la ocupación.',
+      shapes: [
+        { id: 'i', kind: 'start', label: 'Inicio' },
+        { id: 'cfg', kind: 'process', label: 'Configurar I/O, LCD\nAforo = 0' },
+        { id: 'gas', kind: 'io', label: 'Leer Sensor Gas (MQ2)' },
+        { id: 'dg', kind: 'decision', label: '¿Nivel > Umbral?' },
+        { id: 'pel', kind: 'process', label: 'LCD: «PELIGRO: EVACUAR»\nBuzzer ON\nParpadear LED Rojo', state: 'muted' },
+        { id: 'da', kind: 'decision', label: '¿Aforo ≥ 50?', state: 'active' },
+        { id: 'comp', kind: 'process', label: 'LCD: «AFORO COMPLETO»\nLED Rojo Fijo\nIgnorar PIR' },
+        { id: 'pir', kind: 'io', label: 'Encender LED Verde\nLeer PIR (Ingreso)' },
+        { id: 'dm', kind: 'decision', label: '¿Movimiento?' },
+        { id: 'inc', kind: 'process', label: 'Aforo = Aforo + 1\nDelay 5s (Debounce)' },
+        { id: 'btn', kind: 'io', label: 'Leer Botón (Salida)' },
+        { id: 'db', kind: 'decision', label: '¿Presionado\ny Aforo > 0?' },
+        { id: 'dec', kind: 'process', label: 'Aforo = Aforo - 1' },
+        { id: 'lcd', kind: 'process', label: 'Mostrar en LCD:\n«AFORO: XX»' },
+      ],
+      arrows: [
+        { from: 'i', to: 'cfg' }, { from: 'cfg', to: 'gas' }, { from: 'gas', to: 'dg' },
+        { from: 'dg', to: 'pel', label: 'V', state: 'muted' }, { from: 'dg', to: 'da', label: 'F', state: 'active' }, { from: 'pel', to: 'gas', state: 'muted' },
+        { from: 'da', to: 'comp', label: 'V' }, { from: 'da', to: 'pir', label: 'F' }, { from: 'comp', to: 'btn' },
+        { from: 'pir', to: 'dm' }, { from: 'dm', to: 'inc', label: 'V' }, { from: 'dm', to: 'btn', label: 'F' }, { from: 'inc', to: 'btn' },
+        { from: 'btn', to: 'db' }, { from: 'db', to: 'dec', label: 'V' }, { from: 'db', to: 'lcd', label: 'F' }, { from: 'dec', to: 'lcd' },
+        { from: 'lcd', to: 'gas' },
+      ],
+    },
+  ],
+}} />
+
+### 25 · Nodo de monitoreo agrícola (diagrama de bloques, figura 2)
+
+<Visualization viz={{
+  type: 'flow', static: true,
+  steps: [{
+    note: 'Controlador al centro; entradas apuntan hacia él, salidas salen de él; la potencia (trazo grueso) va aparte.',
+    shapes: [
+      { id: 'hum', kind: 'block', label: 'Sensor de\nHumedad' },
+      { id: 'btn', kind: 'block', label: 'Botón Selector' },
+      { id: 'mcu', kind: 'block', label: 'Microcontrolador\n(Arduino Uno)', state: 'marked' },
+      { id: 'lcd', kind: 'block', label: 'Pantalla LCD 16x2' },
+      { id: 'rel', kind: 'block', label: 'Módulo Relé' },
+      { id: 'mot', kind: 'block', label: 'Motor DC\n(Ventilador)' },
+      { id: 'src', kind: 'block', label: 'Fuente 9V' },
+    ],
+    arrows: [
+      { from: 'hum', to: 'mcu', label: 'Analógica', kind: 'data' },
+      { from: 'btn', to: 'mcu', label: 'Digital', kind: 'data' },
+      { from: 'mcu', to: 'lcd', label: 'Bus I2C', kind: 'data' },
+      { from: 'mcu', to: 'rel', label: 'Control (5V)', kind: 'data' },
+      { from: 'rel', to: 'mot', label: '9V conmutado', kind: 'power' },
+      { from: 'src', to: 'mcu', label: '5V regulado', kind: 'power' },
+      { from: 'src', to: 'rel', label: '9V (potencia)', kind: 'power' },
+    ],
+  }],
+}} />
+
+### 26 · Nodo de seguridad y aforo (diagrama de bloques, figura 3)
+
+<Visualization viz={{
+  type: 'flow', static: true,
+  steps: [{
+    note: 'Tres entradas, tres salidas, cada flecha con su tipo de señal.',
+    shapes: [
+      { id: 'pir', kind: 'block', label: 'Sensor PIR\n(Movimiento)' },
+      { id: 'mq2', kind: 'block', label: 'Sensor Gas MQ2' },
+      { id: 'btn', kind: 'block', label: 'Botón\n(Simulador Salida)' },
+      { id: 'mcu', kind: 'block', label: 'Microcontrolador\n(Arduino MEGA2560)' },
+      { id: 'lcd', kind: 'block', label: 'Pantalla LCD 16x2' },
+      { id: 'led', kind: 'block', label: 'LEDs\n(Rojo y Verde)' },
+      { id: 'buz', kind: 'block', label: 'Buzzer\n(Alarma)' },
+    ],
+    arrows: [
+      { from: 'pir', to: 'mcu', label: 'Señal Digital', kind: 'data' },
+      { from: 'mq2', to: 'mcu', label: 'Señal Analógica', kind: 'data' },
+      { from: 'btn', to: 'mcu', label: 'Señal Digital', kind: 'data' },
+      { from: 'mcu', to: 'lcd', label: 'Bus I2C / Digital', kind: 'data' },
+      { from: 'mcu', to: 'led', label: 'Pines Digitales', kind: 'data' },
+      { from: 'mcu', to: 'buz', label: 'Pin Digital', kind: 'data' },
+    ],
+  }],
+}} />
+
+### 27 · FSM de conexión de un cliente MQTT
+
+<Visualization viz={{
+  type: 'flow',
+  steps: [
+    {
+      note: 'Arranca desconectado y envía CONNECT.',
+      shapes: [
+        { id: 'off', kind: 'state', label: 'DESCONECTADO', initial: true, state: 'active' },
+        { id: 'ing', kind: 'state', label: 'CONECTANDO' },
+        { id: 'on', kind: 'state', label: 'CONECTADO' },
+      ],
+      arrows: [
+        { from: 'off', to: 'ing', label: 'CONNECT', state: 'active' },
+        { from: 'ing', to: 'on', label: 'CONNACK rc=0' },
+        { from: 'ing', to: 'off', label: 'rc≠0 / timeout' },
+        { from: 'on', to: 'on', label: 'PINGREQ/PINGRESP' },
+        { from: 'on', to: 'off', label: 'sin PINGRESP · DISCONNECT' },
+      ],
+    },
+    {
+      note: 'Con CONNACK rc=0 queda conectado y mantiene la sesión con keep-alive.',
+      shapes: [
+        { id: 'off', kind: 'state', label: 'DESCONECTADO', initial: true },
+        { id: 'ing', kind: 'state', label: 'CONECTANDO' },
+        { id: 'on', kind: 'state', label: 'CONECTADO', state: 'active' },
+      ],
+      arrows: [
+        { from: 'off', to: 'ing', label: 'CONNECT' },
+        { from: 'ing', to: 'on', label: 'CONNACK rc=0', state: 'active' },
+        { from: 'ing', to: 'off', label: 'rc≠0 / timeout' },
+        { from: 'on', to: 'on', label: 'PINGREQ/PINGRESP', state: 'active' },
+        { from: 'on', to: 'off', label: 'sin PINGRESP · DISCONNECT' },
+      ],
+    },
+  ],
+}} />
+
+### 28 · FSM del broker con un mensaje QoS 2 entrante
+
+<Visualization viz={{
+  type: 'flow', static: true,
+  steps: [{
+    note: 'El broker no reenvía el PUBLISH duplicado (DUP=1) mientras el id siga guardado.',
+    shapes: [
+      { id: 'idle', kind: 'state', label: 'LIBRE', initial: true },
+      { id: 'rec', kind: 'state', label: 'GUARDADO\n(id=7)' },
+      { id: 'rel', kind: 'state', label: 'LIBERADO' },
+      { id: 'fw', kind: 'state', label: 'REENVÍA\nA SUBS.' },
+    ],
+    arrows: [
+      { from: 'idle', to: 'rec', label: 'PUBLISH / PUBREC' },
+      { from: 'rec', to: 'rec', label: 'PUBLISH DUP=1 / PUBREC' },
+      { from: 'rec', to: 'rel', label: 'PUBREL / PUBCOMP' },
+      { from: 'rel', to: 'fw', label: 'entrega' },
+      { from: 'fw', to: 'idle', label: 'borra id=7' },
+    ],
+  }],
+}} />
+
+### 29 · Denso — tres decisiones encadenadas y un bucle de reintento
+
+<Visualization viz={{
+  type: 'flow', static: true,
+  steps: [{
+    note: 'Reintento de conexión Wi-Fi con límite: el retorno del reintento va por fuera, nunca a través de las formas.',
+    shapes: [
+      { id: 'i', kind: 'start', label: 'Inicio' },
+      { id: 'n', kind: 'process', label: 'intentos = 0' },
+      { id: 'w', kind: 'process', label: 'WiFi.begin(ssid, pass)' },
+      { id: 'd1', kind: 'decision', label: '¿Conectado?' },
+      { id: 'inc', kind: 'process', label: 'intentos++\ndelay(500)' },
+      { id: 'd2', kind: 'decision', label: '¿intentos < 10?' },
+      { id: 'err', kind: 'io', label: 'Serial: "sin red"' },
+      { id: 'mq', kind: 'process', label: 'client.connect(broker)' },
+      { id: 'd3', kind: 'decision', label: '¿MQTT OK?' },
+      { id: 'pub', kind: 'io', label: 'publish(temp)' },
+      { id: 'f', kind: 'end', label: 'Fin' },
+    ],
+    arrows: [
+      { from: 'i', to: 'n' }, { from: 'n', to: 'w' }, { from: 'w', to: 'd1' },
+      { from: 'd1', to: 'mq', label: 'V' }, { from: 'd1', to: 'inc', label: 'F' },
+      { from: 'inc', to: 'd2' }, { from: 'd2', to: 'w', label: 'V' }, { from: 'd2', to: 'err', label: 'F' },
+      { from: 'err', to: 'f' },
+      { from: 'mq', to: 'd3' }, { from: 'd3', to: 'pub', label: 'V' }, { from: 'd3', to: 'mq', label: 'F' },
+      { from: 'pub', to: 'f' },
+    ],
+  }],
+}} />
+
+## ExerciseBlock con markdown y KaTeX
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un PWM de **5 V** con ciclo de trabajo $D = 0.3$ alimenta un motor. Calcula $V_{prom}$.\n\nDatos:\n\n- período $T = 2$ ms\n- nivel alto `HIGH` = 5 V",
+  hints: [
+    "El promedio de una señal que vale $V_H$ durante $D\\,T$ y 0 el resto es $$V_{prom} = D \\cdot V_H$$",
+    "No importa *T*: sólo la fracción del período en alto.",
+  ],
+  solution: "$V_{prom} = 0.3 \\cdot 5 = 1.5$ V.\n\n1. identificar $D$\n2. multiplicar por $V_H$",
+}} />
+
+</Base>

@@ -1,0 +1,19 @@
+id: dynamic-optimality
+title: "Optimalidad dinámica"
+type: concept
+week: week-05
+
+prerequisites: ["bst-computational-model", "search-sequence-properties"]
+buildsOn: ["search-sequence-properties"]
+usedBy: ["splay-tree"]
+
+# Es una pregunta abierta sobre el modelo (0 operaciones), no una estructura
+# con costos propios que tabular. Las únicas "complejidades" del material son
+# el estado de la conjetura misma (abierta / O(log log n)), no el costo de
+# una operación — no hay nada que forzar aquí sin inventar. Se deja vacío a
+# propósito, igual que potential-method.
+complexity: {}
+
+professorAnalysisStyle: "análisis competitivo"
+hasVisualization: true
+placeholder: false

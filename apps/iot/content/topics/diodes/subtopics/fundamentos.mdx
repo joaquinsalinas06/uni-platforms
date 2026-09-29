@@ -1,0 +1,236 @@
+---
+kind: subtopic
+order: 1
+title: Fundamentos del diodo
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un diodo es una unión P-N que deja pasar la corriente convencional en un sólo
+sentido. Antes de resolver cualquier circuito hay que reconocer sus dos terminales,
+sus dos "sentidos" de polarización, y el modelo simplificado que el curso usa para
+tratarlo como un componente lineal por tramos.
+
+## Conceptos
+
+### Ánodo y cátodo
+
+- **Ánodo**: terminal positivo del diodo cuando está en polarización directa. En el
+  símbolo, es el extremo **sin** la barra.
+- **Cátodo**: terminal negativo del diodo en polarización directa; es el lado por
+  donde sale la corriente convencional. En el símbolo, es el lado **con** la barra
+  ( ▷| ).
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Ánodo (A) → cátodo (K)',
+  steps: [{
+    note: 'La corriente convencional entra por el ánodo y sale por el cátodo cuando el diodo conduce.',
+    circuit: {
+      nodes: [{ id: 'A', x: 0, y: 0, label: 'A (ánodo)' }, { id: 'K', x: 4, y: 0, label: 'K (cátodo)' }],
+      parts: [{ id: 'D1', kind: 'diode', model: 'si', from: 'A', to: 'K', label: 'D1', tone: 'si' }],
+    },
+  }],
+}} />
+
+### Polarización directa e inversa
+
+- **Directa**: el ánodo está a mayor potencial que el cátodo. Si ese voltaje supera
+  el umbral, el diodo conduce.
+- **Inversa**: el cátodo está a mayor potencial que el ánodo. El diodo bloquea (salvo
+  una corriente de fuga muy pequeña).
+
+### Cuatro magnitudes de la curva I-V
+
+| Símbolo | Nombre | Qué representa |
+|---|---|---|
+| $V_f$ | Voltaje umbral | Voltaje directo mínimo a partir del cual el diodo conduce apreciablemente |
+| $I_f$ | Corriente directa | Corriente que circula en polarización directa, una vez superado $V_f$ |
+| $I_r$ | Corriente de fuga inversa | Corriente (muy pequeña) que sí pasa en polarización inversa |
+| $V_{br}$ | Voltaje de ruptura | Voltaje inverso a partir del cual el diodo deja de bloquear (avalancha) |
+
+### Silicio vs. germanio
+
+El curso trabaja con dos materiales, cada uno con su propio umbral:
+
+- **Silicio (Si)**: $V_\gamma \approx 0.7\,\text{V}$.
+- **Germanio (Ge)**: $V_\gamma \approx 0.3\,\text{V}$.
+
+Cuando un diodo de Si y uno de Ge compiten por conducir en la misma rama (p. ej. en
+paralelo), **el de germanio enciende primero** (necesita menos voltaje), y eso puede
+apagar al de silicio.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Si ‖ Ge: el germanio enciende primero (derivado)',
+  steps: [
+    {
+      note: 'Hipótesis 1 (ingenua): los dos conducen a la vez. Pero D1 exigiría 0.7 V y D2 exigiría 0.3 V entre los MISMOS dos nodos: imposible al mismo tiempo.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+          { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1 (Si)', tone: 'si' },
+          { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2 (Ge)', tone: 'ge' },
+          { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+          { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 ON · D2 ON (falsa)',
+      },
+    },
+    {
+      note: 'Hipótesis 2 (correcta): sólo el Ge conduce, con 0.3 V. Se valida: V_D1 = 0.3 V < 0.7 V → D1 queda OFF sin contradicción. ✓',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+          { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1 (Si)', tone: 'si' },
+          { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2 (Ge)', tone: 'ge' },
+          { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+          { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'off' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 OFF · D2 ON (válida)',
+        currents: [{ part: 'R1', label: 'I', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.0047 },
+    },
+  ],
+}} />
+
+### Modelo equivalente (caída constante)
+
+Para resolver circuitos "a mano", el diodo se reemplaza por:
+
+- **ON**: una fuente de voltaje de valor $V_\gamma$ (0.7 V en Si, 0.3 V en Ge), con el
+  (+) hacia el ánodo.
+- **OFF**: un circuito abierto.
+
+Este es el modelo que usa todo el curso (existen modelos más finos —resistencia
+serie, curva exponencial— pero no se piden en este curso).
+
+## Método paso a paso
+
+1. Mira el símbolo: identifica ánodo (sin barra) y cátodo (con barra).
+2. Identifica el material (Si o Ge) — de eso depende $V_\gamma$ (0.7 V o 0.3 V).
+3. Para saber si conduce, compara el voltaje disponible en ese sentido contra
+   $V_\gamma$: si supera el umbral y el resto del circuito permite que la corriente
+   sea positiva, el diodo conduce (ver el detalle completo del método en
+   [Método de hipótesis](/topics/diodes/subtopics/metodo-hipotesis)).
+4. Si compiten dos diodos de distinto material en la misma rama, el de menor
+   $V_\gamma$ (Ge) generalmente enciende primero.
+
+## Ejemplo resuelto
+
+Ver el circuito Si ‖ Ge de arriba: con $E=5\,\text{V}$ y $R_1=1\,\text{k}\Omega$, el
+Ge enciende (necesita sólo 0.3 V) y el Si queda apagado porque 0.3 V no alcanza su
+umbral de 0.7 V. La corriente resultante es $I = (5-0.3)/1\text{k} = 4.7\,\text{mA}$.
+
+## Errores típicos
+
+- Usar 0.7 V para un diodo marcado "Ge" (o viceversa): el material cambia el umbral.
+- Olvidar que en polarización inversa igual pasa una corriente pequeña ($I_r$, "de
+  fuga") — normalmente se desprecia en este curso, pero existe.
+- Pensar que $V_{br}$ es algo bueno o buscado: es el límite de daño del diodo en
+  inversa, no un modo de operación normal.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Circuito del enunciado: D1 (Si) y D2 (Ge) en paralelo, en serie con R = 2 kΩ y E = 4 V.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 4, label: 'E' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1 (Si)', tone: 'si' },
+        { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2 (Ge)', tone: 'ge' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 2000, label: 'R' },
+        { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un diodo de germanio y uno de silicio están conectados en paralelo (mismo ánodo, mismo cátodo) y en serie con una resistencia $R = 2\\,\\text{k}\\Omega$ a una fuente $E = 4$ V (figura). Determina cuál diodo conduce y calcula la corriente que entrega la fuente.",
+  hints: [
+    "Si ambos compiten por el mismo par de nodos, sólo puede conducir el de menor umbral: Si tiene $V_\\gamma = 0.7$ V y Ge $V_\\gamma = 0.3$ V.",
+    "Plantea la hipótesis con el diodo de menor umbral en ON y el otro en OFF, y valida ambas partes.",
+    "Con el diodo de Ge en ON, la caída en $R$ es $E - 0.3$ V.",
+  ],
+}}>
+
+**1. Descartar "los dos ON".** Los dos diodos están entre los mismos nodos: exigirían
+$V_{AK} = 0.7$ V y $V_{AK} = 0.3$ V a la vez. Imposible.
+
+**2. Hipótesis.** $D_2$ (Ge) **ON**, reemplazado por una fuente de $0.3$ V; $D_1$ (Si) **OFF**, circuito abierto.
+
+**3. Resolver** (una sola malla, KVL):
+
+$$
+E - V_{\gamma,Ge} - I R = 0 \;\Rightarrow\; I = \frac{E - 0.3}{R} = \frac{4 - 0.3}{2\,\text{k}\Omega} = \boxed{1.85\,\text{mA}}
+$$
+
+**4. Validar** con las dos desigualdades:
+
+$$
+D_2\ \text{ON}: \; I = 1.85\,\text{mA} \ge 0 \;\checkmark
+\qquad
+D_1\ \text{OFF}: \; V_{AK,D_1} = 0.3\,\text{V} < 0.7\,\text{V} \;\checkmark
+$$
+
+**5. Conclusión.** Conduce el de **germanio**; el de silicio queda apagado porque el Ge le
+fija $0.3$ V entre ánodo y cátodo, menos que su umbral. La fuente entrega $1.85$ mA.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Resuelto: hipótesis → validación',
+  steps: [
+    {
+      note: 'Hipótesis ingenua: los dos ON. D1 exigiría 0.7 V y D2 0.3 V entre los mismos nodos: contradicción.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 4, label: 'E' },
+          { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1 (Si)', tone: 'si' },
+          { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2 (Ge)', tone: 'ge' },
+          { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 2000, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 ON · D2 ON (falsa)',
+      },
+    },
+    {
+      note: 'D1 OFF · D2 ON: I = (4 − 0.3)/2k = 1.85 mA ≥ 0 ✓ y V_AK(D1) = 0.3 V < 0.7 V ✓.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 4, label: 'E' },
+          { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1 (Si)', tone: 'si' },
+          { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2 (Ge)', tone: 'ge' },
+          { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 2000, label: 'R', state: 'answer' },
+          { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'off' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 OFF · D2 ON (válida)',
+        currents: [{ part: 'R1', label: 'I', showValue: true }],
+        voltages: [{ part: 'D1', label: 'V_{AK}', plus: 'from', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.00185, 'I(D1)': 0, 'I(D2)': 0.00185, 'V(t,a)': 0.3 },
+    },
+  ],
+}} />
+
+**Comprobación — KVL:** $0.3\,\text{V} + 1.85\,\text{mA} \cdot 2\,\text{k}\Omega = 0.3 + 3.7 = 4\,\text{V} = E$ ✓.
+
+</ExerciseBlock>

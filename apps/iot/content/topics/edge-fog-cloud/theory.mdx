@@ -1,0 +1,192 @@
+---
+kind: theory
+title: Edge, Fog y Cloud computing
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un sistema IoT no procesa todos sus datos en el mismo lugar: puede hacerlo junto al
+sensor (edge), en un nodo intermedio de la red local (fog) o en un centro de datos
+centralizado (cloud). Elegir dónde procesar es una decisión de diseño que depende de
+la latencia tolerable, el ancho de banda disponible y qué tan "lista" llega la
+información desde abajo.
+
+## Conceptos
+
+### Edge vs. Cloud
+
+- **Edge computing**: procesamiento que ocurre físicamente cerca del dispositivo que
+  genera el dato (en el propio sensor/actuador o en un nodo justo al lado).
+- **Cloud computing**: procesamiento en un centro de datos remoto y centralizado, con
+  gran capacidad de cómputo y almacenamiento, pero lejos físicamente del dispositivo.
+- **Fog computing**: una capa intermedia entre ambos — nodos de la red local (p. ej.
+  el gateway IoT) que agregan y procesan datos antes de subirlos a la nube.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'De la cosa a la nube: edge → fog → cloud',
+  steps: [{
+    note: 'A medida que el procesamiento se aleja físicamente del dispositivo, gana capacidad de cómputo pero pierde cercanía (y gana latencia).',
+    nodes: [
+      { id: 'thing', value: 'Sensor / actuador (thing)', parent: null },
+      { id: 'edge', value: 'Edge: junto al dispositivo', parent: 'thing' },
+      { id: 'fog', value: 'Fog: gateway / red local', parent: 'edge' },
+      { id: 'cloud', value: 'Cloud: centro de datos centralizado', parent: 'fog' },
+    ],
+    links: [
+      { from: 'thing', to: 'edge', label: 'dato crudo' },
+      { from: 'edge', to: 'fog', label: 'dato preprocesado' },
+      { from: 'fog', to: 'cloud', label: 'dato agregado' },
+    ],
+  }],
+}} />
+
+> Tanto fog como cloud se ejecutan sobre sistemas distribuidos: la idea de "sistema
+> centralizado" aquí se refiere a la **ubicación física**, no a la arquitectura de
+> cómputo interna.
+
+### El gateway IoT
+
+El **gateway IoT** (p. ej. un Huawei AR502H) es el nodo típico donde vive el fog
+computing. Sus funciones:
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Funciones del IoT Gateway',
+  steps: [{
+    note: 'El gateway no sólo conecta: traduce protocolos, agrega datos, procesa localmente y asegura la comunicación.',
+    nodes: [
+      { id: 'gw', value: 'IoT Gateway', parent: null },
+      { id: 'pt', value: 'Traducción de protocolo', parent: 'gw' },
+      { id: 'da', value: 'Agregación de datos', parent: 'gw' },
+      { id: 'lp', value: 'Procesamiento local (edge/fog)', parent: 'gw' },
+      { id: 'cm', value: 'Gestión de conectividad', parent: 'gw' },
+      { id: 'sf', value: 'Funciones de seguridad', parent: 'gw' },
+    ],
+    links: [
+      { from: 'gw', to: 'pt' }, { from: 'gw', to: 'da' }, { from: 'gw', to: 'lp' },
+      { from: 'gw', to: 'cm' }, { from: 'gw', to: 'sf' },
+    ],
+  }],
+}} />
+
+### ¿Por qué la nube tiene mayor latencia (delay) que fog/edge?
+
+Fog vs. cloud: ¿mayor o menor retraso, y por qué? La nube tiene **mayor delay**
+por tres razones:
+
+1. **Ubicación (distancia)** para la disponibilidad del dato: el centro de datos está
+   lejos físicamente.
+2. **Infraestructura de comunicación**: más saltos de red entre el dispositivo y el
+   destino final.
+3. **Protocolos intermedios**: cada capa de protocolo (gateway, transporte, etc.)
+   añade procesamiento y espera.
+
+> **¿Cuál es el límite del fog?** El material lo deja como pregunta abierta para el
+> curso: fog acerca el cómputo, pero no puede reemplazar la capacidad de
+> almacenamiento y análisis masivo de la nube; su límite está en cuánta memoria,
+> energía y procesamiento tiene el nodo local (ver los 4 impulsores de
+> [Arquitectura IoT](/topics/iot-architecture)).
+
+### Principios de diseño
+
+1. **Minimizar la latencia.**
+2. **Conservar ancho de banda de red.**
+3. **Aumentar la eficiencia local.**
+
+### Objetos inteligentes y "datos listos" (ready data)
+
+Para cumplir esos tres principios, conviene que la **capa inferior sea "inteligente"**
+(*smart objects*): así se reduce el cómputo que debe hacer la capa superior.
+
+- Sólo el dato **esencial** debe subir a las capas superiores.
+- Enviar **paquetes más pequeños** en el dominio de red reduce la latencia de
+  comunicación.
+- La idea: mantener una capa inferior de objetos inteligentes con funcionalidad de
+  red y procesamiento **limitada**, y con eso basta — porque el dato de esa capa
+  **no requiere la misma seguridad** que las capas superiores (aunque esto es también
+  un problema abierto: la seguridad es una de las mayores preocupaciones de los
+  servicios IoT modernos, precisamente porque la funcionalidad limitada de esa capa
+  no está enfocada en seguridad).
+
+## Método paso a paso
+
+Para decidir dónde procesar un dato IoT:
+
+1. ¿La decisión debe tomarse en milisegundos y localmente (p. ej. frenar un actuador)?
+   → procesa en **edge**.
+2. ¿Varios dispositivos de una misma instalación deben agregarse o traducirse antes de
+   salir a Internet? → procesa en **fog** (el gateway).
+3. ¿Se necesita historial, aprendizaje sobre grandes volúmenes o visualización
+   multi-sitio? → procesa en **cloud**.
+4. Verifica contra los 3 principios de diseño: ¿la opción elegida minimiza latencia,
+   conserva ancho de banda y aumenta la eficiencia local para ESTE caso?
+
+## Ejemplo resuelto
+
+*(derivado)* Una fábrica con sensores de vibración en motores necesita **detener** un
+motor si la vibración supera un umbral, y también quiere un **historial** de
+vibraciones de toda la planta para mantenimiento predictivo.
+
+- Detener el motor → decisión de milisegundos, local → **edge** (en el propio sensor
+  o su microcontrolador).
+- Historial de toda la planta → no es urgente, necesita agregarse de muchos motores →
+  **fog** (gateway de planta) sube datos agregados y **cloud** los almacena/analiza
+  a largo plazo.
+
+## Errores típicos
+
+- Creer que "edge" y "fog" son sinónimos: edge es junto al dispositivo; fog es un
+  nodo de la red local (típicamente el gateway) que agrega varios dispositivos.
+- Asumir que la nube es "mala" por su latencia: la nube gana en capacidad de
+  almacenamiento/análisis; el trade-off es latencia vs. capacidad, no "mejor/peor".
+- Olvidar que fog y cloud igual corren sobre sistemas distribuidos: "centralizado"
+  aquí es una afirmación sobre ubicación física, no sobre arquitectura de cómputo.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Explique el concepto de Edge Computing. ¿Qué ventajas aporta aplicado a sistemas IoT? Comente dos ejemplos y explique en qué escenarios conviene usar edge computing frente a procesar todo en la nube.",
+  hints: [
+    "Define edge computing por su cercanía física al dispositivo que genera el dato, no por el hardware específico.",
+    "Las ventajas centrales son: menor latencia, menor uso de ancho de banda (menos datos crudos viajan a la nube) y mayor eficiencia local.",
+    "Para elegir edge vs. nube, compara qué tan urgente es la decisión (milisegundos vs. minutos/horas) y si el análisis necesita datos de un solo dispositivo o de muchos.",
+  ],
+}}>
+
+**1. Definición.** Edge computing es el procesamiento de datos IoT que ocurre físicamente cerca (o dentro) del dispositivo que los genera, en vez de enviarlos a un centro de datos remoto.
+
+**2. Ventajas.**
+
+| Ventaja | Por qué |
+|---|---|
+| Menor latencia | La decisión no espera un viaje de ida y vuelta a la nube |
+| Menor ancho de banda | Solo se envía el dato ya procesado/reducido, no el crudo |
+| Mayor eficiencia local | Menos dependencia de la conectividad para operar |
+
+**3. Ejemplos.** (a) Un sensor de vibración que detiene un motor apenas detecta una anomalía, sin esperar respuesta de la nube. (b) Una cámara de seguridad que hace detección de movimiento localmente y solo sube video cuando hay un evento relevante.
+
+**4. Cuándo conviene cada uno.** Edge cuando la acción es urgente (control en tiempo real, milisegundos) o la conectividad es limitada/costosa. Cloud cuando se necesita agregar datos de muchas fuentes, historial de largo plazo o análisis pesado (machine learning sobre todo el conjunto de datos).
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Motor con vibración: edge detiene, cloud analiza el histórico',
+  steps: [{
+    note: 'La misma vibración dispara dos rutas: una local e inmediata (edge), otra agregada y de largo plazo (fog → cloud).',
+    nodes: [
+      { id: 'sensor', value: 'Sensor de vibración', parent: null },
+      { id: 'edge', value: 'Edge: detiene el motor\n(milisegundos)', parent: 'sensor', state: 'answer' },
+      { id: 'fog', value: 'Fog: gateway de planta\n(agrega motores)', parent: 'sensor' },
+      { id: 'cloud', value: 'Cloud: histórico +\nmantenimiento predictivo', parent: 'fog' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

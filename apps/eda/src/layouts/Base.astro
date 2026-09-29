@@ -1,0 +1,136 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import KnowledgeMapNav from '../components/KnowledgeMapNav.astro';
+import SearchDialog from '../components/SearchDialog';
+import { buildSearchIndex } from '../lib/search-index';
+
+interface Props {
+  title: string;
+  crumb?: string;
+  /** Si hay riel derecho, la rejilla pasa a tres columnas. */
+  rail?: boolean;
+}
+const { title, crumb, rail = false } = Astro.props;
+
+// El índice sale entero del knowledge map + la colección `docs`: nada
+// escrito a mano, igual que la navegación.
+const searchIndex = await buildSearchIndex();
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} · CS3014</title>
+    <script is:inline>
+      const saved = localStorage.getItem('theme');
+      if (saved) document.documentElement.dataset.theme = saved;
+    </script>
+    <ClientRouter />
+  </head>
+
+  <body class="min-h-dvh">
+    <header
+      class="sticky top-0 z-30 border-b border-[var(--rule)] bg-[var(--paper)]/85 backdrop-blur-md"
+    >
+      <div class="mx-auto flex h-14 max-w-[1680px] items-center gap-5 px-5 lg:px-8">
+        <a href="/" class="flex items-baseline gap-1.5 no-underline">
+          <span class="font-mono text-sm font-semibold tracking-tight">CS3014</span>
+          <span class="tag">EDA</span>
+        </a>
+        {
+          crumb && (
+            <>
+              <span class="text-[var(--rule)]">/</span>
+              <span class="tag truncate">{crumb}</span>
+            </>
+          )
+        }
+        <!--
+          Persistido: el buscador y el botón de tema no dependen de la
+          página. Sin esto, cada navegación destruye el botón #theme y su
+          listener con él — el script de abajo sólo ata el listener una vez
+          (Astro no vuelve a correr un <script> ya ejecutado tras el swap).
+        -->
+        <div class="ml-auto flex shrink-0 items-center gap-2" transition:persist="site-controls">
+          <SearchDialog client:idle index={searchIndex} />
+          <button
+            id="theme"
+            aria-label="Cambiar tema"
+            class="tag rounded border border-[var(--rule)] px-2.5 py-1 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            tema
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!--
+      transition:animate="none": esta rejilla cambia de 2 a 3 columnas según
+      `rail` (una operación con headings tiene riel derecho, "ejemplos" no).
+      El crossfade nativo de View Transitions superpone la foto vieja
+      (ancho de 2 columnas) sobre la nueva (3 columnas) durante la
+      transición — con anchos distintos, el contenido de una se ve encima
+      del de la otra a mitad de la animación (texto del riel nuevo cortado
+      sobre la tabla vieja). El corte instantáneo se ve peor que nada, pero
+      un crossfade roto se ve peor todavía; la nav (persistida aparte) y el
+      header no pierden su continuidad por esto.
+    -->
+    <div
+      transition:animate="none"
+      class:list={[
+        'mx-auto grid max-w-[1680px] gap-x-10 gap-y-12 px-5 pt-10 pb-24 lg:px-8',
+        rail
+          ? 'lg:grid-cols-[13rem_minmax(0,1fr)] xl:grid-cols-[13rem_minmax(0,1fr)_15rem]'
+          : 'lg:grid-cols-[13rem_minmax(0,1fr)]',
+      ]}
+    >
+      <KnowledgeMapNav />
+      <main class="min-w-0" transition:animate="none"><slot /></main>
+      <!--
+        Siempre en el DOM, nunca condicional en `rail`: si una página con
+        riel navega a una sin riel, un <aside> que EXISTE en la vieja y NO
+        EXISTE en la nueva no tiene con qué emparejarse en la transición —
+        queda un "huérfano" visible encima del contenido nuevo hasta que
+        termina. Con el nodo siempre presente (oculto por CSS cuando no
+        aplica, nunca removido), la transición es un swap de contenido, no
+        una aparición/desaparición de elemento.
+      -->
+      <aside class:list={['min-w-0', rail ? 'hidden xl:block' : 'hidden']} transition:animate="none">
+        <slot name="rail" />
+      </aside>
+    </div>
+
+    <footer class="border-t border-[var(--rule)]">
+      <div class="mx-auto max-w-[1680px] px-5 py-8 lg:px-8">
+        <p class="tag">
+          Estructuras de Datos Avanzadas · el contenido sale del material del curso, nada se inventa
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('theme')?.addEventListener('click', () => {
+        const root = document.documentElement;
+        const dark =
+          root.dataset.theme === 'dark' ||
+          (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+        root.dataset.theme = dark ? 'light' : 'dark';
+        localStorage.setItem('theme', root.dataset.theme);
+      });
+
+      // El router de Astro reemplaza los atributos de <html> por los del
+      // documento nuevo en cada navegación (swapRootAttributes) — como
+      // data-theme sólo lo pone este script inline, sin esto se perdería el
+      // tema en cada click de un enlace. Se copia del documento viejo al
+      // nuevo justo antes del swap.
+      document.addEventListener('astro:before-swap', (e) => {
+        const theme = document.documentElement.dataset.theme;
+        if (theme) e.newDocument.documentElement.dataset.theme = theme;
+      });
+    </script>
+  </body>
+</html>

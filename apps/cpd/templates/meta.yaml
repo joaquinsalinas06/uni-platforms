@@ -1,0 +1,30 @@
+# Interfaz de coordinación entre subagentes. Copiar a
+# content/topics/<id>/meta.yaml y rellenar desde el material fuente.
+# Si algo aquí no cuadra con el schema, el build falla (src/lib/schemas.ts).
+
+id: <id-kebab-case>            # mismo que el nombre de la carpeta y del knowledge map
+title: <nombre como lo usa el profesor>
+type: concept                  # concept | algorithm | model
+unit: u1                       # u1 | u2 | u3
+
+prerequisites: []              # ids del knowledge map. Se referencian, NO se reexplican.
+buildsOn: []
+usedBy: []
+
+complexity:
+  <formula-o-caso>:
+    best: O(...)
+    avg: O(...)
+    worst: O(...)
+    space: O(...)
+    # Obligatorio y mínimo 20 caracteres: el brief prohíbe la notación sin su
+    # razonamiento. Explicar de dónde sale, en el estilo del profesor.
+    reasoning: >-
+      ...
+    # Cita de dónde sale la cota, si aplica: "U2.1-...-apuntes.pdf#12".
+    source:
+
+professorAnalysisStyle: <derivation-based | recurrence-based | brent-theorem | ...>
+hasVisualization: false
+# visualizationType: dag        # xy-chart | dag | network-topology | timeline | memory-layout
+placeholder: false             # true sólo mientras sea contenido de relleno

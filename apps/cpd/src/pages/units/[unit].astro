@@ -1,0 +1,70 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { knowledgeMap, TYPE_LABEL } from '../../lib/knowledge-map';
+
+export async function getStaticPaths() {
+  const units = await getCollection('units');
+  return units.map((unit) => ({ params: { unit: unit.id }, props: { unit } }));
+}
+
+const { unit } = Astro.props;
+const { Content } = await render(unit);
+const topics = knowledgeMap.units.find((u) => u.id === unit.id)?.topics ?? [];
+---
+
+<Base title={unit.data.title} crumb={unit.id}>
+  <header class="stagger mb-12">
+    <p class="tag">{unit.id}</p>
+    <h1 class="mt-2 max-w-[20ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      {unit.data.title}
+    </h1>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  <div class="prose mb-12 max-w-[72ch]"><Content /></div>
+
+  <section>
+    <div class="mb-5 flex items-baseline gap-4">
+      <h2 class="tag">Temas</h2>
+      <span class="h-px flex-1 bg-[var(--rule)]"></span>
+    </div>
+
+    <ol class="border-t border-[var(--rule)]">
+      {
+        topics.map((id, index) => {
+          const t = knowledgeMap.topics[id];
+          const ready = t?.status === 'generated';
+          return (
+            <li class="reveal border-b border-[var(--rule)]">
+              <a
+                href={ready ? `/topics/${id}` : '#'}
+                class:list={[
+                  'group grid grid-cols-[2.25rem_1fr_auto] items-baseline gap-3 py-4 no-underline transition-colors',
+                  ready
+                    ? 'hover:bg-[var(--fill)]'
+                    : 'pointer-events-none opacity-55',
+                ]}
+              >
+                <span class="font-mono text-[0.75rem] text-[var(--faint)]">{String(index + 1).padStart(2, '0')}</span>
+                <span>
+                  <span class="tag">{t?.supportConcept ? 'concepto de apoyo' : t && TYPE_LABEL[t.type]}</span>
+                  <span class="mt-1 block text-[1.0625rem] font-medium group-hover:text-[var(--accent)]">
+                    {t?.title ?? id}
+                  </span>
+                </span>
+                <span class="tag shrink-0">{ready ? 'ver tema ↗' : 'pendiente'}</span>
+              </a>
+            </li>
+          );
+        })
+      }
+    </ol>
+  </section>
+
+  {
+    unit.data.sourceFiles.length > 0 && (
+      <p class="tag mt-10">fuente · {unit.data.sourceFiles.join(' · ')}</p>
+    )
+  }
+</Base>

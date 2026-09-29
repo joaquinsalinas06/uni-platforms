@@ -1,0 +1,57 @@
+---
+kind: theory
+title: Delta-estrella y puente de Wheatstone
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Idea
+
+Hay redes de tres resistencias que no están ni en serie ni en paralelo entre sí —el
+caso típico es un triángulo (delta, Δ) o una estrella (Y)—. Para reducirlas hay que
+**transformarlas** de una forma a la otra. El puente de Wheatstone es exactamente una
+de estas redes: un rombo de cuatro resistencias con una rama detectora al centro, que
+además tiene una condición especial (**equilibrio**) que permite ignorar esa rama
+central y simplifica muchísimo la reducción.
+
+## Conceptos
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Delta (Δ) ⇔ Estrella (Y)',
+  steps: [{
+    note: 'R1, R2, R3 en Δ (entre X, Y, Z) no están ni en serie ni en paralelo: hay que transformarlas a la estrella Ra, Rb, Rc (mismos 3 terminales) o viceversa.',
+    circuit: {
+      nodes: [
+        { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'X', to: 'Z', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'X', to: 'Y', value: 2000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'Z', to: 'Y', value: 3000, label: 'R3' },
+      ],
+      groups: [{ parts: ['R1', 'R2', 'R3'], tone: 'bridge', label: 'Δ' }],
+    },
+  }],
+}} />
+
+Esta semana el curso cubre dos subtemas:
+
+- **[Delta ⇔ estrella](/topics/delta-wye-wheatstone/subtopics/delta-estrella)**: las
+  fórmulas de conversión en ambos sentidos y cuándo hacen falta, aplicadas a un puente
+  desbalanceado (el EX PARCIAL 25-2, en cambio, esconde un puente balanceado y se
+  resuelve sin Δ↔Y).
+- **[Puente de Wheatstone](/topics/delta-wye-wheatstone/subtopics/puente-wheatstone)**:
+  la estructura en rombo, la condición de equilibrio, qué pasa cuando el puente está
+  desequilibrado, y sus aplicaciones en sensores resistivos (galgas, termistores,
+  LDR).
+
+## Errores típicos
+
+- Intentar reducir un Δ/Y como si fuera serie-paralelo: si tres resistencias
+  comparten sus tres nodos dos a dos (nunca los mismos dos nodos las tres), no son ni
+  serie ni paralelo — hay que transformar.
+- Olvidar que la transformación Δ↔Y **no cambia el resto del circuito**: sólo
+  reemplaza esas 3 resistencias por las 3 equivalentes, conservando los mismos 3
+  terminales externos.

@@ -1,0 +1,164 @@
+---
+kind: subtopic
+order: 1
+title: Arquitectura y paquete
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+MQTT define quién habla con quién (broker, publisher, subscriber) y cómo se empaqueta
+cada mensaje sobre TCP. El paquete siempre tiene la misma forma — header fijo, largo
+restante, header variable, payload — sin importar si es un CONNECT o un PUBLISH; lo único
+que cambia es el contenido de las dos últimas partes.
+
+## Conceptos
+
+### Roles
+- **Broker**: puede vivir en el gateway local o en la nube. Recibe todo, decide a quién
+  reenviar o qué procesar.
+- **Publisher**: se conecta al broker para publicar datos. No programa el mensaje hacia
+  un cliente específico, sólo lo clasifica en un tópico.
+- **Subscriber**: dispositivo, app o servicio que necesita el dato. Se conecta al broker
+  para que le avisen cuando algo nuevo llegue a los tópicos que le interesan.
+
+MQTT es **data agnostic**: no interpreta el payload, sólo lo transporta. Corre sobre TCP
+(puerto 1883 en claro, 8883 con TLS — ver [Tópicos y seguridad](/topics/mqtt/subtopics/topicos-y-seguridad)).
+No hace falta conocer la implementación de TCP, basta con el paradigma header→payload.
+
+### Fixed header (2+ bytes)
+Todo paquete MQTT empieza con este header fijo de al menos 2 bytes:
+
+| Byte | Bits 7-4 | Bit 3 | Bits 2-1 | Bit 0 |
+|---|---|---|---|---|
+| Byte 1 | Message Type (4 bits) | DUP | QoS Level (2 bits) | RETAIN |
+| Byte 2 | Remaining Length (1 a 4 bytes) | | | |
+
+- **Message Type**: 4 bits → hasta 16 tipos de paquete (ver tabla abajo).
+- **DUP** (Duplicate Delivery Flag): 1 si este PUBLISH es una retransmisión.
+- **QoS**: 2 bits → nivel 0, 1 o 2 (ver [QoS](/topics/mqtt/subtopics/qos)).
+- **RETAIN**: 1 si el broker debe guardar este PUBLISH como el último valor del tópico.
+
+<Visualization viz={{
+  type: 'memory-layout',
+  static: true,
+  title: 'Estructura general de un paquete MQTT',
+  steps: [{
+    note: 'Byte 1 empaqueta 4 campos en sub-bits (tipo·DUP·QoS·RETAIN); Byte 2 es el Remaining Length; luego vienen el header variable y el payload, ambos de largo variable.',
+    blocks: [
+      { id: 'b1', label: 'Byte 1: Tipo (4b) · DUP (1b) · QoS (2b) · RETAIN (1b)', bytes: 1, offset: 0 },
+      { id: 'b2', label: 'Remaining Length (1-4 B)', bytes: 1, offset: 1 },
+      { id: 'vh', label: 'Header variable (opcional, largo variable)', bytes: 2, offset: 2 },
+      { id: 'pl', label: 'Payload (largo variable)', bytes: 3, offset: 4 },
+    ],
+  }],
+}} />
+
+### Remaining Length
+Especifica cuántos bytes siguen después de este campo: header variable + payload. El
+largo total del paquete = tamaño del fixed header + Remaining Length.
+
+### Message types (los tres que vio el curso; el resto queda como referencia)
+- **CONNECT**: crea la conexión con el broker y espera a que se establezca.
+- **DISCONNECT**: espera a que el cliente termine su acción y cierra la conexión TCP/IP
+  (deja de escuchar).
+- **PUBLISH**: transporta el dato enviado por el cliente MQTT.
+
+> **Nota de apoyo** (no está en el material, pero forma parte de la tabla oficial de tipos que
+> muestra la slide 9): CONNACK, PUBACK, PUBREC, PUBREL, PUBCOMP (los cuatro últimos son la
+> "conversación" de QoS 1 y 2, ver [QoS](/topics/mqtt/subtopics/qos)), SUBSCRIBE, SUBACK,
+> UNSUBSCRIBE, UNSUBACK, PINGREQ, PINGRESP y AUTH.
+
+### Header variable
+Parte opcional que depende del tipo de paquete. En un **CONNECT** contiene:
+
+- **Protocol Name**: `"MQTT"`.
+- **Protocol Level**: `4` para MQTT 3.1.1.
+- **Connect Flags** (ejemplo de la slide): Clean Session = 1, Will Flag = 0, Username = 1,
+  Password = 1.
+- **Keep Alive**: ejemplo, 60 segundos. Es el período máximo sin tráfico MQTT; si no se
+  envía nada en ese lapso el cliente manda **PINGREQ** y el broker responde **PINGRESP**.
+  Ayuda a detectar conexiones caídas o inactivas.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Keep alive: detección de conexión rota',
+  steps: [{
+    note: 'Si no hay tráfico MQTT en 60 s, el cliente hace ping al broker para confirmar que sigue vivo.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'c', to: 'b', label: 'CONNECT', flags: 'Keep Alive = 60 s' },
+      { from: 'b', to: 'c', label: 'CONNACK' },
+      { from: 'c', to: 'b', label: '(60 s sin tráfico)', state: 'muted' },
+      { from: 'c', to: 'b', label: 'PINGREQ' },
+      { from: 'b', to: 'c', label: 'PINGRESP' },
+    ],
+  }],
+}} />
+
+### Payload
+Es el contenido principal; el header variable sólo lo acompaña. Depende del tipo:
+
+- En **PUBLISH**, el payload es el mensaje de aplicación (p. ej. `"Temperature = 25°C"`).
+- En **SUBSCRIBE**, el payload lista los tópicos a los que se suscribe, con sus opciones.
+
+## Método paso a paso
+Para leer/armar un paquete MQTT:
+
+1. Lee el byte 1: tipo (4 bits altos), DUP, QoS, RETAIN.
+2. Lee el Remaining Length (1 a 4 bytes, largo variable codificado).
+3. Si el tipo lo requiere, lee el header variable (para CONNECT: protocol name, level,
+   connect flags, keep alive).
+4. El resto de bytes, hasta completar Remaining Length, es el payload.
+
+## Ejemplo resuelto
+Ciclo de vida típico de una sesión: CONNECT → CONNACK, luego PUBLISH(es) en cualquier
+dirección, y al final DISCONNECT.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Ciclo de conexión MQTT',
+  steps: [{
+    note: 'CONNECT/CONNACK abre la sesión; PUBLISH mueve datos; DISCONNECT la cierra ordenadamente.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'c', to: 'b', label: 'CONNECT', flags: 'Protocol=MQTT, Level=4' },
+      { from: 'b', to: 'c', label: 'CONNACK' },
+      { from: 'c', to: 'b', label: 'PUBLISH', flags: 'topic, payload, QoS, DUP, RETAIN' },
+      { from: 'c', to: 'b', label: 'DISCONNECT' },
+    ],
+  }],
+}} />
+
+## Errores típicos
+- Pensar que el header variable siempre existe: es *opcional*, depende del tipo de paquete.
+- Confundir Remaining Length con el largo total del paquete: Remaining Length excluye el
+  fixed header.
+- Olvidar que DUP, QoS y RETAIN viven en el mismo byte que el tipo de mensaje (son bits,
+  no bytes aparte).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un analizador de red captura el primer byte de un paquete MQTT: 0011 0101 (binario). Indique el tipo de mensaje (según la tabla de tipos), y los valores de DUP, QoS y RETAIN.",
+  hints: [
+    "Los 4 bits más altos son el tipo (0-15); compáralos con la tabla Name/Value.",
+    "El siguiente bit es DUP, los dos siguientes son QoS (00,01,10), el último es RETAIN.",
+  ],
+}}>
+
+Separando el byte `0011 0101` en sus cuatro campos:
+
+| Bits | Valor binario | Valor decimal | Significado |
+|---|---|---|---|
+| 7-4 (tipo) | `0011` | 3 | **PUBLISH** |
+| 3 (DUP) | `0` | 0 | no es una retransmisión |
+| 2-1 (QoS) | `10` | 2 | **QoS 2** |
+| 0 (RETAIN) | `1` | 1 | el broker debe guardarlo como retenido |
+
+**Respuesta:** $\boxed{\text{PUBLISH, DUP}=0\text{, QoS}=2\text{, RETAIN}=1}$
+
+</ExerciseBlock>

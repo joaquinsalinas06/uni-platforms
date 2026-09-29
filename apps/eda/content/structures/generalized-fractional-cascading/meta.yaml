@@ -1,0 +1,42 @@
+id: generalized-fractional-cascading
+title: Fractional cascading generalizado
+type: algorithm
+week: week-05
+
+prerequisites: [fractional-cascading, d4-bound-z]
+buildsOn: [fractional-cascading]
+usedBy: []
+
+complexity:
+  applicability:
+    worst: O(1)
+    reasoning: >-
+      No es un costo derivado: es la CONDICIÓN que el grafo debe cumplir
+      para que la técnica aplique (grado acotado en cada vértice) — no se
+      deriva con una recurrencia, se verifica vértice por vértice, igual que
+      /structures/decomposable-search-problem#decomposability es una
+      hipótesis y no una cota calculada.
+    source: "Sem5_Fractional_Cascading_II.pdf#51"
+  bounded-degree-check:
+    worst: O(1)
+    reasoning: >-
+      Conteo directo: verificar el grado de un vértice es contar un número
+      constante de vecinos (a lo más 5 en esta construcción — padre, dos
+      hijos, dos enlaces auxiliares a la gemela invertida, #52), no recorrer
+      el resto del grafo.
+    source: "Sem5_Fractional_Cascading_II.pdf#52"
+  composition:
+    worst: O(lg n + k)
+    space: O(n lg³ n)
+    reasoning: >-
+      Conteo directo de pasos (#54): "O(lg n) + O(1)·O(lg n) + O(k) = O(lg n
+      + k)" — una única búsqueda binaria real al entrar, más O(1) por cada
+      paso de descenso (incluyendo los saltos entre estructura normal e
+      invertida, #53), más O(k) de reportar. El espacio (#57) sale de un
+      argumento de multiplicidad: "cada punto aparece, en promedio, O(lg³ n)
+      veces entre las distintas copias de D1, D2 y D3 anidadas dentro de D4".
+    source: "Sem5_Fractional_Cascading_II.pdf#53-54,57"
+
+professorAnalysisStyle: conteo directo
+hasVisualization: true
+placeholder: false

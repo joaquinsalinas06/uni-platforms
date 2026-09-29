@@ -1,0 +1,319 @@
+---
+kind: theory
+title: Digitalización y ADC
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Para que un microcontrolador procese una señal del mundo real (temperatura, luz,
+humedad…) primero hay que convertirla en números. Ese proceso — **digitalización** —
+tiene dos cortes independientes: cortar en el tiempo (muestreo) y cortar en amplitud
+(cuantización). El **ADC** (convertidor analógico-digital) es el hardware que hace
+ambos cortes a la vez, y su resolución en bits determina qué tan fino es ese corte.
+
+## Conceptos
+
+### Muestreo (sampling)
+
+Una señal analógica continua $x(t)$ se "rebana" en una secuencia de números tomados a
+intervalos regulares, el **intervalo de muestreo** $T_s$. Cada muestra corresponde al
+instante:
+
+$$t = nT_s = \frac{n}{f_s}$$
+
+donde $f_s = 1/T_s$ es la **frecuencia de muestreo** y $n$ es la posición de la
+muestra en la secuencia. El resultado es una serie de números $x[n] = x_1, x_2, x_3,
+\ldots, x_N$ que normalmente se guarda en un arreglo.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Muestreo: x(t) se corta cada Ts segundos',
+  steps: [{
+    note: 'Cada punto marcado es una muestra x[n] tomada en t = nTs. El intervalo entre dos muestras consecutivas es Ts; su inverso es la frecuencia de muestreo fs.',
+    series: [
+      { id: 'xt', label: 'x(t)', kind: 'line', fn: 'sin(0.9*x)+0.3*sin(3*x)', domain: [0, 10] },
+      { id: 'xn', label: 'x[n]', kind: 'samples', fn: 'sin(0.9*x)+0.3*sin(3*x)', domain: [0, 10], samples: 1, tone: 'current' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'x' },
+    vlines: [{ at: 4, label: 'nTs' }, { at: 5, label: '(n+1)Ts' }],
+  }],
+}} />
+
+### Cuantización (amplitude slicing)
+
+Como los números digitales solo pueden representar amplitudes discretas y específicas,
+la señal también debe "rebanarse" en amplitud: cada muestra se redondea al nivel
+discreto más cercano disponible. Digitalizar exige cortar en las **dos** dimensiones:
+tiempo y amplitud.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Cuantización: la amplitud se redondea a niveles discretos',
+  steps: [{
+    note: 'La curva fina es x(t); los escalones son los niveles discretos que el ADC puede representar (aquí, solo 6 niveles enteros, a modo ilustrativo).',
+    series: [
+      { id: 'xt', label: 'x(t)', kind: 'line', fn: '3+2*sin(0.6*x)', domain: [0, 12] },
+      { id: 'xq', label: 'x cuantizada', kind: 'step', fn: 'floor(3+2*sin(0.6*x))', domain: [0, 12], samples: 120, tone: 'current' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'x', min: 0, max: 6 },
+    hlines: [{ at: 1, label: 'nivel 1' }, { at: 3, label: 'nivel 3' }, { at: 5, label: 'nivel 5' }],
+  }],
+}} />
+
+### Proceso completo: señal digitalizada
+
+Cortando a la vez en tiempo y en amplitud se obtiene la señal digitalizada $x[k]$, la
+que realmente se guarda en memoria y procesa el microcontrolador.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Señal digitalizada x[k] (muestreo + cuantización)',
+  steps: [{
+    note: 'Cada muestra ocurre en un instante discreto (múltiplo de Ts) y toma un valor de amplitud discreto (un nivel entero): las dos rebanadas juntas.',
+    series: [{ id: 'xk', label: 'x[k]', kind: 'samples', fn: 'floor(3+2*sin(0.6*x))', domain: [0, 12], samples: 1 }],
+    x: { label: 'k' },
+    y: { label: 'x[k]', min: 0, max: 6 },
+  }],
+}} />
+
+### ¿Es reversible la digitalización?
+
+Claramente no: se pierde información entre una muestra y la siguiente, y también al
+redondear la amplitud a un nivel discreto. Sin embargo, en la práctica se asume que la
+versión discreta es una representación suficientemente fiel de la señal continua
+original — es decir, no es reversible exactamente, pero se trabaja bajo el supuesto de
+que existe una relación significativa entre ambas (y que, si el muestreo fue lo
+bastante rápido y la cuantización lo bastante fina, la señal discreta captura lo
+esencial de la continua).
+
+### Resolución del ADC: VLSB y niveles
+
+La **resolución** de un ADC es la cantidad de niveles discretos que puede representar,
+expresada en bits. Un ADC de $n$ bits representa $2^n$ niveles. El **voltaje del bit
+menos significativo** ($V_{LSB}$) es el cambio de voltaje más pequeño que el ADC puede
+distinguir:
+
+$$V_{LSB} = \frac{V_H - V_L}{2^{n}}$$
+
+donde $V_H$ y $V_L$ son los límites del rango de entrada del ADC.
+
+> **Convención usada en el material**: tanto el Ejemplo 1 (12 bits) como la tabla de
+> la práctica de laboratorio calculan $V_{LSB}$ dividiendo el rango entre $2^n$ (no
+> entre $2^n - 1$). Con esa convención, el código más alto representable
+> ($2^n - 1$, todo unos) corresponde a un voltaje *ligeramente menor* que $V_H$ — el
+> valor $V_H$ exacto "cae" en el código $2^n$, que ya no entra en $n$ bits. Otros
+> textos definen $V_{LSB} = (V_H-V_L)/(2^n-1)$ para que el código máximo sí llegue
+> exactamente a $V_H$. Aquí seguimos la convención del material (denominador
+> $2^n$) y se señala explícitamente cuándo esto genera un caso límite.
+
+Tabla de resolución de un ADC (asumiendo rango de referencia de 5 V):
+
+| Resolución | Resolución de voltaje ($V_{LSB}$) | Código máximo (niveles − 1) | Aplicaciones típicas |
+|---|---|---|---|
+| 6 bit | 78.1 mV | 63 (64 niveles) | Sistemas de muy bajo costo, potenciómetros o joysticks básicos |
+| 8 bit | 19.5 mV | 255 (256 niveles) | Microcontroladores básicos, procesamiento de imagen simple |
+| 10 bit | 4.88 mV | 1023 (1024 niveles) | Microcontroladores estándar (Arduino Uno), sensores generales |
+| 11 bit | 2.44 mV | 2047 (2048 niveles) | Sensores industriales, telemetría de rango medio |
+| 12 bit | 1.22 mV | 4095 (4096 niveles) | Microcontroladores modernos (STM32, ESP32), robótica |
+| 14 bit | 305 µV | 16383 (16384 niveles) | Instrumentación científica, radar |
+| 16 bit | 76.3 µV | 65535 (65536 niveles) | Audio de alta fidelidad, multímetros |
+| 24 bit | 298 nV | 16777215 (16777216 niveles) | Audio profesional, sismógrafos, ECG/EEG de precisión |
+
+### Código ↔ voltaje
+
+Para pasar de un código digital $D$ a su voltaje equivalente, o viceversa:
+
+$$D = \mathrm{round}\left(\frac{V_{in}-V_L}{V_{LSB}}\right) \qquad\qquad V_{in} = V_L + D\cdot V_{LSB}$$
+
+### Tipos de ADC
+
+- **Comparador**: el bloque base de cualquier ADC. Compara $V_{IN}$ contra una
+  referencia $V_{REF}$: si $V_{IN} > V_{REF}$, la salida es HIGH ($V_{OH}$); si
+  $V_{IN} < V_{REF}$, la salida es LOW ($V_{OL}$). Por sí solo solo da 1 bit
+  (¿está por encima o por debajo del umbral?).
+- **Flash ADC**: usa $2^n - 1$ comparadores en paralelo, cada uno con un $V_{REF}$
+  distinto (repartidos con una escalera de resistencias), y un codificador de
+  prioridad que convierte el "código termómetro" (cuántos comparadores están en
+  HIGH) en binario. Es el ADC más rápido (una sola conversión, sin pasos), pero
+  necesita muchísimo hardware: para $n$ bits hace falta $2^n-1$ comparadores.
+- **SAR (Successive Approximation Register)**: usa un solo comparador, un DAC
+  interno y una búsqueda binaria bit por bit (de más a menos significativo). Es
+  mucho más económico en hardware que el Flash, a costa de tardar $n$ ciclos de
+  comparación por conversión en vez de uno solo.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'SAR ADC: aproximaciones sucesivas',
+  steps: [{
+    note: 'Se prueba cada bit de mayor a menor peso: se enciende, el DAC genera el voltaje correspondiente, se compara contra Vin, y se conserva el bit solo si Vin sigue siendo mayor o igual.',
+    shapes: [
+      { id: 'start', kind: 'start', label: 'Muestra y retiene Vin (S/H)', initial: true },
+      { id: 'setbit', kind: 'process', label: 'Prueba el siguiente bit (de MSB a LSB): lo pone en 1' },
+      { id: 'dac', kind: 'process', label: 'El DAC interno genera V_DAC con el código actual' },
+      { id: 'cmp', kind: 'decision', label: '¿Vin ≥ V_DAC?' },
+      { id: 'keep', kind: 'process', label: 'Mantiene el bit en 1' },
+      { id: 'clear', kind: 'process', label: 'Vuelve el bit a 0' },
+      { id: 'more', kind: 'decision', label: '¿Quedan bits por probar?' },
+      { id: 'end', kind: 'end', label: 'Código digital final' },
+    ],
+    arrows: [
+      { from: 'start', to: 'setbit' },
+      { from: 'setbit', to: 'dac' },
+      { from: 'dac', to: 'cmp' },
+      { from: 'cmp', to: 'keep', label: 'sí' },
+      { from: 'cmp', to: 'clear', label: 'no' },
+      { from: 'keep', to: 'more' },
+      { from: 'clear', to: 'more' },
+      { from: 'more', to: 'setbit', label: 'sí' },
+      { from: 'more', to: 'end', label: 'no' },
+    ],
+  }],
+}} />
+
+## Método paso a paso
+
+**Para calcular exactitud, niveles o código de un ADC:**
+
+1. Identifica el rango de entrada del ADC: $V_L$ (mínimo) y $V_H$ (máximo).
+2. Identifica $n$, la resolución en bits. Los niveles totales son $2^n$.
+3. Calcula $V_{LSB} = (V_H - V_L)/2^n$: es la exactitud (± medio LSB o ± un LSB,
+   según lo que pida el enunciado) y la resolución de voltaje.
+4. Para hallar el código de un voltaje dado: $D = \mathrm{round}((V_{in}-V_L)/V_{LSB})$.
+5. Para hallar el voltaje de un código dado: $V_{in} = V_L + D\cdot V_{LSB}$.
+6. Para hallar cuántos bits se necesitan para distinguir un $\Delta V$ dado: exige
+   $V_{LSB} \le \Delta V$, es decir $2^n \ge (V_H-V_L)/\Delta V$, y despeja el menor
+   $n$ entero que cumple la desigualdad.
+
+## Ejemplo resuelto
+
+### Ejemplo 1 — Exactitud de un ADC de 12 bits (0 a 10 V)
+
+Un ADC de 12 bits anuncia una exactitud de ± el LSB, con rango de entrada 0 a 10 V.
+
+$$V_{LSB} = \frac{V_{max}}{2^{n}} = \frac{10}{2^{12}} = \frac{10}{4096} = 0.00244 \ \text{V} = 2.44 \ \text{mV}$$
+
+La exactitud del ADC es entonces ± 2.44 mV.
+
+### Ejemplo 2 — Codificación de 8 bits (0 a 10 V)
+
+Con $V_L=0$, $V_H=10$ V y $n=8$: $V_{LSB} = 10/256 = 0.0390625$ V ≈ 39.06 mV.
+
+- (a) 0 V → $D = \mathrm{round}(0/0.0390625) = 0$ → `00000000`
+- (b) 1 V → $D = \mathrm{round}(1/0.0390625) = \mathrm{round}(25.6) = 26$ → `00011010`
+- (c) 5.33 V → $D = \mathrm{round}(5.33/0.0390625) = \mathrm{round}(136.45) = 136$ → `10001000`
+- (d) 10 V → $D = \mathrm{round}(10/0.0390625) = 256$. **Caso límite**: 256 no entra en
+  8 bits (el código máximo es 255 = `11111111`). Es la consecuencia directa de usar
+  $V_{LSB}=V_{max}/2^n$: el voltaje máximo nominal "cae" justo un código por encima
+  del último representable. En la práctica, el ADC satura en 255, que equivale a
+  $255 \times 0.0390625 = 9.9609$ V (no exactamente 10 V).
+- (e) Resolución de la conversión: $V_{LSB} = 39.06$ mV (≈ 0.39 % del rango total).
+
+### Ejemplo de laboratorio — código a voltaje (12 bits, 0–5 V)
+
+Un microcontrolador de 12 bits lee el código $D=670$, con $V_L=0$ V y $V_H=5$ V:
+
+$$V_{in} = V_L + D\cdot V_{LSB} = 0 + 670 \cdot \frac{5}{4096} = \frac{3350}{4096} = 0.818 \ \text{V}$$
+
+### Ejemplo de laboratorio — código a voltaje con rango desplazado (10 bits, 5–12 V)
+
+Un ADC de 10 bits con rango $V_L = 5$ V a $V_H = 12$ V lee el código $D=420$:
+
+$$V_{LSB} = \frac{12-5}{1024} = \frac{7}{1024} = 0.006836 \ \text{V}$$
+$$V_{in} = 5 + 420 \times 0.006836 = 5 + 2.871 = 7.871 \ \text{V}$$
+
+## Errores típicos
+
+- Confundir "niveles" ($2^n$) con "código máximo" ($2^n - 1$): el código máximo
+  siempre es un entero menos que la cantidad de niveles.
+- Olvidar el rango desplazado: si $V_L \neq 0$ (como en el ejemplo de 5–12 V), hay que
+  sumar $V_L$ al final, no solo multiplicar $D \times V_{LSB}$.
+- Redondear mal el código (usar `floor` en vez de `round`, o viceversa, sin que el
+  enunciado lo aclare — aquí se usa redondeo al entero más cercano).
+- Pedir "más bits" sin plantear la desigualdad $V_{LSB} \le \Delta V$: hay que
+  despejar el menor $n$ entero que cumple la condición, no solo aproximar.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un sensor de temperatura entrega una señal analógica entre $0$ V ($V_L$) y $10$ V ($V_H$). Se conecta a un microcontrolador con un ADC de 12 bits que opera en el mismo rango. (a) ¿Cuál es el cambio de voltaje más pequeño (en mV) que el ADC puede detectar? (b) ¿Cuántos valores discretos (niveles digitales) puede representar este ADC? (c) Si el sensor marca una temperatura que entrega $4.16$ V, ¿qué valor entregará el ADC? (d) Si en $0.1\\,°C$ de variación el voltaje cambia de $4.16$ V a $4.161$ V, ¿cuál debería ser —como mínimo— la resolución en bits ($n$) del ADC para garantizar una medición precisa?",
+  hints: [
+    "$V_{LSB} = (V_H - V_L)/2^n$. Para (c), $D = \\text{round}(V_{in}/V_{LSB})$.",
+    "Para (d), el ADC debe poder distinguir un $\\Delta V = 0.001$ V: plantea $V_{LSB} \\le \\Delta V$ y despeja el menor $n$ entero.",
+  ],
+}}>
+
+**1. Resolución de voltaje ($V_{LSB}$).** Con $V_L=0$, $V_H=10$ V, $n=12$:
+
+$$V_{LSB} = \frac{V_H - V_L}{2^{12}} = \frac{10}{4096} = \boxed{2.44\,\text{mV}}$$
+
+**2. Niveles digitales.** Un ADC de $n=12$ bits representa $2^n$ códigos:
+
+$$\text{niveles} = 2^{12} = \boxed{4096}$$
+
+**3. Código para $V_{in}=4.16$ V.** Redondeando al entero más cercano:
+
+$$D = \mathrm{round}\left(\frac{V_{in}}{V_{LSB}}\right) = \mathrm{round}\left(\frac{4.16 \cdot 4096}{10}\right) = \mathrm{round}(1703.94) = \boxed{1704}$$
+
+**4. Bits mínimos para distinguir $\Delta V = 0.001$ V.** Se exige $V_{LSB} \le \Delta V$:
+
+$$2^n \ge \frac{V_H-V_L}{\Delta V} = \frac{10}{0.001} = 10\,000 \;\Rightarrow\; n \ge \log_2(10\,000) \approx 13.29$$
+
+El menor entero que cumple es $\boxed{n = 14\ \text{bits}}$ (con $n=13$, $V_{LSB}=10/8192=1.22$ mV, insuficiente; con $n=14$, $V_{LSB}=10/16384=0.61$ mV $\le 1$ mV, sí alcanza).
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Curva de códigos del ADC de 12 bits (0–10 V)',
+  steps: [{
+    note: 'Cada escalón es un código D entregado por el ADC. En Vin = 4.16 V el ADC entrega el código 1704.',
+    series: [{ id: 'D', label: 'D(Vin)', kind: 'step', fn: 'round(x*4096/10)', domain: [0, 10], samples: 300 }],
+    x: { label: 'Vin (V)', min: 0, max: 10 },
+    y: { label: 'Código D' },
+    vlines: [{ at: 4.16, label: 'Vin = 4.16 V', state: 'answer' }],
+    hlines: [{ at: 1704, label: 'D = 1704', state: 'answer' }],
+  }],
+}} />
+
+**Comprobación:** $D=1704 \Rightarrow V_{in} = D \cdot V_{LSB} = 1704 \cdot 0.00244 = 4.158$ V $\approx 4.16$ V ✓ (la diferencia es el redondeo, menor a medio $V_{LSB}$).
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "La digitalización consiste en convertir una señal analógica en una representación digital. Describe brevemente el proceso con el que se logra la digitalización, y explica si puede considerarse reversible.",
+  hints: [
+    "El proceso tiene dos cortes independientes: uno en el tiempo y otro en la amplitud.",
+    "Piensa en si se puede reconstruir $x(t)$ exactamente a partir de $x[n]$.",
+  ],
+}}>
+
+**1. Muestreo (corte en tiempo).** Se toma un valor de $x(t)$ cada $T_s$ segundos:
+
+$$x[n] = x(nT_s), \qquad f_s = \frac{1}{T_s}$$
+
+**2. Cuantización (corte en amplitud).** Cada muestra se redondea a uno de los $2^n$
+niveles discretos que el ADC puede representar, con un error de redondeo de hasta
+$\pm V_{LSB}/2$.
+
+**3. ¿Es reversible?** $\boxed{\text{No, no es reversible de forma exacta}}$: entre dos
+muestras se pierde toda la variación de la señal continua, y la cuantización introduce
+un error que no se puede deshacer. En la práctica se asume que, si $T_s$ es
+suficientemente pequeño y la resolución suficientemente fina, $x[n]$ es una
+representación fiel de $x(t)$, aunque no se pueda recuperar la señal analógica original
+sin ninguna pérdida.
+
+| Corte | Qué recorta | Parámetro |
+|---|---|---|
+| Muestreo | El eje del tiempo | $T_s$ (o $f_s = 1/T_s$) |
+| Cuantización | El eje de amplitud | $n$ bits ($2^n$ niveles, $V_{LSB}$) |
+
+</ExerciseBlock>

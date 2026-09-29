@@ -1,0 +1,261 @@
+---
+kind: operation
+title: Splay
+order: 5
+cppSteps:
+  - step-1-node.cpp
+  - step-2-rotate.cpp
+  - step-3-zig-zig.cpp
+  - step-4-zig-zag.cpp
+  - step-5-splay.cpp
+  - full-implementation.cpp
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Es la operación madre del splay tree: "se encarga de mover el valor x
+buscado a la raíz pero balanceando algunos nodos sobre la marcha. Usa
+rotaciones por casos específicos para tener una complejidad amortizada de
+$O(\log n)$ por búsqueda" (#60-63). No es un caso más — es el bucle que decide,
+en cada iteración, cuál de los tres casos aplicar:
+[`zig`](/structures/splay-tree/operations/zig),
+[`zig-zig`](/structures/splay-tree/operations/zig-zig) o
+[`zig-zag`](/structures/splay-tree/operations/zig-zag).
+
+## Intuición
+
+Splay(x) repite "mira dónde está x respecto de su padre y su abuelo, aplica
+el caso que corresponda" hasta que x llega a la raíz. Cada iteración sube a
+x al menos un nivel (dos, si el caso es zig-zig o zig-zag), así que el
+número de iteraciones está acotado por la profundidad inicial de x. El
+criterio para elegir caso en cada iteración es puramente estructural, no
+depende de valores (Sem6 #10):
+
+- si x no tiene abuelo (su padre es la raíz) → [`zig`](/structures/splay-tree/operations/zig);
+- si x y su padre son hijos del mismo lado de su abuelo → [`zig-zig`](/structures/splay-tree/operations/zig-zig);
+- si son hijos de lados opuestos → [`zig-zag`](/structures/splay-tree/operations/zig-zag).
+
+Los tres casos no son tres mecanismos distintos: son tres combinaciones de
+la misma primitiva [`Rotar`](/structures/splay-tree/operations/rotate)
+(Sem6 #8-9). Eso es lo que hace que el bucle de abajo quepa en diez líneas.
+
+### Subida completa: de hoja a raíz
+
+*(derivado del pseudocódigo del profesor (Sem6 #10), ejecutado a mano sobre
+un árbol concreto)* Splay(x) no se ve completo mirando un solo caso — hay
+que verlo encadenar dos iteraciones sobre una cadena degenerada de 5 nodos,
+para ver cómo cada tramo elige su caso.
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: "Splay(n1) sobre una cadena pura n5-n4-n3-n2-n1 (cada nodo, hijo izquierdo del anterior). x=n1 es la hoja más profunda. Primer tramo: p=n2, a=n3 — n1 es izquierdo de n2, y n2 es izquierdo de n3: MISMO lado → aplica zig-zig (ver /structures/splay-tree/operations/zig-zig).",
+      highlight: ["n1", "n2", "n3"],
+      nodes: [
+        { id: "n5", value: "n5", parent: null },
+        { id: "n4", value: "n4", parent: "n5", side: "left" },
+        { id: "n3", value: "n3", parent: "n4", side: "left" },
+        { id: "n2", value: "n2", parent: "n3", side: "left" },
+        { id: "n1", value: "n1", parent: "n2", side: "left", state: "active" },
+      ],
+    },
+    {
+      note: "Tras el primer zig-zig (dos rotaciones: (n2,n3) primero, luego (n1,n2) — ver la página de zig-zig para el detalle paso a paso): n1 sube dos niveles y queda donde estaba n3, con n2 colgando como su hijo derecho y n3 colgando del hijo derecho de n2 — el patrón en cascada de todo zig-zig.",
+      highlight: ["n1"],
+      nodes: [
+        { id: "n5", value: "n5", parent: null },
+        { id: "n4", value: "n4", parent: "n5", side: "left" },
+        { id: "n1", value: "n1", parent: "n4", side: "left", state: "active" },
+        { id: "n2", value: "n2", parent: "n1", side: "right" },
+        { id: "n3", value: "n3", parent: "n2", side: "right" },
+      ],
+    },
+    {
+      note: "Segundo tramo: ahora p=n4, a=n5 — n1 es izquierdo de n4, y n4 es izquierdo de n5: otra vez el MISMO lado → otro zig-zig. El subárbol {n2, n3} que colgaba de n1 viaja pegado a n1 como un bloque, sin que la rotación mire su interior.",
+      highlight: ["n1", "n4", "n5"],
+      nodes: [
+        { id: "n5", value: "n5", parent: null },
+        { id: "n4", value: "n4", parent: "n5", side: "left" },
+        { id: "n1", value: "n1", parent: "n4", side: "left", state: "active" },
+        { id: "n2", value: "n2", parent: "n1", side: "right" },
+        { id: "n3", value: "n3", parent: "n2", side: "right" },
+      ],
+    },
+    {
+      note: "Tras el segundo zig-zig, n1 es la raíz — Splay(n1) termina. Dos iteraciones para una hoja a profundidad 4: cada una subió a x dos niveles (zig-zig), acotado por la profundidad inicial, exactamente como dice el algoritmo. El árbol quedó más parejo que la cadena original, no por accidente: es el efecto acumulado de rotar el abuelo primero en cada tramo.",
+      highlight: ["n1"],
+      nodes: [
+        { id: "n1", value: "n1", parent: null, state: "answer" },
+        { id: "n4", value: "n4", parent: "n1", side: "right" },
+        { id: "n2", value: "n2", parent: "n4", side: "left" },
+        { id: "n3", value: "n3", parent: "n2", side: "right" },
+        { id: "n5", value: "n5", parent: "n4", side: "right" },
+      ],
+    },
+  ],
+}} />
+
+## Algoritmo
+
+1. Mientras `x` no sea la raíz:
+2. `p ← padre(x)`. Si `p` es la raíz → `Rotar(x)` (caso
+   [`zig`](/structures/splay-tree/operations/zig)); x queda en la raíz y el
+   bucle termina.
+3. Si no, `g ← padre(p)`. Si `x` y `p` son hijos del mismo lado de `g` →
+   `Rotar(p); Rotar(x)` (caso
+   [`zig-zig`](/structures/splay-tree/operations/zig-zig)).
+4. Si son hijos de lados opuestos → `Rotar(x); Rotar(x)` (caso
+   [`zig-zag`](/structures/splay-tree/operations/zig-zag)).
+5. Repetir desde el paso 1.
+
+## Pseudocódigo
+
+El del profesor, literal (Sem6 #10) — escrito sólo con la primitiva
+[`Rotar`](/structures/splay-tree/operations/rotate):
+
+```
+Algoritmo: Splay(x)
+mientras x ≠ raiz hacer
+     p ← padre(x)
+     si p = raiz entonces
+          Rotar(x)                          // Zig
+     en otro caso
+          g ← padre(p)
+          si (x = p.izq) = (p = g.izq) entonces
+               Rotar(p);  Rotar(x)          // Zig-Zig
+          en otro caso
+               Rotar(x);  Rotar(x)          // Zig-Zag
+// x es ahora la raíz
+```
+
+Dos detalles que sólo se leen del pseudocódigo: la condición del `si` compara
+dos booleanos (`x` es izquierdo de `p` **si y sólo si** `p` es izquierdo de
+`g`), lo que cubre de una vez los dos espejos de zig-zig; y si `x` ya es la
+raíz al entrar, el bucle no se ejecuta ni una vez — Splay es un no-op.
+
+## C++
+
+Ver `step-5-splay.cpp` y `full-implementation.cpp` en el editor de arriba:
+`splay(x)` es exactamente ese bucle, llamando `zig`, `zigZig` o `zigZag`
+según la posición relativa de x, p y g — y los tres, a su vez, sólo llaman a
+`rotate`.
+
+## Complejidad temporal
+
+$O(\log n)$ **amortizado** (#63) — no peor caso de una llamada aislada. Cada
+iteración del bucle es $O(1)$ real (una o dos llamadas a
+[`Rotar`](/structures/splay-tree/operations/rotate)), y el número de
+iteraciones es a lo más la profundidad de x: "el costo real es proporcional a
+la profundidad de $x$ — hasta $\Theta(n)$ en el peor caso individual"
+(Sem6 #10). Lo que el profesor garantiza es que, promediado sobre cualquier
+secuencia de llamadas a Splay, el costo por llamada es $O(\log n)$ — la cota
+amortizada no dice nada sobre una llamada aislada, sólo sobre el total de la
+secuencia.
+
+Esa cota amortizada no se queda enunciada: se **demuestra** en
+[access-lemma](/structures/access-lemma), con la función de potencial y el
+Lema de Acceso de Sleator & Tarjan. Ahí es donde el paso zig-zig de este
+bucle se acota formalmente, término a término.
+
+## Complejidad espacial
+
+$O(1)$ adicional (versión iterativa, sin recursión).
+
+### Por qué "move-to-root" no funciona
+
+El profesor **plantea** exactamente esta pregunta — "¿por qué no basta con
+rotar x con y, y luego x con z (las dos rotaciones «ingenuas»)?" (Sem6 #6) —
+y la responde sólo en parte: "el orden de las rotaciones importa: primero y
+con z, luego x con y — nunca al revés" (Sem6 #9). *Por qué* el orden importa
+es lo que se ve acá, y se demuestra en
+[access-lemma](/structures/access-lemma). Aquí está el contraste sobre el mismo
+caso mínimo (x, p, a en cadena, mismo lado): mismo destino — x en la raíz,
+misma profundidad final para todos — pero **forma final distinta** según el
+orden de rotación.
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: "Punto de partida, idéntico para los dos algoritmos: x hijo izquierdo de p, p hijo izquierdo de a. A, B, C, D son subárboles completos (colapsados).",
+      highlight: ["x", "p", "a"],
+      nodes: [
+        { id: "a", value: "a", parent: null },
+        { id: "p", value: "p", parent: "a" },
+        { id: "D", value: "D", parent: "a", collapsed: true },
+        { id: "x", value: "x", parent: "p" },
+        { id: "C", value: "C", parent: "p", collapsed: true },
+        { id: "A", value: "A", parent: "x", collapsed: true },
+        { id: "B", value: "B", parent: "x", collapsed: true },
+      ],
+    },
+    {
+      note: "Zig-zig (correcto): rota (p, a) primero, luego (x, p). Resultado: x en la raíz, p su hijo derecho, a colgando del hijo derecho de p — en CASCADA. Ver el detalle paso a paso en /structures/splay-tree/operations/zig-zig.",
+      highlight: ["x"],
+      nodes: [
+        { id: "x", value: "x", parent: null, state: "answer" },
+        { id: "A", value: "A", parent: "x", collapsed: true },
+        { id: "p", value: "p", parent: "x" },
+        { id: "B", value: "B", parent: "p", collapsed: true },
+        { id: "a", value: "a", parent: "p" },
+        { id: "C", value: "C", parent: "a", collapsed: true },
+        { id: "D", value: "D", parent: "a", collapsed: true },
+      ],
+    },
+    {
+      note: "Move-to-root (incorrecto): sobre el MISMO árbol de partida, rota (x, p) primero — un Zig aislado. x sube un nivel; p queda como su hijo derecho; B pasa a ser hijo izquierdo de p. a todavía no se tocó.",
+      highlight: ["x", "p"],
+      nodes: [
+        { id: "a", value: "a", parent: null },
+        { id: "x", value: "x", parent: "a" },
+        { id: "D", value: "D", parent: "a", collapsed: true },
+        { id: "A", value: "A", parent: "x", collapsed: true },
+        { id: "p", value: "p", parent: "x" },
+        { id: "B", value: "B", parent: "p", collapsed: true },
+      ],
+    },
+    {
+      note: "Move-to-root, segundo giro: ahora rota (x, a) — otro Zig aislado. x sube a la raíz, y el subárbol {p, B} completo (colgando de x) pasa a ser hijo izquierdo de a, no de x.",
+      highlight: ["x", "a"],
+      nodes: [
+        { id: "x", value: "x", parent: null, state: "muted" },
+        { id: "A", value: "A", parent: "x", collapsed: true },
+        { id: "a", value: "a", parent: "x" },
+        { id: "p", value: "p", parent: "a", side: "left" },
+        { id: "B", value: "B", parent: "p", collapsed: true },
+        { id: "D", value: "D", parent: "a", side: "right", collapsed: true },
+      ],
+    },
+    {
+      note: "Forma final de move-to-root: x en la raíz (mismo destino), pero a es su hijo DIRECTO y p cuelga del lado IZQUIERDO de a — no en cascada del lado derecho, como en zig-zig. Con más niveles por encima, esta diferencia se acumula: es la razón de fondo por la que move-to-root no logra la cota O(log n) amortizada que sí logra zig-zig.",
+      highlight: ["x"],
+      nodes: [
+        { id: "x", value: "x", parent: null, state: "muted" },
+        { id: "A", value: "A", parent: "x", collapsed: true },
+        { id: "a", value: "a", parent: "x" },
+        { id: "p", value: "p", parent: "a", side: "left" },
+        { id: "B", value: "B", parent: "p", collapsed: true },
+        { id: "D", value: "D", parent: "a", side: "right", collapsed: true },
+      ],
+    },
+  ],
+}} />
+
+## Ejemplo
+
+Ver [examples.md](/structures/splay-tree/examples).
+
+## Casos límite
+
+- **`x` ya es la raíz**: la guarda `mientras x ≠ raiz` (Sem6 #10) no se
+  cumple, el bucle no se ejecuta ni una vez, cero rotaciones — Splay es un
+  no-op.
+- **`x` es hijo directo de la raíz**: una sola iteración, siempre
+  [`zig`](/structures/splay-tree/operations/zig) (nunca zig-zig ni
+  zig-zag, porque no hay abuelo).
+- **Árbol degenerado en cadena, x es la hoja más profunda**: el número de
+  iteraciones es $O(n)$ — es el $\Theta(n)$ "en el peor caso individual" que
+  el profesor señala al pie del pseudocódigo (Sem6 #10), distinto de la cota
+  amortizada de $O(\log n)$.

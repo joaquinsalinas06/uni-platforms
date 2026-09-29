@@ -1,0 +1,392 @@
+---
+kind: theory
+title: Tecnologías de comunicación
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+No existe "la mejor" tecnología de comunicación para IoT: cada una sacrifica algo. Elegir mal
+la tecnología de radio de un proyecto (usar Wi-Fi donde se necesitaba LoRaWAN, o Zigbee donde
+hacía falta 4G) es uno de los errores de diseño más caros de un sistema IoT, porque rehacer
+la capa de comunicación implica cambiar hardware. Este tema da el vocabulario, los datos de
+cada tecnología y un método de decisión para no equivocarse.
+
+## Conceptos
+
+### El triángulo energía–velocidad–distancia
+
+Las diapositivas presentan tres características en tensión: **energía disponible**,
+**velocidad de transmisión** y **distancia entre dispositivos**. No se pueden maximizar las
+tres a la vez:
+
+- **Bajo consumo + larga distancia** → se sacrifica velocidad (ej. LoRa, NB-IoT).
+- **Alta velocidad + larga distancia** → se sacrifica consumo (ej. 5G, Wi-Fi de alta potencia).
+- **Alta velocidad + bajo consumo** → se sacrifica alcance (ej. BLE).
+
+Lo que se busca idealmente en IoT es bajo consumo de energía, alta velocidad de transmisión
+y larga distancia a la vez — pero eso no existe: siempre hay que resolver este trade-off
+según lo que pida la aplicación (heterogeneidad de dispositivos, disponibilidad de energía).
+No hay "bala de plata".
+
+### Tipos de comunicación
+
+| Criterio | Categorías | Ejemplos (de las diapositivas) |
+|---|---|---|
+| Distancia | Corta / Larga | Larga: LTE, NB-IoT, LoRaWAN, 5G, satélites · Corta: Ethernet, Wi-Fi, Zigbee |
+| Naturaleza electromagnética | Medio confinado (cableado) / Radiación (inalámbrico) | Cableado: Ethernet, Modbus, RS-485, fibra óptica · Inalámbrico: Wi-Fi, Bluetooth, LoRa, 5G |
+| Arquitectura | LAN (Local Area Network) / WAN (Wide Area Network) | LAN: Bluetooth, Zigbee, NFC, Wi-Fi · WAN: LoRaWAN, Sigfox, NB-IoT, LTE, 5G, satélites |
+
+> **Nota de apoyo** (no está en el material): estas tres clasificaciones se cruzan — por
+> ejemplo Wi-Fi aparece como "larga distancia" en el criterio de distancia y como LAN en el
+> de arquitectura; no son excluyentes, son tres formas distintas de mirar la misma tecnología.
+
+### Tecnologías, una por una
+
+Los datos de alcance/velocidad marcados *(derivado)* no están explícitos en las diapositivas
+y se dan solo como referencia de orden de magnitud.
+
+#### Wi-Fi
+- **Alcance**: corta/larga distancia según el criterio de las slides; en la práctica un AP
+  típico cubre decenas de metros *(derivado)*.
+- **Velocidad**: alta.
+- **Energía**: alto consumo.
+- **Topología / uso**: LAN local; ideal cuando hay infraestructura eléctrica e Internet cerca.
+
+#### Bluetooth / BLE
+- **Alcance**: corta distancia.
+- **Velocidad**: mayor que Zigbee.
+- **Energía**: mayor consumo que Zigbee (pero bajo frente a Wi-Fi/celular).
+- **Topología / uso**: LAN, punto a punto o pequeñas redes; wearables, sensores cercanos al
+  teléfono.
+
+#### Zigbee
+- **Alcance**: las diapositivas se contradicen — en la p. 25 dice "aprox. 10 m"; en la p. 32
+  dice "10 a 100 metros, extendido por la red mesh". Se muestran ambos: el valor de 10 m es
+  el alcance punto a punto más conservador; 10–100 m es el rango típico documentado, y el
+  mesh permite saltar de nodo en nodo para cubrir más.
+- **Velocidad**: también hay disparidad — la p. 25 dice "bajo ancho de banda (1 Mbps)"; la
+  p. 32 dice "máximo 250 kbps". El estándar Zigbee real usa 250 kbps en la banda de 2.4 GHz;
+  se reportan ambos valores tal como aparecen en el material.
+- **Energía**: ultra bajo consumo (años con baterías pequeñas).
+- **Banda**: 2.4 GHz (global), 900 MHz (Norteamérica), 868 MHz (Europa), ISM sin licencia.
+- **Topología**: coordinador central (ZC) o red mesh descentralizada con routers (ZR) y
+  dispositivos finales.
+- **Uso típico**: redes de sensores de bajo consumo, control y monitoreo.
+
+#### LoRa / LoRaWAN
+- **Alcance**: 10 km (LoRa, slide p. 25); hasta 15 km en campo abierto (LoRaWAN, slide p. 28).
+- **Velocidad**: bajo ancho de banda, ~50 kb/s.
+- **Energía**: bajo consumo, ideal para baterías de larga duración.
+- **Banda**: bandas sin licencia (868 MHz Europa, 915 MHz América).
+- **Modulación**: CSS (Chirp Spread Spectrum).
+- **Topología / uso**: estrella hacia un gateway LoRaWAN; buena penetración incluso en zonas
+  urbanas densas; paquetes de datos pequeños.
+
+#### Sigfox
+- **Alcance**: 40–50 km en zonas rurales, 3–10 km en entornos urbanos.
+- **Velocidad**: más de 100 b/s (payload máximo 12 bytes por mensaje de subida, 8 bytes de
+  bajada).
+- **Energía**: ultra bajo consumo (años de batería).
+- **Límite**: hasta 140 mensajes de subida y 4 de bajada por dispositivo al día.
+- **Red**: centralizada, propiedad de Sigfox o sus socios; no es una tecnología abierta.
+- **Banda**: ISM sin licencia (868 MHz Europa, 915 MHz América).
+- **Topología / uso**: estrella hacia estaciones base públicas de Sigfox; bajo costo.
+
+#### NB-IoT
+- **Alcance**: larga distancia (red celular).
+- **Velocidad**: alrededor de 250 kb/s.
+- **Energía**: bajo consumo.
+- **Topología / uso**: WAN celular con licencia; sensores fijos que reportan poco pero desde
+  lejos.
+
+#### 3G / 4G / LTE / 5G
+- **Alcance**: larga distancia.
+- **Velocidad**: alta, ancho de banda manejable.
+- **Energía**: alto consumo.
+- **Problema práctico**: requiere estaciones base (infraestructura celular) — cobertura y
+  costo dependen del operador.
+- **Uso típico**: video/streaming, control remoto en tiempo casi real, cualquier caso con
+  buena cobertura celular y presupuesto para datos.
+
+#### RFID
+- **Ejemplos de uso**: autos, tiendas.
+- **Energía**: bajo consumo, funciona por inducción magnética (puede no necesitar batería).
+- **Alcance**: muy corto *(derivado)*.
+
+#### NFC
+- **Ejemplos de uso**: celulares, tarjetas de crédito.
+- **Alcance**: centímetros.
+- **Velocidad**: ancho de banda aceptable para su propósito.
+- **Energía**: bajo consumo.
+
+### Topologías de red: estrella, árbol y malla
+
+Zigbee ilustra las tres topologías de red que se repiten en IoT (coordinador ZC, routers ZR,
+dispositivos finales):
+
+<Visualization viz={{
+  type: 'network-topology',
+  title: 'Topologías: estrella, árbol y malla (ejemplo Zigbee)',
+  steps: [
+    {
+      note: 'Estrella: todos los dispositivos finales hablan directo con el coordinador (ZC). Simple, pero si el coordinador falla, cae toda la red y el alcance queda limitado al radio de un solo salto.',
+      processes: [
+        { id: 'zc', label: 'ZC (coordinador)', state: 'active' },
+        { id: 'e1', label: 'end device' }, { id: 'e2', label: 'end device' },
+        { id: 'e3', label: 'end device' }, { id: 'e4', label: 'end device' },
+      ],
+      dataFlow: [
+        { from: 'e1', to: 'zc' }, { from: 'e2', to: 'zc' },
+        { from: 'e3', to: 'zc' }, { from: 'e4', to: 'zc' },
+      ],
+    },
+    {
+      note: 'Árbol: los routers (ZR) extienden el alcance del coordinador, y cada router atiende a su propio grupo de dispositivos finales.',
+      processes: [
+        { id: 'zc', label: 'ZC (coordinador)', state: 'active' },
+        { id: 'r1', label: 'ZR (router)' }, { id: 'r2', label: 'ZR (router)' },
+        { id: 'e1', label: 'end device' }, { id: 'e2', label: 'end device' },
+        { id: 'e3', label: 'end device' }, { id: 'e4', label: 'end device' },
+      ],
+      dataFlow: [
+        { from: 'r1', to: 'zc' }, { from: 'r2', to: 'zc' },
+        { from: 'e1', to: 'r1' }, { from: 'e2', to: 'r1' },
+        { from: 'e3', to: 'r2' }, { from: 'e4', to: 'r2' },
+      ],
+    },
+    {
+      note: 'Malla: los routers se conectan entre sí además de con el coordinador, así hay rutas alternas si un nodo falla — mayor alcance total y más tolerancia a fallas, a costa de más consumo y complejidad de enrutamiento.',
+      processes: [
+        { id: 'zc', label: 'ZC (coordinador)', state: 'active' },
+        { id: 'r1', label: 'ZR (router)' }, { id: 'r2', label: 'ZR (router)' }, { id: 'r3', label: 'ZR (router)' },
+        { id: 'e1', label: 'end device' }, { id: 'e2', label: 'end device' }, { id: 'e3', label: 'end device' },
+      ],
+      dataFlow: [
+        { from: 'r1', to: 'zc' }, { from: 'r2', to: 'zc' }, { from: 'r3', to: 'zc' },
+        { from: 'r1', to: 'r2' }, { from: 'r2', to: 'r3' }, { from: 'r3', to: 'r1' },
+        { from: 'e1', to: 'r1' }, { from: 'e2', to: 'r2' }, { from: 'e3', to: 'r3' },
+      ],
+    },
+  ],
+}} />
+
+### Alcance de cada tecnología (escala logarítmica)
+
+La línea vertical marca el lado aproximado de un terreno de 15 km² (el de la pregunta de
+examen): $L = \sqrt{15\text{ km}^2} \approx 3.9$ km $= 3873$ m.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Alcance típico por tecnología (m, escala log)',
+  steps: [{
+    note: 'Zigbee y BLE cubren decenas de metros; Wi-Fi y celular, cientos; LoRaWAN y Sigfox son las únicas que superan por sí solas el lado de un campo de 15 km².',
+    series: [{
+      id: 'alcance', label: 'alcance', kind: 'bars',
+      bars: [
+        { label: 'NFC', from: 0.02, to: 0.1 },
+        { label: 'RFID', from: 0.1, to: 5 },
+        { label: 'BLE', from: 1, to: 50 },
+        { label: 'Zigbee', from: 10, to: 100 },
+        { label: 'Wi-Fi', from: 10, to: 100 },
+        { label: 'NB-IoT / 4G / 5G', from: 1000, to: 10000 },
+        { label: 'Sigfox', from: 3000, to: 50000 },
+        { label: 'LoRaWAN', from: 1000, to: 15000 },
+      ],
+    }],
+    x: { label: 'alcance (m)', log: true },
+    vlines: [{ at: 3873, label: 'lado del campo (15 km² ≈ 3.9 km)', state: 'marked' }],
+  }],
+}} />
+
+## Método paso a paso
+
+**Cómo elegir tecnología de comunicación para un subsistema IoT** (checklist de decisión):
+
+1. **Distancia**: ¿cuántos metros/kilómetros hay entre el dispositivo y el receptor más
+   cercano (gateway, AP, estación base)? Si supera cientos de metros, descarta BLE/Zigbee/Wi-Fi
+   puros y mira LoRaWAN, Sigfox, NB-IoT o celular.
+2. **Volumen de datos / ancho de banda**: ¿el dispositivo manda unos bytes cada rato (lectura
+   de sensor) o un flujo continuo (video, audio)? Los LPWAN (LoRaWAN, Sigfox, NB-IoT) sirven
+   para lo primero, no para lo segundo.
+3. **Energía / batería**: ¿el nodo tiene batería/panel solar y debe durar meses o años sin
+   mantenimiento? Prioriza las de ultra bajo consumo (LoRaWAN, Sigfox, Zigbee, NB-IoT) sobre
+   las de alto consumo (Wi-Fi, celular).
+4. **Latencia**: ¿la respuesta debe ser casi inmediata (control de un actuador) o puede
+   tardar segundos/minutos (reporte periódico)? Los LPWAN de bajo duty-cycle (LoRaWAN, Sigfox)
+   no son buenos para control en tiempo real; para eso sirven Zigbee/Wi-Fi/BLE locales.
+5. **Costo e infraestructura**: ¿hay Internet/estaciones base cerca, o hay que instalar un
+   gateway propio? La conexión celular puede ser costosa y limitada en zonas rurales; un
+   gateway LoRaWAN propio es una inversión única.
+6. **Topología**: ¿el subsistema necesita cubrir un área con muchos nodos que se puedan
+   retransmitir entre sí (mesh), o basta con que todos hablen a un único punto (estrella)?
+
+## Ejemplo resuelto
+
+**Pregunta de examen (EP-2026I, P3)**: una empresa agrícola quiere monitorear cultivos en una
+zona rural de 15 km². El sistema incluye sensores de humedad/temperatura distribuidos por
+todo el terreno, cámaras de vigilancia en puntos estratégicos, riego automático que debe
+responder rápido, dispositivos alimentados por batería y panel solar, e Internet limitado y
+costoso. Tecnologías disponibles: Wi-Fi, BLE, Zigbee, LoRaWAN, 4G/5G.
+
+**a) Sensores de humedad/temperatura → LoRaWAN.** Justificación: distancia (15 km² requiere
+cubrir ~3.9 km de lado, dentro del alcance de 15 km de LoRaWAN), bajo volumen de datos
+(lecturas periódicas pequeñas caben en su bajo data rate), bajo consumo (coherente con
+batería + panel solar) e infraestructura barata (un solo gateway propio, sin depender de
+Internet costoso).
+
+**b) Cámaras de vigilancia → 4G/5G** (o Wi-Fi local si el punto está cerca de un AP con
+electricidad). Justificación: el video exige alto ancho de banda, algo que ni LoRaWAN, ni
+Sigfox, ni Zigbee, ni BLE pueden dar; hay que aceptar el mayor consumo de energía y el costo
+de datos celulares porque es la única opción con el data rate necesario.
+
+**c) Riego automático rápido → Zigbee (mesh local) o Wi-Fi local**, no LoRaWAN. Justificación
+considerando latencia y confiabilidad: LoRaWAN tiene bajo duty-cycle y latencias de segundos
+a minutos (no apto para "responder rápidamente"); una red Zigbee mesh o Wi-Fi local entre las
+válvulas de riego y un controlador cercano da la baja latencia y la confiabilidad (rutas
+alternas en malla) que exige el riego.
+
+**d) Ventajas/desventajas de usar solo Wi-Fi para todo el sistema**:
+- *Ventajas*: alta velocidad (soporta video sin problema), tecnología barata y conocida,
+  reutiliza infraestructura de red existente.
+- *Desventajas*: alcance corto (decenas de metros por punto de acceso) — cubrir 15 km²
+  necesitaría decenas de APs y repetidores, con cableado eléctrico hasta cada uno; alto
+  consumo de energía, incompatible con nodos a batería/solar en el campo; depende de
+  Internet local, que el enunciado dice que es limitado y costoso.
+
+**e) Arquitectura híbrida propuesta**: cada tecnología cubre el subsistema para el que es
+buena, coordinadas por un gateway/edge local:
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Arquitectura híbrida — EP-2026I P3',
+  steps: [{
+    note: 'Los sensores usan LoRaWAN (largo alcance, bajo consumo) hacia un gateway propio; las cámaras usan 4G/5G (alto ancho de banda) directo a la nube; el riego usa una red Zigbee/Wi-Fi local de baja latencia contra un controlador en el mismo campo, que puede actuar sin esperar a la nube.',
+    nodes: [
+      { id: 'sensores', value: 'Sensores humedad/temp.', parent: null },
+      { id: 'gw', value: 'Gateway LoRaWAN', parent: null, state: 'marked' },
+      { id: 'camaras', value: 'Cámaras de vigilancia', parent: null },
+      { id: 'riego', value: 'Válvulas de riego', parent: null },
+      { id: 'ctrl', value: 'Controlador local (Zigbee/Wi-Fi)', parent: null, state: 'answer' },
+      { id: 'cloud', value: 'Nube / plataforma de monitoreo', parent: null },
+    ],
+    links: [
+      { from: 'sensores', to: 'gw', kind: 'tree', label: 'LoRaWAN' },
+      { from: 'gw', to: 'cloud', kind: 'tree', label: 'Internet (poco tráfico)' },
+      { from: 'camaras', to: 'cloud', kind: 'tree', label: '4G/5G (video)' },
+      { from: 'riego', to: 'ctrl', kind: 'tree', label: 'Zigbee/Wi-Fi mesh (baja latencia)', bidirectional: true },
+      { from: 'ctrl', to: 'cloud', kind: 'tree', label: 'reporte de estado' },
+    ],
+  }],
+}} />
+
+## Errores típicos
+
+- Elegir la tecnología por "la que más rápido transmite" sin mirar consumo ni distancia: en
+  IoT casi nunca hay una sola variable a optimizar.
+- Usar LoRaWAN/Sigfox para algo que necesita respuesta rápida (riego, alarmas): su bajo
+  duty-cycle y su bajo data rate los hace lentos por diseño.
+- Usar Wi-Fi o celular para un nodo a batería que debe durar meses: el consumo los agota en
+  días.
+- Ignorar que Sigfox no es una tecnología abierta y tiene límites duros de mensajes/día (140
+  subidas, 4 bajadas) — no sirve si el sistema necesita reportar seguido.
+- Mezclar la clasificación por distancia con la de arquitectura (LAN/WAN) como si fueran lo
+  mismo: son dos ejes distintos que se cruzan.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Una casa domótica tiene: sensores de puerta/ventana (a batería, deben durar años), bombillas inteligentes que se controlan desde el celular dentro de la casa, y una cámara de seguridad que transmite video a la nube. Elige una tecnología por dispositivo y justifica.",
+  hints: [
+    "Compara consumo de energía esperado vs. duración de la batería.",
+    "El video necesita ancho de banda; los sensores de puerta, casi nada.",
+  ],
+}}>
+
+**1. Tabla de decisión** (requisito × tecnología):
+
+| Dispositivo | Requisito clave | Zigbee/BLE | Wi-Fi |
+|---|---|---|---|
+| Sensor puerta/ventana | Batería dura años, pocos datos | ✅ ultra bajo consumo | ❌ agota batería en días |
+| Bombilla inteligente | Control local, corto alcance | ✅ suficiente y de bajo consumo | ❌ más consumo del necesario |
+| Cámara de seguridad | Alto ancho de banda (video) | ❌ no alcanza | ✅ único con ancho de banda |
+
+**2. Arquitectura elegida:**
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'Casa domótica: una tecnología por requisito',
+  steps: [{
+    note: 'Los sensores de puerta y las bombillas comparten una red Zigbee/BLE local de bajo consumo; la cámara, al necesitar ancho de banda para video, usa Wi-Fi directo hacia la nube.',
+    processes: [
+      { id: 'gw', label: 'Gateway/hub domótico', state: 'active' },
+      { id: 'puerta', label: 'Sensor puerta/ventana' },
+      { id: 'foco', label: 'Bombilla inteligente' },
+      { id: 'cam', label: 'Cámara de seguridad' },
+      { id: 'cloud', label: 'Nube' },
+    ],
+    dataFlow: [
+      { from: 'puerta', to: 'gw', label: 'Zigbee/BLE' },
+      { from: 'foco', to: 'gw', label: 'Zigbee/BLE' },
+      { from: 'cam', to: 'cloud', label: 'Wi-Fi (video)' },
+      { from: 'gw', to: 'cloud', label: 'reporte de estado' },
+    ],
+  }],
+}} />
+
+$$\boxed{\text{Puerta/ventana} \to \text{Zigbee} \quad \text{Bombilla} \to \text{BLE/Zigbee} \quad \text{Cámara} \to \text{Wi-Fi}}$$
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Una ciudad quiere sensores de ocupación en $5\\,000$ espacios de estacionamiento distribuidos en toda el área urbana, reportando cada pocos minutos si el espacio está libre u ocupado, con batería que debe durar más de $5$ años. ¿Qué tecnología eligirías entre Zigbee, Wi-Fi, LoRaWAN/NB-IoT y Sigfox? Justifica usando el checklist de decisión (distancia, volumen de datos, energía, latencia, costo).",
+  hints: [
+    "El área es 'toda la ciudad': ¿qué tecnologías de las vistas cubren eso sin miles de gateways?",
+    "El reporte es 'cada pocos minutos', no en tiempo real: ¿qué tan grave es la latencia de un LPWAN aquí?",
+  ],
+}}>
+
+**1. Tabla de decisión** (checklist × tecnología):
+
+| Criterio | Zigbee | Wi-Fi | LoRaWAN/NB-IoT | Sigfox |
+|---|---|---|---|---|
+| Distancia (toda la ciudad) | ❌ decenas de m | ❌ decenas de m | ✅ km | ✅ km |
+| Volumen de datos (libre/ocupado) | ✅ | ✅ | ✅ | ✅ |
+| Energía (batería $>5$ años) | parcial | ❌ | ✅ | ✅ |
+| Latencia (cada pocos min.) | ✅ | ✅ | ✅ (patrón típico de LPWAN) | ✅ |
+| Costo/infraestructura | muchos APs | muchos APs | 1 gateway propio o celular existente | límite $140$ msj/día |
+
+**2. Arquitectura elegida** (LoRaWAN, gateways propios cubriendo la ciudad):
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'Estacionamiento inteligente vía LoRaWAN',
+  steps: [{
+    note: 'Miles de sensores de ocupación (5000) hablan en estrella hacia un puñado de gateways LoRaWAN distribuidos en la ciudad, que reenvían a la nube.',
+    processes: [
+      { id: 'gw1', label: 'Gateway LoRaWAN 1', state: 'active' },
+      { id: 'gw2', label: 'Gateway LoRaWAN 2', state: 'active' },
+      { id: 's1', label: 'Sensor plaza 1' }, { id: 's2', label: 'Sensor plaza 2' },
+      { id: 's3', label: 'Sensor plaza …' }, { id: 's4', label: 'Sensor plaza 5000' },
+      { id: 'cloud', label: 'Nube / app de estacionamiento' },
+    ],
+    dataFlow: [
+      { from: 's1', to: 'gw1' }, { from: 's2', to: 'gw1' },
+      { from: 's3', to: 'gw2' }, { from: 's4', to: 'gw2' },
+      { from: 'gw1', to: 'cloud' }, { from: 'gw2', to: 'cloud' },
+    ],
+  }],
+}} />
+
+$$\boxed{\text{LoRaWAN (o NB-IoT si se prioriza red celular ya existente)}}$$
+
+**Descartada:** Sigfox, por su límite de $140$ mensajes/día por dispositivo y por no ser red propia de la ciudad.
+
+</ExerciseBlock>

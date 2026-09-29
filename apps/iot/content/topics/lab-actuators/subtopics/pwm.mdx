@@ -1,0 +1,263 @@
+---
+kind: subtopic
+order: 1
+title: PWM
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un pin digital de Arduino solo puede estar en HIGH o en LOW: no puede
+entregar, por ejemplo, "6 V" de forma directa como lo haría una salida
+analógica real. El **PWM** (Pulse Width Modulation, modulación por ancho de
+pulso) resuelve esto alternando rápido entre HIGH y LOW, variando **cuánto
+tiempo** la señal pasa en cada nivel para *simular* un valor intermedio.
+
+## Conceptos
+
+**Nota clave del material**: PWM no es el valor analógico exacto, sino un
+**valor promedio** que alterna entre un nivel alto ($V_{high}$) y uno bajo
+($V_{low}$). Ni el motor ni el LED "ven" pulsos individuales si la
+frecuencia es suficientemente alta: perciben el promedio.
+
+- $t_{ON}$: tiempo que la señal permanece en $V_{high}$ dentro de un periodo.
+- $t_{OFF}$: tiempo que la señal permanece en $V_{low}$ dentro de un periodo.
+- $T = t_{ON} + t_{OFF}$: periodo de la señal.
+- **Duty cycle** $D$: fracción del periodo en alto.
+
+$$D = \frac{t_{ON}}{T} = \frac{t_{ON}}{t_{ON} + t_{OFF}}$$
+
+**Voltaje promedio**: si la señal pasa una fracción $D$ del tiempo en
+$V_{high}$ y el resto ($1-D$) en $V_{low}$, el promedio ponderado por tiempo
+es:
+
+$$V_{avg} = D \cdot V_{high} + (1-D)\cdot V_{low}$$
+
+Reordenando (distribuyendo y agrupando $V_{low}$):
+
+$$V_{avg} = V_{low} + D\,(V_{high} - V_{low})$$
+
+Esta segunda forma es la más útil para trabajar: parte de $V_{low}$ (lo que
+se tiene con $D=0$) y le suma la fracción $D$ de todo el rango disponible
+($V_{high}-V_{low}$).
+
+Un caso particular común (el de `analogWrite` de Arduino, con $V_{low}=0$):
+$V_{avg} = D \cdot V_{high}$.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'V_prom en función del duty cycle (2 V – 14 V)',
+  static: true,
+  steps: [{
+    note: 'Relación lineal entre D y el voltaje promedio: en D=0 se tiene V_low, en D=1 se tiene V_high.',
+    series: [{ id: 'vavg', label: 'V_prom(D)', kind: 'line', fn: '2 + 12*x', domain: [0, 1] }],
+    x: { label: 'D (duty cycle)', min: 0, max: 1 },
+    y: { label: 'V_prom (V)', min: 0, max: 14 },
+    hlines: [
+      { at: 8, label: 'D=0.50 → 8 V' },
+      { at: 11, label: 'D=0.75 → 11 V' },
+      { at: 5, label: 'D=0.25 → 5 V' },
+    ],
+  }],
+}} />
+
+## Método paso a paso
+
+1. Identificar $V_{low}$, $V_{high}$ (los dos niveles entre los que alterna
+   la señal) y, si se conocen, $t_{ON}$/$t_{OFF}$ o $D$.
+2. Si falta $D$ pero se conocen $t_{ON}$ y $t_{OFF}$: $D = t_{ON}/(t_{ON}+t_{OFF})$.
+3. Si falta $t_{ON}$ (o $t_{OFF}$) pero se conoce $D$ y el otro tiempo:
+   despejar de la misma fórmula. Por ejemplo, con $D$ y $t_{OFF}$ conocidos:
+   $t_{ON} = \dfrac{D\cdot t_{OFF}}{1-D}$.
+4. Para el voltaje promedio: $V_{avg} = V_{low} + D\,(V_{high}-V_{low})$.
+5. Para el $D$ que da un $V_{avg}$ deseado: despejar
+   $D = \dfrac{V_{avg}-V_{low}}{V_{high}-V_{low}}$.
+6. **Cuidado con motores**: si el enunciado dice que la velocidad (RPM) es
+   lineal respecto al voltaje promedio **desde 0 V** (reposo) hasta un
+   voltaje nominal, esa relación RPM–voltaje es aparte de la relación
+   $D$–voltaje del PWM. Primero se halla el $V_{avg}$ que da la RPM pedida
+   (con la recta del motor) y **después** se convierte ese $V_{avg}$ a $D$
+   (con la recta del PWM, que usa $V_{low}$ y $V_{high}$, no 0 V).
+
+## Ejemplo resuelto
+
+**Enunciado (slide)**: una señal PWM alterna entre $V_{low}=2\text{ V}$ y
+$V_{high}=14\text{ V}$.
+
+**1. Voltaje promedio con $D=50\%$.**
+
+$$V_{avg} = 2 + 0.5\,(14-2) = 2 + 6 = 8\text{ V}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'PWM: D = 0.50 (2 V – 14 V)',
+  static: true,
+  steps: [{
+    note: 'Con D=0.50, la señal pasa la mitad del periodo en 14 V y la mitad en 2 V; el promedio es 8 V. Periodo T=20 ms elegido solo para dibujar (derivado, no lo da el enunciado).',
+    series: [{ id: 'pwm', label: 'V(t)', kind: 'step', points: [[0,14],[10,14],[10,2],[20,2],[20,14],[30,14],[30,2],[40,2]] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V (V)', min: 0, max: 14 },
+    hlines: [{ at: 8, label: 'V_prom = 8 V' }],
+  }],
+}} />
+
+**2. $t_{ON}$ para $D=0.75$ con $t_{OFF}=10\text{ ms}$.**
+
+$$D = \frac{t_{ON}}{t_{ON}+t_{OFF}} \;\Rightarrow\; 0.75 = \frac{t_{ON}}{t_{ON}+10}$$
+
+$$0.75\,(t_{ON}+10) = t_{ON} \;\Rightarrow\; 0.75\,t_{ON} + 7.5 = t_{ON} \;\Rightarrow\; 7.5 = 0.25\,t_{ON}$$
+
+$$t_{ON} = 30\text{ ms} \quad (T = 40\text{ ms},\; V_{avg} = 2+0.75\cdot12 = 11\text{ V})$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'PWM: D = 0.75 (t_ON=30 ms, t_OFF=10 ms)',
+  static: true,
+  steps: [{
+    note: 'D=0.75 significa que la señal pasa la mayor parte del periodo en el nivel alto; el promedio (11 V) queda mucho más cerca de 14 V que de 2 V.',
+    series: [{ id: 'pwm', label: 'V(t)', kind: 'step', points: [[0,14],[30,14],[30,2],[40,2],[40,14],[70,14],[70,2],[80,2]] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V (V)', min: 0, max: 14 },
+    hlines: [{ at: 11, label: 'V_prom = 11 V' }],
+  }],
+}} />
+
+**3. $D$ para que $V_{avg}=5\text{ V}$.**
+
+$$D = \frac{V_{avg}-V_{low}}{V_{high}-V_{low}} = \frac{5-2}{14-2} = \frac{3}{12} = 0.25$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'PWM: D = 0.25 (periodo T=40 ms, ilustrativo)',
+  static: true,
+  steps: [{
+    note: 'D=0.25: la señal pasa poco tiempo en 14 V y la mayor parte en 2 V, dando un promedio (5 V) cercano a V_low.',
+    series: [{ id: 'pwm', label: 'V(t)', kind: 'step', points: [[0,14],[10,14],[10,2],[40,2],[40,14],[50,14],[50,2],[80,2]] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V (V)', min: 0, max: 14 },
+    hlines: [{ at: 5, label: 'V_prom = 5 V' }],
+  }],
+}} />
+
+**Parcial EP-2026I, pregunta 8b**: un controlador de potencia genera una
+señal PWM **no ideal**: $V_{low}=1\text{ V}$, $V_{high}=9\text{ V}$. El motor
+DC que controla responde de forma **perfectamente lineal al voltaje
+promedio**: $0\text{ V}\to 0\text{ RPM}$ y $9\text{ V}\to 3000\text{ RPM}$.
+¿Qué $D$ da $1800\text{ RPM}$?
+
+Primero, la recta del motor (RPM vs. $V_{avg}$, **no** la recta del PWM):
+
+$$\text{RPM} = \frac{3000}{9}\,V_{avg} \;\Rightarrow\; V_{avg} = \frac{1800}{3000}\cdot 9 = 5.4\text{ V}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'Motor: RPM lineal con V_prom (0 V → 0 RPM, 9 V → 3000 RPM)',
+  static: true,
+  steps: [{
+    note: 'Esta recta parte de 0 V, no de V_low: describe al motor, no al PWM que lo alimenta.',
+    series: [{ id: 'rpm', label: 'RPM(V_prom)', kind: 'line', fn: '(3000/9)*x', domain: [0, 9] }],
+    x: { label: 'V_prom (V)', min: 0, max: 9 },
+    y: { label: 'RPM', min: 0, max: 3000 },
+    hlines: [{ at: 1800, label: '1800 RPM' }],
+    vlines: [{ at: 5.4, label: 'V_prom = 5.4 V' }],
+  }],
+}} />
+
+Ahora sí, con la recta del PWM (que usa $V_{low}=1$ y $V_{high}=9$, no 0 V):
+
+$$D = \frac{V_{avg}-V_{low}}{V_{high}-V_{low}} = \frac{5.4-1}{9-1} = \frac{4.4}{8} = 0.55$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'PWM no ideal: D = 0.55 (1 V – 9 V)',
+  static: true,
+  steps: [{
+    note: 'D=0.55 sobre el rango 1 V–9 V da V_prom=5.4 V, el voltaje que el motor necesita para girar a 1800 RPM. Periodo T=20 ms elegido solo para dibujar.',
+    series: [{ id: 'pwm', label: 'V(t)', kind: 'step', points: [[0,9],[11,9],[11,1],[20,1],[20,9],[31,9],[31,1],[40,1]] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V (V)', min: 0, max: 9 },
+    hlines: [{ at: 5.4, label: 'V_prom = 5.4 V' }],
+  }],
+}} />
+
+## Errores típicos
+
+- Usar $D\cdot V_{high}$ a secas cuando $V_{low}\neq 0$: hay que partir de
+  $V_{low}$ y sumar solo la fracción $D$ del rango, no del total.
+- Mezclar la recta del **motor** (RPM vs. voltaje promedio, que puede partir
+  de 0 V) con la recta del **PWM** (que usa $V_{low}$ y $V_{high}$ reales de
+  la señal): son dos relaciones distintas y hay que resolver primero una y
+  después la otra.
+- Confundir $T$ con $t_{ON}$: $D$ siempre se calcula sobre el periodo
+  completo $T=t_{ON}+t_{OFF}$, no sobre $t_{OFF}$ solo.
+- Olvidar unidades al despejar tiempos (mezclar ms con s).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Una señal PWM alterna entre $0$ V y $5$ V con $t_{ON} = 3$ ms y $t_{OFF} = 7$ ms. Calcule el duty cycle y el voltaje promedio.",
+  hints: [
+    "$D = t_{ON} / (t_{ON} + t_{OFF})$.",
+    "Con $V_{low} = 0$, $V_{avg} = D \\cdot V_{high}$.",
+  ],
+}}>
+
+**1. Periodo y duty cycle.**
+
+$$T = t_{ON} + t_{OFF} = 3 + 7 = 10\,\text{ms}$$
+
+$$D = \frac{t_{ON}}{T} = \frac{3}{10} = \boxed{0.30}$$
+
+**2. Voltaje promedio** (con $V_{low}=0$):
+
+$$V_{avg} = D \cdot V_{high} = 0.30 \times 5 = \boxed{1.5\,\text{V}}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'PWM: D = 0.30 (0 V – 5 V)',
+  steps: [{
+    note: 'D=0.30: la señal pasa 3 ms en 5 V y 7 ms en 0 V de cada periodo de 10 ms; el promedio ponderado por tiempo es 1.5 V.',
+    series: [{ id: 'pwm', label: 'V(t)', kind: 'step', points: [[0,5],[3,5],[3,0],[10,0],[10,5],[13,5],[13,0],[20,0]] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V (V)', min: 0, max: 5 },
+    hlines: [{ at: 1.5, label: 'V_prom = 1.5 V' }],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un controlador de potencia entrega un PWM no ideal con $V_{low} = 1$ V y $V_{high} = 9$ V (igual que en el parcial). El mismo motor (lineal, $0$ V$\\to 0$ RPM, $9$ V$\\to 3000$ RPM) debe girar a $2400$ RPM. ¿Qué duty cycle se necesita?",
+  hints: [
+    "Primero halle el $V_{avg}$ que da $2400$ RPM con la recta del motor (que parte de 0 V).",
+    "Luego convierta ese $V_{avg}$ a $D$ usando $V_{low}=1$ V y $V_{high}=9$ V (la recta del PWM).",
+  ],
+}}>
+
+**1. Recta del motor** (RPM vs. $V_{avg}$, parte de $0$ V):
+
+$$\text{RPM} = \frac{3000}{9}\,V_{avg} \;\Rightarrow\; V_{avg} = \frac{2400}{3000}\cdot 9 = \boxed{7.2\,\text{V}}$$
+
+**2. Recta del PWM** (usa $V_{low}=1$, $V_{high}=9$, no $0$ V):
+
+$$D = \frac{V_{avg}-V_{low}}{V_{high}-V_{low}} = \frac{7.2-1}{9-1} = \frac{6.2}{8} = \boxed{0.775}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'PWM no ideal: D = 0.775 (1 V – 9 V) → 2400 RPM',
+  steps: [{
+    note: 'D=0.775 sobre el rango 1 V–9 V da V_prom=7.2 V, el voltaje que el motor necesita para girar a 2400 RPM. Periodo T=20 ms elegido solo para dibujar.',
+    series: [{ id: 'pwm', label: 'V(t)', kind: 'step', points: [[0,9],[15.5,9],[15.5,1],[20,1],[20,9],[35.5,9],[35.5,1],[40,1]] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V (V)', min: 0, max: 9 },
+    hlines: [{ at: 7.2, label: 'V_prom = 7.2 V' }],
+  }],
+}} />
+
+</ExerciseBlock>

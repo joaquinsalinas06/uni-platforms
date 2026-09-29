@@ -1,0 +1,218 @@
+---
+kind: operation
+title: Leer un campo en la versión t
+order: 1
+cppSteps:
+  - step-1-node.cpp
+  - step-2-structure.cpp
+  - full-implementation.cpp
+visualization:
+  type: persistent
+  mode: fat-node
+  steps:
+    - note: >-
+        Nodo v: nace en t=0 con valor original 20. Su registro ya tiene dos
+        modificaciones escritas, en orden de inserción: (valor, 200, t=1) y
+        (valor, 201, t=2). La consulta es leerCampo(v, valor, t=1.5) — el
+        marcador "t = 1.5" es el delimitador de la búsqueda.
+      nodes:
+        - { id: orig, value: "v: 20 (original)" }
+        - { id: e1, value: "t=1: valor=200", tag: "campo: Value" }
+        - { id: e2, value: "t=2: valor=201", tag: "campo: Value" }
+        - { id: t_query, value: "t = 1.5", state: marked }
+    - note: >-
+        La búsqueda recorre el registro de más reciente a más antigua:
+        primero se compara la entrada más nueva, t=2 (valor=201). ¿2 <= 1.5?
+        No — se descarta.
+      caption: "¿campo == Value && tiempo <= t?"
+      highlight: ["e2"]
+      nodes:
+        - { id: orig, value: "v: 20 (original)" }
+        - { id: e1, value: "t=1: valor=200", tag: "campo: Value" }
+        - { id: e2, value: "t=2: valor=201", tag: "campo: Value", state: muted }
+        - { id: t_query, value: "t = 1.5", state: marked }
+    - note: >-
+        Se compara la siguiente entrada hacia atrás, t=1 (valor=200). ¿1 <=
+        1.5? Sí — es candidata.
+      caption: "¿campo == Value && tiempo <= t?"
+      highlight: ["e1"]
+      nodes:
+        - { id: orig, value: "v: 20 (original)" }
+        - { id: e1, value: "t=1: valor=200", tag: "campo: Value", state: active }
+        - { id: e2, value: "t=2: valor=201", tag: "campo: Value", state: muted }
+        - { id: t_query, value: "t = 1.5", state: marked }
+    - note: >-
+        Es la primera entrada, recorriendo de más reciente a más antigua,
+        con tiempo <= 1.5: la búsqueda se detiene aquí. Nunca se llega a
+        revisar el valor original — eso sólo ocurre cuando ninguna entrada
+        del registro aplica.
+      highlight: ["e1"]
+      nodes:
+        - { id: orig, value: "v: 20 (original)" }
+        - { id: e1, value: "t=1: valor=200", tag: "campo: Value", state: answer }
+        - { id: e2, value: "t=2: valor=201", tag: "campo: Value", state: muted }
+        - { id: t_query, value: "t = 1.5", state: marked }
+    - note: >-
+        leerCampo(v, valor, 1.5) = 200. Esa misma entrada sigue siendo la
+        respuesta correcta para cualquier t en [1, 2) — aunque el nodo ya
+        tenga escrito valor=201 con t=2, esa entrada es "del futuro" para
+        una consulta en t=1.5.
+      highlight: ["e1"]
+      nodes:
+        - { id: orig, value: "v: 20 (original)" }
+        - { id: e1, value: "t=1: valor=200 -> respuesta", tag: "campo: Value", state: answer }
+        - { id: e2, value: "t=2: valor=201", tag: "campo: Value", state: muted }
+        - { id: t_query, value: "t = 1.5", state: marked }
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Devuelve el valor de un campo de un nodo, tal como era en una versión
+(tiempo) $t$ dada — no necesariamente la más reciente.
+
+## Intuición
+
+El nodo nunca borra un valor viejo cuando se escribe uno nuevo: lo agrega
+al registro de modificaciones, con marca de tiempo. Leer en la versión $t$
+es entonces buscar hacia atrás en ese registro la primera modificación
+que "ya había pasado" para el tiempo $t$, y si nunca hubo ninguna, usar el
+valor con el que el nodo nació.
+
+## Por qué hace falta el enum `Field`
+
+Un nodo gordo con $p$ campos no lleva un registro por campo — lleva **uno
+solo, compartido**, acotado a $2p$ entradas en total (ver el invariante de
+[node-split](/structures/fat-nodes/operations/node-split)). Como las
+modificaciones de campos distintos quedan mezcladas ahí, en el orden en que
+se escribieron, cada entrada tiene que decir **de qué campo es** — eso es
+`Field` (`enum class Field { Value, Next };`, `step-1-node.cpp`).
+`readValue` y `readNext` son la misma búsqueda de `leerCampo`, sólo que una
+filtra `campo == Value` y la otra `campo == Next`, ignorando por completo
+las entradas del otro campo, sin importar su tiempo.
+
+<Visualization viz={{
+  type: 'persistent',
+  mode: 'fat-node',
+  steps: [
+    {
+      note: "Nodo v con un registro MEZCLADO: dos campos (valor y siguiente) comparten el mismo registro, en el orden real en que se escribieron. Consulta: readNext(v, t=3.5).",
+      nodes: [
+        { id: "e1", value: "t=1: valor=10", tag: "campo: Value" },
+        { id: "e2", value: "t=2: siguiente=B", tag: "campo: Next" },
+        { id: "e3", value: "t=3: valor=11", tag: "campo: Value" },
+        { id: "e4", value: "t=4: siguiente=C", tag: "campo: Next" },
+        { id: "t_query", value: "t = 3.5", state: "marked" }
+      ]
+    },
+    {
+      note: "Se empieza por la entrada más reciente, t=4 (siguiente=C). Campo correcto (Next) — pero 4 <= 3.5 es falso: se descarta por tiempo, no por campo.",
+      caption: "campo == Next, pero tiempo (4) > t (3.5) -> descarta",
+      highlight: ["e4"],
+      nodes: [
+        { id: "e1", value: "t=1: valor=10", tag: "campo: Value" },
+        { id: "e2", value: "t=2: siguiente=B", tag: "campo: Next" },
+        { id: "e3", value: "t=3: valor=11", tag: "campo: Value" },
+        { id: "e4", value: "t=4: siguiente=C", tag: "campo: Next", state: "muted" },
+        { id: "t_query", value: "t = 3.5", state: "marked" }
+      ]
+    },
+    {
+      note: "Siguiente hacia atrás, t=3 (valor=11). Esta vez el campo NO coincide — es Value, no Next — así que se descarta sin siquiera mirar el tiempo. El registro compartido obliga a este filtro extra que un registro-por-campo no necesitaría.",
+      caption: "campo == Value != Next -> descarta (no se mira el tiempo)",
+      highlight: ["e3"],
+      nodes: [
+        { id: "e1", value: "t=1: valor=10", tag: "campo: Value" },
+        { id: "e2", value: "t=2: siguiente=B", tag: "campo: Next" },
+        { id: "e3", value: "t=3: valor=11", tag: "campo: Value", state: "muted" },
+        { id: "e4", value: "t=4: siguiente=C", tag: "campo: Next", state: "muted" },
+        { id: "t_query", value: "t = 3.5", state: "marked" }
+      ]
+    },
+    {
+      note: "t=2 (siguiente=B): campo == Next y 2 <= 3.5 — las dos condiciones se cumplen. La búsqueda se detiene aquí: readNext(v, 3.5) = B. La entrada t=1 (valor=10) ni se llega a mirar, aunque exista en el mismo registro.",
+      caption: "campo == Next && tiempo (2) <= t (3.5) -> respuesta",
+      highlight: ["e2"],
+      nodes: [
+        { id: "e1", value: "t=1: valor=10", tag: "campo: Value" },
+        { id: "e2", value: "t=2: siguiente=B -> respuesta", tag: "campo: Next", state: "answer" },
+        { id: "e3", value: "t=3: valor=11", tag: "campo: Value", state: "muted" },
+        { id: "e4", value: "t=4: siguiente=C", tag: "campo: Next", state: "muted" },
+        { id: "t_query", value: "t = 3.5", state: "marked" }
+      ]
+    }
+  ]
+}} />
+
+## Algoritmo
+
+Textual del profesor (página 24): "Se revisa el registro de
+modificaciones de más reciente a más antigua, y se toma la primera con
+tiempo ≤ t; si no hay ninguna, se usa el valor original del nodo."
+
+1. Recorrer el registro del nodo de atrás hacia adelante (más reciente
+   primero).
+2. Devolver el valor de la primera entrada de ese campo con
+   $\text{tiempo} \le t$.
+3. Si ninguna entrada aplica, devolver el valor original del campo.
+
+## Pseudocódigo
+
+El profesor no da pseudocódigo formal para ningún algoritmo de nodos
+gordos (todo es prosa); lo siguiente es la traducción directa del
+párrafo de la página 24, no una invención:
+
+```
+función leerCampo(nodo, campo, t):
+    para cada entrada (c, valor, tiempo) en registro(nodo),
+         de la más reciente a la más antigua:
+        si c = campo y tiempo <= t:
+            devolver valor
+    devolver valorOriginal(nodo, campo)
+```
+
+## C++
+
+Ver `step-1-node.cpp` (el nodo y su registro), `step-2-structure.cpp`
+(`readValue` / `readNext`) y `full-implementation.cpp` en el editor de
+arriba.
+
+## Complejidad temporal
+
+$O(1)$. El registro tiene tamaño acotado por $2p$ (con $p = O(1)$ por
+hipótesis), así que aunque el algoritmo lo recorra entero en el peor caso,
+ese recorrido es de longitud constante. El profesor lo dice directo: "$O(1)$,
+pues el registro tiene tamaño acotado" (página 24). No hay distinción
+entre costo real y amortizado aquí: leer nunca modifica el registro, así
+que no hay nada que un análisis de potencial tenga que explicar.
+
+## Complejidad espacial
+
+$O(1)$ adicional: la operación no crea estructura nueva, sólo recorre la
+que ya existe.
+
+## Ejemplo
+
+*(Derivado del pseudocódigo; no aparece en las diapositivas.)* Un nodo `v`
+nace en `t=0` con `valor = 20`. Se escribe `valor = 200` en `t=1` y
+`valor = 201` en `t=2`. `leerCampo(v, valor, 0)` devuelve `20` (valor
+original, ninguna entrada tiene tiempo ≤ 0 salvo que se escriba en t=0);
+`leerCampo(v, valor, 1)` devuelve `200`; `leerCampo(v, valor, 1.5)` —o
+cualquier tiempo entre escrituras— también devuelve `200`, porque es la
+entrada más reciente con tiempo ≤ 1.5.
+
+## Casos límite
+
+- **Ninguna modificación registrada**: "si no hay ninguna, se usa el
+  valor original del nodo" (página 24) — el caso base explícito del
+  profesor.
+- **$t$ anterior a la creación del nodo**: no lo cubre la persistencia
+  parcial (el nodo no existía); lo resuelve
+  [nodos gordos bidireccionales](/structures/fat-nodes/operations/bidirectional-fat-nodes)
+  cuando la versión que se consulta queda "detrás" en el árbol de
+  versiones.
+- **El registro está en su tamaño máximo ($2p$)**: sigue siendo $O(1)$
+  porque $2p$ es constante — el caso límite de tamaño no degrada el
+  costo, es justamente lo que dispara
+  [node-split](/structures/fat-nodes/operations/node-split) en la
+  siguiente escritura, no en la lectura.

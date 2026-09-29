@@ -1,0 +1,358 @@
+---
+kind: operation
+title: Construcción 2D
+order: 6
+cppSteps:
+  - step-1-point.cpp
+  - step-2-build-1d.cpp
+  - step-7-build-2d.cpp
+  - full-implementation.cpp
+visualization:
+  type: range-tree
+  steps:
+    - note: >-
+        Reproduce la diapositiva #47: árbol primario en X sobre los puntos
+        (3,10) (4,7) (7,11) (9,6) (13,0) (15,−2) (18,3) (27,1) — misma forma
+        que el árbol 1D de build-1d (las llaves X son las mismas: 3,4,7,9,
+        13,15,18,27), pero cada hoja ahora es un punto (x,y) completo.
+      highlight: []
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i }
+        - { id: p27, value: 1, parent: n18i }
+    - note: >-
+        Empezamos por el nodo MÁS PEQUEÑO para que el patrón se vea sin
+        ruido: nodo 3 (hoja interna de n4), subárbol de sólo 2 puntos —
+        (3,10) y (4,7). Su secundario ordenado por Y es trivial: un único
+        separador (7, el menor) con las dos hojas como hijos. Este mismo
+        procedimiento —tomar los puntos del subárbol, ordenarlos por Y,
+        armar un árbol— se repite en TODOS los nodos del primario, no sólo
+        en éste.
+      highlight: [n3i]
+      panels:
+        - { id: secondary, label: "Secundario nodo 3", anchor: n3i }
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4, state: marked }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i }
+        - { id: p27, value: 1, parent: n18i }
+        - { id: ry3sep, value: 7, parent: null, panel: secondary }
+        - { id: ry3leaf4, value: 7, parent: ry3sep, panel: secondary }
+        - { id: ry3leaf3, value: 10, parent: ry3sep, panel: secondary }
+    - note: >-
+        Un nodo intermedio: nodo 15, subárbol de 4 puntos — (13,0) (15,−2)
+        (18,3) (27,1) — ordenados por Y: −2, 0, 1, 3. Mismo procedimiento
+        que el nodo 3, ahora con un nivel más de anidamiento interno (dos
+        separadores en vez de uno) porque hay el doble de puntos. Sigue
+        siendo el MISMO patrón, sólo más grande.
+      highlight: [n15]
+      panels:
+        - { id: secondary, label: "Secundario nodo 15", anchor: n15 }
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9, state: marked }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i }
+        - { id: p27, value: 1, parent: n18i }
+        - { id: y0, value: 0, parent: null, panel: secondary }
+        - { id: yneg2i, value: -2, parent: y0, panel: secondary }
+        - { id: pleaf15, value: -2, parent: yneg2i, panel: secondary }
+        - { id: pleaf13, value: 0, parent: yneg2i, panel: secondary }
+        - { id: y1i, value: 1, parent: y0, panel: secondary }
+        - { id: pleaf27, value: 1, parent: y1i, panel: secondary }
+        - { id: pleaf18, value: 3, parent: y1i, panel: secondary }
+    - note: >-
+        Y la raíz: nodo 9, subárbol de los 8 puntos completos. Su secundario
+        tiene EXACTAMENTE la misma forma recursiva que el árbol primario en
+        X (raíz separadora, dos hijos separadores, cuatro hojas por lado) —
+        sólo que construido sobre los valores de Y en vez de X. Esto escala:
+        cada nodo, sin excepción, trae su propio árbol secundario del mismo
+        tamaño que su propio subárbol (aquí sólo se dibujan sus dos primeros
+        niveles — raíz y separadores — el resto son las mismas 8 hojas ya
+        vistas, siguiendo el mismo patrón).
+      highlight: [r9]
+      panels:
+        - { id: secondary, label: "Secundario de la raíz (2 primeros niveles)", anchor: r9 }
+      nodes:
+        - { id: r9, value: 9, parent: null, state: marked }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i }
+        - { id: p27, value: 1, parent: n18i }
+        - { id: yroot, value: 3, parent: null, panel: secondary }
+        - { id: ryc, value: 0, parent: yroot, panel: secondary }
+        - { id: ryf, value: 7, parent: yroot, panel: secondary }
+      caption: >-
+        Nodo 3 (2 pts), nodo 15 (4 pts), raíz (8 pts): el mismo patrón en
+        todos los nodos del primario, escalando con el tamaño del subárbol.
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Convierte el árbol de [build-1d](/structures/range-tree/operations/build-1d)
+(ordenado por X) en un range tree 2D: cada nodo del árbol primario apunta a
+un **árbol secundario**, ordenado por Y, construido sobre los mismos puntos
+de su propio subárbol (Sem4_Orthogonal_Range_Search.pdf#46-47).
+
+## Intuición
+
+Un range tree se puede anidar porque, a diferencia de un arreglo, cada nodo
+ya delimita un subconjunto contiguo de puntos (su subárbol) sobre el cual
+tiene sentido construir *otra* estructura — un range tree por Y. Así, un
+subárbol canónico en X (que
+[range-query-1d](/structures/range-tree/operations/range-query-1d) ya sabe
+encontrar en O(log n)) trae consigo, listo, un árbol secundario donde
+consultar el rango en Y sin volver a mirar la X.
+
+## Algoritmo
+
+*(Derivado; #54 sólo da la idea de construir bottom-up con la información
+de los hijos, sin pseudocódigo.)*
+
+1. Construir el árbol primario en X como en
+   [build-1d](/structures/range-tree/operations/build-1d).
+2. Para cada nodo del primario, de las hojas hacia la raíz: el árbol
+   secundario del nodo se arma en $O(\text{tamaño del subárbol})$ **mezclando** (por
+   Y, como en mergesort) los árboles secundarios ya construidos de sus dos
+   hijos — "cada range tree correspondiente a subárboles puede ser
+   construido en $O(n)$ usando la información de sus dos hijos" (#54).
+
+Ese paso 2 — la mezcla — es el que de verdad construye cada secundario; el
+ejemplo de arriba muestra el resultado ya armado para tres nodos, pero no
+CÓMO se llega a él. Con node4 (cubre los puntos de node3 y node7):
+
+<Visualization viz={{
+  type: 'range-tree',
+  steps: [
+    {
+      note: "El secundario de node4 no se arma desde cero: se MEZCLA (por Y, como el paso de fusión de mergesort) los secundarios que sus dos hijos ya construyeron — node3 → {7,10} (por Y), node7 → {6,11}.",
+      highlight: ["n4"],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9", state: "marked" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+      ],
+    },
+    {
+      note: "Intercalar {7,10} y {6,11} por Y da la secuencia 6,7,10,11 — igual que fusionar dos arreglos ordenados. Todavía son 4 hojas sueltas: el orden ya está resuelto, falta construir la forma de árbol encima.",
+      highlight: ["n4"],
+      panels: [{ id: "merge4", label: "Secundario de node4 (mezcla)", anchor: "n4" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9", state: "marked" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "b_l6", value: 6, parent: null, panel: "merge4", state: "idle" },
+        { id: "b_l7", value: 7, parent: null, panel: "merge4", state: "idle" },
+        { id: "b_l10", value: 10, parent: null, panel: "merge4", state: "idle" },
+        { id: "b_l11", value: 11, parent: null, panel: "merge4", state: "idle" },
+      ],
+    },
+    {
+      note: "Mitad derecha de la secuencia mezclada: separador 10 (máximo de su subárbol izquierdo, la hoja 10) agrupa {10,11} — exactamente build-1d, aplicado a estas dos hojas.",
+      highlight: ["b_right"],
+      panels: [{ id: "merge4", label: "Secundario de node4 (mezcla)", anchor: "n4" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9", state: "marked" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "b_l6", value: 6, parent: null, panel: "merge4", state: "idle" },
+        { id: "b_l7", value: 7, parent: null, panel: "merge4", state: "idle" },
+        { id: "b_right", value: 10, parent: null, panel: "merge4", state: "marked" },
+        { id: "b_l10", value: 10, parent: "b_right", panel: "merge4" },
+        { id: "b_l11", value: 11, parent: "b_right", panel: "merge4" },
+      ],
+    },
+    {
+      note: "Mitad izquierda, el mismo procedimiento: separador 6 agrupa {6,7}. Las dos mitades del secundario de node4 ya están armadas, todavía sin unir bajo una raíz común.",
+      highlight: ["b_left"],
+      panels: [{ id: "merge4", label: "Secundario de node4 (mezcla)", anchor: "n4" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9", state: "marked" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "b_left", value: 6, parent: null, panel: "merge4", state: "marked" },
+        { id: "b_l6", value: 6, parent: "b_left", panel: "merge4" },
+        { id: "b_l7", value: 7, parent: "b_left", panel: "merge4" },
+        { id: "b_right", value: 10, parent: null, panel: "merge4" },
+        { id: "b_l10", value: 10, parent: "b_right", panel: "merge4" },
+        { id: "b_l11", value: 11, parent: "b_right", panel: "merge4" },
+      ],
+    },
+    {
+      note: "La raíz une las dos mitades: guarda el máximo de la mitad izquierda, 7. Secundario de node4 completo — {6,7,10,11} — construido en O(4) mezclando lo que sus hijos ya tenían armado, sin reordenar nada desde cero.",
+      highlight: ["b_root"],
+      panels: [{ id: "merge4", label: "Secundario de node4 (mezcla)", anchor: "n4" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9", state: "answer" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "b_root", value: 7, parent: null, panel: "merge4", state: "answer" },
+        { id: "b_left", value: 6, parent: "b_root", panel: "merge4" },
+        { id: "b_l6", value: 6, parent: "b_left", panel: "merge4" },
+        { id: "b_l7", value: 7, parent: "b_left", panel: "merge4" },
+        { id: "b_right", value: 10, parent: "b_root", panel: "merge4" },
+        { id: "b_l10", value: 10, parent: "b_right", panel: "merge4" },
+        { id: "b_l11", value: 11, parent: "b_right", panel: "merge4" },
+      ],
+      caption: "Mezcla node3{7,10} + node7{6,11} → node4{6,7,10,11}, en O(4).",
+    },
+  ],
+}} />
+
+3. La hoja de un solo punto es, trivialmente, su propio árbol secundario de
+   tamaño 1.
+
+## Pseudocódigo
+
+```
+BuildRangeTree2D(raiz_x)                          // derivado
+si raiz_x es hoja
+    raiz_x.secundario ← árbol_de_un_punto(raiz_x)
+si no
+    BuildRangeTree2D(raiz_x.izq)
+    BuildRangeTree2D(raiz_x.der)
+    raiz_x.secundario ← MezclarPorY(raiz_x.izq.secundario, raiz_x.der.secundario)
+```
+
+## C++
+
+Ver `step-7-build-2d.cpp` y `full-implementation.cpp` en el editor de
+arriba.
+
+## Complejidad temporal
+
+$O(n \log n)$: construir el primario ya cuesta $O(n \log n)$
+([build-1d](/structures/range-tree/operations/build-1d)); mezclar los
+secundarios nivel por nivel cuesta $O(\text{tamaño del subárbol})$ por nodo, que
+sumado sobre los $O(\log n)$ niveles da $O(n \log n)$ adicional
+(Sem4_Orthogonal_Range_Search.pdf#54-55).
+
+## Complejidad espacial
+
+$O(n \log n)$: "cada hoja debería estar incluida en $O(\log n)$ subárboles"
+(#49) — cada punto vive en un árbol secundario por cada ancestro suyo en
+el primario, y hay $O(\log n)$ ancestros por punto.
+
+## Ejemplo
+
+Ver la visualización de arriba, en tres pasos crecientes: el secundario del
+nodo 3 (2 puntos), el del nodo 15 (raíz 0 e hijos −2 y 1, sobre sus 4
+puntos — exactamente la diapositiva #47) y el de la raíz completa (8
+puntos, con la misma forma recursiva que el primario en X). Los tres son el
+mismo procedimiento aplicado a subárboles de distinto tamaño — no hay nada
+especial en el nodo 15, sólo fue el ejemplo que trae el mazo.
+
+## Casos límite
+
+- **Nodo hoja**: su árbol secundario es un único punto, sin construcción
+  real.
+- **Raíz**: su árbol secundario contiene los n puntos ordenados por Y —
+  el más grande y el único que cuesta $O(n)$ mezclar de una sola vez.
+- **Puntos con Y repetida**: el orden por Y necesita un criterio de
+  desempate (por ejemplo, por X) para que el árbol secundario quede bien
+  definido; el material no lo menciona.

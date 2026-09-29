@@ -1,0 +1,25 @@
+id: logarithm-lemma
+title: "El lema de los logaritmos"
+type: concept
+week: week-06
+
+prerequisites: []
+buildsOn: []
+usedBy: ["access-lemma"]
+
+# Es un lema aritmético sobre tres números positivos (#29-30), no una
+# estructura de datos: no tiene nodos, no tiene operaciones y no se "ejecuta",
+# así que no hay tiempo ni espacio propios que tabular. La única cota que
+# aparece aquí es la del enunciado (lg a + lg b ≤ 2 lg c − 2), que es una
+# desigualdad aritmética, no el costo de una operación. Rellenar esta tabla
+# sería inventar. Se deja vacío a propósito, igual que en
+# dynamic-optimality y potential-method.
+complexity: {}
+
+# No es un análisis de costo: el profesor lo presenta como una desigualdad
+# aritmética ("consecuencia de AM-GM", #29). Etiquetarlo `amortized` sugeriría
+# que aquí se amortiza algo, y no es el caso — eso pasa en access-lemma.
+professorAnalysisStyle: "desigualdad AM-GM"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

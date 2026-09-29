@@ -1,0 +1,41 @@
+id: balanced-bst
+title: Árbol binario de búsqueda balanceado
+type: structure
+week: week-04
+
+prerequisites: []
+buildsOn: []
+usedBy: [range-tree, segment-intersection-sweep-line, splay-tree]
+
+complexity:
+  search:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar (no dada por el profesor: sourceSlides vacío para
+      este concepto). El invariante de balance mantiene la altura en O(lg n)
+      en todo momento, y Search sigue un único camino raíz-hoja: un
+      descenso por nivel, O(1) por nivel.
+  insert:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar. La inserción baja O(lg n) niveles como Search y
+      luego sube por el mismo camino aplicando a lo más O(lg n) rotaciones
+      de O(1) cada una para restaurar el invariante de balance: el trabajo
+      total sigue siendo proporcional a la altura.
+  predecessor:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar. Predecessor baja un único camino desde la raíz
+      (o sube desde el nodo encontrado usando el padre) para hallar la
+      llave inmediatamente menor; ese camino tiene longitud O(lg n) por el
+      mismo invariante de balance que acota Search.
+  successor:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar. Simétrico a Predecessor: un único camino de
+      longitud O(lg n) para hallar la llave inmediatamente mayor.
+
+professorAnalysisStyle: derivación estándar (no atribuible al profesor; ver nota en theory.md)
+hasVisualization: true
+visualizationType: tree
+placeholder: false

@@ -1,0 +1,11 @@
+id: sensors
+title: Sensores
+type: concept
+unit: s3
+prerequisites: [iot-architecture]
+buildsOn: []
+usedBy: [actuators, signals-domains]
+hasVisualization: true
+visualizationType: dag
+placeholder: false
+formulas: []

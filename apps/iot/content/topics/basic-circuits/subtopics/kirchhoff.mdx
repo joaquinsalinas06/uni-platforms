@@ -1,0 +1,964 @@
+---
+kind: subtopic
+order: 4
+title: "Leyes de Kirchhoff"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Cuando un circuito no se deja reducir con serie/paralelo puro (varias fuentes,
+puentes, mallas que comparten elementos), hace falta un método general: las
+**Leyes de Kirchhoff**. Es el tema que más pesa en el examen parcial y el que más
+cuesta, porque no es una fórmula sino un **procedimiento**: hay que plantear un
+sistema de ecuaciones y resolverlo. Esta página incluye una receta paso a paso y
+los 7 ejemplos completos de la sesión de ejercicios, del más simple al más
+complejo (un puente con fuente interna, un circuito de 4 mallas y uno con tres fuentes).
+
+## Conceptos
+
+### Ley de corrientes de Kirchhoff (LCK / KCL)
+
+En todo **nodo**, la suma de corrientes que entran es igual a la suma de las que
+salen (conservación de la carga):
+
+$$
+\sum I_{entran} = \sum I_{salen}
+$$
+
+### Ley de tensiones de Kirchhoff (LTK / KVL)
+
+Al recorrer una **malla** cerrada y volver al punto de partida, la suma
+algebraica de las subidas y caídas de tensión es cero (conservación de la
+energía):
+
+$$
+\sum_{malla} V = 0
+$$
+
+### El método de mallas (*mesh analysis*)
+
+En vez de aplicar KCL y KVL "a mano" en cada nodo y cada malla por separado, el
+método de mallas asigna una **corriente de malla** $I_k$ (ficticia, hipotética)
+a cada ventana cerrada del circuito, todas recorridas en el mismo sentido
+(normalmente horario). Luego:
+
+- Un elemento que pertenece a **una sola malla** lleva exactamente esa corriente
+  de malla.
+- Un elemento **compartido por dos mallas adyacentes** lleva la diferencia de las
+  dos corrientes de malla que lo atraviesan (con el signo que corresponda al
+  sentido elegido).
+- Se aplica KVL alrededor de cada malla (sumando subidas y bajando caídas) para
+  obtener un sistema de $n$ ecuaciones con $n$ incógnitas ($I_1, I_2, \dots, I_n$).
+- El número de mallas independientes es $\text{ramas} - \text{nodos} + 1$.
+
+## Método paso a paso (la "receta")
+
+1. **Cuenta las mallas**: identifica cada ventana cerrada del circuito (cada
+   "hueco" en el dibujo). Dibuja una flecha circular en cada una, todas en el
+   mismo sentido (horario es la convención más común).
+2. **Recorre la primera malla**, elemento por elemento, en el sentido de su
+   flecha:
+   - Al atravesar una **fuente de tensión** de − a +, es una SUBIDA (+E).
+     De + a −, es una BAJADA (−E).
+   - Al atravesar una **resistencia** en el sentido de la corriente de malla
+     que la recorre, es una BAJADA ($-IR$). Si la resistencia es compartida con
+     otra malla, la corriente que importa es la de ESA malla menos la de la
+     malla vecina (con el signo según cuál "empuja" en el sentido de tu
+     recorrido).
+3. **Iguala la suma del recorrido a cero** (KVL) — esa es la ecuación de esa
+   malla.
+4. **Repite** para cada malla restante.
+5. **Resuelve el sistema** (sustitución, matrices, o el método que prefieras).
+6. Con las corrientes de malla ya conocidas, obtén cualquier corriente de rama,
+   caída de tensión o potencia que pida el problema.
+
+### ¿Por qué un elemento pertenece a una o dos mallas? (circuito de 3 ventanas)
+
+Piensa en un circuito con **3 ventanas** (3 mallas): una fuente y una resistencia
+en el borde exterior de cada "ala", y en el centro un elemento que separa las
+mallas vecinas. La regla es puramente geométrica:
+
+- Un elemento en el **borde exterior** del circuito (nada del otro lado) solo
+  puede estar tocando una ventana: pertenece a **una sola malla**.
+- Un elemento **interior**, que tiene una ventana a cada lado, pertenece
+  necesariamente a **las dos mallas** que separa — su corriente real es la
+  diferencia de esas dos corrientes de malla.
+
+En el ejemplo 5 de esta página (un puente con una fuente extra en el brazo
+central) esto se ve muy claro: el lado izquierdo del rombo (2 kΩ arriba, 4 kΩ
+abajo) separa la ventana izquierda (la de la fuente de 10 V) de los dos
+triángulos del rombo, así que cada una de esas resistencias aparece en dos
+mallas; la fuente central de 5 V separa el triángulo superior del inferior, así
+que también aparece en dos; y las resistencias de 1 kΩ de arriba y abajo y el
+lado derecho del rombo (4 kΩ arriba, 2 kΩ abajo) están en el borde exterior, así
+que aparecen en una sola.
+
+## Ejemplo resuelto 1 — dos resistencias iguales en paralelo, vía mallas
+
+$E=20\text{ V}$ en serie con $R_1=1\ \Omega$, y luego dos resistencias de
+$2\ \Omega$ en paralelo. Halla $i_1$ (corriente total) e $i_2$ (por una de las
+ramas de $2\ \Omega$), y la potencia que consume $R_1$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 1: dos mallas, resistencia compartida',
+  steps: [1, 2, 3, 4].map((k) => ({
+    note: k < 4 ? `Recorro la malla I₁ (E, R1, Ra) en sentido horario, elemento ${k}.` : 'Malla I₁ cerrada: la suma de subidas y caídas es cero.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 20, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'a', value: 1, label: 'R1' },
+        { id: 'Ra', kind: 'resistor', from: 'a', to: 'a2', value: 2, label: 'Ra' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'Rb', kind: 'resistor', from: 'b', to: 'b2', value: 2, label: 'Rb' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      kvl: k < 4 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'Ra es compartida (I₁−I₂). i1 = I(R1) = I₁; i2 = I(Rb) = I₂ (por simetría, ambas ramas de 2 Ω llevan la misma corriente).',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 20, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'a', value: 1, label: 'R1', state: 'answer' },
+        { id: 'Ra', kind: 'resistor', from: 'a', to: 'a2', value: 2, label: 'Ra' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'Rb', kind: 'resistor', from: 'b', to: 'b2', value: 2, label: 'Rb', state: 'answer' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'R1', label: 'i1', showValue: true }, { part: 'Rb', label: 'i2', showValue: true }],
+    },
+    expect: { 'I(R1)': 10, 'I(Rb)': 5, 'P(R1)': 100 },
+  }]),
+}} />
+
+## Ejemplo resuelto 2 — una sola malla
+
+$E=50\text{ V}$, $R_1=7\ \Omega$, $R_2=4\ \Omega$, $R_3=7\ \Omega$, $R_4=7\ \Omega$,
+todos en un único lazo serie. Halla $I$ y la caída $V_2$ en $R_2$. Ojo con la
+polaridad del dibujo: el terminal **+** de $E$ está **abajo** (a tierra) y el **−**
+arriba, así que $I$ sale por abajo y recorre el lazo en sentido **antihorario**
+($R_4 \to R_3 \to R_2 \to R_1$). Por eso $V_2$ tiene el + a la derecha de $R_2$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 2: una sola malla',
+  steps: [1, 2, 3, 4, 5].map((k) => ({
+    note: k < 5 ? `Recorro la única malla en el sentido de I (antihorario, bajando por E), elemento ${k}.` : 'Malla cerrada: E, R4, R3, R2 y R1 en serie.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 },
+        { id: 'b', x: 8, y: 0 }, { id: 'c', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 't', to: 'g', value: 50, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 't', value: 7, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'a', value: 4, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'b', value: 7, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'g', to: 'c', value: 7, label: 'R4' },
+      ],
+      loops: [{ id: 'm1', path: ['t', 'g', 'c', 'b', 'a'], dir: 'ccw', label: 'I', tone: 'mesh1' }],
+      kvl: k < 5 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'I = 50/(7+4+7+7) = 2 A. V2 = I·R2 = 2×4 = 8 V (+ a la derecha, por donde entra I).',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 },
+        { id: 'b', x: 8, y: 0 }, { id: 'c', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 't', to: 'g', value: 50, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 't', value: 7, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'a', value: 4, label: 'R2', state: 'answer' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'b', value: 7, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'g', to: 'c', value: 7, label: 'R4' },
+      ],
+      loops: [{ id: 'm1', path: ['t', 'g', 'c', 'b', 'a'], dir: 'ccw', label: 'I', tone: 'mesh1' }],
+      currents: [{ part: 'R4', label: 'I', showValue: true }],
+      voltages: [{ part: 'R2', label: 'V2', plus: 'from', showValue: true }],
+    },
+    expect: { 'I(R4)': 2, 'I(E)': 2, 'V(b,a)': 8 },
+  }]),
+}} />
+
+## Ejemplo resuelto 3 — tres mallas
+
+$E=10\text{ V}$, $R_1=4\ \Omega$ en serie con dos bloques en paralelo entre los
+rieles $b$ y $c$: el bloque B con $R_2=R_3=4\ \Omega$ (paralelo entre sí) y el
+bloque C con $R_4=0.5\ \Omega$ y $R_5=1.5\ \Omega$ en serie. Halla $I_s$ (total),
+$I_B$ e $I_C$ (las que bajan a cada bloque) y la potencia que consume $R_4$. Las
+ventanas del dibujo son tres: E–R1–R2, la que queda entre R2 y R3 (dentro del
+bloque B) y la que queda entre R3 y la rama R4–R5.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 3: tres mallas',
+  steps: [1, 2, 3, 4, 5, 6, 7, 8].map((k) => ({
+    note: k < 8 ? `Recorro la malla I₁ (E, R1, R2) en sentido horario, tramo ${k}.` : 'Malla I₁ cerrada.',
+    circuit: {
+      nodes: [
+        { id: 'gA', x: 0, y: 12, ground: true }, { id: 'a', x: 0, y: 0, label: 'a' }, { id: 'bB', x: 8, y: 0, label: 'b' }, { id: 'bC', x: 14, y: 0 },
+        { id: 'pB', x: 8, y: 3 }, { id: 'pL', x: 6, y: 3 }, { id: 'pR', x: 10, y: 3 },
+        { id: 'qL', x: 6, y: 9 }, { id: 'qR', x: 10, y: 9 }, { id: 'qB', x: 8, y: 9 },
+        { id: 'mC', x: 14, y: 6 }, { id: 'cB', x: 8, y: 12, label: 'c' }, { id: 'cC', x: 14, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'gA', to: 'a', value: 10, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'bB', value: 4, label: 'R1' },
+        { id: 'wIB', kind: 'wire', from: 'bB', to: 'pB' },
+        { id: 'wL', kind: 'wire', from: 'pB', to: 'pL' },
+        { id: 'wR', kind: 'wire', from: 'pB', to: 'pR' },
+        { id: 'R2', kind: 'resistor', from: 'pL', to: 'qL', value: 4, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'pR', to: 'qR', value: 4, label: 'R3' },
+        { id: 'wqL', kind: 'wire', from: 'qL', to: 'qB' },
+        { id: 'wqR', kind: 'wire', from: 'qR', to: 'qB' },
+        { id: 'wqc', kind: 'wire', from: 'qB', to: 'cB' },
+        { id: 'wbC', kind: 'wire', from: 'bB', to: 'bC' },
+        { id: 'R4', kind: 'resistor', from: 'bC', to: 'mC', value: 0.5, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 'mC', to: 'cC', value: 1.5, label: 'R5' },
+        { id: 'wcC', kind: 'wire', from: 'cC', to: 'cB' },
+        { id: 'wcA', kind: 'wire', from: 'cB', to: 'gA' },
+      ],
+      loops: [
+        { id: 'm1', path: ['gA', 'a', 'bB', 'pB', 'pL', 'qL', 'qB', 'cB'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['pL', 'pB', 'pR', 'qR', 'qB', 'qL'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['bB', 'bC', 'mC', 'cC', 'cB', 'qB', 'qR', 'pR', 'pB'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      kvl: k < 8 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'R2 es compartida por I₁ e I₂; R3 por I₂ e I₃. Is = I(R1) = I₁ = 2 A. IB = corriente que baja al bloque B = 1 A (0.5 A por cada 4 Ω). IC = I(R4) = I₃ = 1 A. P(R4) = 1²·0.5 = 0.5 W.',
+    circuit: {
+      nodes: [
+        { id: 'gA', x: 0, y: 12, ground: true }, { id: 'a', x: 0, y: 0, label: 'a' }, { id: 'bB', x: 8, y: 0, label: 'b' }, { id: 'bC', x: 14, y: 0 },
+        { id: 'pB', x: 8, y: 3 }, { id: 'pL', x: 6, y: 3 }, { id: 'pR', x: 10, y: 3 },
+        { id: 'qL', x: 6, y: 9 }, { id: 'qR', x: 10, y: 9 }, { id: 'qB', x: 8, y: 9 },
+        { id: 'mC', x: 14, y: 6 }, { id: 'cB', x: 8, y: 12, label: 'c' }, { id: 'cC', x: 14, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'gA', to: 'a', value: 10, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'bB', value: 4, label: 'R1', state: 'answer' },
+        { id: 'wIB', kind: 'wire', from: 'bB', to: 'pB', state: 'answer' },
+        { id: 'wL', kind: 'wire', from: 'pB', to: 'pL' },
+        { id: 'wR', kind: 'wire', from: 'pB', to: 'pR' },
+        { id: 'R2', kind: 'resistor', from: 'pL', to: 'qL', value: 4, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'pR', to: 'qR', value: 4, label: 'R3' },
+        { id: 'wqL', kind: 'wire', from: 'qL', to: 'qB' },
+        { id: 'wqR', kind: 'wire', from: 'qR', to: 'qB' },
+        { id: 'wqc', kind: 'wire', from: 'qB', to: 'cB' },
+        { id: 'wbC', kind: 'wire', from: 'bB', to: 'bC' },
+        { id: 'R4', kind: 'resistor', from: 'bC', to: 'mC', value: 0.5, label: 'R4', state: 'answer' },
+        { id: 'R5', kind: 'resistor', from: 'mC', to: 'cC', value: 1.5, label: 'R5' },
+        { id: 'wcC', kind: 'wire', from: 'cC', to: 'cB' },
+        { id: 'wcA', kind: 'wire', from: 'cB', to: 'gA' },
+      ],
+      loops: [
+        { id: 'm1', path: ['gA', 'a', 'bB', 'pB', 'pL', 'qL', 'qB', 'cB'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['pL', 'pB', 'pR', 'qR', 'qB', 'qL'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['bB', 'bC', 'mC', 'cC', 'cB', 'qB', 'qR', 'pR', 'pB'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'R1', label: 'Is', showValue: true }, { part: 'wIB', label: 'IB', showValue: true }, { part: 'R4', label: 'IC', showValue: true }],
+    },
+    expect: { 'I(R1)': 2, 'I(wIB)': 1, 'I(R2)': 0.5, 'I(R4)': 1, 'P(R4)': 0.5 },
+  }]),
+}} />
+
+## Ejemplo resuelto 4 — la misma topología del ejemplo 1, con otros valores
+
+$E=16.8\text{ V}$, $R_A=3.6\ \Omega$ en serie con $R_B=6\ \Omega$ y $R_C=3\ \Omega$
+en paralelo. Halla $I_A, I_B, I_C$, las caídas $V_A, V_B, V_C$, la potencia que
+consume $R_B$ y la potencia que entrega la fuente.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 4: dos mallas (mismo patrón que el ejemplo 1)',
+  steps: [1, 2, 3, 4].map((k) => ({
+    note: k < 4 ? `Recorro la malla I₁ (E, RA, RB) en sentido horario, elemento ${k}.` : 'Malla I₁ cerrada.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 16.8, label: 'E' },
+        { id: 'RA', kind: 'resistor', from: 't', to: 'a', value: 3.6, label: 'RA' },
+        { id: 'RB', kind: 'resistor', from: 'a', to: 'a2', value: 6, label: 'RB' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'RC', kind: 'resistor', from: 'b', to: 'b2', value: 3, label: 'RC' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      kvl: k < 4 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'IA=I₁=3 A. IB=I(RB)=I₁−I₂=1 A. IC=I(RC)=I₂=2 A. VA=IA·RA=10.8 V. VB=IB·RB=6 V=VC=IC·RC.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 16.8, label: 'E' },
+        { id: 'RA', kind: 'resistor', from: 't', to: 'a', value: 3.6, label: 'RA', state: 'answer' },
+        { id: 'RB', kind: 'resistor', from: 'a', to: 'a2', value: 6, label: 'RB', state: 'answer' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'RC', kind: 'resistor', from: 'b', to: 'b2', value: 3, label: 'RC', state: 'answer' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'RA', label: 'IA', showValue: true }, { part: 'RB', label: 'IB', showValue: true }, { part: 'RC', label: 'IC', showValue: true }],
+    },
+    expect: {
+      'I(RA)': 3, 'I(RB)': 1, 'I(RC)': 2,
+      'V(t,a)': 10.8, 'V(a,a2)': 6, 'V(b,b2)': 6,
+      'P(RB)': 6, 'P(E)': 50.4,
+    },
+  }]),
+}} />
+
+## Ejemplo resuelto 5 — puente con fuente interna (3 mallas)
+
+Este es el circuito del *Falstad* de la sesión de ejercicios: $E=10\text{ V}$ en
+serie con un puente cuyo brazo central no es una resistencia sino **otra fuente**,
+$E_2=5\text{ V}$. $R_{arriba}=R_{abajo}=1\text{ k}\Omega$; en el puente,
+$R_{2k,a}=2\text{ k}\Omega$, $R_{4k,a}=4\text{ k}\Omega$, $R_{4k,b}=4\text{ k}\Omega$,
+$R_{2k,b}=2\text{ k}\Omega$. Halla $I_1$ (la corriente que entrega la fuente de
+10 V) y la potencia que esta entrega.
+
+Aquí se ve por qué algunos elementos van en una malla y otros en dos: la
+ventana izquierda I₁ es E → 1 kΩ → 2 kΩ (R2a) → 4 kΩ (R4b) → 1 kΩ; la fuente de
+5 V parte el rombo en **dos mallas triangulares** (I₂ arriba: R2a, R4a, E2; I₃
+abajo: E2, R2b, R4b). R2a la comparten I₁ e I₂, R4b la comparten I₁ e I₃ y E2 la
+comparten I₂ e I₃.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 5: puente con fuente interna, 3 mallas',
+  steps: [1, 2, 3, 4, 5].map((k) => ({
+    note: k < 5 ? `Recorro la malla izquierda I₁ (E, R_arriba, R2a, R4b, R_abajo) en sentido horario, tramo ${k}.` : 'Malla I₁ cerrada.',
+    circuit: {
+      nodes: [
+        { id: 'P2', x: 0, y: 8, ground: true }, { id: 'P1', x: 0, y: 0 },
+        { id: 'P3', x: 6, y: 0 }, { id: 'P4', x: 6, y: 8 },
+        { id: 'P5', x: 6, y: 4 }, { id: 'P6', x: 9, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'P2', to: 'P1', value: 10, label: 'E' },
+        { id: 'Rtop', kind: 'resistor', from: 'P1', to: 'P3', value: 1000, label: 'R_arr' },
+        { id: 'Rbot', kind: 'resistor', from: 'P2', to: 'P4', value: 1000, label: 'R_ab' },
+        { id: 'R2a', kind: 'resistor', from: 'P3', to: 'P5', value: 2000, label: 'R2a' },
+        { id: 'R4a', kind: 'resistor', from: 'P3', to: 'P6', value: 4000, label: 'R4a' },
+        { id: 'E2', kind: 'vsource', from: 'P6', to: 'P5', value: 5, label: 'E2' },
+        { id: 'R4b', kind: 'resistor', from: 'P5', to: 'P4', value: 4000, label: 'R4b' },
+        { id: 'R2b', kind: 'resistor', from: 'P6', to: 'P4', value: 2000, label: 'R2b' },
+      ],
+      loops: [
+        { id: 'm1', path: ['P2', 'P1', 'P3', 'P5', 'P4'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['P3', 'P5', 'P6'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['P6', 'P4', 'P5'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      kvl: k < 5 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'R2a se comparte entre I₁ e I₂; R4b entre I₁ e I₃; E2 entre I₂ e I₃. Resolviendo el sistema: I1 = I₁ ≈ 1.786 mA y la fuente de 10 V entrega P = 10·I₁ ≈ 17.86 mW.',
+    circuit: {
+      nodes: [
+        { id: 'P2', x: 0, y: 8, ground: true }, { id: 'P1', x: 0, y: 0 },
+        { id: 'P3', x: 6, y: 0 }, { id: 'P4', x: 6, y: 8 },
+        { id: 'P5', x: 6, y: 4 }, { id: 'P6', x: 9, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'P2', to: 'P1', value: 10, label: 'E', state: 'answer' },
+        { id: 'Rtop', kind: 'resistor', from: 'P1', to: 'P3', value: 1000, label: 'R_arr' },
+        { id: 'Rbot', kind: 'resistor', from: 'P2', to: 'P4', value: 1000, label: 'R_ab' },
+        { id: 'R2a', kind: 'resistor', from: 'P3', to: 'P5', value: 2000, label: 'R2a' },
+        { id: 'R4a', kind: 'resistor', from: 'P3', to: 'P6', value: 4000, label: 'R4a' },
+        { id: 'E2', kind: 'vsource', from: 'P6', to: 'P5', value: 5, label: 'E2' },
+        { id: 'R4b', kind: 'resistor', from: 'P5', to: 'P4', value: 4000, label: 'R4b' },
+        { id: 'R2b', kind: 'resistor', from: 'P6', to: 'P4', value: 2000, label: 'R2b' },
+      ],
+      loops: [
+        { id: 'm1', path: ['P2', 'P1', 'P3', 'P5', 'P4'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['P3', 'P5', 'P6'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['P6', 'P4', 'P5'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'E', label: 'I1', showValue: true }],
+    },
+    expect: { 'I(E)': 0.0017857, 'P(E)': 0.017857 },
+  }]),
+}} />
+
+## Ejemplo resuelto 6 — cuatro mallas
+
+$E=72\text{ V}$ entre $a$ (+) y $b$ (−, tierra). Un bloque izquierdo: $R_1=4\text{k}$,
+$R_2=8\text{k}$ y $R_3=12\text{k}$ forman un camino en serie que se cierra sobre
+$R_4=24\text{k}$, y $R_5=12\text{k}$ lleva ese bloque hasta $b$. Un bloque
+derecho: $R_6=12\text{k}$ de $a$ al vértice del triángulo, $R_7=9\text{k}$ del
+vértice al riel inferior ($b$), y $R_8=3\text{k}$ + $R_9=6\text{k}$ del vértice al
+mismo riel por el otro lado (todo en $\Omega \times 10^3$). Halla $I_s$ (la que
+entrega la fuente), la potencia que entrega la fuente y la caída de tensión en
+$R_7$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 6: cuatro mallas',
+  steps: [1, 2, 3, 4].map((k) => ({
+    note: k < 4 ? `Recorro la malla I₁ (R1, R4, R3, R2) en sentido horario, elemento ${k}.` : 'Malla I₁ cerrada.',
+    circuit: {
+      nodes: [
+        { id: 'TL', x: 0, y: 0 }, { id: 'N1', x: 6, y: 0 }, { id: 'a', x: 12, y: 0, label: 'a' }, { id: 'apex', x: 22, y: 0 },
+        { id: 'BL', x: 0, y: 6 }, { id: 'N2', x: 6, y: 6 }, { id: 'b', x: 12, y: 6, label: 'b', ground: true },
+        { id: 'L', x: 22, y: 6 }, { id: 'BR', x: 28, y: 6 },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'TL', to: 'N1', value: 4000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'TL', to: 'BL', value: 8000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'BL', to: 'N2', value: 12000, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 24000, label: 'R4' },
+        { id: 'w1', kind: 'wire', from: 'N1', to: 'a' },
+        { id: 'R5', kind: 'resistor', from: 'N2', to: 'b', value: 12000, label: 'R5' },
+        { id: 'E', kind: 'vsource', from: 'b', to: 'a', value: 72, label: 'E' },
+        { id: 'R6', kind: 'resistor', from: 'a', to: 'apex', value: 12000, label: 'R6' },
+        { id: 'R7', kind: 'resistor', from: 'apex', to: 'L', value: 9000, label: 'R7' },
+        { id: 'R8', kind: 'resistor', from: 'apex', to: 'BR', value: 3000, label: 'R8' },
+        { id: 'R9', kind: 'resistor', from: 'L', to: 'BR', value: 6000, label: 'R9' },
+        { id: 'w2', kind: 'wire', from: 'b', to: 'L' },
+      ],
+      loops: [
+        { id: 'm1', path: ['TL', 'N1', 'N2', 'BL'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['N1', 'a', 'b', 'N2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['a', 'apex', 'L', 'b'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+        { id: 'm4', path: ['apex', 'BR', 'L'], dir: 'cw', label: 'I₄', tone: 'mesh4' },
+      ],
+      kvl: k < 4 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'R4 se comparte entre I₁ e I₂; E entre I₂ e I₃; R7 entre I₃ e I₄. Comprobación por reducción: izquierda (4+8+12)‖24 + 12 = 24 k; derecha 12 + 9‖(3+6) = 16.5 k; 24‖16.5 ≈ 9.78 k. Is ≈ 7.36 mA, P(E) ≈ 530.2 mW, V7 ≈ 19.64 V.',
+    circuit: {
+      nodes: [
+        { id: 'TL', x: 0, y: 0 }, { id: 'N1', x: 6, y: 0 }, { id: 'a', x: 12, y: 0, label: 'a' }, { id: 'apex', x: 22, y: 0 },
+        { id: 'BL', x: 0, y: 6 }, { id: 'N2', x: 6, y: 6 }, { id: 'b', x: 12, y: 6, label: 'b', ground: true },
+        { id: 'L', x: 22, y: 6 }, { id: 'BR', x: 28, y: 6 },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'TL', to: 'N1', value: 4000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'TL', to: 'BL', value: 8000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'BL', to: 'N2', value: 12000, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 24000, label: 'R4' },
+        { id: 'w1', kind: 'wire', from: 'N1', to: 'a' },
+        { id: 'R5', kind: 'resistor', from: 'N2', to: 'b', value: 12000, label: 'R5' },
+        { id: 'E', kind: 'vsource', from: 'b', to: 'a', value: 72, label: 'E', state: 'answer' },
+        { id: 'R6', kind: 'resistor', from: 'a', to: 'apex', value: 12000, label: 'R6' },
+        { id: 'R7', kind: 'resistor', from: 'apex', to: 'L', value: 9000, label: 'R7', state: 'answer' },
+        { id: 'R8', kind: 'resistor', from: 'apex', to: 'BR', value: 3000, label: 'R8' },
+        { id: 'R9', kind: 'resistor', from: 'L', to: 'BR', value: 6000, label: 'R9' },
+        { id: 'w2', kind: 'wire', from: 'b', to: 'L' },
+      ],
+      loops: [
+        { id: 'm1', path: ['TL', 'N1', 'N2', 'BL'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['N1', 'a', 'b', 'N2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['a', 'apex', 'L', 'b'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+        { id: 'm4', path: ['apex', 'BR', 'L'], dir: 'cw', label: 'I₄', tone: 'mesh4' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'E', label: 'Is', showValue: true }],
+      voltages: [{ part: 'R7', label: 'V7', plus: 'from', showValue: true }],
+    },
+    expect: { 'I(E)': 0.0073636, 'P(E)': 0.530182, 'V(apex,L)': 19.636 },
+  }]),
+}} />
+
+## Ejemplo resuelto 7 — tres fuentes y una tensión en circuito abierto (Boylestad)
+
+Este es el ejercicio 7 de la sesión (el mismo que se repite en el LAB 1 de la
+semana 4, allí con **$E = 1\text{ V}$**). Todas las resistencias valen $2\ \Omega$.
+Leyendo el dibujo nodo por nodo (vértice superior $T$, esquina inferior izquierda
+$L$ y nodo interior $M$):
+
+- lado izquierdo $L \to T$: una $2\ \Omega$ y la fuente $E$ con su **+ hacia $T$**;
+- $T \to M$: una $2\ \Omega$; $L \to M$: una $2\ \Omega$;
+- lado derecho: de $T$ baja la otra fuente $E$ (**+ en $T$**), una $2\ \Omega$ y el
+  terminal $x$; de $x$ sale una $2\ \Omega$ horizontal hasta $M$;
+- de $T$ baja una línea larga (cruza la horizontal sin conectarse) a una $2\ \Omega$
+  que llega al terminal $y$; de $y$ la base vuelve a $L$ pasando por la fuente
+  $3E$ (**+ a la izquierda**) y una $2\ \Omega$;
+- $E_0$ es la tensión entre los terminales **abiertos** $x$ e $y$.
+
+Como entre $x$ e $y$ no hay nada conectado, **por $E_0$ no pasa corriente**: el
+circuito queda con tres ventanas (en la figura se redibuja sin el cruce, con la
+misma conexión de cada pieza). La tercera malla rodea el hueco de $E_0$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejemplo 7: E, E y 3E (E = 1 V)',
+  steps: [1, 2, 3, 4, 5].map((k) => ({
+    note: k < 5 ? `Malla I₁ (E, R2, R3, R1), sentido horario, tramo ${k}. El tramo L→p1→… sube por R1 y cruza E de − a +: subida.` : 'Malla I₁ cerrada.',
+    circuit: {
+      nodes: [
+        { id: 'tl', x: 0, y: 0 }, { id: 'T', x: 6, y: 0, label: 'T' }, { id: 't2', x: 12, y: 0 }, { id: 't3', x: 18, y: 0 },
+        { id: 'p1', x: 0, y: 6 }, { id: 'q1', x: 12, y: 6 },
+        { id: 'L', x: 0, y: 12, label: 'L', ground: true }, { id: 'M', x: 6, y: 12, label: 'M' }, { id: 'R', x: 12, y: 12, label: 'x' },
+        { id: 'lb', x: 0, y: 16 }, { id: 's1', x: 6, y: 16 }, { id: 'B', x: 12, y: 16, label: 'y' }, { id: 'b3', x: 18, y: 16 },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'L', to: 'p1', value: 2, label: 'R1' },
+        { id: 'E1', kind: 'vsource', from: 'p1', to: 'tl', value: 1, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 'tl', to: 'T' },
+        { id: 'R2', kind: 'resistor', from: 'T', to: 'M', value: 2, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'L', to: 'M', value: 2, label: 'R3' },
+        { id: 'w2', kind: 'wire', from: 'T', to: 't2' },
+        { id: 'E2', kind: 'vsource', from: 'q1', to: 't2', value: 1, label: 'E' },
+        { id: 'R4', kind: 'resistor', from: 'q1', to: 'R', value: 2, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 'R', to: 'M', value: 2, label: 'R5' },
+        { id: 'w3', kind: 'wire', from: 't2', to: 't3' },
+        { id: 'R6', kind: 'resistor', from: 't3', to: 'b3', value: 2, label: 'R6' },
+        { id: 'w4', kind: 'wire', from: 'b3', to: 'B' },
+        { id: 'E3', kind: 'vsource', from: 'B', to: 's1', value: 3, label: '3E' },
+        { id: 'R7', kind: 'resistor', from: 's1', to: 'lb', value: 2, label: 'R7' },
+        { id: 'w5', kind: 'wire', from: 'lb', to: 'L' },
+        { id: 'E0', kind: 'open', from: 'R', to: 'B', label: 'E0' },
+      ],
+      loops: [
+        { id: 'm1', path: ['L', 'p1', 'tl', 'T', 'M'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['T', 't2', 'q1', 'R', 'M'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['t2', 't3', 'b3', 'B', 's1', 'lb', 'L', 'M', 'R', 'q1'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      kvl: k < 5 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'Con las tres mallas: I₁ = 4/7 A, I₂ = 1/2 A, I₃ = 5/7 A. 3E sólo está en la malla I₃: entrega P = 3E·I₃ = 15/7 ≈ 2.14 W. E0 = V(x) − V(y) = 6/7 ≈ 0.857 V (tomando + en x). Por E0 (abierto) la corriente es 0.',
+    circuit: {
+      nodes: [
+        { id: 'tl', x: 0, y: 0 }, { id: 'T', x: 6, y: 0, label: 'T' }, { id: 't2', x: 12, y: 0 }, { id: 't3', x: 18, y: 0 },
+        { id: 'p1', x: 0, y: 6 }, { id: 'q1', x: 12, y: 6 },
+        { id: 'L', x: 0, y: 12, label: 'L', ground: true }, { id: 'M', x: 6, y: 12, label: 'M' }, { id: 'R', x: 12, y: 12, label: 'x' },
+        { id: 'lb', x: 0, y: 16 }, { id: 's1', x: 6, y: 16 }, { id: 'B', x: 12, y: 16, label: 'y' }, { id: 'b3', x: 18, y: 16 },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'L', to: 'p1', value: 2, label: 'R1' },
+        { id: 'E1', kind: 'vsource', from: 'p1', to: 'tl', value: 1, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 'tl', to: 'T' },
+        { id: 'R2', kind: 'resistor', from: 'T', to: 'M', value: 2, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'L', to: 'M', value: 2, label: 'R3' },
+        { id: 'w2', kind: 'wire', from: 'T', to: 't2' },
+        { id: 'E2', kind: 'vsource', from: 'q1', to: 't2', value: 1, label: 'E' },
+        { id: 'R4', kind: 'resistor', from: 'q1', to: 'R', value: 2, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 'R', to: 'M', value: 2, label: 'R5' },
+        { id: 'w3', kind: 'wire', from: 't2', to: 't3' },
+        { id: 'R6', kind: 'resistor', from: 't3', to: 'b3', value: 2, label: 'R6' },
+        { id: 'w4', kind: 'wire', from: 'b3', to: 'B' },
+        { id: 'E3', kind: 'vsource', from: 'B', to: 's1', value: 3, label: '3E', state: 'answer' },
+        { id: 'R7', kind: 'resistor', from: 's1', to: 'lb', value: 2, label: 'R7' },
+        { id: 'w5', kind: 'wire', from: 'lb', to: 'L' },
+        { id: 'E0', kind: 'open', from: 'R', to: 'B', label: 'E0', state: 'answer' },
+      ],
+      loops: [
+        { id: 'm1', path: ['L', 'p1', 'tl', 'T', 'M'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['T', 't2', 'q1', 'R', 'M'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['t2', 't3', 'b3', 'B', 's1', 'lb', 'L', 'M', 'R', 'q1'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'E3', label: 'I_{3E}', showValue: true }],
+      voltages: [{ part: 'E0', label: 'E0', plus: 'from', showValue: true }],
+    },
+    expect: { 'V(R,B)': 0.857143, 'P(E3)': 2.142857, 'I(E3)': 0.714286, 'I(R1)': 0.571429, 'I(R4)': -0.214286 },
+  }]),
+}} />
+
+Respuestas (con $E = 1\text{ V}$): (a) $E_0 = 6E/7 \approx 0.857\text{ V}$ (+ en el
+terminal que viene de la rama derecha); (b) $P_{3E} = 3E \cdot I_3 = 15E^2/7 \approx
+2.14\text{ W}$; (c) $I_{E_0} = 0$: $E_0$ es una tensión en circuito abierto. Como
+el sistema es lineal en $E$, para otro valor de $E$ las tensiones escalan con $E$ y
+las potencias con $E^2$.
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "En el ejercicio 7 (Boylestad), si ahora $E = 2$ V (mismo circuito, $3E = 6$ V), ¿cuánto valen $E_0$, la potencia que entrega la fuente $3E$ y la corriente por $E_0$?",
+  hints: [
+    "Todas las fuentes son múltiplos de $E$ y el sistema de mallas es lineal: cada corriente de malla es $(\\text{constante})\\cdot E$.",
+    "Con $E = 1$ V salió $E_0 = 6/7$ V y $P_{3E} = 15/7$ W. Las tensiones escalan con $E$ y las potencias con $E^2$.",
+  ],
+}}>
+
+**1. Linealidad.** Todas las fuentes son múltiplos de $E$, así que el sistema de mallas es
+$\mathbf{R}\,\mathbf{I} = E\,\mathbf{b}$: cada corriente de malla es proporcional a $E$.
+Con $E = 1$ V salió $I_1 = 4/7$, $I_2 = 1/2$, $I_3 = 5/7$ A; con $E = 2$ V se duplican:
+
+$$
+I_1 = \frac{8}{7}\,\text{A} \qquad I_2 = 1\,\text{A} \qquad I_3 = \frac{10}{7}\,\text{A}
+$$
+
+**2. Tensión en circuito abierto.** $E_0$ es una tensión, escala con $E$:
+
+$$
+E_0 = \frac{6E}{7} = \frac{6 \cdot 2}{7} = \boxed{\tfrac{12}{7} \approx 1.71\,\text{V}}
+$$
+
+**3. Potencia de la fuente $3E$.** Sólo está en la malla $I_3$, así que la atraviesa $I_3$:
+
+$$
+P_{3E} = 3E \cdot I_3 = 6\,\text{V} \cdot \frac{10}{7}\,\text{A} = \boxed{\tfrac{60}{7} \approx 8.57\,\text{W}}
+$$
+
+**4. Corriente por $E_0$.** Entre $x$ e $y$ no hay ningún elemento (circuito abierto):
+
+$$
+I_{E_0} = \boxed{0\,\text{A}}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Resuelto con E = 2 V: todas las corrientes se duplican respecto de E = 1 V; E0 = 12/7 V y 3E entrega 60/7 W.',
+    circuit: {
+      nodes: [
+        { id: 'tl', x: 0, y: 0 }, { id: 'T', x: 6, y: 0, label: 'T' }, { id: 't2', x: 12, y: 0 }, { id: 't3', x: 18, y: 0 },
+        { id: 'p1', x: 0, y: 6 }, { id: 'q1', x: 12, y: 6 },
+        { id: 'L', x: 0, y: 12, label: 'L', ground: true }, { id: 'M', x: 6, y: 12, label: 'M' }, { id: 'R', x: 12, y: 12, label: 'x' },
+        { id: 'lb', x: 0, y: 16 }, { id: 's1', x: 6, y: 16 }, { id: 'B', x: 12, y: 16, label: 'y' }, { id: 'b3', x: 18, y: 16 },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'L', to: 'p1', value: 2, label: 'R1' },
+        { id: 'E1', kind: 'vsource', from: 'p1', to: 'tl', value: 2, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 'tl', to: 'T' },
+        { id: 'R2', kind: 'resistor', from: 'T', to: 'M', value: 2, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'L', to: 'M', value: 2, label: 'R3' },
+        { id: 'w2', kind: 'wire', from: 'T', to: 't2' },
+        { id: 'E2', kind: 'vsource', from: 'q1', to: 't2', value: 2, label: 'E' },
+        { id: 'R4', kind: 'resistor', from: 'q1', to: 'R', value: 2, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 'R', to: 'M', value: 2, label: 'R5' },
+        { id: 'w3', kind: 'wire', from: 't2', to: 't3' },
+        { id: 'R6', kind: 'resistor', from: 't3', to: 'b3', value: 2, label: 'R6' },
+        { id: 'w4', kind: 'wire', from: 'b3', to: 'B' },
+        { id: 'E3', kind: 'vsource', from: 'B', to: 's1', value: 6, label: '3E', state: 'answer' },
+        { id: 'R7', kind: 'resistor', from: 's1', to: 'lb', value: 2, label: 'R7' },
+        { id: 'w5', kind: 'wire', from: 'lb', to: 'L' },
+        { id: 'E0', kind: 'open', from: 'R', to: 'B', label: 'E0', state: 'answer' },
+      ],
+      loops: [
+        { id: 'm1', path: ['L', 'p1', 'tl', 'T', 'M'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['T', 't2', 'q1', 'R', 'M'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['t2', 't3', 'b3', 'B', 's1', 'lb', 'L', 'M', 'R', 'q1'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      currents: [{ part: 'E3', label: 'I_3', showValue: true }, { part: 'R1', label: 'I_1', showValue: true }],
+      voltages: [{ part: 'E0', label: 'E_0', plus: 'from', showValue: true }],
+    },
+    expect: { 'V(R,B)': 1.714286, 'P(E3)': 8.571429, 'I(E3)': 1.428571, 'I(R1)': 1.142857, 'I(R4)': -0.428571 },
+  }],
+}} />
+
+**Comprobación — escalado con $E$:**
+
+| Magnitud | $E = 1$ V | $E = 2$ V | Factor |
+|---|---|---|---|
+| $I_3$ | $5/7$ A | $10/7$ A | $\times 2$ |
+| $E_0$ | $6/7$ V | $12/7$ V | $\times 2$ |
+| $P_{3E}$ | $15/7$ W | $60/7$ W | $\times 4 = 2^2$ ✓ |
+
+</ExerciseBlock>
+
+## Errores típicos
+
+- Elegir sentidos de malla distintos (unas horario, otras antihorario) sin
+  llevar bien la cuenta de los signos: el error más común y el más difícil de
+  detectar. Conviene fijar SIEMPRE el mismo sentido para todas las mallas.
+- Olvidar que un elemento compartido lleva la RESTA de las dos corrientes de
+  malla, no la suma.
+- Confundir subida y bajada de tensión en una fuente al recorrer la malla en
+  contra de su polaridad.
+- No verificar el resultado (con balance de potencia o con una reducción
+  serie-paralelo alternativa, cuando el circuito lo permite, como en el ejemplo 6).
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Dos mallas en sentido horario; R (vertical, entre a y a2) es la rama compartida.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0, label: 'a' },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 16.8, label: 'E' },
+        { id: 'RA', kind: 'resistor', from: 't', to: 'a', value: 3.6, label: 'RA' },
+        { id: 'RB', kind: 'resistor', from: 'a', to: 'a2', value: 6, label: 'R', tone: 'current' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'RC', kind: 'resistor', from: 'b', to: 'b2', value: 3, label: 'RC' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "En un circuito de dos mallas con una resistencia $R$ compartida (figura), ¿por qué la corriente real que atraviesa $R$ es $I_1 - I_2$ y no $I_1 + I_2$? Explica usando el sentido de las corrientes de malla.",
+  hints: [
+    "Ambas corrientes de malla ($I_1$ e $I_2$) se definen en el **mismo** sentido de giro (por convención, horario).",
+    "Sobre el elemento compartido, las dos flechas de malla apuntan en sentidos **físicos** opuestos (una la recorre \"de ida\", la otra \"de vuelta\").",
+  ],
+}}>
+
+**1. Convención.** Las dos mallas giran en sentido horario. Una corriente de malla es una
+corriente ficticia que recorre *todo* el borde de su ventana.
+
+**2. Qué hace cada malla sobre $R$.** $R$ es el borde común de las dos ventanas:
+
+- $I_1$ (ventana izquierda, horaria) baja por $R$: de $a$ a $a_2$.
+- $I_2$ (ventana derecha, horaria) sube por $R$: de $a_2$ a $a$.
+
+**3. Superposición en la rama.** La corriente real es la suma *con signo* de las que la
+recorren. Tomando como positivo el sentido de $I_1$ ($a \to a_2$):
+
+$$
+I_R = I_1 + (-I_2) = \boxed{I_1 - I_2}
+$$
+
+Sería $I_1 + I_2$ sólo si una de las mallas se hubiera tomado antihoraria. En una rama
+que pertenece a una sola malla (como $R_A$ o $R_C$), la corriente real es directamente esa
+corriente de malla.
+
+**4. Con números** (ejemplo 4: $E = 16.8$ V, $R_A = 3.6\,\Omega$, $R = 6\,\Omega$, $R_C = 3\,\Omega$).
+El sistema da $I_1 = 3$ A e $I_2 = 2$ A, así que
+
+$$
+I_R = I_1 - I_2 = 3 - 2 = 1\,\text{A} \qquad (\text{de } a \text{ a } a_2)
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'I₁ = 3 A baja por R, I₂ = 2 A sube por R: la corriente real en R es I₁ − I₂ = 1 A.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0, label: 'a' },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 16.8, label: 'E' },
+        { id: 'RA', kind: 'resistor', from: 't', to: 'a', value: 3.6, label: 'RA' },
+        { id: 'RB', kind: 'resistor', from: 'a', to: 'a2', value: 6, label: 'R', state: 'answer' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'RC', kind: 'resistor', from: 'b', to: 'b2', value: 3, label: 'RC' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'RA', label: 'I_1', showValue: true }, { part: 'RC', label: 'I_2', showValue: true }, { part: 'RB', label: 'I_R', showValue: true }],
+    },
+    expect: { 'I(RA)': 3, 'I(RC)': 2, 'I(RB)': 1 },
+  }],
+}} />
+
+**Comprobación — KCL en el nodo $a$:** entra $I_1 = 3$ A por $R_A$ y salen $I_R = 1$ A por
+$R$ e $I_2 = 2$ A hacia $R_C$: $3 = 1 + 2$ ✓. Con $I_1 + I_2 = 5$ A saldría más corriente
+de la que entra ✗.
+
+</ExerciseBlock>
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Circuito del enunciado (EP 2025-II, P6). Si = 0.7 V, Ge = 0.3 V. D5 apunta hacia arriba.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 20, ground: true },
+        { id: 'N1', x: 8, y: 0 }, { id: 'n1', x: 8, y: 8 }, { id: 'Va', x: 8, y: 20, label: 'Va' },
+        { id: 'N2', x: 16, y: 0 }, { id: 'p1', x: 16, y: 5 }, { id: 'p2', x: 16, y: 10 }, { id: 'N3', x: 16, y: 20 },
+        { id: 'q0', x: 24, y: 0 }, { id: 'q1', x: 24, y: 5 }, { id: 'q2', x: 24, y: 12 }, { id: 'q3', x: 24, y: 20 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 15, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'N1', value: 1000, label: 'R1' },
+        { id: 'D8', kind: 'diode', model: 'si', from: 'N1', to: 'n1', label: 'D8' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'Va', value: 1000, label: 'R2' },
+        { id: 'R6', kind: 'resistor', from: 'g', to: 'Va', value: 2000, label: 'R6' },
+        { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 2000, label: 'R4' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'N2', to: 'p1', label: 'D1' },
+        { id: 'D2', kind: 'diode', model: 'si', from: 'p1', to: 'p2', label: 'D2' },
+        { id: 'V2', kind: 'vsource', from: 'N3', to: 'p2', value: 3, label: 'V2' },
+        { id: 'R5', kind: 'resistor', from: 'Va', to: 'N3', value: 4000, label: 'R5' },
+        { id: 'D6', kind: 'diode', model: 'si', from: 'N2', to: 'q0', label: 'D6' },
+        { id: 'D4', kind: 'diode', model: 'ge', from: 'q0', to: 'q1', label: 'D4' },
+        { id: 'R3', kind: 'resistor', from: 'q1', to: 'q2', value: 3000, label: 'R3' },
+        { id: 'D5', kind: 'diode', model: 'ge', from: 'q3', to: 'q2', label: 'D5' },
+        { id: 'D7', kind: 'diode', model: 'si', from: 'q3', to: 'N3', label: 'D7' },
+      ],
+      currents: [{ part: 'R1', label: 'I' }, { part: 'D6', label: 'I_x' }],
+      voltages: [{ part: 'R4', label: 'V_b' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "En el circuito de la figura (examen parcial 2025-II, sección de laboratorio), con $E = 15$ V, $R_1 = R_2 = 1\\,\\text{k}\\Omega$, $R_3 = 3\\,\\text{k}\\Omega$, $R_4 = R_6 = 2\\,\\text{k}\\Omega$, $R_5 = 4\\,\\text{k}\\Omega$, $V_2 = 3$ V, Si $= 0.7$ V y Ge $= 0.3$ V, calcula: (a) la corriente $I_x$, (b) la corriente $I$ que entrega la fuente $E$, (c) el potencial $V_a$, (d) la diferencia de potencial $V_b$, (e) la potencia que consume $R_2$, (f) el valor mínimo de $E$ para que la rama de diodos $D_1$–$D_2$ esté en polarización directa.",
+  hints: [
+    "Recorre la rama de $D_6$: ¿hay algún diodo que apunte en contra de los demás? Si la rama no puede conducir, $I_x$ sale sin cálculo.",
+    "La parte de Kirchhoff es la de siempre: supón $D_8$, $D_1$ y $D_2$ ON (fuentes de $V_\\gamma$), escribe cada rama en función de $I$ (corriente de $R_1$) con $V_a = R_6\\,I$, y cierra con KCL $I = i_1 + i_2$.",
+    "La rama $R_4 \\to D_1 \\to D_2 \\to V_2 \\to R_5$ tiene una caída fija de $0.3 + 0.7 + 3 = 4$ V. Para (f): la rama conduce mínimamente cuando $i_2 = 0$.",
+  ],
+}}>
+
+Unidades: mA, kΩ, V. Tierra en el borne − de $E$.
+
+**1. (a) Rama de $D_6$.** $D_6$, $D_4$ y $D_7$ apuntan en el sentido del recorrido, pero
+$D_5$ apunta al revés: en ningún sentido pueden conducir todos a la vez. La rama queda
+abierta:
+
+$$
+I_x = \boxed{0\,\text{A}}
+$$
+
+**2. Hipótesis.** $D_8$, $D_1$, $D_2$ **ON** (fuentes de $0.7$, $0.3$, $0.7$ V); $D_5$ **OFF**.
+
+**3. Cada rama en función de $I$.** Toda $I$ vuelve a tierra por $R_6$, así que
+$V_a = 2I$ y el nodo tras $R_1$ está a $15 - I$:
+
+$$
+i_1 = \frac{(15 - I) - 0.7 - 2I}{R_2} = 14.3 - 3I
+\qquad
+i_2 = \frac{(15 - I) - 4 - 2I}{R_4 + R_5} = \frac{11 - 3I}{6}
+$$
+
+**4. (b) KCL en el nodo tras $R_1$.** $I = i_1 + i_2$:
+
+$$
+I = 14.3 - 3I + \frac{11 - 3I}{6} \;\Rightarrow\; 4.5\,I = 16.13 \;\Rightarrow\; I = \boxed{3.585\,\text{mA}}
+$$
+
+**5. (c) Potencial $V_a$:**
+
+$$
+V_a = R_6\,I = 2 \cdot 3.585 = \boxed{7.170\,\text{V}}
+$$
+
+**6. (d) Caída $V_b$ en $R_4$.** $i_2 = (11 - 10.756)/6 = 0.0407$ mA:
+
+$$
+V_b = R_4\,i_2 = 2 \cdot 0.0407 = \boxed{81.5\,\text{mV}}
+$$
+
+**7. (e) Potencia en $R_2$.** $i_1 = 14.3 - 10.756 = 3.544$ mA:
+
+$$
+P_{R_2} = i_1^2\,R_2 = (3.544\,\text{mA})^2 \cdot 1\,\text{k}\Omega = \boxed{12.56\,\text{mW}}
+$$
+
+**8. Validar la hipótesis:**
+
+| Diodo | Supuesto | Condición | Resultado |
+|---|---|---|---|
+| $D_8$ | ON | $i_1 \ge 0$ | $3.544$ mA ✓ |
+| $D_1$, $D_2$ | ON | $i_2 \ge 0$ | $0.0407$ mA ✓ |
+| $D_5$ | OFF | $V_{AK} < V_\gamma$ | $V_{AK} < 0$ ✓ |
+
+**9. (f) $E$ mínima.** La rama $D_1$–$D_2$ está en el umbral cuando $i_2 = 0$:
+$(E - I) - 4 - 2I = 0$, y toda la corriente va por $D_8$: $I = i_1 = 4 - 0.7 = 3.3$ mA.
+
+$$
+E_{min} = 4 + 3I = 4 + 3 \cdot 3.3 = \boxed{13.9\,\text{V}}
+$$
+
+Por debajo de $13.9$ V, $i_2$ saldría negativa ✗: $D_1$ y $D_2$ quedan OFF.
+
+<Visualization viz={(() => {
+  const nodes = [
+    { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 20, ground: true },
+    { id: 'N1', x: 8, y: 0 }, { id: 'n1', x: 8, y: 8 }, { id: 'Va', x: 8, y: 20, label: 'Va', showPotential: true },
+    { id: 'N2', x: 16, y: 0 }, { id: 'p1', x: 16, y: 5 }, { id: 'p2', x: 16, y: 10 }, { id: 'N3', x: 16, y: 20 },
+    { id: 'q0', x: 24, y: 0 }, { id: 'q1', x: 24, y: 5 }, { id: 'q2', x: 24, y: 12 }, { id: 'q3', x: 24, y: 20 },
+  ];
+  const parts = (E) => [
+    { id: 'E', kind: 'vsource', from: 'g', to: 't', value: E, label: 'E' },
+    { id: 'R1', kind: 'resistor', from: 't', to: 'N1', value: 1000, label: 'R1' },
+    { id: 'D8', kind: 'diode', model: 'si', from: 'N1', to: 'n1', label: 'D8' },
+    { id: 'R2', kind: 'resistor', from: 'n1', to: 'Va', value: 1000, label: 'R2' },
+    { id: 'R6', kind: 'resistor', from: 'g', to: 'Va', value: 2000, label: 'R6' },
+    { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 2000, label: 'R4' },
+    { id: 'D1', kind: 'diode', model: 'ge', from: 'N2', to: 'p1', label: 'D1' },
+    { id: 'D2', kind: 'diode', model: 'si', from: 'p1', to: 'p2', label: 'D2' },
+    { id: 'V2', kind: 'vsource', from: 'N3', to: 'p2', value: 3, label: 'V2' },
+    { id: 'R5', kind: 'resistor', from: 'Va', to: 'N3', value: 4000, label: 'R5' },
+    { id: 'D6', kind: 'diode', model: 'si', from: 'N2', to: 'q0', label: 'D6' },
+    { id: 'D4', kind: 'diode', model: 'ge', from: 'q0', to: 'q1', label: 'D4' },
+    { id: 'R3', kind: 'resistor', from: 'q1', to: 'q2', value: 3000, label: 'R3' },
+    { id: 'D5', kind: 'diode', model: 'ge', from: 'q3', to: 'q2', label: 'D5' },
+    { id: 'D7', kind: 'diode', model: 'si', from: 'q3', to: 'N3', label: 'D7' },
+  ];
+  const hyp = [{ part: 'D8', assume: 'on' }, { part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }, { part: 'D6', assume: 'on', showModel: false }, { part: 'D4', assume: 'on', showModel: false }, { part: 'D5', assume: 'off' }, { part: 'D7', assume: 'on', showModel: false }];
+  return {
+    type: 'circuit',
+    title: 'Resuelto: suponer → resolver → validar',
+    steps: [
+      {
+        note: 'a) D5 apunta en contra del resto de su rama: OFF, la rama queda abierta e Ix = 0.',
+        circuit: { nodes, parts: parts(15), diodes: hyp, hypothesis: 'D5 OFF', currents: [{ part: 'D6', label: 'I_x', showValue: true }] },
+        expect: { 'I(D6)': 0, 'I(R3)': 0 },
+      },
+      {
+        note: 'b–e) D8, D1, D2 ON: I = 3.585 mA, Va = 7.170 V, Vb = 81.5 mV, i1 = 3.544 mA. i1 e i2 positivas ✓.',
+        circuit: { nodes, parts: parts(15), diodes: hyp, hypothesis: 'D8 D1 D2 ON', currents: [{ part: 'R1', label: 'I', showValue: true }, { part: 'R2', label: 'i_1', showValue: true }, { part: 'D1', label: 'i_2', showValue: true }], voltages: [{ part: 'R4', label: 'V_b', showValue: true }] },
+        expect: { 'I(R1)': 0.003585, 'V(Va)': 7.170, 'V(N1,N2)': 0.0815, 'I(D1)': 0.0000407, 'I(R2)': 0.003544, 'P(R2)': 0.01256 },
+      },
+      {
+        note: 'f) Con E = 13.9 V la rama D1–D2 queda justo en el umbral: i2 = 0 e I = i1 = 3.3 mA.',
+        circuit: { nodes, parts: parts(13.9), diodes: hyp, hypothesis: 'D1 D2 ON (umbral)', currents: [{ part: 'D1', label: 'i_2', showValue: true }, { part: 'R1', label: 'I', showValue: true }] },
+        expect: { 'I(D1)': 0, 'I(R1)': 0.0033 },
+      },
+    ],
+  };
+})()} />
+
+**Comprobación — KCL:** $i_1 + i_2 = 3.544 + 0.0407 = 3.585$ mA $= I$ ✓.
+
+</ExerciseBlock>

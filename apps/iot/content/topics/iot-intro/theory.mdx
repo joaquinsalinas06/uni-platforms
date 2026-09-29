@@ -1,0 +1,216 @@
+---
+kind: theory
+title: "¿Qué es IoT?"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Internet of Things (IoT) = **Internet + Things**. La idea central es dejar de pensar
+la red solo como computadoras que sirven páginas o video, y empezar a pensar en
+un conjunto de "cosas" (sensores, dispositivos, personas, vehículos, electrodomésticos)
+que son conscientes de su contexto y pueden comunicarse entre sí, en cualquier momento
+y desde cualquier lugar. El curso usa esto como punto de partida antes de entrar a
+la arquitectura (semana 2) y a los circuitos que hacen posible el "sensing" (resto de
+esta semana).
+
+## Conceptos
+
+### "Things"
+
+Un **"Thing"** es cualquier entidad —dispositivo inteligente, sensor, ser humano u
+otro objeto— consciente de su contexto y capaz de comunicarse con otras entidades.
+Dos ideas clave del material:
+
+1. Accesible en cualquier momento, desde cualquier lugar.
+2. Integra dispositivos móviles, dispositivos de borde (routers, hubs inteligentes)
+   y humanos como controladores dentro del lazo.
+
+El rango de "things" va desde sensores diminutos hasta servidores back-end potentes
+usados para analizar los datos que esos sensores producen.
+
+### Origen del término y evolución tecnológica
+
+- **Kevin Ashton** acuñó el término *"Internet of Things"* en **1999**, en una
+  presentación sobre gestión de cadena de suministro (*supply-chain management*).
+- La **conectividad** (también llamada "smartness") es un aspecto fundamental de IoT:
+  - Al inicio, **RFID** (Radio-Frequency Identification) era la tecnología dominante
+    para redes de sensores inalámbricas (**WSN**, Wireless Sensor Networks).
+  - Hoy, los dispositivos con **Bluetooth** impulsaron la adopción masiva de la
+    tendencia IoT.
+
+> **Nota de apoyo** (no está en el material): esta transición de RFID a Bluetooth no
+> significa que RFID haya desaparecido; conviven según el caso de uso (identificación
+> pasiva de corto alcance vs. enlaces bidireccionales de más capacidad).
+
+### Los pilares de IoT
+
+El material resume IoT en un diagrama con un núcleo ("Smartness" — Big data /
+Analytics) rodeado de cinco aspectos que todo sistema IoT debe resolver:
+
+- **Sensing**: cómo el sistema percibe el mundo físico (de aquí nace todo el resto de
+  esta semana: circuitos, Ohm, Kirchhoff — el lenguaje con el que se diseñan sensores).
+- **Connectivity**: protocolos y medios de comunicación entre "things".
+- **Protection**: seguridad y privacidad de los datos y del sistema.
+- **Human factor**: el ser humano que regula y mejora el sistema (no es un simple
+  receptor pasivo de datos).
+- **"Smartness" (Big data / Analytics)**: qué se hace con los datos una vez sensados
+  y transmitidos.
+
+<Visualization viz={{
+  type: 'dag',
+  title: 'Pilares de IoT',
+  static: true,
+  steps: [{
+    note: 'IoT se piensa como un núcleo (sensing + smartness) rodeado de los aspectos que todo diseño debe resolver.',
+    nodes: [
+      { id: 'iot', value: 'IoT', parent: null },
+      { id: 'sensing', value: 'Sensing', parent: 'iot' },
+      { id: 'connectivity', value: 'Connectivity', parent: 'iot' },
+      { id: 'protection', value: 'Protection', parent: 'iot' },
+      { id: 'human', value: 'Human factor', parent: 'iot' },
+      { id: 'smart', value: '"Smartness" (Big data / Analytics)', parent: 'iot' },
+    ],
+  }],
+}} />
+
+### Arquitectura como servicio (SOA)
+
+El material introduce la **arquitectura IoT como un servicio** (*Service Oriented
+Architecture*, SOA) organizada en 4 capas:
+
+1. **Sensing layer**: se integra con el hardware disponible para sensar el estado de
+   las cosas.
+2. **Network layer**: infraestructura (inalámbrica o cableada) que soporta las
+   conexiones entre las cosas.
+3. **Service layer**: crea y gestiona los servicios que necesitan los usuarios o
+   las aplicaciones.
+4. **Interfaces layer**: métodos de interacción con usuarios o aplicaciones.
+
+<Visualization viz={{
+  type: 'dag',
+  title: 'Arquitectura IoT como servicio (SOA)',
+  static: true,
+  steps: [{
+    note: 'Cada capa se apoya en la anterior: primero se sensa, luego se transporta, luego se convierte en servicio y finalmente se expone a través de una interfaz.',
+    nodes: [
+      { id: 'sensing', value: '1. Sensing layer', parent: null },
+      { id: 'network', value: '2. Network layer', parent: 'sensing' },
+      { id: 'service', value: '3. Service layer', parent: 'network' },
+      { id: 'interfaces', value: '4. Interfaces layer', parent: 'service' },
+    ],
+  }],
+}} />
+
+### Implementación de referencia (*Reference IoT implementation*)
+
+Es un **programa ejecutable que cumple con el comportamiento de entrada/salida** de
+un estándar (de comunicación, sensado, privacidad, etc.). Puede estar escrito en
+cualquier lenguaje: lo que importa es que respete el estándar, no la tecnología
+concreta con la que se construyó.
+
+### Diseño de la plataforma (*Platform design*)
+
+Diseñar la plataforma significa:
+
+- Definir el **hardware requerido** para ejecutar el servicio IoT.
+- Convertir los requisitos de sistema y los modelos de software en requisitos
+  detallados (usando *profiling* y herramientas de análisis sobre especificaciones
+  ejecutables existentes).
+- Explorar el espacio de diseño, manual o automáticamente.
+- Desarrollar capas de abstracción de hardware (HAL) y otro software de soporte.
+
+### Sistemas embebidos para IoT (*platform-based design*)
+
+El diseño de sistemas embebidos para IoT sigue un proceso de **dos etapas**:
+
+1. **Diseñar la plataforma** (hardware + software de soporte).
+2. **Usar la plataforma** para construir el sistema final.
+
+Una plataforma bien diseñada se puede **reutilizar** para alojar muchos sistemas
+distintos — no se rediseña desde cero cada vez. Y el primer requisito de cualquiera
+de esos sistemas es el **sensado inteligente** (*smart sensing*), que es exactamente
+la puerta de entrada al resto de la semana: para sensar hay que entender circuitos
+eléctricos básicos (Ohm, reducción de resistencias, Kirchhoff, divisores).
+
+## Errores típicos
+
+- Confundir "Internet of Things" con "tener un microcontrolador con WiFi": IoT es
+  un paradigma de diseño (sensar + conectar + dar servicio + interfaz), no una pieza
+  de hardware específica.
+- Pensar que la capa de "Interfaces" es solo la pantalla del usuario final: también
+  incluye la interacción con **aplicaciones** (APIs), no solo con personas.
+- Olvidar que "diseñar la plataforma" y "usar la plataforma" son etapas distintas:
+  el curso pasa buena parte del tiempo en la primera (por eso se estudian circuitos
+  antes que protocolos).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "Explica con tus palabras qué significan las 4 capas de la arquitectura IoT como servicio (SOA) y da un ejemplo de un dispositivo o módulo real para cada capa (por ejemplo, para 'sensing' un sensor de temperatura).",
+  hints: [
+    "Empieza por la capa que está más cerca del mundo físico (sensing) y termina en la que está más cerca del usuario (interfaces).",
+    "La capa de servicio no es hardware: es lógica que decide qué hacer con los datos sensados y transmitidos.",
+  ],
+}}>
+
+**1. Sensing layer — el hardware que toca el mundo físico.** Mide una magnitud (temperatura, luz, movimiento) y la convierte en señal eléctrica. Ejemplo: un sensor de temperatura DHT22.
+
+**2. Network layer — el medio que transporta ese dato.** No procesa nada, solo mueve bits desde el "thing" hasta donde se necesiten. Ejemplo: WiFi o LoRa.
+
+**3. Service layer — la lógica que le da sentido al dato.** No es hardware: decide qué hacer con lo que llegó. Ejemplo: un servicio en la nube que evalúa si la temperatura supera un umbral y decide activar una alarma.
+
+**4. Interfaces layer — cómo se expone ese servicio.** El punto de contacto con personas o con otras aplicaciones. Ejemplo: un dashboard web o una API REST.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Ejemplo resuelto: sensor de temperatura → alarma',
+  steps: [{
+    note: 'Cada capa se apoya en la anterior: el dato sube desde el sensor hasta la interfaz que finalmente lo muestra o lo usa.',
+    nodes: [
+      { id: 'sensing', value: '1. Sensing: DHT22', parent: null },
+      { id: 'network', value: '2. Network: WiFi/LoRa', parent: 'sensing' },
+      { id: 'service', value: '3. Service: ¿activar alarma?', parent: 'network' },
+      { id: 'interfaces', value: '4. Interfaces: dashboard / API REST', parent: 'service' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "¿Por qué el material afirma que 'el sensado inteligente es el primer requisito' de un sistema embebido para IoT, y qué relación tiene esto con el resto de los temas de esta semana (Ohm, reducción de resistencias, Kirchhoff)?",
+  hints: [
+    "Recuerda las dos etapas del platform-based design: diseñar la plataforma y usar la plataforma.",
+    "Sin poder sensar el mundo físico de forma confiable, ninguna capa superior (red, servicio, interfaz) tiene datos con qué trabajar.",
+  ],
+}}>
+
+**1. La dependencia es de abajo hacia arriba.** Sin sensado no hay dato que enviar por la red, ni servicio que ofrecer, ni interfaz que muestre algo útil: toda la pirámide SOA depende de que la capa de *sensing* funcione primero.
+
+**2. "Diseñar la plataforma" exige entender el hardware de sensado, no solo usarlo.** Las dos etapas del *platform-based design* son diseñar la plataforma (hardware + soporte) y usarla para construir el sistema final; el curso se detiene en la primera.
+
+**3. Por eso Ohm, reducción de resistencias y Kirchhoff van antes que protocolos.** Diseñar un sensor requiere entender cómo se comporta una resistencia ($V = IR$), cómo se combinan varias (serie/paralelo) y cómo se analiza un circuito con varias fuentes y mallas (Kirchhoff) — el lenguaje mínimo para construir el traductor entre mundo físico y señal eléctrica.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Por qué sensing va primero',
+  steps: [{
+    note: 'Si la capa de sensing falla, ninguna capa superior tiene con qué trabajar; por eso el curso entra primero a los circuitos que hacen posible sensar.',
+    nodes: [
+      { id: 'circ', value: 'Ohm · reducción · Kirchhoff', parent: null },
+      { id: 'sensing', value: '1. Sensing layer', parent: 'circ' },
+      { id: 'network', value: '2. Network layer', parent: 'sensing' },
+      { id: 'service', value: '3. Service layer', parent: 'network' },
+      { id: 'interfaces', value: '4. Interfaces layer', parent: 'service' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

@@ -1,0 +1,178 @@
+---
+kind: operation
+title: Insert retroactivo
+order: 1
+cppSteps:
+  - step-1-accumulator.cpp
+  - step-2-insert-retroactive.cpp
+  - step-3-delete-retroactive.cpp
+  - step-4-noncommutative-counterexample.cpp
+  - full-implementation.cpp
+visualization:
+  type: persistent
+  steps:
+    - note: >-
+        Historial real del acumulador (ejemplo derivado en esta operación):
+        Add(+3) en t=1, Add(+5) en t=2.
+      caption: "acumulador = 8"
+      nodes:
+        - { id: t1, value: "Add(+3)", parent: null }
+        - { id: t2, value: "Add(+5)", parent: t1 }
+    - note: >-
+        Se pide Insert(t=0, Add(+2)) — antes de t1. En un modelo genérico
+        habría que reproducir t1 y t2 después de esta entrada.
+      caption: "posición pedida: t = 0"
+      highlight: ["t0"]
+      nodes:
+        - { id: t1, value: "Add(+3)", parent: null }
+        - { id: t2, value: "Add(+5)", parent: t1 }
+        - { id: t0, value: "Add(+2)", parent: null, state: marked }
+    - note: >-
+        Add conmuta con todo lo demás: no importa en qué posición se aplique
+        de verdad, así que se aplica directamente ahora en vez de
+        insertarla en t=0 y reproducir t1, t2.
+      caption: "Insert(t=0, Add(+2)) ≡ Insert(ahora, Add(+2))"
+      highlight: ["tnow"]
+      nodes:
+        - { id: t1, value: "Add(+3)", parent: null }
+        - { id: t2, value: "Add(+5)", parent: t1 }
+        - { id: tnow, value: "Add(+2)", parent: t2, state: active }
+    - note: >-
+        O(1) amortizado: la misma llamada que un Add normal, sin reproducir
+        ninguna operación intermedia.
+      caption: "acumulador = 10"
+      highlight: ["tnow"]
+      nodes:
+        - { id: t1, value: "Add(+3)", parent: null }
+        - { id: t2, value: "Add(+5)", parent: t1 }
+        - { id: tnow, value: "Add(+2)", parent: t2, state: active }
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Inserta la operación `op` en el tiempo `t` de la línea de tiempo (que puede
+ser un tiempo pasado), asumiendo que `op` conmuta con cualquier otra
+operación de la estructura.
+
+## Intuición
+
+Como `op` conmuta con todo lo demás, no importa en qué posición de la línea
+de tiempo se aplique realmente: el efecto sobre la estructura presente es el
+mismo si se aplica en `t` (y se deja que "viaje" hacia adelante conmutando
+con cada operación intermedia) que si se aplica directamente ahora. No hace
+falta representar la línea de tiempo ni reproducir nada entre `t` y el
+presente.
+
+## Algoritmo
+
+1. Verificar (fuera del alcance de esta operación, es una condición previa
+   sobre la estructura) que `op` conmuta con toda otra operación aplicable.
+2. Aplicar `op` directamente sobre la estructura presente.
+
+## Pseudocódigo
+
+```
+Insert(t, op)  ≡  Insert(ahora, op)          // por conmutatividad
+```
+
+(páginas 25-26, diapositiva 10)
+
+## C++
+
+Ver `step-2-insert-retroactive.cpp` y `full-implementation.cpp` en el editor
+de arriba.
+
+## Complejidad temporal
+
+$O(1)$ amortizado — igual que aplicar la operación original sobre la
+estructura de base, porque no hay ningún trabajo adicional que hacer por ser
+"retroactiva": es literalmente la misma llamada, sólo reetiquetada. Ver
+`meta.yaml` para el razonamiento completo.
+
+## Complejidad espacial
+
+El profesor no la da. No se necesita guardar la línea de tiempo completa
+para sostener retroactividad parcial con esta técnica: basta la estructura
+presente.
+
+## Ejemplo
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*: sobre un
+acumulador que soporta `Add(Δ)` (conmutativa: sumar en cualquier orden da el
+mismo total), con historial real `Add(+3)` en t=1 y `Add(+5)` en t=2
+(acumulador presente = 8), insertar retroactivamente `Add(+2)` en t=0 (antes
+de ambas) se resuelve como `Add(+2)` aplicado ahora: acumulador presente =
+10. No hace falta reproducir `Add(+3)` ni `Add(+5)`.
+
+## Contraste: la misma inserción cuando SÍ conmuta y cuando NO
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*. El diagrama de
+arriba resuelve `Insert(t=0, Add(+2))` "aplicando ahora" porque `Add`
+conmuta con todo. Para ver por qué esa técnica **no** es un truco general
+sino que depende genuinamente de la conmutatividad, compárese con la misma
+idea intentada sobre una operación que no conmuta: una asignación
+`Set(x = v)` sobre la misma línea de tiempo, con historial real
+`Set(x=3)` en t=1 y `Set(x=5)` en t=2 (`x` presente = 5, porque la última
+asignación gana).
+
+<Visualization viz={{
+  type: "persistent",
+  steps: [
+    {
+      note: "Historial real: Set(x=3) en t=1, Set(x=5) en t=2. El valor presente es 5 — la ÚLTIMA asignación cronológica es la que sobrevive, no una combinación de ambas.",
+      caption: "x = 5",
+      nodes: [
+        { id: "t1", value: "Set(x=3)", parent: null },
+        { id: "t2", value: "Set(x=5)", parent: "t1" },
+      ],
+    },
+    {
+      note: "Se pide Insert(t=0, Set(x=2)) — antes de t1. Si se intentara el mismo atajo que con Add ('aplicar ahora'), x quedaría en 2, no en 5.",
+      caption: "atajo incorrecto: Insert(ahora, Set(x=2)) -> x = 2 (MAL)",
+      highlight: ["t0"],
+      nodes: [
+        { id: "t1", value: "Set(x=3)", parent: null },
+        { id: "t2", value: "Set(x=5)", parent: "t1" },
+        { id: "t0", value: "Set(x=2)", parent: null, state: "marked" },
+      ],
+    },
+    {
+      note: "El resultado correcto es x = 5: Set(x=2) queda por detrás de Set(x=3) y Set(x=5) en la línea de tiempo, y ninguna de las dos 've' el valor 2 — cada Set posterior simplemente sobreescribe. 'Aplicar ahora' habría dado 2, no 5: la equivalencia Insert(t,op) ≡ Insert(ahora,op) es FALSA aquí, porque el resultado depende de dónde cae op respecto a las demás.",
+      caption: "correcto: x = 5 (sin cambio) — pero exige reproducir la línea de tiempo, no aplicar directo",
+      highlight: ["t0", "t1", "t2"],
+      nodes: [
+        { id: "t0", value: "Set(x=2)", parent: null, state: "muted" },
+        { id: "t1", value: "Set(x=3)", parent: "t0", state: "active" },
+        { id: "t2", value: "Set(x=5)", parent: "t1", state: "active" },
+      ],
+    },
+  ],
+}} />
+
+La diferencia entre los dos diagramas es exactamente la condición de esta
+técnica: con `Add`, insertar en `t=0` y "dejarlo viajar" conmutando hasta el
+presente da el mismo resultado que aplicarlo directamente ahora — por eso
+el atajo es válido y cuesta $O(1)$. Con `Set`, el resultado depende de la
+posición relativa de las operaciones (la última asignación gana), así que
+el mismo atajo da una respuesta distinta de la correcta: no hay forma de
+saltarse la reproducción de la línea de tiempo sin conmutatividad. Este es
+precisamente el hueco que
+[problemas de búsqueda descomponibles](/structures/decomposable-search-problem)
+y el [método de rollback](/structures/rollback-method) llenan para
+operaciones como `Set` que no conmutan.
+
+## Casos límite
+
+- **`op` no conmuta con alguna operación de la estructura** (por ejemplo,
+  una asignación `A[i] = v`): la equivalencia `Insert(t, op) ≡ Insert(ahora,
+  op)` deja de ser válida, porque el resultado sí depende de dónde caiga
+  `op` respecto a las demás. Esta técnica no aplica; ver el contraejemplo en
+  [examples.md](/structures/commutative-invertible-retroactivity#ejemplos).
+- **Insertar la misma llave dos veces** en el ejemplo de la tabla hash: el
+  profesor advierte de pasada (sin desarrollarlo) que insertar una llave
+  *nueva* conmuta con insertar otra llave *distinta*, pero insertar la misma
+  llave dos veces no conmuta de la misma manera con su propia repetición.
+- **`t` en el presente**: caso degenerado donde `Insert(t, op) ≡ Insert(ahora,
+  op)` es trivialmente cierto porque `t` ya es "ahora".

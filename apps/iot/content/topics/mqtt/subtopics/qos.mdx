@@ -1,0 +1,271 @@
+---
+kind: subtopic
+order: 2
+title: QoS
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+QoS (Quality of Service) es el compromiso de entrega que MQTT ofrece por *mensaje*: cuánto
+esfuerzo hace el protocolo para que un PUBLISH llegue, y si tolera perderlo o duplicarlo.
+No es una propiedad de la conexión completa, es un flag de 2 bits que va en cada PUBLISH.
+
+## Conceptos
+
+### Los tres niveles
+- **QoS 0 — "at most once" (fire and forget)**: el mensaje se envía una sola vez y se
+  olvida. No se guarda ni hay feedback de si llegó. Es el modo más rápido; si la
+  transmisión falla o el cliente se desconecta, el mensaje se pierde por completo.
+- **QoS 1 — "at least once"**: el mensaje se entrega al menos una vez, con un ack de
+  vuelta (**PUBACK**). Si el PUBACK no llega, el emisor reenvía el mismo PUBLISH
+  (con DUP=1) hasta recibir el ack — por eso puede haber **duplicados**.
+- **QoS 2 — "exactly once"**: el mensaje se entrega exactamente una vez. Requiere
+  almacenamiento local en emisor y receptor hasta que el proceso concluye, mediante un
+  **handshake de cuatro partes** (dos pares pregunta-respuesta):
+  1. **PUBLISH** — el emisor manda el mensaje y lo guarda.
+  2. **PUBREC** — el receptor confirma que lo recibió (aún no lo entrega a la app).
+  3. **PUBREL** — el emisor libera el mensaje: ya puede procesarse.
+  4. **PUBCOMP** — el receptor confirma que el proceso terminó.
+  Al recibir PUBREL el receptor puede borrar el mensaje guardado; al recibir PUBCOMP el
+  emisor también borra su copia.
+
+  > **Erratas corregidas en silencio**: la slide 21 rotula el segundo paquete del handshake
+  > como "PUBREL" con la descripción "Response to receive"; esa descripción corresponde a
+  > **PUBREC** (así lo confirma la tabla de tipos de la slide 9: PUBREC = "Publish received").
+  > El orden correcto es PUBLISH → PUBREC → PUBREL → PUBCOMP, como se muestra abajo.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'QoS 0, 1 y 2 — publisher ↔ broker ↔ subscriber',
+  steps: [
+    {
+      note: 'QoS 0: un solo envío en cada tramo, sin ack. Si se pierde, se pierde.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 0' },
+        { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 0' },
+      ],
+    },
+    {
+      note: 'QoS 1: cada tramo se confirma con PUBACK. Si no llega, se reenvía con DUP=1.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 1' },
+        { from: 'b', to: 'p', label: 'PUBACK' },
+        { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 1' },
+        { from: 's', to: 'b', label: 'PUBACK' },
+      ],
+    },
+    {
+      note: 'QoS 2: handshake de 4 partes por tramo. Cada extremo guarda el mensaje hasta completar su parte.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2', store: 'guarda msg' },
+        { from: 'b', to: 'p', label: 'PUBREC' },
+        { from: 'p', to: 'b', label: 'PUBREL' },
+        { from: 'b', to: 'p', label: 'PUBCOMP', store: 'borra msg' },
+        { from: 'b', to: 's', label: 'PUBLISH', flags: 'QoS 2', store: 'guarda msg' },
+        { from: 's', to: 'b', label: 'PUBREC' },
+        { from: 'b', to: 's', label: 'PUBREL' },
+        { from: 's', to: 'b', label: 'PUBCOMP', store: 'borra msg' },
+      ],
+    },
+  ],
+}} />
+
+### El flag DUP en acción
+Ejemplo de la slide: un cliente publica `"Temperature = 25°C"` con QoS 1, DUP=0. El
+broker recibe el mensaje y envía PUBACK, pero el PUBACK se pierde en la red. El cliente,
+al no recibir el ack, asume que falló y retransmite el mismo PUBLISH con **DUP=1**.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'DUP=1: PUBACK perdido, se retransmite',
+  steps: [{
+    note: 'El PUBLISH original llegó bien, pero el broker nunca se entera de que el cliente lo reenvió por un ack perdido en el camino.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'c', to: 'b', label: 'PUBLISH "Temperature=25°C"', flags: 'QoS 1 · DUP=0' },
+      { from: 'b', to: 'c', label: 'PUBACK', lost: true },
+      { from: 'c', to: 'b', label: 'PUBLISH "Temperature=25°C"', flags: 'QoS 1 · DUP=1 (retransmisión)' },
+      { from: 'b', to: 'c', label: 'PUBACK' },
+    ],
+  }],
+}} />
+
+### QoS efectivo: el mínimo de los dos extremos
+El broker nunca entrega con más garantía de la que el publisher prometió ni de la que el
+subscriber pidió:
+
+$$QoS_{efectivo} = \min(QoS_{pub}, QoS_{sub})$$
+
+- **Ejemplo 1** — Publisher QoS 2, Subscriber QoS 1 → resultado QoS 1. El subscriber no
+  pidió QoS 2, así que el broker "degrada" la entrega.
+- **Ejemplo 2** — Publisher QoS 1, Subscriber QoS 2 → resultado QoS 1. El publisher sólo
+  garantizó QoS 1, así que QoS 2 es imposible de lograr aunque el subscriber lo pida.
+
+### ¿Para qué QoS si TCP ya garantiza la entrega?
+TCP garantiza entrega **dentro de una misma conexión** (retransmite segmentos perdidos a
+nivel de transporte), pero:
+- Si la conexión TCP se cae y se reestablece, TCP "olvida" todo lo pendiente: no hay
+  noción de "ese mensaje de aplicación específico" que sobreviva a la reconexión.
+- El ack de TCP confirma que los *bytes* llegaron a la pila de red del otro extremo, no
+  que la *aplicación* (el broker o el cliente MQTT) procesó el mensaje.
+- QoS es un acuerdo **de extremo a extremo a nivel de aplicación** (PUBACK/PUBREC/PUBREL/
+  PUBCOMP), independiente de cuántas conexiones TCP hagan falta para lograrlo — incluso
+  puede sobrevivir una reconexión si hay sesión persistente (ver
+  [Retained, sesión y LWT](/topics/mqtt/subtopics/retained-sesion-lwt)).
+
+## Método paso a paso
+Para elegir el QoS de un mensaje:
+
+1. ¿Es tolerable perder el mensaje sin que nadie se entere? → QoS 0.
+2. ¿Hace falta que llegue sí o sí, pero un duplicado ocasional no rompe nada (p. ej. una
+   lectura periódica, un dato idempotente)? → QoS 1.
+3. ¿Un duplicado causaría un efecto no deseado (accionar un actuador dos veces, cobrar
+   dos veces)? → QoS 2.
+
+## Ejemplo resuelto
+Los nueve escenarios que planteó el profesor, con la justificación de una línea:
+
+| # | Escenario | QoS | Justificación |
+|---|---|---|---|
+| 1 | Sensor de humedad en el jardín, envía cada 5 s | 0 | Dato periódico y perecedero: si se pierde una muestra, llega la siguiente en 5 s. |
+| 2 | Botón de pánico en un ascensor → emergencia | 1 | Crítico: no se puede perder, pero un duplicado no hace daño (la emergencia sigue siendo real). |
+| 3 | Refrigerador publica lista de productos al abrir la puerta | 0 | Evento frecuente y no crítico; se puede tolerar una pérdida ocasional. |
+| 4 | Riego automático recibe "encender bomba de agua" | 2 | Un duplicado accionaría la bomba dos veces (efecto físico no deseado). |
+| 5 | Smartwatch envía frecuencia cardiaca en tiempo real | 0 | Flujo continuo de alta frecuencia; se prioriza velocidad sobre garantía por muestra. |
+| 6 | Alarma contra incendios notifica "humo detectado" | 1 | Crítico que llegue, pero un duplicado (dos notificaciones) no es grave. |
+| 7 | Control de acceso abre la puerta con tarjeta válida | 2 | Un duplicado abriría la puerta una segunda vez sin nueva autorización: efecto de seguridad. |
+| 8 | Contador eléctrico envía lectura mensual | 2 | Un duplicado alteraría la facturación: debe procesarse exactamente una vez. |
+| 9 | Dron de entrega recibe "bajar altura 5 metros" | 2 | Un duplicado bajaría la altura el doble de lo ordenado: comando de actuación crítico. |
+
+## Errores típicos
+- Pensar que QoS 2 es "mejor" siempre: cuesta más overhead (4 mensajes vs 1); se reserva
+  para donde un duplicado realmente rompe algo.
+- Olvidar que el QoS efectivo es el **mínimo**, no el máximo ni el del publisher solo.
+- Confundir DUP (indica retransmisión de un PUBLISH) con QoS (nivel de garantía): son
+  bits distintos del mismo byte.
+- Creer que QoS 0 nunca tiene ack: nunca lo tiene, por definición ("fire and forget").
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "(EP-2025II, Q1 — 2.0 pts) En el protocolo MQTT, el nivel de Quality of Service (QoS) = 2 garantiza que cada mensaje sea entregado exactamente una vez (exactly once). Describa el mecanismo que permite lograr este comportamiento e indique los comandos o tipos de mensaje involucrados en el proceso. Brinde un ejemplo para donde usaría QoS = 0, 1 y 2, y explique el porqué de su elección.",
+  hints: [
+    "El mecanismo es un handshake de 4 paquetes con almacenamiento en ambos extremos: ¿cuáles son y en qué orden?",
+    "¿Cuándo puede borrar su copia cada extremo (emisor vs receptor)?",
+    "Para los ejemplos, piensa en costo de perder el mensaje vs costo de un duplicado.",
+  ],
+}}>
+
+**a. Mecanismo (handshake de 4 paquetes con almacenamiento en ambos extremos):**
+
+1. **PUBLISH** — el emisor manda el mensaje y lo guarda localmente.
+2. **PUBREC** — el receptor confirma que lo recibió (aún no lo entrega a la app) y guarda su propio estado.
+3. **PUBREL** — el emisor libera el mensaje; al recibirlo, el receptor ya puede **borrar** su copia.
+4. **PUBCOMP** — el receptor confirma que el proceso terminó; al recibirlo, el emisor **borra** su copia.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'QoS 2: handshake completo entre publisher y broker',
+  steps: [{
+    note: 'Cada extremo guarda el mensaje hasta que su parte del handshake concluye; sólo entonces borra su copia.',
+    actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 2', store: 'guarda msg' },
+      { from: 'b', to: 'p', label: 'PUBREC' },
+      { from: 'p', to: 'b', label: 'PUBREL' },
+      { from: 'b', to: 'p', label: 'PUBCOMP', store: 'borra msg' },
+    ],
+  }],
+}} />
+
+Los cuatro paquetes y el almacenamiento en ambos lados evitan tanto la pérdida (como en QoS 0)
+como el duplicado (como puede pasar en QoS 1 si se pierde el PUBACK).
+
+**b. Ejemplos:**
+
+| QoS | Ejemplo | Por qué |
+|---|---|---|
+| 0 | Sensor de humedad que publica cada 5 s | Perder una muestra no importa; importa más la velocidad, y llega otra en 5 s. |
+| 1 | Alarma de humo | Debe llegar sí o sí, pero una notificación duplicada no es grave. |
+| 2 | Comando "encender bomba de agua" de un riego automático | Un duplicado activaría la bomba dos veces: efecto físico indeseado. |
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "(EP-2026I, P4a y P4b — cadena de frío de vacunas, 0.5 pt cada una) Sensores de temperatura envían datos cada 5 segundos. a) ¿Qué nivel de QoS usaría para estos mensajes periódicos? b) Una alarma debe activarse inmediatamente si la temperatura supera un límite crítico. ¿Qué nivel de QoS recomendaría para el mensaje de alarma?",
+  hints: [
+    "Para (a): si se pierde una lectura de temperatura, ¿pasa algo grave si en 5 s llega la siguiente?",
+    "Para (b): la alarma es un evento raro y crítico; ¿un duplicado le hace daño a algo?",
+  ],
+}}>
+
+- **a) QoS 0.** Es un flujo periódico y frecuente; perder una muestra ocasional no
+  compromete el monitoreo porque llega una nueva a los 5 s, y así se minimiza el tráfico
+  (overhead) como pide el enunciado.
+- **b) QoS 1.** La alarma debe llegar sí o sí (no se puede perder un evento de temperatura
+  crítica), y un duplicado (la alarma sonando dos veces) no causa daño — no hace falta pagar
+  el costo de QoS 2 porque no hay un efecto de actuación físico asociado directamente al mensaje.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'a) QoS 0 sin ack vs b) QoS 1 con ack',
+  steps: [
+    {
+      note: 'a) Temperatura cada 5 s con QoS 0: sin ack, sin reintento. Si se pierde, llega la siguiente en 5 s.',
+      actors: [{ id: 's', label: 'Sensor' }, { id: 'b', label: 'Broker' }],
+      msgs: [{ from: 's', to: 'b', label: 'PUBLISH "Temp"', flags: 'QoS 0' }],
+    },
+    {
+      note: 'b) Alarma con QoS 1: el broker confirma con PUBACK; si se pierde, el sensor reenvía con DUP=1.',
+      actors: [{ id: 's', label: 'Sensor' }, { id: 'b', label: 'Broker' }],
+      msgs: [
+        { from: 's', to: 'b', label: 'PUBLISH "Alarma"', flags: 'QoS 1' },
+        { from: 'b', to: 's', label: 'PUBACK' },
+      ],
+    },
+  ],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "(EP-2026I, P4e — 1 pt) En una red inestable, algunos paquetes pueden retransmitirse. ¿El protocolo de transporte TCP nos ayudaría en estos casos? ¿Qué flag nos ayudaría a gestionar estos casos en MQTT? Explique su respuesta.",
+  hints: [
+    "TCP retransmite a nivel de segmento dentro de una conexión: ¿eso es lo mismo que un ack de aplicación MQTT (PUBACK/PUBREC)?",
+    "Cuando el CLIENTE MQTT retransmite un PUBLISH completo porque no le llegó el ack, ¿qué bit del fixed header marca esa retransmisión?",
+  ],
+}}>
+
+- **¿Ayuda TCP?** Sólo parcialmente: garantiza que los bytes de una conexión activa lleguen
+  en orden, pero no resuelve la pérdida de un ack de **aplicación** (p. ej. un PUBACK) ni
+  sobrevive si la conexión se cae y se reestablece.
+- **Flag que ayuda en MQTT:** **DUP** (Duplicate Delivery Flag, bit 3 del primer byte del
+  fixed header). Cuando el cliente reenvía un PUBLISH porque no recibió el ack esperado,
+  marca DUP=1 para indicar que es una retransmisión y no un mensaje nuevo.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'PUBACK perdido: el flag DUP marca la retransmisión',
+  steps: [{
+    note: 'TCP entregó bien los bytes del PUBACK; se perdió a nivel de aplicación (el cliente MQTT nunca lo vio). Por eso reenvía con DUP=1.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 'b', label: 'Broker' }],
+    msgs: [
+      { from: 'c', to: 'b', label: 'PUBLISH', flags: 'QoS 1 · DUP=0' },
+      { from: 'b', to: 'c', label: 'PUBACK', lost: true },
+      { from: 'c', to: 'b', label: 'PUBLISH', flags: 'QoS 1 · DUP=1 (retransmisión)' },
+      { from: 'b', to: 'c', label: 'PUBACK' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

@@ -1,0 +1,69 @@
+id: fat-nodes
+title: "Nodos gordos"
+type: algorithm
+week: week-03
+
+prerequisites: ["pointer-machine", "persistence-levels", "potential-method"]
+buildsOn: ["persistence-levels"]
+usedBy: []
+
+complexity:
+  read-field:
+    worst: "O(1)"
+    reasoning: >-
+      Costo real O(1): se revisa el registro de modificaciones de más
+      reciente a más antigua y se toma la primera entrada con tiempo <= t
+      (o el valor original si no hay ninguna). El registro tiene tamaño
+      acotado (2p, con p = O(1) por hipótesis), así que recorrerlo entero
+      en el peor caso sigue siendo O(1). El profesor no distingue
+      amortizado aquí: leer nunca modifica el registro.
+    source: "Sem_3_Persistencia-1.pdf#23-24"
+  write-field:
+    worst: "O(1)"
+    reasoning: >-
+      Caso con espacio en el registro: costo real c_i = O(1) (agregar una
+      tupla). Con el potencial Phi = suma sobre nodos de las entradas
+      usadas en su registro, esta operación sube Phi en 1 (DeltaPhi = +1),
+      así que el costo amortizado es ĉ_i = O(1) + 1 = O(1). Es el caso
+      "barato" de write-field; el caso lleno se cobra aparte en
+      node-split.
+    source: "Sem_3_Persistencia-1.pdf#29-30"
+  node-split:
+    worst: "O(p)"
+    reasoning: >-
+      Costo real c_i = O(1) (crear el nodo nuevo) + O(p) (redirigir los p
+      punteros entrantes, cada redirección una escritura de campo sobre
+      el predecesor). Con Phi = suma de entradas usadas: el nodo viejo
+      pasa de 2p entradas a 0 (DeltaPhi_split = -2p), y cada redirección
+      agrega a lo más 1 entrada a su predecesor (DeltaPhi_redirect <= +p).
+      El costo amortizado resulta ĉ_i = O(p) + (-2p + p) = O(p) - p =
+      O(1), porque p = O(1) por hipótesis. El profesor nunca separa
+      mejor/promedio/peor: da directamente el costo real y el amortizado.
+    source: "Sem_3_Persistencia-1.pdf#25-26,31-33"
+  bidirectional-fat-nodes:
+    worst: "O(1)"
+    reasoning: >-
+      El teorema DSST para persistencia total da "O(1) amortizado por
+      operación" (páginas 44-45) usando dos registros por nodo (adelante
+      y atrás) y un split "más delicado". El profesor no reproduce el
+      argumento de potencial completo para este caso extendido: sólo da
+      la cota final, heredando el mismo estilo (potential-method) de la
+      persistencia parcial sin repetir el cálculo de DeltaPhi paso a
+      paso.
+    source: "Sem_3_Persistencia-1.pdf#36-37,42-45"
+  version-tree-linearization:
+    worst: "O(1)"
+    reasoning: >-
+      "Comparar / insertar tiempos (order maintenance): O(1) ambas"
+      (página 41). El profesor no lo deriva: presenta la estructura de
+      mantenimiento de orden como una caja negra con esa interfaz, sobre
+      la secuencia de paréntesis que produce el recorrido de Euler del
+      árbol de versiones. El costo del recorrido de Euler en sí (recorrer
+      un árbol de n versiones) tampoco se analiza por separado en el
+      mazo.
+    source: "Sem_3_Persistencia-1.pdf#38-41"
+
+professorAnalysisStyle: potential-method
+hasVisualization: true
+visualizationType: persistent
+placeholder: false

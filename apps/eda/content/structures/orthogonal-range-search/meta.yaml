@@ -1,0 +1,43 @@
+id: orthogonal-range-search
+title: "Búsqueda ortogonal por rangos"
+type: concept
+week: week-04
+
+prerequisites: []
+buildsOn: []
+usedBy: ["range-tree", "layered-range-tree"]
+
+# Baseline d=1 sobre arreglo ordenado (#17-20), previo a introducir el BBST
+# en #22-24 (eso ya es range-tree). El profesor sólo da una fila de tabla sin
+# distinguir por operación ("consulta O(log n + k)", #20); la separación por
+# operación de abajo es el razonamiento de por qué esa cota se descompone así
+# — no una cifra nueva inventada, sino la lectura de qué exige cada pregunta.
+complexity:
+  existence:
+    worst: O(log n)
+    reasoning: >-
+      Sobre el arreglo ordenado, basta ubicar el predecesor de l1 (o el
+      sucesor) con búsqueda binaria (#19) y comparar contra r1: la
+      existencia no depende de k, sólo de encontrar la frontera del rango.
+    source: Sem4_Orthogonal_Range_Search.pdf#14,19-20
+  count:
+    worst: O(log n)
+    reasoning: >-
+      Dos búsquedas binarias ubican los índices frontera (predecesor de l1,
+      sucesor de r1); el conteo es la resta de esas posiciones, aritmética
+      de índices que tampoco depende de k.
+    source: Sem4_Orthogonal_Range_Search.pdf#15,19-20
+  enumeration:
+    worst: O(log n + k)
+    reasoning: >-
+      Mismo costo de frontera O(log n), pero además hay que recorrer y
+      reportar cada uno de los k elementos entre las fronteras: a diferencia
+      de existencia/conteo, no se puede responder sin tocar cada elemento de
+      la respuesta. Por eso es la única de las tres operaciones que es
+      output-sensitive (#8-9, #16, #20).
+    source: Sem4_Orthogonal_Range_Search.pdf#8-9,16,20
+
+professorAnalysisStyle: "conteo estructural directo"
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

@@ -1,0 +1,15 @@
+id: arduino-sensors
+title: Arduino y sensores comerciales
+type: lab
+unit: s4
+prerequisites: [digitization-adc]
+buildsOn: []
+usedBy: [lab-actuators]
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas:
+  - name: Voltaje leído por analogRead (Arduino, 10 bits)
+    tex: "V = \\text{lectura} \\times \\dfrac{5}{1024}"
+    reasoning: "El ADC interno de Arduino Uno/Mega tiene 10 bits (1024 niveles); esta relación lineal convierte la lectura entera de analogRead() a voltios, usada en el ejemplo del sensor LDR."
+    source: "Sem04_LAB_Sensores#17"

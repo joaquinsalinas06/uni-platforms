@@ -1,0 +1,13 @@
+{
+  "course": "Curso Plantilla (ej. Big Data / Algoritmos)",
+  "code": "CS-000",
+  "units": [
+    {
+      "id": "u1",
+      "title": "Unidad 1: Fundamentos",
+      "topics": [
+        "bienvenida"
+      ]
+    }
+  ]
+}

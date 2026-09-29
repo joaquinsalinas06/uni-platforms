@@ -1,0 +1,62 @@
+---
+kind: theory
+title: Diodos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Idea
+
+El diodo es el primer componente **no lineal** del curso: conduce en un sentido y
+bloquea en el otro. Como no hay una fórmula única que lo describa en todo momento
+(su comportamiento cambia entre "prende" y "apaga"), resolver un circuito con diodos
+exige un **método**: suponer un estado, resolver como si fuera lineal, y validar la
+suposición. Es exigente pero mecánico — y es uno de los temas más preguntados en el
+examen parcial.
+
+## Conceptos
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Diodo de silicio conduciendo (modelo de caída constante)',
+  steps: [{
+    note: 'En conducción, el diodo de Si se reemplaza por una fuente de 0.7 V (ánodo positivo respecto al cátodo).',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1', tone: 'si' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+        { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      diodes: [{ part: 'D1', assume: 'on' }],
+      hypothesis: 'D1 ON',
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.0043 },
+  }],
+}} />
+
+Este tema se organiza en cuatro subtemas:
+
+- **[Fundamentos](/topics/diodes/subtopics/fundamentos)**: ánodo/cátodo, polarización
+  directa/inversa, $V_f$, $I_f$, $I_r$, $V_{br}$, silicio (0.7 V) vs. germanio
+  (0.3 V), y el modelo equivalente de caída constante.
+- **[Método de hipótesis](/topics/diodes/subtopics/metodo-hipotesis)**: el método del
+  profesor paso a paso (asumir, redibujar, resolver, validar, ajustar), con **todos**
+  los ejercicios 1a-5 del material resueltos como animación.
+- **[LED y protección](/topics/diodes/subtopics/led-y-proteccion)**: el LED como
+  diodo (caída, corriente, potencia) desde el laboratorio de Tinkercad, y el diodo de
+  protección contra polaridad invertida.
+- **[Rectificadores](/topics/diodes/subtopics/rectificadores)**: rectificación de
+  media onda y onda completa, y *clippers* con fuente DC en serie.
+
+## Errores típicos
+
+- Tratar al diodo como una resistencia: no tiene un valor de Ω fijo, tiene un modelo
+  de **estado** (ON/OFF) que hay que suponer y validar.
+- Olvidar la validación: sin comprobar $I_D>0$ (ON) o $V_{AK}<V_\gamma$ (OFF), la
+  "solución" puede ser matemáticamente consistente pero físicamente imposible.
+- Confundir ánodo y cátodo al dibujar el modelo de caída constante: la fuente
+  equivalente siempre tiene el (+) hacia el ánodo.

@@ -1,0 +1,15 @@
+id: diodes
+title: Diodos
+type: method            # concept | method | lab  (igual que el mapa)
+unit: s2
+prerequisites: [basic-circuits]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas:
+  - name: Caída de un diodo de silicio en conducción
+    tex: "V_{D} = 0.7\\,\\text{V}"
+    reasoning: "Modelo de caída constante: en directa y conduciendo, el diodo Si se reemplaza por una fuente de 0.7 V."
+    source: "Sem02_WheatstoneYDiodos#22"

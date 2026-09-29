@@ -1,0 +1,494 @@
+---
+kind: theory
+title: "El lema de los logaritmos"
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Punto de partida: la configuración zig-zig ANTES del paso, con los
+        nombres que usa el profesor en la aplicación del lema (#30) — x, su
+        padre y y su abuelo z. A, B, C, D son subárboles completos: se
+        dibujan colapsados porque su contenido no importa, sólo su tamaño.
+        Todavía no hay nada marcado; es sólo el escenario donde el lema se
+        va a instanciar.
+      nodes:
+        - { id: z, value: z, parent: null }
+        - { id: y, value: y, parent: z }
+        - { id: D, value: D, parent: z, collapsed: true }
+        - { id: x, value: x, parent: y }
+        - { id: C, value: C, parent: y, collapsed: true }
+        - { id: A, value: A, parent: x, collapsed: true }
+        - { id: B, value: B, parent: x, collapsed: true }
+    - note: >-
+        Primera cantidad: b = s(x), el tamaño del subárbol de x ANTES del
+        paso. Son exactamente los nodos ámbar: x junto con A y B. Ámbar
+        porque delimita una frontera — es uno de los dos conjuntos que el
+        lema va a meter dentro del mismo contenedor.
+      highlight: [x]
+      nodes:
+        - { id: z, value: z, parent: null }
+        - { id: y, value: y, parent: z }
+        - { id: D, value: D, parent: z, collapsed: true }
+        - { id: x, value: x, parent: y, tag: "b = s(x)", state: marked }
+        - { id: C, value: C, parent: y, collapsed: true }
+        - { id: A, value: A, parent: x, collapsed: true, state: marked }
+        - { id: B, value: B, parent: x, collapsed: true, state: marked }
+      caption: "b = s(x) = |x| + |A| + |B|   (subárbol de x ANTES)"
+    - note: >-
+        Mismo árbol DESPUÉS del zig-zig: x quedó en la raíz, z bajó hasta
+        ser nieto. Los siete nodos son los mismos, sólo cambió de quién
+        cuelga cada uno — por eso los dos conjuntos que interesan se pueden
+        comparar sobre este único dibujo. La mecánica de las dos rotaciones
+        no se repite aquí: está en
+        [zig-zig](/structures/splay-tree/operations/zig-zig).
+      nodes:
+        - { id: x, value: x, parent: null }
+        - { id: A, value: A, parent: x, collapsed: true }
+        - { id: y, value: y, parent: x }
+        - { id: B, value: B, parent: y, collapsed: true }
+        - { id: z, value: z, parent: y }
+        - { id: C, value: C, parent: z, collapsed: true }
+        - { id: D, value: D, parent: z, collapsed: true }
+    - note: >-
+        Segunda cantidad: a = s'(z), el tamaño del subárbol de z DESPUÉS
+        del paso. La prima siempre significa "después". Ahora z cuelga del
+        fondo, así que su subárbol es pequeño: z junto con C y D.
+      highlight: [z]
+      nodes:
+        - { id: x, value: x, parent: null }
+        - { id: A, value: A, parent: x, collapsed: true }
+        - { id: y, value: y, parent: x }
+        - { id: B, value: B, parent: y, collapsed: true }
+        - { id: z, value: z, parent: y, tag: "a = s'(z)", state: marked }
+        - { id: C, value: C, parent: z, collapsed: true, state: marked }
+        - { id: D, value: D, parent: z, collapsed: true, state: marked }
+      caption: "a = s'(z) = |z| + |C| + |D|   (subárbol de z DESPUÉS)"
+    - note: >-
+        El mismo conjunto b = s(x) del paso 2, pero dibujado sobre el árbol
+        de DESPUÉS: son los mismos tres bloques (x, A, B), sólo que ahora x
+        es la raíz, A sigue colgando de x y B se mudó bajo y. El conjunto
+        de nodos no cambió — cambió su forma. Eso es lo que permite
+        compararlo con a dentro del mismo dibujo.
+      highlight: [x]
+      nodes:
+        - { id: x, value: x, parent: null, tag: "b = s(x)", state: marked }
+        - { id: A, value: A, parent: x, collapsed: true, state: marked }
+        - { id: y, value: y, parent: x }
+        - { id: B, value: B, parent: y, collapsed: true, state: marked }
+        - { id: z, value: z, parent: y }
+        - { id: C, value: C, parent: z, collapsed: true }
+        - { id: D, value: D, parent: z, collapsed: true }
+      caption: "b = s(x) = |x| + |A| + |B|   (los mismos nodos, ya reacomodados)"
+    - note: >-
+        Los dos conjuntos a la vez, y el hecho central de la aplicación
+        (#30) dibujado: NINGÚN bloque ámbar aparece en los dos — son
+        disjuntos. El único nodo del árbol que no pertenece a ninguno de
+        los dos es y, que queda en reposo. Por eso a + b nunca puede pasar
+        de lo que mide el árbol entero.
+      highlight: [y]
+      nodes:
+        - { id: x, value: x, parent: null, tag: "b", state: marked }
+        - { id: A, value: A, parent: x, collapsed: true, state: marked }
+        - { id: y, value: y, parent: x, tag: "fuera de a y de b" }
+        - { id: B, value: B, parent: y, collapsed: true, state: marked }
+        - { id: z, value: z, parent: y, tag: "a", state: marked }
+        - { id: C, value: C, parent: z, collapsed: true, state: marked }
+        - { id: D, value: D, parent: z, collapsed: true, state: marked }
+      caption: "a y b disjuntos; sólo y queda fuera ⇒ a + b = c − 1 ≤ c"
+    - note: >-
+        Tercera cantidad y cierre: c = s'(x), el tamaño del subárbol de x
+        DESPUÉS, que aquí es el árbol completo — x es la raíz. En carmesí
+        porque es el contenedor, la respuesta a "¿dentro de qué caben los
+        dos conjuntos ámbar?". Con a + b ≤ c verificada, la hipótesis del
+        lema se cumple y su conclusión se puede aplicar tal cual.
+      highlight: [x]
+      nodes:
+        - { id: x, value: x, parent: null, tag: "c = s'(x)", state: answer }
+        - { id: A, value: A, parent: x, collapsed: true, state: marked }
+        - { id: y, value: y, parent: x }
+        - { id: B, value: B, parent: y, collapsed: true, state: marked }
+        - { id: z, value: z, parent: y, tag: "a", state: marked }
+        - { id: C, value: C, parent: z, collapsed: true, state: marked }
+        - { id: D, value: D, parent: z, collapsed: true, state: marked }
+      caption: "a + b ≤ c ⇒ lg a + lg b ≤ 2 lg c − 2, es decir r'(z) + r(x) ≤ 2 r'(x) − 2"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+La prueba del [Lema de Acceso](/structures/access-lemma) analiza un paso
+zig-zig y llega, tras sustituir y acotar, a esta expresión para el costo
+amortizado del paso (#28):
+
+$$2 + \big(r'(z) - r(x)\big) + \big(r'(x) - r(x)\big)$$
+
+Lo que la prueba necesita es que eso quede por debajo de $3(r'(x) - r(x))$, para
+que la suma telescópica de todos los pasos cierre. Es decir, hace falta
+exactamente:
+
+$$2 + r'(z) - r(x) \le 2\big(r'(x) - r(x)\big)$$
+
+El profesor se detiene ahí y lo pregunta literalmente: **"Falta un último
+paso [...] ¿De dónde sale esa desigualdad?"** (#28). Y no sale de álgebra
+elemental: $r'(z)$, $r(x)$ y $r'(x)$ son *logaritmos* de tamaños de subárbol, y lo
+único que se sabe relacionándolos es una desigualdad entre los **tamaños**,
+no entre sus logaritmos. Este lema es justo el puente que faltaba: convierte
+una relación entre tamaños ($a + b \le c$) en una relación entre sus logaritmos.
+
+El diagrama de arriba muestra de dónde salen esos tres tamaños en el árbol.
+El resto del Lema de Acceso — la función de potencial, el telescopio, el
+enunciado final — no se repite aquí: vive en
+[access-lemma](/structures/access-lemma).
+
+## Intuición
+
+El enunciado (#29) es:
+
+> Si $a, b > 0$ y $a + b \le c$, entonces $\lg a + \lg b \le 2 \lg c - 2$.
+
+La lectura corta: **con una suma fija, la suma de los logaritmos se maximiza
+cuando los dos números son iguales.** El profesor lo dice explícitamente al
+final de la prueba: "el máximo se alcanza cuando $a = b = c/2$" (#29).
+
+De ahí sale el $-2$, que es la parte que desconcierta. No es una constante
+mágica ni un margen de seguridad: es exactamente lo que vale el caso de
+igualdad. Si $a = b = c/2$, entonces
+
+$$\lg a + \lg b = 2 \lg \frac{c}{2} = 2(\lg c - 1) = 2 \lg c - 2.$$
+
+El $-2$ es $2 \lg 2$: **el precio de partir $c$ en dos mitades**, una vez por cada
+mitad. Un reparto desparejo (uno se lleva casi todo, el otro casi nada) no
+se acerca a esa cota — se queda muy por debajo, porque el logaritmo del que
+casi no recibió nada se desploma hacia $-\infty$ mucho más rápido de lo que
+crece el del que se llevó todo.
+
+> **Nota de apoyo** (no está en las diapositivas): el nombre técnico de esa
+> propiedad es que $\lg$ es **cóncava**. Para una función cóncava, repartir una
+> cantidad fija entre dos argumentos siempre da la suma más grande en el
+> reparto parejo. El profesor no usa la palabra "concavidad" — llega al
+> mismo lugar por AM-GM, que es lo que se demuestra abajo.
+
+Esto es esa lectura con números, sobre árboles de 8 nodos repartidos de
+cuatro maneras distintas (derivado; el profesor no instancia el lema con
+números):
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Reparto extremo: un contenedor de c = 8 nodos partido en dos bloques de tamaños a = 1 y b = 7. Ámbar = los dos bloques que se reparten; carmesí = el contenedor c. La suma de logaritmos es lg 1 + lg 7 = 0 + 2.807 = 2.807, muy por debajo de la cota 2 lg 8 − 2 = 4. Sobra holgura: el bloque de tamaño 1 aporta 0 y arruina la suma.',
+      caption: 'a=1, b=7, c=8 → lg a + lg b = 2.807 ≤ 4 (holgura 1.193)',
+      highlight: ['c'],
+      nodes: [
+        { id: 'c', value: 8, tag: 'c = 8', state: 'answer' },
+        { id: 'a', value: 1, parent: 'c', tag: 'a = 1', collapsed: true, state: 'marked' },
+        { id: 'b', value: 7, parent: 'c', tag: 'b = 7', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'Se empareja un poco el reparto: a = 2, b = 6. La suma sube a 1 + 2.585 = 3.585. Mismo contenedor, misma suma a + b = 8, pero un reparto menos desigual ya da una suma de logaritmos mayor.',
+      caption: 'a=2, b=6, c=8 → lg a + lg b = 3.585 ≤ 4 (holgura 0.415)',
+      highlight: ['c'],
+      nodes: [
+        { id: 'c', value: 8, tag: 'c = 8', state: 'answer' },
+        { id: 'a', value: 2, parent: 'c', tag: 'a = 2', collapsed: true, state: 'marked' },
+        { id: 'b', value: 6, parent: 'c', tag: 'b = 6', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'Más parejo todavía: a = 3, b = 5. La suma sube otra vez, a 1.585 + 2.322 = 3.907. Va quedando claro el patrón: cuanto menos desigual es el reparto, más grande es lg a + lg b, aunque a + b no cambie nunca.',
+      caption: 'a=3, b=5, c=8 → lg a + lg b = 3.907 ≤ 4 (holgura 0.093)',
+      highlight: ['c'],
+      nodes: [
+        { id: 'c', value: 8, tag: 'c = 8', state: 'answer' },
+        { id: 'a', value: 3, parent: 'c', tag: 'a = 3', collapsed: true, state: 'marked' },
+        { id: 'b', value: 5, parent: 'c', tag: 'b = 5', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'El reparto parejo, a = b = 4 = c/2: la suma llega a 2 + 2 = 4, que es EXACTAMENTE la cota 2 lg 8 − 2 = 4. Cero holgura. Es el caso de igualdad que menciona el profesor (#29), y es el que explica el −2: dos mitades, cada una cuesta un lg 2 = 1 respecto de c.',
+      caption: 'a=4, b=4, c=8 → lg a + lg b = 4 = 2 lg 8 − 2 (igualdad, holgura 0)',
+      highlight: ['a', 'b'],
+      nodes: [
+        { id: 'c', value: 8, tag: 'c = 8', state: 'answer' },
+        { id: 'a', value: 4, parent: 'c', tag: 'a = 4', collapsed: true, state: 'marked' },
+        { id: 'b', value: 4, parent: 'c', tag: 'b = 4', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'Resumen de los cuatro repartos: 2.807 < 3.585 < 3.907 < 4. El máximo está en el reparto parejo y vale justo la cota del lema. Por eso el lema no se puede mejorar: existe un caso donde se cumple con igualdad, así que ningún −3 ni −2.5 serviría en su lugar.',
+      caption: 'máx sobre a + b = 8: se alcanza en a = b = 4 y vale 2 lg 8 − 2 = 4',
+      highlight: ['max'],
+      nodes: [
+        { id: 'p17', value: '1+7 → 2.807' },
+        { id: 'p26', value: '2+6 → 3.585' },
+        { id: 'p35', value: '3+5 → 3.907' },
+        { id: 'max', value: '4+4 → 4.000', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+No aplica: esto no es una estructura de datos, es un lema aritmético sobre
+tres números positivos (#29). No hay nodos, punteros ni invariante que
+mantener.
+
+Lo más parecido a un "invariante" son sus dos **hipótesis**, y vale la pena
+mirar por qué están formuladas así y no de otra forma:
+
+- **$a, b > 0$** — estrictamente positivos, porque $\lg 0$ no existe (tiende a
+  $-\infty$) y $\lg$ de un negativo tampoco. En la aplicación se cumple solo: $a$ y
+  $b$ son tamaños de subárboles que contienen al menos su propia raíz, así
+  que valen $\ge 1$.
+- **$a + b \le c$** — con desigualdad, no con igualdad. Es deliberado: en la
+  aplicación los dos conjuntos no llenan el contenedor (sobra el nodo $y$), así
+  que $a + b = c - 1$. Un lema que exigiera $a + b = c$ no se podría usar ahí.
+  Nótese que $c > 0$ se deduce de las otras dos, no hace falta pedirlo.
+
+## Operaciones
+
+No aplica: `operations: []` en el knowledge map. Un lema no se ejecuta, se
+*invoca*: su único "uso" es sustituir $a$, $b$ y $c$ por tres cantidades concretas
+y verificar que cumplen las hipótesis. Esa sustitución —la única del
+material— está trazada abajo, en el análisis.
+
+## Análisis de complejidad
+
+Aquí no hay costo que analizar (ver la sección siguiente); lo que va en esta
+sección es la **demostración** del lema, que es lo que el profesor da en su
+lugar, y su aplicación al paso zig-zig.
+
+### La demostración (#29)
+
+El profesor la da en una línea: "Por AM-GM, $ab \le \left(\frac{a+b}{2}\right)^2 \le \frac{c^2}{4}$;
+tomando $\lg$ de ambos lados se obtiene el resultado." Desplegada paso a paso:
+
+1. **AM-GM** (media aritmética ≥ media geométrica) para dos números positivos:
+   $\sqrt{ab} \le \frac{a+b}{2}$. Elevando al cuadrado (ambos lados son positivos, así que
+   la desigualdad se conserva):
+
+   $$ab \le \left(\frac{a+b}{2}\right)^2$$
+
+2. **La hipótesis** $a + b \le c$ entra aquí: como elevar al cuadrado preserva el
+   orden entre positivos,
+
+   $$\left(\frac{a+b}{2}\right)^2 \le \left(\frac{c}{2}\right)^2 = \frac{c^2}{4}$$
+
+3. **Encadenando** 1 y 2: $ab \le \frac{c^2}{4}$. Toda la información de la hipótesis ya
+   está usada; lo que queda es tomar logaritmos.
+
+4. **$\lg$ es creciente**, así que aplicarlo a ambos lados preserva la
+   desigualdad:
+
+   $$\lg(ab) \le \lg\left(\frac{c^2}{4}\right)$$
+
+5. **Las dos identidades del logaritmo** terminan el trabajo: a la izquierda,
+   $\lg(ab) = \lg a + \lg b$; a la derecha, $\lg(c^2/4) = \lg c^2 - \lg 4 = 2\lg c - 2$. Es decir:
+
+   $$\lg a + \lg b \le 2 \lg c - 2 \qquad \blacksquare$$
+
+**Cuándo se alcanza la igualdad.** En el paso 1, AM-GM es igualdad si y sólo
+si $a = b$; en el paso 2, es igualdad si y sólo si $a + b = c$. Ambas cosas a la
+vez dan $a = b = c/2$ — exactamente lo que dice el profesor (#29). Es lo que
+hace que el $-2$ no se pueda mejorar.
+
+La misma cadena con números, para ver que ninguna de las dos desigualdades
+sobra (derivado, con $a = 3$, $b = 5$, $c = 8$):
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Los tres números del ejemplo: a = 3, b = 5, c = 8. Cumplen las hipótesis: ambos positivos, y a + b = 8 ≤ 8 = c (aquí con igualdad, el caso más ajustado de la hipótesis). El producto de partida es ab = 15.',
+      caption: 'a = 3, b = 5, c = 8 → ab = 15',
+      highlight: ['n1'],
+      nodes: [
+        { id: 'n1', value: 'a·b = 15', tag: 'partida', state: 'active' },
+      ],
+    },
+    {
+      note: 'Paso 1 — AM-GM: ab ≤ ((a+b)/2)². Con estos números, ((3+5)/2)² = 4² = 16, y en efecto 15 ≤ 16. La desigualdad es estricta porque a ≠ b: aquí se pierde algo, y es justo lo que se recupera cuando a = b.',
+      caption: 'AM-GM: ab ≤ ((a+b)/2)² → 15 ≤ 16 ✓ (estricta: a ≠ b)',
+      highlight: ['n2'],
+      nodes: [
+        { id: 'n1', value: 'a·b = 15', tag: 'partida' },
+        { id: 'n2', value: '((a+b)/2)² = 16', parent: 'n1', tag: 'AM-GM', state: 'active' },
+      ],
+    },
+    {
+      note: 'Paso 2 — aquí entra la hipótesis a + b ≤ c: como 8 ≤ 8, elevar al cuadrado da 16 ≤ c²/4 = 64/4 = 16. En este ejemplo se cumple con igualdad porque a + b = c exactamente; si la hipótesis fuera estricta (a + b < c) este paso también sería estricto y sobraría más holgura.',
+      caption: 'hipótesis a+b ≤ c: ((a+b)/2)² ≤ c²/4 → 16 ≤ 16 ✓ (igualdad: a+b = c)',
+      highlight: ['n3'],
+      nodes: [
+        { id: 'n1', value: 'a·b = 15', tag: 'partida' },
+        { id: 'n2', value: '((a+b)/2)² = 16', parent: 'n1', tag: 'AM-GM' },
+        { id: 'n3', value: 'c²/4 = 16', parent: 'n2', tag: 'a+b ≤ c', state: 'active' },
+      ],
+    },
+    {
+      note: 'Paso 3 — encadenando las dos: ab ≤ c²/4, o sea 15 ≤ 16. Toda la hipótesis ya está consumida; de aquí en adelante sólo se aplican propiedades del logaritmo, ninguna desigualdad nueva.',
+      caption: 'cadena: ab ≤ c²/4 → 15 ≤ 16 ✓',
+      highlight: ['n4'],
+      nodes: [
+        { id: 'n1', value: 'a·b = 15', tag: 'partida' },
+        { id: 'n2', value: '((a+b)/2)² = 16', parent: 'n1', tag: 'AM-GM' },
+        { id: 'n3', value: 'c²/4 = 16', parent: 'n2', tag: 'a+b ≤ c' },
+        { id: 'n4', value: '15 ≤ 16', parent: 'n3', tag: 'cadena', state: 'active' },
+      ],
+    },
+    {
+      note: 'Paso 4 — lg es creciente, así que aplicarlo a ambos lados conserva la desigualdad: lg 15 = 3.907 ≤ lg 16 = 4. Nótese que es el mismo 3.907 del diagrama de la intuición para a = 3, b = 5: no es casualidad, es la misma cuenta escrita al revés.',
+      caption: 'lg creciente: lg 15 ≤ lg 16 → 3.907 ≤ 4 ✓',
+      highlight: ['n5'],
+      nodes: [
+        { id: 'n1', value: 'a·b = 15', tag: 'partida' },
+        { id: 'n2', value: '((a+b)/2)² = 16', parent: 'n1', tag: 'AM-GM' },
+        { id: 'n3', value: 'c²/4 = 16', parent: 'n2', tag: 'a+b ≤ c' },
+        { id: 'n4', value: '15 ≤ 16', parent: 'n3', tag: 'cadena' },
+        { id: 'n5', value: 'lg 15 ≤ lg 16', parent: 'n4', tag: 'lg creciente', state: 'active' },
+      ],
+    },
+    {
+      note: 'Paso 5 — se reescriben los dos lados con las identidades del logaritmo: a la izquierda lg(ab) = lg a + lg b, a la derecha lg(c²/4) = 2 lg c − 2. Esa reescritura del lado derecho es literalmente de dónde sale el −2 del enunciado: es el lg 4 que se resta. El lema queda demostrado.',
+      caption: 'lg a + lg b ≤ 2 lg c − 2 → 1.585 + 2.322 ≤ 6 − 2 = 4 ✓',
+      highlight: ['n6'],
+      nodes: [
+        { id: 'n1', value: 'a·b = 15', tag: 'partida' },
+        { id: 'n2', value: '((a+b)/2)² = 16', parent: 'n1', tag: 'AM-GM' },
+        { id: 'n3', value: 'c²/4 = 16', parent: 'n2', tag: 'a+b ≤ c' },
+        { id: 'n4', value: '15 ≤ 16', parent: 'n3', tag: 'cadena' },
+        { id: 'n5', value: 'lg 15 ≤ lg 16', parent: 'n4', tag: 'lg creciente' },
+        { id: 'n6', value: 'lg a + lg b ≤ 2 lg c − 2', parent: 'n5', tag: 'identidades', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+### La aplicación al zig-zig (#30)
+
+El profesor instancia el lema así:
+
+$$a = s'(z), \qquad b = s(x), \qquad c = s'(x)$$
+
+donde $s$ es el tamaño (suma de pesos) del subárbol y la prima significa
+"después del paso". El rango es $r = \lg s$; su definición y la función de
+potencial están en [access-lemma](/structures/access-lemma).
+
+La hipótesis $a + b \le c$ se cumple por una razón puramente geométrica, que es
+la que muestra el diagrama del inicio de esta página: **los subárboles de $z$
+(después) y de $x$ (antes) son disjuntos, y ambos caben dentro del subárbol de
+$x$ (después)** (#30). Disjuntos porque, tras el zig-zig, $z$ se llevó C y D
+mientras que A, B y el propio $x$ quedaron del otro lado; contenidos porque $x$
+terminó siendo la raíz de los tres niveles, así que su subárbol de después es
+todo.
+
+> **Nota de apoyo** (no está en las diapositivas): la cuenta exacta es
+> $a + b = c - 1$, porque el único nodo del subárbol final de $x$ que no está ni en
+> $s'(z)$ ni en $s(x)$ es $y$. El profesor sólo afirma "disjuntos y ambos caben
+> dentro", que es todo lo que el lema necesita — pero saber que sobra
+> exactamente un nodo ayuda a ver que la hipótesis no está apretada por
+> casualidad.
+
+Sustituyendo en la conclusión del lema y escribiendo $r = \lg s$:
+
+$$r'(z) + r(x) \le 2\,r'(x) - 2$$
+
+que es (#30) exactamente lo que faltaba:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'El lema, tal como se demostró arriba, todavía en términos de a, b y c. Ninguna referencia al árbol todavía: es aritmética pura.',
+      caption: 'lg a + lg b ≤ 2 lg c − 2',
+      highlight: ['l1'],
+      nodes: [
+        { id: 'l1', value: 'lg a + lg b ≤ 2 lg c − 2', tag: 'lema (#29)', state: 'active' },
+      ],
+    },
+    {
+      note: 'Se sustituyen las tres cantidades por las del paso zig-zig: a = s\'(z), b = s(x), c = s\'(x). La hipótesis a + b ≤ c es la que el diagrama del inicio de la página verifica: dos conjuntos disjuntos dentro del mismo contenedor.',
+      caption: "a = s'(z),  b = s(x),  c = s'(x)   — disjuntos y contenidos (#30)",
+      highlight: ['l2'],
+      nodes: [
+        { id: 'l1', value: 'lg a + lg b ≤ 2 lg c − 2', tag: 'lema (#29)' },
+        { id: 'l2', value: "lg s'(z) + lg s(x) ≤ 2 lg s'(x) − 2", parent: 'l1', tag: 'sustituir', state: 'active' },
+      ],
+    },
+    {
+      note: 'Como el rango es r = lg s, la línea anterior se reescribe entera en rangos. Aquí ya no aparece ningún logaritmo explícito: es la forma en la que la prueba del Lema de Acceso trabaja.',
+      caption: "r'(z) + r(x) ≤ 2 r'(x) − 2",
+      highlight: ['l3'],
+      nodes: [
+        { id: 'l1', value: 'lg a + lg b ≤ 2 lg c − 2', tag: 'lema (#29)' },
+        { id: 'l2', value: "lg s'(z) + lg s(x) ≤ 2 lg s'(x) − 2", parent: 'l1', tag: 'sustituir' },
+        { id: 'l3', value: "r'(z) + r(x) ≤ 2 r'(x) − 2", parent: 'l2', tag: 'r = lg s', state: 'active' },
+      ],
+    },
+    {
+      note: 'Pasando todo a la izquierda (restar 2 r\'(x) de ambos lados) queda la forma que aparece literalmente en la diapositiva #30. Es sólo álgebra: la desigualdad no cambió.',
+      caption: "r'(z) + r(x) − 2 r'(x) ≤ −2   (#30)",
+      highlight: ['l4'],
+      nodes: [
+        { id: 'l1', value: 'lg a + lg b ≤ 2 lg c − 2', tag: 'lema (#29)' },
+        { id: 'l2', value: "lg s'(z) + lg s(x) ≤ 2 lg s'(x) − 2", parent: 'l1', tag: 'sustituir' },
+        { id: 'l3', value: "r'(z) + r(x) ≤ 2 r'(x) − 2", parent: 'l2', tag: 'r = lg s' },
+        { id: 'l4', value: "r'(z) + r(x) − 2r'(x) ≤ −2", parent: 'l3', tag: 'reordenar', state: 'active' },
+      ],
+    },
+    {
+      note: 'Último reacomodo: sumar 2 a ambos lados y restar r(x) más de lo que se resta a la derecha — dicho de otro modo, mover −2r\'(x) a la derecha como +2r\'(x) y restar 2r(x) a ambos lados. El resultado es exactamente la desigualdad que la prueba del zig-zig pedía en #28. El hueco está cerrado; el resto del argumento sigue en access-lemma.',
+      caption: "2 + r'(z) − r(x) ≤ 2(r'(x) − r(x))   ← lo que faltaba (#28)",
+      highlight: ['l5'],
+      nodes: [
+        { id: 'l1', value: 'lg a + lg b ≤ 2 lg c − 2', tag: 'lema (#29)' },
+        { id: 'l2', value: "lg s'(z) + lg s(x) ≤ 2 lg s'(x) − 2", parent: 'l1', tag: 'sustituir' },
+        { id: 'l3', value: "r'(z) + r(x) ≤ 2 r'(x) − 2", parent: 'l2', tag: 'r = lg s' },
+        { id: 'l4', value: "r'(z) + r(x) − 2r'(x) ≤ −2", parent: 'l3', tag: 'reordenar' },
+        { id: 'l5', value: "2 + r'(z) − r(x) ≤ 2(r'(x) − r(x))", parent: 'l4', tag: 'meta (#28)', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+Y con eso el paso zig-zig queda acotado por $3(r'(x) - r(x))$ (#31), que es lo
+que la telescópica del [Lema de Acceso](/structures/access-lemma) necesita. El
+zig-zag usa **el mismo lema** sobre la configuración reflejada (#31): el
+profesor no repite el álgebra, y aquí tampoco.
+
+## Tabla de complejidad
+
+No aplica: `complexity: {}` en `meta.yaml`, a propósito. Este tema no tiene
+operaciones ni costos — la única "cota" que aparece es la desigualdad del
+enunciado, que es aritmética, no temporal. Las cotas de tiempo que este lema
+hace posibles ($O(\lg n)$ amortizado por acceso) se reportan donde
+corresponden: en [access-lemma](/structures/access-lemma) y en
+[splay-tree](/structures/splay-tree).
+
+## Ejemplos
+
+Ver [examples.md](/structures/logarithm-lemma#ejemplos): tres instancias
+numéricas del lema — el caso de igualdad ($a = b = 4$, $c = 8$), un reparto
+desparejo con holgura, y el límite donde $a + b < c$ estricto. Ninguna aparece
+en las diapositivas; todas están derivadas del enunciado (#29).
+
+## Comparación con estructuras relacionadas
+
+| | [método del potencial](/structures/potential-method) | este lema | [Lema de Acceso](/structures/access-lemma) |
+| --- | --- | --- | --- |
+| qué es | el marco del análisis amortizado: $\hat{c}_i = c_i + \Delta\Phi$ | una desigualdad aritmética sobre tres números positivos | el teorema que acota el costo amortizado de Splay |
+| qué aporta | la contabilidad ($\Phi$, telescópica, condición de validez) | el único paso que no es contabilidad ni álgebra elemental | el enunciado que se quería probar |
+| depende de | nada del árbol | nada del árbol: sólo $a, b > 0$ y $a + b \le c$ | de los otros dos |
+| se usa en | cualquier estructura amortizada ([fibonacci-heap](/structures/fibonacci-heap), Splay) | únicamente dentro del zig-zig y el zig-zag (#30-31) | [splay-tree](/structures/splay-tree) |
+
+En una frase: el método del potencial es el **marco**, el Lema de Acceso es
+el **argumento**, y este lema es la **pieza aritmética** que el argumento
+enchufa en el punto donde el álgebra sola no llega. Es fácil confundirlo con
+"otra parte de la prueba de Splay", pero no sabe nada de árboles: es cierto
+para tres números cualesquiera.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/logarithm-lemma#prueba-de-dominio).

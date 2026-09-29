@@ -1,0 +1,297 @@
+---
+kind: theory
+title: Splay tree
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Un splay tree de 5 nodos en cadena hacia la izquierda: 50-40-30-20-10.
+        Estado de reposo, antes de cualquier búsqueda — un BST ordinario,
+        sin ningún campo de balance extra.
+      nodes:
+        - { id: n50, value: 50, parent: null }
+        - { id: n40, value: 40, parent: n50, side: left }
+        - { id: n30, value: 30, parent: n40, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n10, value: 10, parent: n20, side: left }
+    - note: >-
+        Se busca 10: el nodo más profundo, a distancia 4 de la raíz. La
+        búsqueda desciende como en cualquier BST y lo encuentra — hasta acá,
+        ningún BST balanceado haría nada distinto.
+      highlight: ["n10"]
+      nodes:
+        - { id: n50, value: 50, parent: null }
+        - { id: n40, value: 40, parent: n50, side: left }
+        - { id: n30, value: 30, parent: n40, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n10, value: 10, parent: n20, side: left, state: active }
+    - note: >-
+        Lo que distingue al splay tree pasa después de encontrarlo:
+        Splay(10) lo sube con rotaciones hasta la raíz — ver
+        [`splay`](/structures/splay-tree/operations/splay) para el
+        detalle paso a paso de zig/zig-zig/zig-zag que produce este
+        resultado.
+      highlight: ["n10"]
+      nodes:
+        - { id: n10, value: 10, parent: null, state: answer }
+        - { id: n20, value: 20, parent: n10, side: right }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
+        - { id: n50, value: 50, parent: n40, side: right }
+    - note: >-
+        Si ahora se vuelve a buscar 10, el costo es 0: ya está en la raíz.
+        Ésa es la apuesta del splay tree — un valor buscado seguido queda
+        barato de volver a buscar, a costa de que la forma del árbol
+        cambie con cada acceso.
+      highlight: ["n10"]
+      nodes:
+        - { id: n10, value: 10, parent: null, state: active }
+        - { id: n20, value: 20, parent: n10, side: right }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
+        - { id: n50, value: 50, parent: n40, side: right }
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+El [modelo computacional BST](/structures/bst-computational-model) fija qué
+cuesta cada movimiento, y las
+[propiedades de secuencias de búsqueda](/structures/search-sequence-properties)
+describen cinco patrones que hacen que una secuencia sea "fácil" — pero
+ninguna de las dos dice **cómo construir un árbol que aproveche esos
+patrones**. Un [BST balanceado](/structures/balanced-bst) garantiza
+$O(\lg n)$ en el peor caso, siempre, sin importar la secuencia — y por eso
+mismo nunca sale más barato aunque la secuencia sea trivial (acceso
+secuencial, un conjunto de trabajo pequeño). El splay tree es la respuesta
+concreta: "Es un BST amortizado que siempre mueve el valor de búsqueda $x_i$ a
+la raíz del árbol mediante la función Splay" (#60). Es, además, el candidato
+que el profesor presenta (sin demostrarlo) a
+[dynamic-optimality](/structures/dynamic-optimality): la estructura que
+podría ser dinámicamente óptima.
+
+## Intuición
+
+Cada vez que se busca un valor, el árbol se reorganiza para dejarlo en la
+raíz — no de cualquier forma, sino subiéndolo mediante rotaciones locales
+que además reacomodan el camino que recorrió. Un valor que se busca seguido
+queda cerca de la raíz y la próxima búsqueda por él sale barata; un valor
+que no se toca en mucho tiempo se hunde. El árbol nunca deja de ser un BST
+válido (el orden in-order se preserva en cada rotación, ver
+[`rotate`](/structures/bst-computational-model/operations/rotate)), pero su
+forma cambia con cada acceso.
+
+## Estructura interna
+
+Un splay tree es un [BST](/structures/balanced-bst) ordinario sobre el
+[modelo computacional BST](/structures/bst-computational-model): cada nodo
+guarda su valor y punteros a padre, hijo izquierdo e hijo derecho. No hay
+ningún campo extra de balance (ni altura, ni color, ni factor): el único
+invariante es el de orden de un BST. Lo que distingue al splay tree no es
+qué guarda cada nodo, sino **qué operación se ejecuta después de cada
+búsqueda**: Splay(x), que siempre termina con x en la raíz.
+
+## Operaciones
+
+- [`rotate`](/structures/splay-tree/operations/rotate) — la primitiva:
+  `Rotar(v)` sube v un nivel sobre su padre. Los tres casos de abajo se
+  arman todos a partir de ella, y sólo se distinguen por sobre qué nodo se
+  llama primero (Sem6 #8-9).
+- [`zig`](/structures/splay-tree/operations/zig) — caso base: x es hijo de
+  la raíz, una sola rotación.
+- [`zig-zig`](/structures/splay-tree/operations/zig-zig) — x y su padre p
+  son hijos del mismo lado de su abuelo a.
+- [`zig-zag`](/structures/splay-tree/operations/zig-zag) — x y su padre p
+  son hijos de lados opuestos.
+- [`splay`](/structures/splay-tree/operations/splay) — la operación madre:
+  aplica repetidamente el caso que corresponda hasta que x llega a la raíz.
+- [`search`](/structures/splay-tree/operations/search) — Buscar(k) sobre el
+  modelo BST, seguido de Splay: del nodo encontrado si k está, del último
+  nodo visitado si no (Sem6 #13).
+
+## Análisis de complejidad
+
+`professorAnalysisStyle: amortized` — y aquí la palabra no es una etiqueta
+externa: aparece en la propia definición de la estructura ("Es un BST
+**amortizado**", #60), en la cota de Splay ("complejidad **amortizada** de
+$O(\log n)$ por búsqueda", #63) y en la propiedad general ("Cada operación toma
+$O(\log n)$ (**amortizado**)", #68). Eso obliga a distinguir dos costos en todo
+momento:
+
+- **Costo real** de un paso individual (`zig`, `zig-zig`, `zig-zag`): $O(1)$
+  cada uno — una o dos rotaciones, y cada rotación es $O(1)$ por
+  [el modelo BST](/structures/bst-computational-model/operations/rotate).
+  El costo real de **un** Splay(x) completo puede ser $O(n)$: si x está a
+  profundidad $n-1$, hacen falta ~$n/2$ pasos, cada uno $O(1)$, sumando $O(n)$.
+- **Costo amortizado**: promediado sobre cualquier secuencia de búsquedas,
+  el profesor da $O(\log n)$ por Splay (#63) y por operación en general (#68).
+  Una búsqueda aislada puede costar $O(n)$ en el peor caso real; lo que la
+  cota amortizada garantiza es que esa búsqueda cara sólo puede ocurrir si
+  "prepagó" con búsquedas baratas anteriores.
+
+En la semana 5 esa cota se **enuncia** sin derivarse: el mazo no define
+ninguna función de potencial $\Phi$, no da el argumento de rango ni prueba el
+Lema de Acceso. La semana 6 cierra ese hueco completo, y no acá: la
+demostración vive en [access-lemma](/structures/access-lemma) — la función
+de potencial $\Phi = \sum r(x)$ con $r(x) = \lg s(x)$, el enunciado del Lema
+de Acceso de Sleator & Tarjan (1985) y su prueba, caso por caso. Este tema
+la usa como resultado; no la reexplica.
+
+Aterrizar esa $\Phi$ en un árbol concreto — no sólo en la fórmula — es lo
+que hace creíble "prepagó con búsquedas baratas anteriores". El
+[método del potencial](/structures/potential-method) ya explica el
+mecanismo en general (ahí está la cuenta $\hat{c}_i = c_i + \Delta\Phi$ y
+el ejemplo sobre el montículo de Fibonacci); acá se aplica exactamente esa
+misma $\Phi = \sum \log_2(\text{tamaño del subárbol})$ a un splay tree de 5
+nodos, para ver el "prepago" ocurrir sobre rotaciones reales:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Árbol balanceado de 5 nodos, en reposo. Φ = Σ log₂(tamaño del subárbol de cada nodo): las hojas (n2, n4) aportan log₂1=0, n1 y n5 (subárbol de tamaño 2) aportan log₂2=1 cada uno, y la raíz n3 (subárbol de tamaño 5) aporta log₂5≈2.32. Ningún nodo se tocó todavía.',
+      caption: 'Φ(D₀) = 0+0+1+1+2.32 = 4.32',
+      nodes: [
+        { id: 'n3', value: 3, parent: null },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right' },
+        { id: 'n5', value: 5, parent: 'n3', side: 'right' },
+        { id: 'n4', value: 4, parent: 'n5', side: 'left' },
+      ],
+    },
+    {
+      note: 'Búsqueda barata: Splay(1). n1 ya es hijo de la raíz ⇒ un solo zig, costo real c₁=1 rotación. El resultado sube el tamaño del subárbol de n1 a 5 (ahora es la raíz) y baja el de n3 a 4 — Φ SUBE (ΔΦ=+1): la operación es barata pero deja crédito prepagado para más adelante.',
+      caption: 'c₁=1 (un zig)   ΔΦ=Φ(D₁)−Φ(D₀)=5.32−4.32=+1   ĉ₁=c₁+ΔΦ=1+1=2',
+      highlight: ['n1'],
+      nodes: [
+        { id: 'n1', value: 1, parent: null, state: 'active' },
+        { id: 'n3', value: 3, parent: 'n1', side: 'right' },
+        { id: 'n2', value: 2, parent: 'n3', side: 'left' },
+        { id: 'n5', value: 5, parent: 'n3', side: 'right' },
+        { id: 'n4', value: 4, parent: 'n5', side: 'left' },
+      ],
+    },
+    {
+      note: 'Otra búsqueda barata: Splay(5). n5 y su padre n3 son ambos hijos derechos de su abuelo ⇒ zig-zig, costo real c₂=2 rotaciones (sigue siendo O(1), no O(n)). Esta vez Φ NO cambia (ΔΦ=0): ni banca crédito ni lo gasta, el costo amortizado coincide con el real — el mismo caso "neutro" que Union en el montículo de Fibonacci.',
+      caption: 'c₂=2 (zig-zig)   ΔΦ=Φ(D₂)−Φ(D₁)=5.32−5.32=0   ĉ₂=c₂+ΔΦ=2+0=2',
+      highlight: ['n5'],
+      nodes: [
+        { id: 'n5', value: 5, parent: null, state: 'active' },
+        { id: 'n3', value: 3, parent: 'n5', side: 'left' },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+      ],
+    },
+    {
+      note: 'La búsqueda cara: Splay(2). n2 quedó a profundidad 3 (la más honda del árbol) — hace falta un zig-zag (n2 es hijo derecho de n1, hijo izquierdo de n3) y después un zig más para llegar a la raíz: c₃=3 rotaciones, el doble que cualquiera de los dos pasos anteriores.',
+      caption: 'c₃=3 (zig-zag + zig)',
+      highlight: ['n2'],
+      nodes: [
+        { id: 'n5', value: 5, parent: null },
+        { id: 'n3', value: 3, parent: 'n5', side: 'left' },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right', state: 'active' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+      ],
+    },
+    {
+      note: 'n2 termina en la raíz. Su subárbol pasó de tamaño 1 a 5, pero el de n5 (antes raíz, tamaño 5) cayó a 3 y el resto se reparte parejo: Φ CAE (ΔΦ=−0.42) — la caída absorbe parte del costo real, dejando el costo amortizado (2.58) por debajo del real (3). Ésta es la búsqueda que "cobra" el crédito que las dos búsquedas baratas anteriores dejaron prepagado — y Φ nunca bajó del valor inicial (4.32→5.32→5.32→4.91), la condición de validez del método del potencial se cumple en toda la secuencia.',
+      caption: 'ΔΦ=Φ(D₃)−Φ(D₂)=4.91−5.32=−0.42   ĉ₃=c₃+ΔΦ=3−0.42=2.58',
+      highlight: ['n2'],
+      nodes: [
+        { id: 'n2', value: 2, parent: null, state: 'answer' },
+        { id: 'n1', value: 1, parent: 'n2', side: 'left' },
+        { id: 'n5', value: 5, parent: 'n2', side: 'right' },
+        { id: 'n3', value: 3, parent: 'n5', side: 'left' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+      ],
+    },
+  ],
+}} />
+
+Los números son chicos porque $n=5$; con $n$ grande la misma mecánica es la
+que produce la brecha real: un Splay(x) puede costar $O(n)$ real (búsqueda
+cara de la nota anterior) mientras $\Delta\Phi$ absorbe casi todo, dejando
+$O(\log n)$ amortizado — exactamente lo que
+[el Lema de Acceso](/structures/access-lemma) demuestra en general y que
+aquí sólo se ve en miniatura.
+
+**El punto que hay que entender de verdad**: por qué `zig-zig` rota primero
+el **abuelo** `a` y no el padre `p`. El profesor lo plantea como pregunta
+explícita — "x e y son **ambos** hijos izquierdos (o ambos derechos) de sus
+padres. ¿Por qué no basta con rotar x con y, y luego x con z (dos rotaciones
+«ingenuas»)?" (Sem6 #6) — y responde sólo la mitad: "el orden importa:
+primero y con z, luego x con y — nunca al revés" (Sem6 #9). El *porqué* de
+fondo sigue siendo apoyo, y ahora tiene dónde cerrarse:
+[access-lemma](/structures/access-lemma) acota el paso zig-zig formalmente,
+y ahí se ve que el argumento sólo cierra con este orden.
+
+> **Nota de apoyo** (no está en las diapositivas): rotar primero `p` (subir
+> a `x` un nivel, luego rotar de nuevo) es el algoritmo "move-to-root"
+> ingenuo, y **no** consigue la cota amortizada de $O(\log n)$. La razón es que
+> ese orden no reduce la profundidad de los nodos que quedaron "colgando" en
+> el camino tan agresivamente como rotar `a` primero: rotar el abuelo
+> primero hace que el subárbol que compartían `p` y `a` quede dividido de
+> forma más pareja entre los dos, en vez de que uno de los dos quede casi
+> tan profundo como antes. Es exactamente la diferencia entre zig-zig
+> (rota `a` primero) y aplicar `zig` dos veces seguidas (rota `p` primero,
+> luego rota otra vez) — mismo destino final (x en la raíz), pero la forma
+> intermedia del árbol es distinta, y esa forma es la que determina si el
+> argumento de potencial cierra o no. Ese argumento está en
+> [access-lemma](/structures/access-lemma); lo que la nota agrega es la
+> lectura geométrica de por qué se rompe con el otro orden.
+
+## Tabla de complejidad
+
+La tabla se genera desde `meta.yaml`. Nota de lectura: `rotate`, `zig`,
+`zig-zig` y `zig-zag` llevan **costo real** $O(1)$ (son la primitiva y los
+pasos atómicos); `splay` y `search` llevan **costo amortizado** $O(\log n)$
+(son las cotas que promedian sobre una secuencia). El peor caso real de una
+llamada individual no tiene fila propia porque no es una cota más de la
+tabla, sino la observación que el profesor hace al pie del pseudocódigo: "el
+costo real es proporcional a la profundidad de $x$ — hasta $\Theta(n)$ en el
+peor caso individual" (Sem6 #10).
+
+## Ejemplos
+
+Ver [examples.md](/structures/splay-tree/examples).
+
+## Comparación con estructuras relacionadas
+
+| | [balanced-bst](/structures/balanced-bst) | splay tree (aquí) |
+| --- | --- | --- |
+| invariante | forma (altura balanceada) | ninguno extra: sólo orden BST |
+| garantía | $O(\lg n)$ peor caso, **toda** operación | $O(\log n)$ sólo **amortizado** |
+| se adapta a la secuencia | no — mismo costo sin importar el patrón | sí — exhibe las cinco propiedades de [search-sequence-properties](/structures/search-sequence-properties) que un BST estático no puede |
+| optimalidad dinámica | no se plantea | es **el candidato** ([dynamic-optimality](/structures/dynamic-optimality)), conjetura abierta |
+
+Este es el cierre del hueco que
+[search-sequence-properties](/structures/search-sequence-properties) deja
+explícito: esas cuatro propiedades (acceso secuencial, puntero dinámico,
+conjunto de trabajo, cota de entropía) describen qué tan fácil puede ser una
+secuencia, pero "ninguna de las cuatro dice cómo lograr esa cota — eso es
+trabajo de una estructura concreta que se adapte a la secuencia". El splay
+tree es esa estructura (#69-72): las cumple todas. Lo que sigue sin
+responderse (#74-75) es si además cumple la propiedad unificada y si es
+$O(1)$-competitivo contra el óptimo offline — ambas abiertas.
+
+### Qué sigue (semana 6)
+
+Este tema cierra con Splay y Buscar. La semana 6 continúa desde acá en tres
+direcciones, y cada una vive en su propio tema:
+
+- [splay-tree-adt](/structures/splay-tree-adt) — las operaciones del TDA
+  (Separar, Unir, Insertar, Eliminar) construidas **sólo** sobre Buscar y
+  Splay, sin ningún recorrido extra del árbol.
+- [access-lemma](/structures/access-lemma) — la demostración de la cota
+  amortizada que acá sólo se enuncia: la función de potencial, el Lema de
+  Acceso y su prueba.
+- [static-optimality](/structures/static-optimality) — la cota de entropía
+  de [search-sequence-properties](/structures/search-sequence-properties),
+  ahora demostrada como corolario del Lema de Acceso.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/splay-tree/mastery-check).

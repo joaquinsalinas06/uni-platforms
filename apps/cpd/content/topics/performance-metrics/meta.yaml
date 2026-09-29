@@ -1,0 +1,31 @@
+id: performance-metrics
+title: "Speedup, eficiencia, Ley de Amdahl y Ley de Gustafson"
+type: concept
+unit: u2
+
+prerequisites: ["dag-cost-model"]
+buildsOn: []
+usedBy: ["pram-models", "partitioning-randomized", "nbody-divide-conquer"]
+
+complexity:
+  amdahl-speedup:
+    worst: "S = \\tfrac{1}{f_s + \\tfrac{f_p}{p}}"
+    reasoning: >-
+      Se parte de Ts = fs + fp = 1 (normalizado) y Tp = fs + fp/p, con fs la
+      fraccion secuencial y fp = 1 - fs la paralela. S = Ts/Tp da la formula.
+      Cuando p -> infinito, fp/p -> 0 y S -> 1/fs: la parte secuencial pone un
+      techo al speedup sin importar cuantos procesadores se agreguen.
+    source: "U2.1-Diseño_en_paralelo-performance-apuntes.pdf#1"
+  gustafson-speedup:
+    worst: "S = f_s + p f_p"
+    reasoning: >-
+      Aqui Tp = fs + fp se mantiene fijo (el tiempo paralelo es constante) y
+      Ts = fs + p*fp crece con p porque el problema crece proporcionalmente a
+      p. S = Ts/Tp = fs + p*fp: a diferencia de Amdahl, el speedup escala
+      linealmente con p en vez de saturar.
+    source: "U2.1-Diseño_en_paralelo-performance-apuntes.pdf#1"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false

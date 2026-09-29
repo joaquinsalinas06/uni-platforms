@@ -1,0 +1,1105 @@
+---
+# Sólo ejercicios que no están ya resueltos en content/topics ni content/evaluaciones.
+# Forma de cada ejercicio: templates/exercise-solution.md. Agrupados por semana (## de
+# knowledge-map.json) y, dentro de cada semana, del más fácil al más difícil.
+# Cada circuito está dibujado desde la figura original (página citada); su expect lo verifica pnpm verify.
+title: Ejemplos y ejercicios de laboratorio
+---
+
+import Visualization from '../src/components/Visualization.astro';
+import ExerciseBlock from '../src/components/ExerciseBlock';
+
+## Semana 1 — Introducción a IoT y circuitos básicos
+
+### Divisor de tres resistencias
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Divisor de tres resistencias',
+  steps: [{
+    note: 'Una sola malla: E, R1, R2 y R3 en serie.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 5, y: 0 },
+        { id: 'b', x: 5, y: 4 }, { id: 'c', x: 5, y: 8 }, { id: 'd', x: 5, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 12, label: 'E' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'a' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'b', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'c', value: 4000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'd', value: 10000, label: 'R3' },
+        { id: 'w1', kind: 'wire', from: 'd', to: 'g' },
+      ],
+      voltages: [{ part: 'R1', label: 'V_c' }, { part: 'R2', label: 'V_b' }, { part: 'R3', label: 'V_a' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "*(Sem01_EjerciciosConCircuitos, p. 27)* Una fuente de $E = 12$ V alimenta tres resistencias en serie: $R_1 = 1\\,\\text{k}\\Omega$ (arriba), $R_2 = 4\\,\\text{k}\\Omega$ y $R_3 = 10\\,\\text{k}\\Omega$ (abajo). Halle las caídas de tensión $V_a$ (sobre $R_3$), $V_b$ (sobre $R_2$) y $V_c$ (sobre $R_1$), con la polaridad indicada.",
+  hints: [
+    "Es una sola malla: la misma corriente pasa por las tres resistencias. Súmalas y aplica Ohm a todo el lazo.",
+    "$R_T = 15\\,\\text{k}\\Omega$. Cada caída es la fracción de 12 V que le toca a su resistencia: $V_x = E\\,R_x/R_T$ (divisor de tensión).",
+  ],
+}}>
+
+**1. Resistencia total.** Una sola malla: las tres resistencias están en serie y se suman.
+
+$$
+R_T = R_1 + R_2 + R_3 = 1 + 4 + 10 = 15\,\text{k}\Omega
+$$
+
+**2. Corriente de la malla.** Ohm aplicado a todo el lazo; es la misma en las tres.
+
+$$
+I = \frac{E}{R_T} = \frac{12\,\text{V}}{15\,\text{k}\Omega} = 0.8\,\text{mA}
+$$
+
+**3. Caída en cada resistencia.** Ohm en cada una con esa corriente.
+
+$$
+V_a = I\,R_3 = 0.8\,\text{mA}\cdot 10\,\text{k}\Omega = \boxed{8\,\text{V}} \qquad V_b = I\,R_2 = \boxed{3.2\,\text{V}} \qquad V_c = I\,R_1 = \boxed{0.8\,\text{V}}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: divisor de tres resistencias',
+  steps: [{
+    note: 'La caída es proporcional a la resistencia: R3 (10 kΩ) se lleva 2/3 de los 12 V.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 5, y: 0 },
+        { id: 'b', x: 5, y: 4 }, { id: 'c', x: 5, y: 8 }, { id: 'd', x: 5, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 12, label: 'E' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'a' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'b', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'c', value: 4000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'd', value: 10000, label: 'R3', state: 'answer' },
+        { id: 'w1', kind: 'wire', from: 'd', to: 'g' },
+      ],
+      groups: [{ parts: ['R1', 'R2', 'R3'], tone: 'series', label: 'serie' }],
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+      voltages: [{ part: 'R1', label: 'V_c', showValue: true }, { part: 'R2', label: 'V_b', showValue: true }, { part: 'R3', label: 'V_a', showValue: true }],
+    },
+    expect: { 'V(c,d)': 8, 'V(b,c)': 3.2, 'V(a,b)': 0.8, 'I(R1)': 0.0008 },
+  }],
+}} />
+
+**Comprobación (LKV):** $V_a + V_b + V_c = 8 + 3.2 + 0.8 = 12\,\text{V} = E$ ✓.
+
+</ExerciseBlock>
+
+### Serie-paralelo con $V_1 = 20$ V
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Serie-paralelo con V1 = 20 V',
+  steps: [{
+    note: 'R2‖R3 arriba, R4 a la derecha y R5‖R6 en el regreso a tierra.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 10, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'n2', x: 8, y: 0 },
+        { id: 'n3', x: 12, y: 0 }, { id: 'n4', x: 12, y: 10 }, { id: 'm2', x: 8, y: 10 }, { id: 'm1', x: 4, y: 10 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 20, label: 'V1' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'n1', value: 2, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'n2', value: 12, label: 'R2', via: [[4, -2], [8, -2]] },
+        { id: 'R3', kind: 'resistor', from: 'n1', to: 'n2', value: 6, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'n2', to: 'n3', value: 1, label: 'R4' },
+        { id: 'w1', kind: 'wire', from: 'n3', to: 'n4' }, { id: 'w2', kind: 'wire', from: 'n4', to: 'm2' },
+        { id: 'R5', kind: 'resistor', from: 'm2', to: 'm1', value: 2, label: 'R5' },
+        { id: 'R6', kind: 'resistor', from: 'm2', to: 'm1', value: 2, label: 'R6', via: [[8, 12], [4, 12]] },
+        { id: 'w3', kind: 'wire', from: 'm1', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'i' }, { part: 'R2', label: 'i_1' }, { part: 'R6', label: 'i_2' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 45)* Una fuente $V_1 = 20\\,\\text{V}$ alimenta, en este orden: $R_1 = 2\\,\\Omega$; el paralelo $R_2 = 12\\,\\Omega \\parallel R_3 = 6\\,\\Omega$; $R_4 = 1\\,\\Omega$; y, en el camino de regreso a tierra, el paralelo $R_5 = 2\\,\\Omega \\parallel R_6 = 2\\,\\Omega$. Calcule: (a) la corriente $i$ que entrega la fuente, (b) la corriente $i_1$ por $R_2$, (c) la potencia que consume $R_4$ y (d) la potencia que entrega la fuente. Extra: la corriente $i_2$ por $R_6$.",
+  hints: [
+    "Reduce primero cada paralelo a una sola resistencia; lo que queda es una sola malla en serie.",
+    "$R_2\\parallel R_3 = 4\\,\\Omega$ y $R_5\\parallel R_6 = 1\\,\\Omega$, así que $R_{eq} = 2+4+1+1 = 8\\,\\Omega$.",
+    "Para $i_1$ usa divisor de corriente (o calcula la tensión sobre el paralelo y aplica Ohm a $R_2$).",
+  ],
+}}>
+
+**1. Reducir los dos paralelos.** Cada par une los mismos dos nodos.
+
+$$
+R_2 \parallel R_3 = \frac{12 \cdot 6}{12 + 6} = 4\,\Omega \qquad R_5 \parallel R_6 = \frac{2 \cdot 2}{2 + 2} = 1\,\Omega
+$$
+
+**2. Resistencia equivalente.** Lo que queda es una sola malla en serie.
+
+$$
+R_{eq} = R_1 + (R_2\parallel R_3) + R_4 + (R_5\parallel R_6) = 2 + 4 + 1 + 1 = 8\,\Omega
+$$
+
+### (a) Corriente de la fuente
+
+**3. Ohm en la malla reducida.**
+
+$$
+i = \frac{V_1}{R_{eq}} = \frac{20\,\text{V}}{8\,\Omega} = \boxed{2.5\,\text{A}}
+$$
+
+### (b) Corriente por $R_2$
+
+**4. Tensión sobre el paralelo.** Toda $i$ atraviesa $R_2\parallel R_3$; con esa tensión, Ohm en $R_2$.
+
+$$
+V_{23} = i\,(R_2\parallel R_3) = 2.5 \cdot 4 = 10\,\text{V} \quad\Rightarrow\quad i_1 = \frac{V_{23}}{R_2} = \frac{10}{12} = \boxed{0.833\,\text{A}}
+$$
+
+(y $10/6 = 1.667$ A por $R_3$: la resistencia menor se lleva más corriente).
+
+### (c) Potencia en $R_4$
+
+**5. $P = i^2 R$** con la corriente total, porque $R_4$ está en serie con la fuente.
+
+$$
+P_{R_4} = i^2\,R_4 = 2.5^2 \cdot 1 = \boxed{6.25\,\text{W}}
+$$
+
+### (d) Potencia de la fuente y extra $i_2$
+
+**6. $P = V\,i$** con la corriente que sale de la fuente.
+
+$$
+P_{V_1} = V_1\,i = 20 \cdot 2.5 = \boxed{50\,\text{W}}
+$$
+
+**7. Divisor de corriente en $R_5 \parallel R_6$.** Son iguales: cada una lleva la mitad.
+
+$$
+i_2 = \frac{i}{2} = \boxed{1.25\,\text{A}}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: serie-paralelo con V1 = 20 V',
+  steps: [{
+    note: 'i = 2.5 A sale de la fuente, se reparte 0.83 / 1.67 A en R2‖R3 y 1.25 / 1.25 A en R5‖R6.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 10, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'n2', x: 8, y: 0 },
+        { id: 'n3', x: 12, y: 0 }, { id: 'n4', x: 12, y: 10 }, { id: 'm2', x: 8, y: 10 }, { id: 'm1', x: 4, y: 10 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 20, label: 'V1' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'n1', value: 2, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'n2', value: 12, label: 'R2', via: [[4, -2], [8, -2]] },
+        { id: 'R3', kind: 'resistor', from: 'n1', to: 'n2', value: 6, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'n2', to: 'n3', value: 1, label: 'R4', state: 'answer' },
+        { id: 'w1', kind: 'wire', from: 'n3', to: 'n4' }, { id: 'w2', kind: 'wire', from: 'n4', to: 'm2' },
+        { id: 'R5', kind: 'resistor', from: 'm2', to: 'm1', value: 2, label: 'R5' },
+        { id: 'R6', kind: 'resistor', from: 'm2', to: 'm1', value: 2, label: 'R6', via: [[8, 12], [4, 12]] },
+        { id: 'w3', kind: 'wire', from: 'm1', to: 'g' },
+      ],
+      groups: [{ parts: ['R2', 'R3'], tone: 'parallel', label: 'paralelo' }, { parts: ['R5', 'R6'], tone: 'parallel', label: 'paralelo' }],
+      currents: [{ part: 'R1', label: 'i', showValue: true }, { part: 'R2', label: 'i_1', showValue: true }, { part: 'R6', label: 'i_2', showValue: true }],
+    },
+    expect: { 'I(R1)': 2.5, 'I(R2)': 0.8333, 'I(R6)': 1.25, 'P(R4)': 6.25, 'P(V1)': 50 },
+  }],
+}} />
+
+**Comprobación — balance de potencia:**
+
+| Elemento | Cálculo | Potencia |
+|---|---|---|
+| $R_1$ | $2.5^2 \cdot 2$ | 12.5 W |
+| $R_2$ | $10^2 / 12$ | 8.33 W |
+| $R_3$ | $10^2 / 6$ | 16.67 W |
+| $R_4$ | $2.5^2 \cdot 1$ | 6.25 W |
+| $R_5$, $R_6$ | $2 \cdot (1.25^2 \cdot 2)$ | 6.25 W |
+| **Total consumido** | | **50 W** $= P_{V_1}$ ✓ |
+
+</ExerciseBlock>
+
+## Semana 2 — Arquitectura IoT, Wheatstone y diodos
+
+### Rama con diodo de silicio
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Rama con diodo de silicio',
+  steps: [{
+    note: 'Las dos ramas cuelgan directo de la fuente.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 4, y: 8, ground: true }, { id: 'bl', x: 0, y: 8 }, { id: 't', x: 0, y: 0 }, { id: 'n', x: 4, y: 0 },
+        { id: 'r', x: 8, y: 0 }, { id: 'm', x: 8, y: 4 }, { id: 'br', x: 8, y: 8 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'bl', to: 't', value: 12, label: 'V1' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'n' },
+        { id: 'R1', kind: 'resistor', from: 'n', to: 'g', value: 240, label: 'R1' },
+        { id: 'w1', kind: 'wire', from: 'n', to: 'r' },
+        { id: 'R2', kind: 'resistor', from: 'r', to: 'm', value: 1000, label: 'R2' },
+        { id: 'D', kind: 'diode', model: 'si', vf: 0.7, from: 'm', to: 'br', label: 'D', tone: 'si' },
+        { id: 'w2', kind: 'wire', from: 'br', to: 'g' }, { id: 'w3', kind: 'wire', from: 'g', to: 'bl' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 32)* Una fuente $V_1 = 12\\,\\text{V}$ alimenta dos ramas en paralelo: $R_1 = 240\\,\\Omega$ sola, y $R_2 = 1\\,\\text{k}\\Omega$ en serie con un diodo D de silicio (ánodo hacia $R_2$, cátodo hacia tierra). (a) Calcule la corriente por $R_1$. (b) Calcule la corriente por $R_2$. (c) Si la fuente se invirtiera, ¿el diodo D conduciría?",
+  hints: [
+    "La fuente está conectada directo a las dos ramas (sin resistencia en serie): cada rama ve los 12 V completos y se resuelve por separado.",
+    "Plantea la hipótesis D en ON (fuente de 0.7 V) y valida que su corriente salga positiva.",
+    "Para (c), con la fuente al revés el ánodo queda 12 V por debajo del cátodo: revisa el signo de $V_{AK}$.",
+  ],
+}}>
+
+Modelo de caída constante: Si $\Rightarrow V_\gamma = 0.7$ V.
+
+### (a) Corriente por $R_1$
+
+**1. Ohm directo.** $R_1$ está sola entre los bornes de la fuente: ve los 12 V completos.
+
+$$
+I_{R_1} = \frac{V_1}{R_1} = \frac{12\,\text{V}}{240\,\Omega} = \boxed{50\,\text{mA}}
+$$
+
+### (b) Corriente por $R_2$
+
+**2. Hipótesis: D ON.** El diodo se reemplaza por una fuente de 0.7 V y se resuelve la rama.
+
+$$
+I_{R_2} = \frac{V_1 - V_\gamma}{R_2} = \frac{12 - 0.7}{1\,\text{k}\Omega} = \boxed{11.3\,\text{mA}}
+$$
+
+**3. Validar.** ON exige corriente positiva en el sentido ánodo → cátodo.
+
+$$
+I_D = 11.3\,\text{mA} \ge 0 \;\checkmark \quad\Rightarrow\quad \text{D ON}
+$$
+
+### (c) Fuente invertida
+
+**4. Hipótesis: D OFF** (el nodo superior ahora está en −12 V). Sin corriente, $R_2$ no cae y el ánodo queda en −12 V.
+
+$$
+V_{AK} = -12\,\text{V} - 0\,\text{V} = -12\,\text{V} < 0.7\,\text{V} \;\checkmark \quad\Rightarrow\quad \boxed{\text{D no conduce},\ I_{R_2} = 0\,\text{A}}
+$$
+
+Por $R_1$ siguen pasando 50 mA, ahora en sentido contrario.
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: diodo en directa y con la fuente invertida',
+  steps: [
+    {
+      note: 'Fuente normal: D ON (0.7 V) y validado con I_D > 0. R1 lleva 50 mA y R2 11.3 mA.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 4, y: 8, ground: true }, { id: 'bl', x: 0, y: 8 }, { id: 't', x: 0, y: 0 }, { id: 'n', x: 4, y: 0 },
+          { id: 'r', x: 8, y: 0 }, { id: 'm', x: 8, y: 4 }, { id: 'br', x: 8, y: 8 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 'bl', to: 't', value: 12, label: 'V1' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n' },
+          { id: 'R1', kind: 'resistor', from: 'n', to: 'g', value: 240, label: 'R1' },
+          { id: 'w1', kind: 'wire', from: 'n', to: 'r' },
+          { id: 'R2', kind: 'resistor', from: 'r', to: 'm', value: 1000, label: 'R2' },
+          { id: 'D', kind: 'diode', model: 'si', vf: 0.7, from: 'm', to: 'br', label: 'D', tone: 'si' },
+          { id: 'w2', kind: 'wire', from: 'br', to: 'g' }, { id: 'w3', kind: 'wire', from: 'g', to: 'bl' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'D ON',
+        currents: [{ part: 'R1', label: 'I_{R1}', showValue: true }, { part: 'R2', label: 'I_{R2}', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.05, 'I(R2)': 0.0113, 'I(D)': 0.0113 },
+    },
+    {
+      note: 'Fuente invertida: D OFF, validado con V_AK = −12 V < 0.7 V. I_R2 = 0 y R1 lleva 50 mA hacia arriba (sale negativa respecto de la flecha).',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 4, y: 8, ground: true }, { id: 'bl', x: 0, y: 8 }, { id: 't', x: 0, y: 0 }, { id: 'n', x: 4, y: 0 },
+          { id: 'r', x: 8, y: 0 }, { id: 'm', x: 8, y: 4 }, { id: 'br', x: 8, y: 8 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 't', to: 'bl', value: 12, label: 'V1' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n' },
+          { id: 'R1', kind: 'resistor', from: 'n', to: 'g', value: 240, label: 'R1' },
+          { id: 'w1', kind: 'wire', from: 'n', to: 'r' },
+          { id: 'R2', kind: 'resistor', from: 'r', to: 'm', value: 1000, label: 'R2' },
+          { id: 'D', kind: 'diode', model: 'si', vf: 0.7, from: 'm', to: 'br', label: 'D', tone: 'si' },
+          { id: 'w2', kind: 'wire', from: 'br', to: 'g' }, { id: 'w3', kind: 'wire', from: 'g', to: 'bl' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'D OFF',
+        currents: [{ part: 'R1', label: 'I_{R1}', showValue: true }, { part: 'R2', label: 'I_{R2}', showValue: true }],
+      },
+      expect: { 'I(D)': 0, 'I(R1)': -0.05 },
+    },
+  ],
+}} />
+
+**Comprobación:** en (b), LKV en la rama: $I_{R_2} R_2 + V_\gamma = 11.3 + 0.7 = 12$ V $= V_1$ ✓.
+
+</ExerciseBlock>
+
+### Req entre A y B
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Req entre A y B',
+  steps: [{
+    note: 'A es el riel de arriba y B el de abajo.',
+    circuit: {
+      nodes: [
+        { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't4', x: 4, y: 0 }, { id: 't8', x: 8, y: 0 }, { id: 't14', x: 14, y: 0 },
+        { id: 't18', x: 18, y: 0 }, { id: 't26', x: 26, y: 0 }, { id: 't30', x: 30, y: 0 },
+        { id: 'B', x: 0, y: 12, label: 'B' }, { id: 'b4', x: 4, y: 12 }, { id: 'b11', x: 11, y: 12 }, { id: 'b14', x: 14, y: 12 },
+        { id: 'b18', x: 18, y: 12 }, { id: 'b26', x: 26, y: 12 }, { id: 'b30', x: 30, y: 12 },
+        { id: 'P', x: 4, y: 4 }, { id: 'Q', x: 8, y: 4 }, { id: 'S', x: 4, y: 7 }, { id: 'Q2', x: 8, y: 7 },
+        { id: 'M', x: 14, y: 5 }, { id: 'M2', x: 11, y: 5 }, { id: 'X', x: 18, y: 6 }, { id: 'X1', x: 20, y: 6 }, { id: 'Y1', x: 24, y: 6 }, { id: 'Y', x: 26, y: 6 },
+      ],
+      parts: [
+        { id: 'wa1', kind: 'wire', from: 'A', to: 't4' }, { id: 'wa2', kind: 'wire', from: 't4', to: 't8' }, { id: 'wa3', kind: 'wire', from: 't8', to: 't14' },
+        { id: 'wa4', kind: 'wire', from: 't14', to: 't18' }, { id: 'wa5', kind: 'wire', from: 't18', to: 't26' },
+        { id: 'wb1', kind: 'wire', from: 'B', to: 'b4' }, { id: 'wb2', kind: 'wire', from: 'b4', to: 'b11' }, { id: 'wb3', kind: 'wire', from: 'b11', to: 'b14' },
+        { id: 'wb4', kind: 'wire', from: 'b14', to: 'b18' }, { id: 'wb5', kind: 'wire', from: 'b18', to: 'b26' }, { id: 'wb6', kind: 'wire', from: 'b26', to: 'b30' },
+        { id: 'R17', kind: 'resistor', from: 't4', to: 'P', value: 30000, label: 'R17' },
+        { id: 'R18', kind: 'resistor', from: 't8', to: 'Q', value: 3000, label: 'R18' },
+        { id: 'R19', kind: 'resistor', from: 'P', to: 'Q', value: 6000, label: 'R19' },
+        { id: 'wps', kind: 'wire', from: 'P', to: 'S' },
+        { id: 'R20', kind: 'resistor', from: 'S', to: 'Q2', value: 6000, label: 'R20' },
+        { id: 'wq', kind: 'wire', from: 'Q2', to: 'Q' },
+        { id: 'R21', kind: 'resistor', from: 'S', to: 'b4', value: 5000, label: 'R21' },
+        { id: 'R12', kind: 'resistor', from: 't14', to: 'M', value: 2500, label: 'R12' },
+        { id: 'wm', kind: 'wire', from: 'M', to: 'M2' },
+        { id: 'R13', kind: 'resistor', from: 'M2', to: 'b11', value: 10000, label: 'R13' },
+        { id: 'R14', kind: 'resistor', from: 'M', to: 'b14', value: 30000, label: 'R14' },
+        { id: 'R6', kind: 'resistor', from: 't18', to: 'X', value: 4000, label: 'R6' },
+        { id: 'R8', kind: 'resistor', from: 'X', to: 'b18', value: 6000, label: 'R8' },
+        { id: 'R7', kind: 'resistor', from: 't26', to: 'Y', value: 8000, label: 'R7' },
+        { id: 'R9', kind: 'resistor', from: 'Y', to: 'b26', value: 12000, label: 'R9' },
+        { id: 'wx', kind: 'wire', from: 'X', to: 'X1' }, { id: 'wy', kind: 'wire', from: 'Y1', to: 'Y' },
+        { id: 'R10', kind: 'resistor', from: 'X1', to: 'Y1', value: 1200, label: 'R10', via: [[20, 4.5], [24, 4.5]] },
+        { id: 'R11', kind: 'resistor', from: 'X1', to: 'Y1', value: 3900, label: 'R11', via: [[20, 7.5], [24, 7.5]] },
+        { id: 'R15', kind: 'resistor', from: 't26', to: 't30', value: 13000, label: 'R15' },
+        { id: 'R16', kind: 'resistor', from: 't30', to: 'b30', value: 7000, label: 'R16' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 4,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 54)* En el circuito de la figura, A es todo el riel superior y B todo el riel inferior (valores en kΩ: $R_{17}=30$, $R_{18}=3$, $R_{19}=6$, $R_{20}=6$, $R_{21}=5$, $R_{12}=2.5$, $R_{13}=10$, $R_{14}=30$, $R_6=4$, $R_8=6$, $R_7=8$, $R_9=12$, $R_{10}=1.2$, $R_{11}=3.9$, $R_{15}=13$, $R_{16}=7$). (a) Halle la resistencia equivalente entre A y B. (b) Si se conecta una fuente DC de $E = 10\\,\\text{V}$ entre A y B, ¿qué potencia entrega la fuente?",
+  hints: [
+    "Entre los dos rieles cuelgan cuatro bloques independientes: redúcelos uno por uno y al final ponlos en paralelo.",
+    "Bloque izquierdo: $R_{19}$ y $R_{20}$ comparten los mismos dos nodos. Bloque del medio: $R_{13}$ y $R_{14}$ también.",
+    "Bloque de $R_6$–$R_{11}$: compara $R_6/R_8$ con $R_7/R_9$. Si son iguales, el puente está balanceado y $R_{10}\\parallel R_{11}$ no lleva corriente.",
+  ],
+}}>
+
+### (a) Resistencia equivalente
+
+**1. Bloque izquierdo.** $R_{19}$ y $R_{20}$ unen P y Q (paralelo); eso queda en serie con $R_{18}$, en paralelo con $R_{17}$ (ambos de A a P) y en serie con $R_{21}$.
+
+$$
+R_{19}\parallel R_{20} = 3\,\text{k} \;\to\; 3 + R_{18} = 6\,\text{k} \;\to\; 6 \parallel R_{17} = \frac{6\cdot 30}{36} = 5\,\text{k} \;\to\; 5 + R_{21} = 10\,\text{k}\Omega
+$$
+
+**2. Bloque del medio.** $R_{13}$ y $R_{14}$ van de M a B (paralelo), en serie con $R_{12}$.
+
+$$
+R_{13}\parallel R_{14} = \frac{10\cdot 30}{40} = 7.5\,\text{k} \;\to\; 7.5 + R_{12} = 10\,\text{k}\Omega
+$$
+
+**3. Puente.** Se comparan las razones de los brazos: si son iguales, X e Y quedan al mismo potencial y $R_{10}\parallel R_{11}$ no lleva corriente.
+
+$$
+\frac{R_6}{R_8} = \frac{4}{6} = \frac{8}{12} = \frac{R_7}{R_9} \;\Rightarrow\; (R_6 + R_8)\parallel(R_7 + R_9) = 10 \parallel 20 = 6.667\,\text{k}\Omega
+$$
+
+**4. Rama derecha.** $R_{15}$ y $R_{16}$ en serie.
+
+$$
+R_{15} + R_{16} = 13 + 7 = 20\,\text{k}\Omega
+$$
+
+**5. Los cuatro bloques en paralelo entre A y B.**
+
+$$
+\frac{1}{R_{eq}} = \frac{1}{10} + \frac{1}{10} + \frac{1}{6.667} + \frac{1}{20} = 0.4\,\text{mS} \;\Rightarrow\; R_{eq} = \boxed{2.5\,\text{k}\Omega}
+$$
+
+### (b) Potencia con $E = 10$ V
+
+**6. $P = E^2/R_{eq}$** porque toda la red se ve desde la fuente como $R_{eq}$.
+
+$$
+P = \frac{E^2}{R_{eq}} = \frac{(10\,\text{V})^2}{2500\,\Omega} = \boxed{40\,\text{mW}} \qquad (I = 4\,\text{mA})
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: Req entre A y B con E = 10 V',
+  steps: [{
+    note: 'Puente balanceado: X e Y al mismo potencial, R10 y R11 sin corriente. La fuente de 10 V entrega 4 mA.',
+    circuit: {
+      nodes: [
+        { id: 'A', x: 0, y: 0, label: 'A' }, { id: 't4', x: 4, y: 0 }, { id: 't8', x: 8, y: 0 }, { id: 't14', x: 14, y: 0 },
+        { id: 't18', x: 18, y: 0 }, { id: 't26', x: 26, y: 0 }, { id: 't30', x: 30, y: 0 },
+        { id: 'B', x: 0, y: 12, label: 'B' }, { id: 'b4', x: 4, y: 12 }, { id: 'b11', x: 11, y: 12 }, { id: 'b14', x: 14, y: 12 },
+        { id: 'b18', x: 18, y: 12 }, { id: 'b26', x: 26, y: 12 }, { id: 'b30', x: 30, y: 12 },
+        { id: 'P', x: 4, y: 4 }, { id: 'Q', x: 8, y: 4 }, { id: 'S', x: 4, y: 7 }, { id: 'Q2', x: 8, y: 7 },
+        { id: 'M', x: 14, y: 5 }, { id: 'M2', x: 11, y: 5 }, { id: 'X', x: 18, y: 6, label: 'X' }, { id: 'X1', x: 20, y: 6 }, { id: 'Y1', x: 24, y: 6 }, { id: 'Y', x: 26, y: 6, label: 'Y' },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'B', to: 'A', value: 10, label: 'E' },
+        { id: 'wa1', kind: 'wire', from: 'A', to: 't4' }, { id: 'wa2', kind: 'wire', from: 't4', to: 't8' }, { id: 'wa3', kind: 'wire', from: 't8', to: 't14' },
+        { id: 'wa4', kind: 'wire', from: 't14', to: 't18' }, { id: 'wa5', kind: 'wire', from: 't18', to: 't26' },
+        { id: 'wb1', kind: 'wire', from: 'B', to: 'b4' }, { id: 'wb2', kind: 'wire', from: 'b4', to: 'b11' }, { id: 'wb3', kind: 'wire', from: 'b11', to: 'b14' },
+        { id: 'wb4', kind: 'wire', from: 'b14', to: 'b18' }, { id: 'wb5', kind: 'wire', from: 'b18', to: 'b26' }, { id: 'wb6', kind: 'wire', from: 'b26', to: 'b30' },
+        { id: 'R17', kind: 'resistor', from: 't4', to: 'P', value: 30000, label: 'R17' },
+        { id: 'R18', kind: 'resistor', from: 't8', to: 'Q', value: 3000, label: 'R18' },
+        { id: 'R19', kind: 'resistor', from: 'P', to: 'Q', value: 6000, label: 'R19' },
+        { id: 'wps', kind: 'wire', from: 'P', to: 'S' },
+        { id: 'R20', kind: 'resistor', from: 'S', to: 'Q2', value: 6000, label: 'R20' },
+        { id: 'wq', kind: 'wire', from: 'Q2', to: 'Q' },
+        { id: 'R21', kind: 'resistor', from: 'S', to: 'b4', value: 5000, label: 'R21' },
+        { id: 'R12', kind: 'resistor', from: 't14', to: 'M', value: 2500, label: 'R12' },
+        { id: 'wm', kind: 'wire', from: 'M', to: 'M2' },
+        { id: 'R13', kind: 'resistor', from: 'M2', to: 'b11', value: 10000, label: 'R13' },
+        { id: 'R14', kind: 'resistor', from: 'M', to: 'b14', value: 30000, label: 'R14' },
+        { id: 'R6', kind: 'resistor', from: 't18', to: 'X', value: 4000, label: 'R6' },
+        { id: 'R8', kind: 'resistor', from: 'X', to: 'b18', value: 6000, label: 'R8' },
+        { id: 'R7', kind: 'resistor', from: 't26', to: 'Y', value: 8000, label: 'R7' },
+        { id: 'R9', kind: 'resistor', from: 'Y', to: 'b26', value: 12000, label: 'R9' },
+        { id: 'wx', kind: 'wire', from: 'X', to: 'X1' }, { id: 'wy', kind: 'wire', from: 'Y1', to: 'Y' },
+        { id: 'R10', kind: 'resistor', from: 'X1', to: 'Y1', value: 1200, label: 'R10', via: [[20, 4.5], [24, 4.5]], state: 'muted' },
+        { id: 'R11', kind: 'resistor', from: 'X1', to: 'Y1', value: 3900, label: 'R11', via: [[20, 7.5], [24, 7.5]], state: 'muted' },
+        { id: 'R15', kind: 'resistor', from: 't26', to: 't30', value: 13000, label: 'R15' },
+        { id: 'R16', kind: 'resistor', from: 't30', to: 'b30', value: 7000, label: 'R16' },
+      ],
+      groups: [{ parts: ['R6', 'R8', 'R7', 'R9'], tone: 'bridge', label: 'puente balanceado' }],
+      currents: [{ part: 'E', label: 'I', showValue: true }],
+      req: { between: ['A', 'B'] },
+    },
+    expect: { 'Req(A,B)': 2500, 'P(E)': 0.04, 'I(E)': 0.004, 'V(X,Y)': 0, 'I(R10)': 0 },
+  }],
+}} />
+
+**Comprobación — corrientes de rama con 10 V:** $10/10\text{k} + 10/10\text{k} + 10/6.667\text{k} + 10/20\text{k} = 1 + 1 + 1.5 + 0.5 = 4\,\text{mA} = E/R_{eq}$ ✓.
+
+</ExerciseBlock>
+
+### Ramas con diodos contrapuestos
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Ramas con diodos, E = 10 V',
+  steps: [{
+    note: 'Circuito tal como está dibujado: fíjate en el sentido de cada diodo.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 8, y: 12, ground: true }, { id: 'bl', x: 0, y: 12 }, { id: 'tl', x: 0, y: 0 }, { id: 'tm', x: 8, y: 0 }, { id: 'tr', x: 14, y: 0 },
+        { id: 'm1', x: 8, y: 4 }, { id: 'm2', x: 8, y: 8 }, { id: 'r1', x: 14, y: 4 }, { id: 'r2', x: 14, y: 8 }, { id: 'br', x: 14, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'bl', to: 'tl', value: 10, label: 'E' },
+        { id: 'w0', kind: 'wire', from: 'tl', to: 'tm' }, { id: 'w1', kind: 'wire', from: 'tm', to: 'tr' },
+        { id: 'V5', kind: 'vsource', from: 'tm', to: 'm1', value: 5, label: 'E2' },
+        { id: 'Rc', kind: 'resistor', from: 'm1', to: 'm2', value: 5, label: 'Ra' },
+        { id: 'Dc', kind: 'diode', model: 'si', vf: 0.7, from: 'g', to: 'm2', label: 'D1', tone: 'si' },
+        { id: 'Rr', kind: 'resistor', from: 'tr', to: 'r1', value: 5, label: 'Rb' },
+        { id: 'Da', kind: 'diode', model: 'si', vf: 0.7, from: 'r1', to: 'r2', label: 'D2', tone: 'si' },
+        { id: 'Db', kind: 'diode', model: 'si', vf: 0.7, from: 'br', to: 'r2', label: 'D3', tone: 'si' },
+        { id: 'w2', kind: 'wire', from: 'br', to: 'g' }, { id: 'w3', kind: 'wire', from: 'g', to: 'bl' },
+      ],
+      currents: [{ part: 'Rc', label: 'i_1' }, { part: 'Rr', label: 'i_2' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 4,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 47)* Una fuente E (+ arriba) alimenta dos ramas. Rama central: desde el nodo superior, una fuente $E_2 = 5\\,\\text{V}$ (− arriba, + abajo), $R_a = 5\\,\\Omega$ y un diodo de silicio D1 cuyo **ánodo va a tierra** (el triángulo apunta hacia arriba). Rama derecha: $R_b = 5\\,\\Omega$ y dos diodos de silicio en serie, D2 con el ánodo hacia arriba y D3 con el ánodo hacia abajo. Calcule, tal como está dibujado: (a) la corriente $i_1$ (hacia abajo por la rama central) cuando $E = 10\\,\\text{V}$; (b) la corriente $i_2$ (hacia abajo por la rama derecha); (c) el valor de E que permite la conducción del diodo de la rama central.",
+  hints: [
+    "Mira la orientación de cada diodo antes de calcular nada: ¿hacia dónde deja pasar corriente cada uno?",
+    "Rama derecha: dos diodos con los cátodos enfrentados. Para que uno conduzca el otro tendría que conducir al revés.",
+    "Rama central: con el diodo OFF no hay corriente, así que el cátodo queda en $E + 5\\,\\text{V}$. El diodo necesita $V_{AK} = 0 - V_K \\geq 0.7\\,\\text{V}$.",
+  ],
+}}>
+
+Modelo de caída constante: Si $\Rightarrow V_\gamma = 0.7$ V.
+
+### (b) Rama derecha: $i_2$
+
+**1. Leer la orientación.** D2 deja pasar hacia abajo y D3 solo hacia arriba: cátodo contra cátodo.
+
+**2. Hipótesis D2 ON, D3 OFF** (el único sentido posible hacia abajo) y validar D3. Sin corriente, $R_b$ no cae: $V_{r_1} = 10$ V y $V_{r_2} = 10 - 0.7 = 9.3$ V.
+
+$$
+V_{AK}^{D3} = V_{\text{tierra}} - V_{r_2} = 0 - 9.3 = -9.3\,\text{V} < 0.7\,\text{V} \;\checkmark \quad\Rightarrow\quad i_2 = \boxed{0\,\text{A}}
+$$
+
+D2 queda en el umbral ($I = 0$); para cualquier E uno de los dos diodos bloquea, así que $i_2 = 0$ siempre.
+
+### (a) Rama central con $E = 10$ V: $i_1$
+
+**3. Hipótesis D1 OFF.** Sin corriente, $R_a$ no cae y el cátodo de D1 queda en $E$ más los 5 V de $E_2$ (+ abajo).
+
+$$
+V_K = E + E_2 = 10 + 5 = 15\,\text{V}
+$$
+
+**4. Validar.** El ánodo está en tierra.
+
+$$
+V_{AK} = 0 - 15 = -15\,\text{V} < 0.7\,\text{V} \;\checkmark \quad\Rightarrow\quad i_1 = \boxed{0\,\text{A}}
+$$
+
+### (c) E para que conduzca D1
+
+**5. Condición de conducción.** D1 necesita $V_{AK} \ge 0.7$ V con $V_K = E + 5$.
+
+$$
+0 - (E + 5) \ge 0.7 \;\Rightarrow\; E \le -5.7\,\text{V}
+$$
+
+Con la polaridad dibujada ningún E positivo lo hace conducir: hay que **invertir** la fuente y darle al menos
+
+$$
+|E|_{min} = E_2 + V_\gamma = 5 + 0.7 = \boxed{5.7\,\text{V}\ \text{(invertida)}}
+$$
+
+**6. Ejemplo: E invertida de 6 V.** La corriente sube por la rama central (negativa respecto de la flecha $i_1$).
+
+$$
+|i_1| = \frac{6 - 5 - 0.7}{5\,\Omega} = 60\,\text{mA}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: ramas con diodos',
+  steps: [
+    {
+      note: 'E = 10 V. D1 OFF (V_AK = −15 V < 0.7 V ✓): i1 = 0. Rama derecha: D2 ON en el umbral, D3 OFF (V_AK = −9.3 V ✓): i2 = 0. El cátodo de D1 queda en 15 V.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 8, y: 12, ground: true }, { id: 'bl', x: 0, y: 12 }, { id: 'tl', x: 0, y: 0 }, { id: 'tm', x: 8, y: 0 }, { id: 'tr', x: 14, y: 0 },
+          { id: 'm1', x: 8, y: 4 }, { id: 'm2', x: 8, y: 8, showPotential: true }, { id: 'r1', x: 14, y: 4 }, { id: 'r2', x: 14, y: 8 }, { id: 'br', x: 14, y: 12 },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'bl', to: 'tl', value: 10, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 'tl', to: 'tm' }, { id: 'w1', kind: 'wire', from: 'tm', to: 'tr' },
+          { id: 'V5', kind: 'vsource', from: 'tm', to: 'm1', value: 5, label: 'E2' },
+          { id: 'Rc', kind: 'resistor', from: 'm1', to: 'm2', value: 5, label: 'Ra' },
+          { id: 'Dc', kind: 'diode', model: 'si', vf: 0.7, from: 'g', to: 'm2', label: 'D1', tone: 'si' },
+          { id: 'Rr', kind: 'resistor', from: 'tr', to: 'r1', value: 5, label: 'Rb' },
+          { id: 'Da', kind: 'diode', model: 'si', vf: 0.7, from: 'r1', to: 'r2', label: 'D2', tone: 'si' },
+          { id: 'Db', kind: 'diode', model: 'si', vf: 0.7, from: 'br', to: 'r2', label: 'D3', tone: 'si' },
+          { id: 'w2', kind: 'wire', from: 'br', to: 'g' }, { id: 'w3', kind: 'wire', from: 'g', to: 'bl' },
+        ],
+        diodes: [{ part: 'Dc', assume: 'off' }, { part: 'Da', assume: 'on', showModel: false }, { part: 'Db', assume: 'off' }],
+        hypothesis: 'D1 OFF · D2 ON · D3 OFF',
+        currents: [{ part: 'Rc', label: 'i_1', showValue: true }, { part: 'Rr', label: 'i_2', showValue: true }],
+      },
+      expect: { 'I(Rc)': 0, 'I(Rr)': 0, 'V(m2)': 15 },
+    },
+    {
+      note: 'E invertida de 6 V: ahora D1 ON (6 − 5 − 0.7 = 0.3 V sobre Ra ⇒ 60 mA hacia arriba, i1 negativa). La rama derecha sigue en 0: ahora bloquea D2.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 8, y: 12, ground: true }, { id: 'bl', x: 0, y: 12 }, { id: 'tl', x: 0, y: 0 }, { id: 'tm', x: 8, y: 0 }, { id: 'tr', x: 14, y: 0 },
+          { id: 'm1', x: 8, y: 4 }, { id: 'm2', x: 8, y: 8, showPotential: true }, { id: 'r1', x: 14, y: 4 }, { id: 'r2', x: 14, y: 8 }, { id: 'br', x: 14, y: 12 },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'tl', to: 'bl', value: 6, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 'tl', to: 'tm' }, { id: 'w1', kind: 'wire', from: 'tm', to: 'tr' },
+          { id: 'V5', kind: 'vsource', from: 'tm', to: 'm1', value: 5, label: 'E2' },
+          { id: 'Rc', kind: 'resistor', from: 'm1', to: 'm2', value: 5, label: 'Ra' },
+          { id: 'Dc', kind: 'diode', model: 'si', vf: 0.7, from: 'g', to: 'm2', label: 'D1', tone: 'si' },
+          { id: 'Rr', kind: 'resistor', from: 'tr', to: 'r1', value: 5, label: 'Rb' },
+          { id: 'Da', kind: 'diode', model: 'si', vf: 0.7, from: 'r1', to: 'r2', label: 'D2', tone: 'si' },
+          { id: 'Db', kind: 'diode', model: 'si', vf: 0.7, from: 'br', to: 'r2', label: 'D3', tone: 'si' },
+          { id: 'w2', kind: 'wire', from: 'br', to: 'g' }, { id: 'w3', kind: 'wire', from: 'g', to: 'bl' },
+        ],
+        diodes: [{ part: 'Dc', assume: 'on' }, { part: 'Da', assume: 'off' }, { part: 'Db', assume: 'on', showModel: false }],
+        hypothesis: 'D1 ON · D2 OFF · D3 ON',
+        currents: [{ part: 'Rc', label: 'i_1', showValue: true }, { part: 'Rr', label: 'i_2', showValue: true }],
+      },
+      expect: { 'I(Rc)': -0.06, 'I(Rr)': 0 },
+    },
+  ],
+}} />
+
+**Comprobación (LKV en la rama central con E invertida de 6 V):** $-6 + 5 + 0.06 \cdot 5 + 0.7 = 0$ ✓.
+
+</ExerciseBlock>
+
+### Recortador doble con $E = 3$ V
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Recortador doble (E = 3 V)',
+  steps: [{
+    note: 'D1 con su fuente de 3 V hacia arriba; D2 con su fuente de 3 V invertida.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 'in', x: 0, y: 0 }, { id: 'o', x: 5, y: 0, label: 'Vo' }, { id: 'o2', x: 9, y: 0 },
+        { id: 'k1', x: 5, y: 4 }, { id: 'b1', x: 5, y: 8 }, { id: 'a2', x: 9, y: 4 }, { id: 'b2', x: 9, y: 8 },
+      ],
+      parts: [
+        { id: 'Vi', kind: 'ac-source', from: 'g', to: 'in', value: 10, label: 'Vi' },
+        { id: 'R', kind: 'resistor', from: 'in', to: 'o', value: 1000, label: 'R' },
+        { id: 'w0', kind: 'wire', from: 'o', to: 'o2' },
+        { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'o', to: 'k1', label: 'D1', tone: 'si' },
+        { id: 'E1', kind: 'vsource', from: 'b1', to: 'k1', value: 3, label: 'E' },
+        { id: 'D2', kind: 'diode', model: 'si', vf: 0.7, from: 'a2', to: 'o2', label: 'D2', tone: 'si' },
+        { id: 'E2', kind: 'vsource', from: 'a2', to: 'b2', value: 3, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'w2', kind: 'wire', from: 'b1', to: 'b2' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 4,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 43)* La entrada $V_i(t) = 10\\sin(2\\pi t)\\,\\text{V}$ pasa por una resistencia R hasta el nodo de salida $V_o$. De $V_o$ a tierra salen dos ramas: D1 (ánodo en $V_o$) en serie con una fuente $E = 3$ V con el + hacia D1; y D2 (cátodo en $V_o$) en serie con otra fuente $E = 3$ V con el − hacia D2. La slide no dice el tipo de diodo: considere silicio (0.7 V), como en el resto del material. Dibuje la forma de onda de $V_o(t)$. (El valor de R no se da y no cambia la forma de $V_o$; en la figura se usa 1 kΩ).",
+  hints: [
+    "Analiza cada diodo por separado: ¿para qué valores de $V_o$ quedaría polarizado en directa?",
+    "D1 conduce cuando $V_o$ intenta superar $3 + 0.7\\,\\text{V}$; D2 conduce cuando $V_o$ intenta bajar de $-(3 + 0.7)\\,\\text{V}$. Mientras ninguno conduce, por R no pasa corriente.",
+    "Busca los instantes en que $10\\sin(2\\pi t) = \\pm 3.7$ para ubicar dónde se \"aplana\" la onda.",
+  ],
+}}>
+
+Modelo de caída constante: Si $\Rightarrow V_\gamma = 0.7$ V.
+
+**1. Umbral de D1.** Su cátodo está fijo en +3 V: conduce cuando el ánodo ($V_o$) lo supera en 0.7 V.
+
+$$
+V_{AK}^{D1} = V_o - 3 \ge 0.7 \;\Leftrightarrow\; V_o \ge +3.7\,\text{V}
+$$
+
+**2. Umbral de D2.** Su ánodo está fijo en −3 V: conduce cuando el cátodo ($V_o$) baja 0.7 V más.
+
+$$
+V_{AK}^{D2} = -3 - V_o \ge 0.7 \;\Leftrightarrow\; V_o \le -3.7\,\text{V}
+$$
+
+**3. Zona central: ambos OFF.** Sin corriente, R no cae y la salida copia a la entrada.
+
+$$
+|V_i| < 3.7\,\text{V}: \quad V_o = V_i
+$$
+
+**4. Zonas recortadas.** El diodo que conduce fija la salida; el resto de la tensión cae en R.
+
+$$
+V_i > 3.7\,\text{V}: \; V_o = \boxed{+3.7\,\text{V}} \qquad V_i < -3.7\,\text{V}: \; V_o = \boxed{-3.7\,\text{V}}
+$$
+
+**5. Instantes de recorte** (período 1 s).
+
+$$
+\sin(2\pi t) = 0.37 \;\Rightarrow\; t \approx 0.060\,\text{s} \text{ a } 0.440\,\text{s} \qquad \text{(semiciclo negativo: } 0.560 \text{ a } 0.940\,\text{s)}
+$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Vi(t) y Vo(t): senoidal recortada en ±3.7 V',
+  steps: [{
+    note: 'Vo sigue a Vi cerca de los cruces por cero y queda plana en ±3.7 V en los picos. Con diodos ideales los niveles serían ±3 V.',
+    series: [
+      { id: 'vi', label: 'Vi(t)', fn: '10*sin(2*PI*x)', domain: [0, 2], samples: 400, state: 'muted' },
+      { id: 'vo', label: 'Vo(t)', fn: 'min(3.7, max(-3.7, 10*sin(2*PI*x)))', domain: [0, 2], samples: 400, tone: 'current' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'V (V)', min: -11, max: 11 },
+    hlines: [{ at: 3.7, label: '+3.7 V', state: 'answer' }, { at: -3.7, label: '−3.7 V', state: 'answer' }],
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: instantáneas en los picos',
+  steps: [
+    {
+      note: 'Pico positivo (Vi = 10 V): D1 ON, D2 OFF. Vo = 3.7 V y por R pasan (10 − 3.7)/1 kΩ = 6.3 mA.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 8, ground: true }, { id: 'in', x: 0, y: 0 }, { id: 'o', x: 5, y: 0, label: 'Vo', showPotential: true }, { id: 'o2', x: 9, y: 0 },
+          { id: 'k1', x: 5, y: 4 }, { id: 'b1', x: 5, y: 8 }, { id: 'a2', x: 9, y: 4 }, { id: 'b2', x: 9, y: 8 },
+        ],
+        parts: [
+          { id: 'Vi', kind: 'ac-source', from: 'g', to: 'in', value: 10, label: 'Vi' },
+          { id: 'R', kind: 'resistor', from: 'in', to: 'o', value: 1000, label: 'R' },
+          { id: 'w0', kind: 'wire', from: 'o', to: 'o2' },
+          { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'o', to: 'k1', label: 'D1', tone: 'si' },
+          { id: 'E1', kind: 'vsource', from: 'b1', to: 'k1', value: 3, label: 'E' },
+          { id: 'D2', kind: 'diode', model: 'si', vf: 0.7, from: 'a2', to: 'o2', label: 'D2', tone: 'si' },
+          { id: 'E2', kind: 'vsource', from: 'a2', to: 'b2', value: 3, label: 'E' },
+          { id: 'w1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'w2', kind: 'wire', from: 'b1', to: 'b2' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'off' }],
+        hypothesis: 'D1 ON · D2 OFF',
+        currents: [{ part: 'R', label: 'I_R', showValue: true }],
+      },
+      expect: { 'V(o)': 3.7, 'I(R)': 0.0063, 'I(D1)': 0.0063, 'I(D2)': 0 },
+    },
+    {
+      note: 'Pico negativo (Vi = −10 V): D1 OFF, D2 ON. Vo = −3.7 V y la corriente por R se invierte.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 8, ground: true }, { id: 'in', x: 0, y: 0 }, { id: 'o', x: 5, y: 0, label: 'Vo', showPotential: true }, { id: 'o2', x: 9, y: 0 },
+          { id: 'k1', x: 5, y: 4 }, { id: 'b1', x: 5, y: 8 }, { id: 'a2', x: 9, y: 4 }, { id: 'b2', x: 9, y: 8 },
+        ],
+        parts: [
+          { id: 'Vi', kind: 'ac-source', from: 'g', to: 'in', value: -10, label: 'Vi' },
+          { id: 'R', kind: 'resistor', from: 'in', to: 'o', value: 1000, label: 'R' },
+          { id: 'w0', kind: 'wire', from: 'o', to: 'o2' },
+          { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'o', to: 'k1', label: 'D1', tone: 'si' },
+          { id: 'E1', kind: 'vsource', from: 'b1', to: 'k1', value: 3, label: 'E' },
+          { id: 'D2', kind: 'diode', model: 'si', vf: 0.7, from: 'a2', to: 'o2', label: 'D2', tone: 'si' },
+          { id: 'E2', kind: 'vsource', from: 'a2', to: 'b2', value: 3, label: 'E' },
+          { id: 'w1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'w2', kind: 'wire', from: 'b1', to: 'b2' },
+        ],
+        diodes: [{ part: 'D1', assume: 'off' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 OFF · D2 ON',
+        currents: [{ part: 'R', label: 'I_R', showValue: true }],
+      },
+      expect: { 'V(o)': -3.7, 'I(D2)': 0.0063, 'I(D1)': 0 },
+    },
+  ],
+}} />
+
+**Comprobación (pico positivo):** validación de D2 OFF con $V_o = 3.7$ V: $V_{AK}^{D2} = -3 - 3.7 = -6.7\,\text{V} < 0.7\,\text{V}$ ✓; LKV: $10 = 6.3\,\text{mA}\cdot 1\,\text{k}\Omega + 0.7 + 3$ ✓.
+
+</ExerciseBlock>
+
+### Dos diodos con $E = 4$ V
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Dos diodos, E = 4 V',
+  steps: [{
+    note: 'D1 (Si) y D2 (Ge, con su fuente V2 = 2 V) cuelgan de nodos distintos.',
+    circuit: {
+      nodes: [
+        { id: 'bl', x: 0, y: 10 }, { id: 'tl', x: 0, y: 0 }, { id: 'a', x: 5, y: 0, label: 'Va' }, { id: 'k1', x: 5, y: 4 }, { id: 'b5', x: 5, y: 10 },
+        { id: 'n', x: 11, y: 0 }, { id: 'k2', x: 11, y: 5 }, { id: 'b11', x: 11, y: 10, ground: true }, { id: 'r', x: 16, y: 0 }, { id: 'b16', x: 16, y: 10 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'bl', to: 'tl', value: 4, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'tl', to: 'a', value: 1000, label: 'R1' },
+        { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'a', to: 'k1', label: 'D1', tone: 'si' },
+        { id: 'R2', kind: 'resistor', from: 'k1', to: 'b5', value: 3000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'a', to: 'n', value: 2000, label: 'R3' },
+        { id: 'D2', kind: 'diode', model: 'ge', vf: 0.3, from: 'n', to: 'k2', label: 'D2', tone: 'ge' },
+        { id: 'V2', kind: 'vsource', from: 'b11', to: 'k2', value: 2, label: 'V2' },
+        { id: 'w0', kind: 'wire', from: 'n', to: 'r' },
+        { id: 'R4', kind: 'resistor', from: 'r', to: 'b16', value: 4000, label: 'R4' },
+        { id: 'w1', kind: 'wire', from: 'bl', to: 'b5' }, { id: 'w2', kind: 'wire', from: 'b5', to: 'b11' }, { id: 'w3', kind: 'wire', from: 'b11', to: 'b16' },
+      ],
+      currents: [{ part: 'R2', label: 'i_1' }, { part: 'D2', label: 'i_2' }, { part: 'R4', label: 'i_L' }],
+      voltages: [{ part: 'R4', label: 'V_L' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 5,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 53)* Con $E = 4\\,\\text{V}$: $R_1 = 1\\,\\text{k}\\Omega$ lleva la fuente al nodo $V_a$. De $V_a$ bajan a tierra D1 (Si) en serie con $R_2 = 3\\,\\text{k}\\Omega$ (corriente $i_1$). De $V_a$ sale también $R_3 = 2\\,\\text{k}\\Omega$ hacia un segundo nodo, del que bajan a tierra D2 (Ge) en serie con una fuente $V_2 = 2\\,\\text{V}$ (+ hacia D2, corriente $i_2$) y $R_4 = 4\\,\\text{k}\\Omega$ (corriente $i_L$, tensión $V_L$). Calcule: las corrientes $i_1$, $i_2$ e $i_L$; el potencial $V_a$; la tensión $V_L$; la potencia que consume $R_4$; y la potencia que consume D2.",
+  hints: [
+    "Método de hipótesis: empieza suponiendo los dos diodos en ON. Con D2 en ON, el nodo de $R_4$ queda fijo en $0.3 + 2 = 2.3\\,\\text{V}$.",
+    "Con D1 y D2 en ON, la LCK en $V_a$ da $V_a \\approx 2.94\\,\\text{V}$, e $i_2 = i_{R3} - i_L$ sale negativa: la hipótesis falla.",
+    "Prueba D1 ON y D2 OFF: $R_3$ y $R_4$ quedan en serie (6 kΩ). Plantea la LCK en $V_a$ y al final valida $V_{AK}$ de D2.",
+  ],
+}}>
+
+Modelo de caída constante: Si 0.7 V, Ge 0.3 V. Unidades: mA, kΩ, V.
+
+### Hipótesis 1: D1 ON, D2 ON
+
+**1. Fijar el nodo de $R_4$.** Con D2 ON, ese nodo queda en la caída del Ge más $V_2$.
+
+$$
+V_L = 0.3 + 2 = 2.3\,\text{V}
+$$
+
+**2. LCK en $V_a$.** Lo que entra por $R_1$ sale por la rama de D1 y por $R_3$.
+
+$$
+4 - V_a = \frac{V_a - 0.7}{3} + \frac{V_a - 2.3}{2} \;\Rightarrow\; 11\,V_a = 32.3 \;\Rightarrow\; V_a = 2.936\,\text{V}
+$$
+
+**3. Validar D2.** Su corriente es lo que llega por $R_3$ menos lo que se va por $R_4$.
+
+$$
+i_2 = \frac{2.936 - 2.3}{2} - \frac{2.3}{4} = 0.318 - 0.575 = -0.257\,\text{mA} < 0 \;\boldsymbol{\times}
+$$
+
+La hipótesis falla: D2 no puede estar ON.
+
+### Hipótesis 2: D1 ON, D2 OFF
+
+**4. LCK en $V_a$ con $R_3 + R_4 = 6\,\text{k}\Omega$ en serie** (D2 abierto).
+
+$$
+4 - V_a = \frac{V_a - 0.7}{3} + \frac{V_a}{6} \;\Rightarrow\; 9\,V_a = 25.4 \;\Rightarrow\; V_a = \boxed{2.822\,\text{V}}
+$$
+
+**5. Corrientes.** Ohm en cada rama con $V_a$.
+
+$$
+i_1 = \frac{2.822 - 0.7}{3} = \boxed{0.707\,\text{mA}} \qquad i_L = \frac{2.822}{6} = \boxed{0.470\,\text{mA}} \qquad i_2 = \boxed{0\,\text{A}}
+$$
+
+**6. Validar ambos diodos.** D1 ON exige $i_1 \ge 0$; D2 OFF exige $V_{AK} < 0.3$ V.
+
+$$
+i_1 = 0.707\,\text{mA} \ge 0 \;\checkmark \qquad V_{AK}^{D2} = V_L - 2 = 1.881 - 2 = -0.119\,\text{V} < 0.3\,\text{V} \;\checkmark
+$$
+
+**7. Tensión y potencias.**
+
+$$
+V_L = i_L\,R_4 = 0.470 \cdot 4 = \boxed{1.881\,\text{V}} \qquad P_{R_4} = \frac{V_L^2}{R_4} = \frac{1.881^2}{4000} = \boxed{0.885\,\text{mW}} \qquad P_{D2} = V_D\,i_2 = \boxed{0\,\text{W}}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: suponer → resolver → validar',
+  steps: [
+    {
+      note: 'Hipótesis 1: D1 y D2 ON. El solver da i2 negativa ✗: D2 no puede conducir.',
+      circuit: {
+        nodes: [
+          { id: 'bl', x: 0, y: 10 }, { id: 'tl', x: 0, y: 0 }, { id: 'a', x: 5, y: 0, label: 'Va' }, { id: 'k1', x: 5, y: 4 }, { id: 'b5', x: 5, y: 10 },
+          { id: 'n', x: 11, y: 0 }, { id: 'k2', x: 11, y: 5 }, { id: 'b11', x: 11, y: 10, ground: true }, { id: 'r', x: 16, y: 0 }, { id: 'b16', x: 16, y: 10 },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'bl', to: 'tl', value: 4, label: 'E' },
+          { id: 'R1', kind: 'resistor', from: 'tl', to: 'a', value: 1000, label: 'R1' },
+          { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'a', to: 'k1', label: 'D1', tone: 'si' },
+          { id: 'R2', kind: 'resistor', from: 'k1', to: 'b5', value: 3000, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'a', to: 'n', value: 2000, label: 'R3' },
+          { id: 'D2', kind: 'diode', model: 'ge', vf: 0.3, from: 'n', to: 'k2', label: 'D2', tone: 'ge' },
+          { id: 'V2', kind: 'vsource', from: 'b11', to: 'k2', value: 2, label: 'V2' },
+          { id: 'w0', kind: 'wire', from: 'n', to: 'r' },
+          { id: 'R4', kind: 'resistor', from: 'r', to: 'b16', value: 4000, label: 'R4' },
+          { id: 'w1', kind: 'wire', from: 'bl', to: 'b5' }, { id: 'w2', kind: 'wire', from: 'b5', to: 'b11' }, { id: 'w3', kind: 'wire', from: 'b11', to: 'b16' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 ON · D2 ON',
+        currents: [{ part: 'D2', label: 'i_2', showValue: true }],
+      },
+    },
+    {
+      note: 'Hipótesis 2: D1 ON, D2 OFF. i1 > 0 ✓ y V_AK(D2) = −0.12 V < 0.3 V ✓: es la solución.',
+      circuit: {
+        nodes: [
+          { id: 'bl', x: 0, y: 10 }, { id: 'tl', x: 0, y: 0 }, { id: 'a', x: 5, y: 0, label: 'Va', showPotential: true }, { id: 'k1', x: 5, y: 4 }, { id: 'b5', x: 5, y: 10 },
+          { id: 'n', x: 11, y: 0 }, { id: 'k2', x: 11, y: 5 }, { id: 'b11', x: 11, y: 10, ground: true }, { id: 'r', x: 16, y: 0 }, { id: 'b16', x: 16, y: 10 },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'bl', to: 'tl', value: 4, label: 'E' },
+          { id: 'R1', kind: 'resistor', from: 'tl', to: 'a', value: 1000, label: 'R1' },
+          { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'a', to: 'k1', label: 'D1', tone: 'si' },
+          { id: 'R2', kind: 'resistor', from: 'k1', to: 'b5', value: 3000, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'a', to: 'n', value: 2000, label: 'R3' },
+          { id: 'D2', kind: 'diode', model: 'ge', vf: 0.3, from: 'n', to: 'k2', label: 'D2', tone: 'ge' },
+          { id: 'V2', kind: 'vsource', from: 'b11', to: 'k2', value: 2, label: 'V2' },
+          { id: 'w0', kind: 'wire', from: 'n', to: 'r' },
+          { id: 'R4', kind: 'resistor', from: 'r', to: 'b16', value: 4000, label: 'R4', state: 'answer' },
+          { id: 'w1', kind: 'wire', from: 'bl', to: 'b5' }, { id: 'w2', kind: 'wire', from: 'b5', to: 'b11' }, { id: 'w3', kind: 'wire', from: 'b11', to: 'b16' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'off' }],
+        hypothesis: 'D1 ON · D2 OFF',
+        currents: [{ part: 'R2', label: 'i_1', showValue: true }, { part: 'D2', label: 'i_2', showValue: true }, { part: 'R4', label: 'i_L', showValue: true }],
+        voltages: [{ part: 'R4', label: 'V_L', showValue: true }],
+      },
+      expect: { 'I(R2)': 0.00070741, 'I(D2)': 0, 'I(R4)': 0.00047037, 'V(a)': 2.8222, 'V(r,b16)': 1.8815, 'P(R4)': 0.000885, 'P(D2)': 0 },
+    },
+  ],
+}} />
+
+**Comprobación (LCK en $V_a$):** $i_{R_1} = (4 - 2.822)/1 = 1.178\,\text{mA} = i_1 + i_L = 0.707 + 0.470$ ✓.
+
+</ExerciseBlock>
+
+### Recortadores con 2 V y 5 V
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Recortadores con 2 V y 5 V',
+  steps: [{
+    note: 'Las tres tierras son el mismo nodo.',
+    circuit: {
+      nodes: [
+        { id: 'v2', x: 0, y: 0, label: 'V2' }, { id: 'mid', x: 6, y: 0 }, { id: 'v1', x: 12, y: 0, label: 'V1' },
+        { id: 's2', x: 0, y: 5 }, { id: 's3', x: 12, y: 5 }, { id: 'g0', x: 0, y: 10 }, { id: 'gm', x: 6, y: 10, ground: true }, { id: 'g3', x: 12, y: 10 },
+      ],
+      parts: [
+        { id: 'D2', kind: 'diode', model: 'si', vf: 0.7, from: 'v2', to: 'mid', label: 'D2', tone: 'si' },
+        { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'mid', to: 'v1', label: 'D1', tone: 'si' },
+        { id: 'Vin', kind: 'ac-source', from: 'gm', to: 'mid', value: 10, label: 'V(t)' },
+        { id: 'R2', kind: 'resistor', from: 'v2', to: 's2', value: 1000, label: 'R2' },
+        { id: 'VB2', kind: 'vsource', from: 'g0', to: 's2', value: 2, label: 'E2' },
+        { id: 'R1', kind: 'resistor', from: 'v1', to: 's3', value: 100, label: 'R1' },
+        { id: 'VB3', kind: 'vsource', from: 'g3', to: 's3', value: 5, label: 'E3' },
+        { id: 'w1', kind: 'wire', from: 'g0', to: 'gm' }, { id: 'w2', kind: 'wire', from: 'gm', to: 'g3' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 5,
+  statement: "*(Sem02_WheatstoneYDiodos, p. 42)* La fuente $V(t) = 10\\sin(2\\pi t)\\,\\text{V}$ está entre tierra y un nodo central. Hacia la derecha, D1 (Si, ánodo en el nodo central) lleva al nodo $V_1$, y de ahí $R_1 = 100\\,\\Omega$ baja a una fuente $E_3 = 5\\,\\text{V}$ (+ arriba) conectada a tierra. Hacia la izquierda, D2 (Si, cátodo en el nodo central) viene del nodo $V_2$, del que $R_2 = 1\\,\\text{k}\\Omega$ baja a una fuente $E_2 = 2\\,\\text{V}$ (+ arriba) conectada a tierra. Dibuje la forma de onda de la tensión en $V_1$ y en $V_2$ e indique sus valores máximo y mínimo.",
+  hints: [
+    "Si un diodo está OFF, su resistencia no lleva corriente y el nodo queda en el valor de su fuente DC (5 V para $V_1$, 2 V para $V_2$).",
+    "D1 conduce cuando $V(t)$ supera $5 + 0.7\\,\\text{V}$. D2 conduce cuando $V(t)$ baja de $2 - 0.7\\,\\text{V}$ (su ánodo está en $V_2$ y su cátodo en la fuente).",
+    "Mientras conduce, cada nodo sigue a la fuente desplazado 0.7 V: $V_1 = V(t) - 0.7$ y $V_2 = V(t) + 0.7$.",
+  ],
+}}>
+
+Modelo de caída constante: Si $\Rightarrow V_\gamma = 0.7$ V.
+
+### Tensión $V_1$ (rama de D1)
+
+**1. D1 OFF: el nodo queda en su fuente.** Sin corriente, $R_1$ no cae.
+
+$$
+V_1 = E_3 = 5\,\text{V} \qquad \text{válido mientras}\; V_{AK}^{D1} = V(t) - 5 < 0.7 \;\Leftrightarrow\; V(t) < 5.7\,\text{V}
+$$
+
+**2. D1 ON: el nodo sigue a la fuente, 0.7 V abajo.**
+
+$$
+V(t) > 5.7\,\text{V}: \quad V_1 = V(t) - 0.7 \qquad (t \approx 0.097 \text{ a } 0.403\,\text{s})
+$$
+
+**3. Extremos.**
+
+$$
+V_{1,max} = 10 - 0.7 = \boxed{9.3\,\text{V}} \qquad V_{1,min} = \boxed{5\,\text{V}} \qquad I_{R_1,max} = \frac{9.3 - 5}{100} = 43\,\text{mA}
+$$
+
+### Tensión $V_2$ (rama de D2)
+
+**4. D2 OFF: el nodo queda en su fuente.**
+
+$$
+V_2 = E_2 = 2\,\text{V} \qquad \text{válido mientras}\; V_{AK}^{D2} = 2 - V(t) < 0.7 \;\Leftrightarrow\; V(t) > 1.3\,\text{V}
+$$
+
+**5. D2 ON: el nodo sigue a la fuente, 0.7 V arriba.**
+
+$$
+V(t) < 1.3\,\text{V}: \quad V_2 = V(t) + 0.7 \qquad (t \approx 0.479 \text{ a } 1.021\,\text{s})
+$$
+
+**6. Extremos.**
+
+$$
+V_{2,max} = \boxed{2\,\text{V}} \qquad V_{2,min} = -10 + 0.7 = \boxed{-9.3\,\text{V}} \qquad |I_{R_2}|_{max} = \frac{2 - (-9.3)}{1\,\text{k}\Omega} = 11.3\,\text{mA}
+$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'V1(t) y V2(t)',
+  steps: [{
+    note: 'V1: línea en 5 V con una joroba hasta 9.3 V en cada semiciclo positivo. V2: línea en 2 V con un valle hasta −9.3 V en cada semiciclo negativo.',
+    series: [
+      { id: 'v', label: 'V(t)', fn: '10*sin(2*PI*x)', domain: [0, 2], samples: 400, state: 'muted' },
+      { id: 'v1', label: 'V1(t)', fn: 'max(5, 10*sin(2*PI*x) - 0.7)', domain: [0, 2], samples: 400, tone: 'current' },
+      { id: 'v2', label: 'V2(t)', fn: 'min(2, 10*sin(2*PI*x) + 0.7)', domain: [0, 2], samples: 400, tone: 'mesh2' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'V (V)', min: -11, max: 11 },
+    hlines: [{ at: 5, label: 'E3 = 5 V', state: 'muted' }, { at: 2, label: 'E2 = 2 V', state: 'muted' }],
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto: instantáneas en los picos',
+  steps: [
+    {
+      note: 'Pico positivo (V = 10 V): D1 ON, D2 OFF. V1 = 9.3 V (43 mA por R1) y V2 = 2 V.',
+      circuit: {
+        nodes: [
+          { id: 'v2', x: 0, y: 0, label: 'V2', showPotential: true }, { id: 'mid', x: 6, y: 0 }, { id: 'v1', x: 12, y: 0, label: 'V1', showPotential: true },
+          { id: 's2', x: 0, y: 5 }, { id: 's3', x: 12, y: 5 }, { id: 'g0', x: 0, y: 10 }, { id: 'gm', x: 6, y: 10, ground: true }, { id: 'g3', x: 12, y: 10 },
+        ],
+        parts: [
+          { id: 'D2', kind: 'diode', model: 'si', vf: 0.7, from: 'v2', to: 'mid', label: 'D2', tone: 'si' },
+          { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'mid', to: 'v1', label: 'D1', tone: 'si' },
+          { id: 'Vin', kind: 'ac-source', from: 'gm', to: 'mid', value: 10, label: 'V(t)' },
+          { id: 'R2', kind: 'resistor', from: 'v2', to: 's2', value: 1000, label: 'R2' },
+          { id: 'VB2', kind: 'vsource', from: 'g0', to: 's2', value: 2, label: 'E2' },
+          { id: 'R1', kind: 'resistor', from: 'v1', to: 's3', value: 100, label: 'R1' },
+          { id: 'VB3', kind: 'vsource', from: 'g3', to: 's3', value: 5, label: 'E3' },
+          { id: 'w1', kind: 'wire', from: 'g0', to: 'gm' }, { id: 'w2', kind: 'wire', from: 'gm', to: 'g3' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'off' }],
+        hypothesis: 'D1 ON · D2 OFF',
+        currents: [{ part: 'R1', label: 'I_{R1}', showValue: true }],
+      },
+      expect: { 'V(v1)': 9.3, 'V(v2)': 2, 'I(R1)': 0.043, 'I(R2)': 0 },
+    },
+    {
+      note: 'Pico negativo (V = −10 V): D1 OFF, D2 ON. V1 = 5 V y V2 = −9.3 V; por R2 circulan 11.3 mA desde la fuente de 2 V hacia D2.',
+      circuit: {
+        nodes: [
+          { id: 'v2', x: 0, y: 0, label: 'V2', showPotential: true }, { id: 'mid', x: 6, y: 0 }, { id: 'v1', x: 12, y: 0, label: 'V1', showPotential: true },
+          { id: 's2', x: 0, y: 5 }, { id: 's3', x: 12, y: 5 }, { id: 'g0', x: 0, y: 10 }, { id: 'gm', x: 6, y: 10, ground: true }, { id: 'g3', x: 12, y: 10 },
+        ],
+        parts: [
+          { id: 'D2', kind: 'diode', model: 'si', vf: 0.7, from: 'v2', to: 'mid', label: 'D2', tone: 'si' },
+          { id: 'D1', kind: 'diode', model: 'si', vf: 0.7, from: 'mid', to: 'v1', label: 'D1', tone: 'si' },
+          { id: 'Vin', kind: 'ac-source', from: 'gm', to: 'mid', value: -10, label: 'V(t)' },
+          { id: 'R2', kind: 'resistor', from: 'v2', to: 's2', value: 1000, label: 'R2' },
+          { id: 'VB2', kind: 'vsource', from: 'g0', to: 's2', value: 2, label: 'E2' },
+          { id: 'R1', kind: 'resistor', from: 'v1', to: 's3', value: 100, label: 'R1' },
+          { id: 'VB3', kind: 'vsource', from: 'g3', to: 's3', value: 5, label: 'E3' },
+          { id: 'w1', kind: 'wire', from: 'g0', to: 'gm' }, { id: 'w2', kind: 'wire', from: 'gm', to: 'g3' },
+        ],
+        diodes: [{ part: 'D1', assume: 'off' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 OFF · D2 ON',
+        currents: [{ part: 'R2', label: 'I_{R2}', dir: 'reverse', showValue: true }],
+      },
+      expect: { 'V(v1)': 5, 'V(v2)': -9.3, 'I(R2)': -0.0113 },
+    },
+  ],
+}} />
+
+**Comprobación (pico positivo):** validación de D2 OFF: $V_{AK}^{D2} = 2 - 10 = -8\,\text{V} < 0.7\,\text{V}$ ✓; LKV en la rama de D1: $10 - 0.7 - 0.043 \cdot 100 = 5\,\text{V} = E_3$ ✓.
+
+</ExerciseBlock>

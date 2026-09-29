@@ -1,0 +1,11 @@
+id: mcu-mpu
+title: Microcontroladores y microprocesadores
+type: concept
+unit: s5
+prerequisites: [iot-architecture]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: dag
+placeholder: false
+formulas: []

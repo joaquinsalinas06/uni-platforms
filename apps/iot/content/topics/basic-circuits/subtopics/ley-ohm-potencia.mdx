@@ -1,0 +1,226 @@
+---
+kind: subtopic
+order: 1
+title: "Ley de Ohm y potencia"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Todo el análisis de circuitos resistivos descansa en una sola relación: la **Ley de
+Ohm**. A partir de ella se calcula la potencia que consume cada elemento, y sumando
+esas potencias se puede verificar que la fuente entrega exactamente lo que el
+circuito consume (**balance de potencia**) — la forma más rápida de detectar un
+error de cálculo.
+
+## Conceptos
+
+### Ley de Ohm
+
+$$
+V = I \cdot R
+$$
+
+La caída de tensión sobre una resistencia es proporcional a la corriente que la
+atraviesa. $R$ es la constante de proporcionalidad (en ohm, $\Omega$).
+
+### Potencia
+
+La potencia que consume una resistencia se puede calcular de **tres formas
+equivalentes**, según qué datos se tengan:
+
+$$
+P = V \cdot I = I^{2} R = \dfrac{V^{2}}{R}
+$$
+
+- Si conoces $V$ e $I$: usa $P=VI$.
+- Si conoces $I$ y $R$ (lo más común al resolver mallas): usa $P=I^2R$.
+- Si conoces $V$ y $R$ (lo más común en divisores): usa $P=V^2/R$.
+
+### Potencia entregada vs. potencia consumida
+
+- Una **fuente** (de tensión o corriente) *entrega* potencia: $P_{fuente} = E \cdot I$,
+  con $I$ la corriente que sale por su terminal positivo.
+- Una **resistencia** siempre *consume* potencia (nunca la entrega): $P = I^2R \geq 0$.
+- **Balance de potencia**: en todo circuito, la potencia entregada por las fuentes es
+  igual a la suma de las potencias consumidas por todas las resistencias. Si no
+  coinciden, hay un error en el circuito o en el cálculo.
+
+## Método paso a paso
+
+1. Identifica qué dos variables conoces para el elemento que te interesa ($V,I$ o $R$).
+2. Aplica Ohm para hallar la que falta, si hace falta.
+3. Calcula la potencia con la forma de la fórmula que evite arrastrar más incógnitas.
+4. Si el ejercicio pide "la potencia que entrega la fuente", usa $P=E \cdot I_{fuente}$
+   con la corriente TOTAL que sale de la fuente (no la de una sola rama).
+5. Verifica: suma la potencia de todas las resistencias y compárala con la entregada
+   por la(s) fuente(s). Deben coincidir.
+
+## Ejemplo resuelto
+
+Circuito en un solo lazo: fuente $E=40\text{ V}$ en serie con $R_1=8\ \Omega$,
+$R_2=5\ \Omega$ y $R_3=3\ \Omega$ (este es el mismo circuito del divisor de tensión
+de la sesión de ejercicios — ver
+[divisores](/topics/basic-circuits/subtopics/divisores) — aquí se usa para verificar
+el balance de potencia).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Balance de potencia en un lazo serie',
+  steps: [{
+    note: 'Un solo lazo: la misma corriente I atraviesa las tres resistencias. R_T = 8+5+3 = 16 Ω, así que I = 40/16 = 2.5 A.',
+    circuit: {
+      nodes: [
+        { id: 'a', x: 0, y: 0 }, { id: 'b', x: 4, y: 0 }, { id: 'c', x: 8, y: 0 },
+        { id: 'd', x: 8, y: 4 }, { id: 'g', x: 0, y: 4, ground: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 'a', value: 40, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'b', value: 8, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'c', value: 5, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'd', value: 3, label: 'R3' },
+        { id: 'w1', kind: 'wire', from: 'd', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+    },
+    expect: { 'I(R1)': 2.5 },
+  }],
+}} />
+
+Con $I = 2.5\text{ A}$:
+
+- $P(R_1) = I^2 R_1 = 2.5^2 \times 8 = 50\text{ W}$
+- $P(R_2) = I^2 R_2 = 2.5^2 \times 5 = 31.25\text{ W}$
+- $P(R_3) = I^2 R_3 = 2.5^2 \times 3 = 18.75\text{ W}$
+- Suma consumida: $50+31.25+18.75 = 100\text{ W}$
+- Potencia entregada por la fuente: $P(E) = E \cdot I = 40 \times 2.5 = 100\text{ W}$
+
+Coinciden: el balance de potencia se cumple.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Verificación con el solver',
+  static: true,
+  steps: [{
+    note: 'El solver calcula las mismas potencias a partir del netlist: consumida por R1, R2, R3 y entregada por E.',
+    circuit: {
+      nodes: [
+        { id: 'a', x: 0, y: 0 }, { id: 'b', x: 4, y: 0 }, { id: 'c', x: 8, y: 0 },
+        { id: 'd', x: 8, y: 4 }, { id: 'g', x: 0, y: 4, ground: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 'a', value: 40, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'b', value: 8, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'c', value: 5, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'd', value: 3, label: 'R3' },
+        { id: 'w1', kind: 'wire', from: 'd', to: 'g' },
+      ],
+    },
+    expect: {
+      'P(R1)': 50,
+      'P(R2)': 31.25,
+      'P(R3)': 18.75,
+      'P(E)': 100,
+    },
+  }],
+}} />
+
+## Errores típicos
+
+- Usar la corriente de una sola rama para calcular la potencia entregada por la
+  fuente, cuando esa fuente alimenta varias ramas en paralelo (hay que usar la
+  corriente TOTAL de la fuente).
+- Confundir $I^2R$ con $I \cdot R^2$ al despejar apurado.
+- Olvidar elevar al cuadrado en $P=I^2R$ o en $P=V^2/R$.
+- No verificar el balance de potencia y arrastrar un error de topología hasta el
+  final del problema.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Circuito del enunciado.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 5, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 5, y: 0, label: 'a' },
+        { id: 'c', x: 10, y: 0 }, { id: 'b', x: 5, y: 5 }, { id: 'd', x: 10, y: 5 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 16.8, label: 'E' },
+        { id: 'RA', kind: 'resistor', from: 't', to: 'a', value: 3.6, label: 'RA' },
+        { id: 'RB', kind: 'resistor', from: 'a', to: 'b', value: 6, label: 'RB' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'c' },
+        { id: 'RC', kind: 'resistor', from: 'c', to: 'd', value: 3, label: 'RC' },
+        { id: 'w2', kind: 'wire', from: 'd', to: 'b' },
+        { id: 'w3', kind: 'wire', from: 'b', to: 'g' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "En el circuito de la figura ($E = 16.8$ V, $R_A = 3.6\\,\\Omega$, $R_B = 6\\,\\Omega$, $R_C = 3\\,\\Omega$) se mide $I_A = 3$ A. Calcula la potencia que consume $R_B$ y la potencia que entrega la fuente.",
+  hints: [
+    "$R_B$ y $R_C$ comparten los mismos dos nodos ($a$ y tierra): están en **paralelo**. Redúcelas primero.",
+    "Toda $I_A$ atraviesa ese paralelo, así que $V_a = I_A \\cdot R_{B\\parallel C}$. Con $V_a$ sale $I_B = V_a / R_B$.",
+    "La fuente entrega $P = E \\cdot I$ con la corriente **total** que sale de ella, que es $I_A$.",
+  ],
+}}>
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Resuelto: I_A = 3 A se reparte en I_B = 1 A e I_C = 2 A — la resistencia menor se lleva más corriente.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 5, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 5, y: 0, label: 'a' },
+        { id: 'c', x: 10, y: 0 }, { id: 'b', x: 5, y: 5 }, { id: 'd', x: 10, y: 5 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 16.8, label: 'E' },
+        { id: 'RA', kind: 'resistor', from: 't', to: 'a', value: 3.6, label: 'RA' },
+        { id: 'RB', kind: 'resistor', from: 'a', to: 'b', value: 6, label: 'RB', state: 'answer' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'c' },
+        { id: 'RC', kind: 'resistor', from: 'c', to: 'd', value: 3, label: 'RC' },
+        { id: 'w2', kind: 'wire', from: 'd', to: 'b' },
+        { id: 'w3', kind: 'wire', from: 'b', to: 'g' },
+      ],
+      groups: [{ parts: ['RB', 'RC'], tone: 'parallel', label: 'paralelo' }],
+      currents: [{ part: 'RA', label: 'I_A', showValue: true }, { part: 'RB', label: 'I_B', showValue: true }, { part: 'RC', label: 'I_C', showValue: true }],
+    },
+    expect: { 'I(RA)': 3, 'I(RB)': 1, 'I(RC)': 2, 'P(RB)': 6, 'P(E)': 50.4, 'V(a)': 6 },
+  }],
+}} />
+
+**1. Reducir el paralelo** $R_B \parallel R_C$ (mismos dos nodos):
+
+$$R_{B\parallel C} = \frac{R_B\,R_C}{R_B + R_C} = \frac{6 \cdot 3}{6 + 3} = 2\,\Omega$$
+
+**2. Tensión en el nodo $a$.** Toda $I_A$ pasa por el paralelo:
+
+$$V_a = I_A \cdot R_{B\parallel C} = 3\,\text{A} \cdot 2\,\Omega = 6\,\text{V}$$
+
+**3. Corriente y potencia en $R_B$:**
+
+$$I_B = \frac{V_a}{R_B} = \frac{6\,\text{V}}{6\,\Omega} = 1\,\text{A} \qquad\Rightarrow\qquad P_{R_B} = I_B^2\,R_B = 1^2 \cdot 6 = \boxed{6\,\text{W}}$$
+
+**4. Potencia entregada por la fuente** (corriente total $I_A$):
+
+$$P_E = E \cdot I_A = 16.8\,\text{V} \cdot 3\,\text{A} = \boxed{50.4\,\text{W}}$$
+
+**Comprobación — balance de potencia:**
+
+| Elemento | Cálculo | Potencia |
+|---|---|---|
+| $R_A$ | $3^2 \cdot 3.6$ | 32.4 W |
+| $R_B$ | $1^2 \cdot 6$ | 6 W |
+| $R_C$ | $2^2 \cdot 3$ | 12 W |
+| **Total consumido** | | **50.4 W** $= P_E$ ✓ |
+
+</ExerciseBlock>

@@ -1,0 +1,39 @@
+id: static-optimality
+title: "Optimalidad estática y la cota de entropía"
+type: concept
+week: week-06
+
+prerequisites: ["access-lemma", "search-sequence-properties"]
+buildsOn: ["access-lemma"]
+usedBy: []
+
+# Es un concepto (`operations: []` en el knowledge map): las dos consecuencias
+# que se deducen del Lema de Acceso, no una estructura con interfaz propia.
+# Aun así, a diferencia de dynamic-optimality, aquí SÍ hay dos cotas reales y
+# cerradas que tabular — las dos que el profesor deriva en #35 y #36 — así que
+# complexity no queda vacío: se indexa por la elección de pesos, que es lo
+# único que cambia entre una y otra. best/avg/space quedan fuera a propósito:
+# el profesor no los da y rellenarlos sería inventar.
+complexity:
+  pesos-uniformes:
+    worst: "O(lg n) amortizado por acceso"
+    reasoning: >-
+      Con w_x = 1 para todo nodo, s(x) es el número de nodos del subárbol de
+      x y r(raíz) = lg n; el Lema de Acceso da entonces 3(lg n − r(x)) + 1 =
+      O(lg n) para cualquier x, porque r(x) ≥ 0. No es una cota nueva: es la
+      confirmación de lo que se anunció la clase pasada sobre el splay tree.
+    source: "Sem6_Dynamic_Optimality_II.pdf#35"
+  pesos-por-frecuencia:
+    worst: "O(Σ_x p_x lg(1/p_x)) amortizado por acceso"
+    reasoning: >-
+      El Lema de Acceso vale para cualquier elección de pesos, no sólo
+      w_x = 1. Tomando w_x proporcional a p_x (la fracción de la secuencia
+      que pide x), el mismo lema da exactamente la cota de entropía — la
+      propiedad de optimalidad estática enunciada sin prueba en la semana 5,
+      aquí demostrada.
+    source: "Sem6_Dynamic_Optimality_II.pdf#36"
+
+professorAnalysisStyle: "amortized"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

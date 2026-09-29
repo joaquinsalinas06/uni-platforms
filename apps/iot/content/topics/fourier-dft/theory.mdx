@@ -1,0 +1,308 @@
+---
+kind: theory
+title: Transformada de Fourier y DFT
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Una señal en el tiempo puede ser difícil de interpretar a simple vista (¿qué tan
+"rápido" cambia?, ¿tiene componentes periódicas escondidas?). La Transformada de
+Fourier — y su versión para señales digitales, la **DFT** — reescribe esa misma señal
+como una suma de senos y cosenos de distintas frecuencias, revelando de qué
+frecuencias está hecha y con qué peso (amplitud) participa cada una.
+
+## Conceptos
+
+### Qué es la DFT
+
+La **Transformada Discreta de Fourier (DFT)** toma $N$ muestras de una señal discreta
+$x[n]$ y devuelve $N$ coeficientes complejos $X[k]$, uno por cada **bin** de
+frecuencia $k = 0, 1, \ldots, N-1$. Cada $X[k]$ dice cuánto de la frecuencia asociada
+al bin $k$ hay en la señal original. En la práctica se calcula con el algoritmo
+**FFT** (*Fast Fourier Transform*), una implementación rápida de la misma DFT (por
+ejemplo, `X = np.fft.fft(x)` en las slides).
+
+> **Nota de apoyo** (no está en el material): la fórmula explícita de la DFT no
+> aparece en las slides, que solo muestran el código `np.fft.fft(x)`. La definición
+> estándar que ese código implementa es:
+> $$X[k] = \sum_{n=0}^{N-1} x[n]\, e^{-i2\pi kn/N}$$
+
+### ¿Es exacta o aproximada?
+
+Como se vio en *Señales y dominios*, las transformaciones entre el dominio del tiempo
+y el de la frecuencia **son exactas**: no hay pérdida de información en la
+transferencia. La DFT (y su inversa, la IDFT) no son la excepción — dadas las $N$
+muestras $x[n]$, la DFT es perfectamente invertible: se puede reconstruir $x[n]$
+exactamente a partir de $X[k]$. La aproximación en toda esta cadena **ya ocurrió
+antes**, en el muestreo (continuo → discreto) que produjo $x[n]$; la DFT en sí misma,
+sobre esas muestras discretas, es una transformación exacta.
+
+### N muestras, bins y FFT
+
+- $N$ = número de muestras de entrada = número de bins de salida.
+- Cada bin $k$ representa una frecuencia discreta $\omega_k = 2\pi k / N$ (en
+  radianes por muestra) o, en Hz, $f_k = k \cdot f_s/N$.
+- La FFT es solo una forma computacionalmente eficiente de calcular la misma DFT
+  (de orden $N\log N$ en vez de $N^2$); el resultado numérico es idéntico.
+
+### Método: cómo bosquejar el espectro de una suma de senos
+
+Dada una señal que es una suma de senos/cosenos de la forma
+$f(t) = \sum_i A_i \sin(\omega_i t + \varphi_i)$:
+
+1. Identifica cada término y su **amplitud** $A_i$ y su **frecuencia angular**
+   $\omega_i$ (rad/s). Si el eje pedido está en Hz, convierte con $f_i = \omega_i/2\pi$.
+2. Dibuja un **pico (stem)** en $\omega = \omega_i$ con **altura = $A_i$**, uno por
+   cada término.
+3. Un término constante (DC, sin oscilar) se dibuja como un pico en $\omega = 0$ con
+   altura igual a esa constante.
+4. El seno y el coseno de la misma frecuencia dan un pico de la misma altura en el
+   **espectro de magnitud** (difieren solo en el **espectro de fase**, que no se pide
+   en estos bosquejos).
+5. Si se trabaja directamente con bins de una DFT de $N$ muestras (dominio discreto,
+   no continuo), recuerda que el espectro es de **dos lados**: cada frecuencia
+   positiva $k$ tiene una réplica espejo en el bin $N-k$, cada una con la mitad de la
+   altura "física" de la señal real correspondiente a esa frecuencia (para una señal
+   real, la energía se reparte entre las dos). Si solo interesa la frecuencia física,
+   basta con dibujar el lado de $k=0$ a $k=N/2$ (espectro de un solo lado).
+
+### Ejemplo de las slides: dos senos sumados
+
+Las slides muestran el ejemplo en Python:
+
+```python
+x1 = np.sin(2*np.pi*k1*n/N)
+x2 = 0.5*np.sin(2*np.pi*k2*n/N)
+x = x1 + x2
+X = np.fft.fft(x)
+```
+
+Con $N=64$, $k_1=2$ y $k_2=5$: la señal total $x[n]$ (gráfico de arriba) es la suma de
+esos dos senos, y su DFT (gráfico de abajo) muestra dos picos nítidos en $k=2$ y
+$k=5$, con réplicas espejo en $k=N-2=62$ y $k=N-5=59$ (cada réplica con la misma
+magnitud que su pareja).
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'x[n] = sin(2πk1n/N) + 0.5·sin(2πk2n/N), N=64, k1=2, k2=5',
+  steps: [{
+    note: 'Señal total en el tiempo discreto: se ve la superposición de una oscilación lenta (k1=2) y una más rápida y más chica (k2=5, amplitud 0.5).',
+    series: [{ id: 'xn', label: 'x[n]', kind: 'samples', fn: 'sin(2*PI*2*x/64)+0.5*sin(2*PI*5*x/64)', domain: [0, 63], samples: 1 }],
+    x: { label: 'n' },
+    y: { label: 'x[n]' },
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Magnitud de la DFT |X[k]|',
+  steps: [{
+    note: 'Picos en k=2 y k=5 (altura N/2 = 32 y N/2·0.5 = 16), con réplicas espejo en N-2=62 y N-5=59: el espectro de una señal real siempre es simétrico.',
+    series: [{ id: 'Xk', label: '|X[k]|', kind: 'stem', points: [[2, 32], [5, 16], [59, 16], [62, 32]] }],
+    x: { label: 'k (frecuencia discreta)', min: 0, max: 63 },
+    y: { label: 'Magnitud' },
+  }],
+}} />
+
+### Digitalización vs. Transformada de Fourier
+
+Ambos procesos convierten una señal de una representación a otra, pero no hacen lo
+mismo ni trabajan en los mismos dominios:
+
+| | Digitalización (muestreo + cuantización) | Transformada de Fourier / DFT |
+|---|---|---|
+| Qué convierte | Tiempo continuo → tiempo discreto (y amplitud continua → amplitud discreta) | Dominio del tiempo ↔ dominio de la frecuencia |
+| ¿Es reversible? | No exactamente: se pierde información entre muestras y al redondear la amplitud | Sí, es exacta: la IDFT recupera $x[n]$ sin pérdida a partir de $X[k]$ |
+| Qué información aporta | Una representación numérica de la señal, lista para ser procesada digitalmente | El contenido espectral: qué frecuencias componen la señal y con qué peso (amplitud/fase) |
+| Dominios en que trabaja | Únicamente el dominio del tiempo (continuo → discreto) | Tiempo y frecuencia (ambos discretos si la entrada ya es $x[n]$) |
+
+## Método paso a paso
+
+(ver *Método: cómo bosquejar el espectro de una suma de senos* más arriba — se repite
+aquí como lista de acción rápida para un examen)
+
+1. Separa la señal en sus términos seno/coseno individuales.
+2. Anota amplitud y frecuencia angular de cada uno.
+3. Dibuja un pico por término en su frecuencia, con altura = amplitud.
+4. Si hay término constante, va como pico en $\omega=0$.
+5. Explica qué representa cada pico: la frecuencia a la que ocurre esa oscilación y
+   su amplitud (qué tanto "pesa" esa componente en la señal total).
+
+## Ejemplo resuelto
+
+### $f(t) = \sin(2t) + 4\sin(5t)$
+
+- Término 1: amplitud $A_1=1$, frecuencia angular $\omega_1 = 2$ rad/s.
+- Término 2: amplitud $A_2=4$, frecuencia angular $\omega_2 = 5$ rad/s.
+- El espectro tiene dos picos: uno en $\omega=2$ de altura 1, y otro en $\omega=5$ de
+  altura 4 (el más alto, porque esa componente domina la forma de la señal).
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'f(t) = sin(2t) + 4sin(5t)',
+  steps: [{
+    note: 'En el tiempo, la oscilación de amplitud 4 (ω=5) domina visualmente la forma de f(t).',
+    series: [{ id: 'ft', label: 'f(t)', kind: 'line', fn: 'sin(2*x)+4*sin(5*x)', domain: [0, 12.6] }],
+    x: { label: 't (s)' },
+    y: { label: 'f(t)' },
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Espectro (bosquejo) de f(t) = sin(2t) + 4sin(5t)',
+  steps: [{
+    note: 'Un pico por cada término: altura = amplitud, posición = frecuencia angular del seno correspondiente.',
+    series: [{ id: 'F', label: '|F(ω)|', kind: 'stem', points: [[2, 1], [5, 4]] }],
+    x: { label: 'ω (rad/s)', min: 0, max: 7 },
+    y: { label: '|F(ω)|' },
+  }],
+}} />
+
+**Qué representan los picos**: cada pico indica que la señal contiene una componente
+sinusoidal a esa frecuencia angular específica, y su altura es el peso (amplitud) de
+esa componente en la señal total. El pico en $\omega=5$ es más alto porque esa
+oscilación aporta más "energía" (mayor amplitud) que la de $\omega=2$.
+
+### Tres ejemplos más (derivado)
+
+- $3\cos(4t)$: un único pico en $\omega=4$ con altura 3 (coseno y seno dan la misma
+  altura en el espectro de magnitud, solo cambia la fase).
+
+  <Visualization viz={{ type: 'xy-chart', static: true, steps: [{ note: 'Un solo término ⇒ un solo pico.', series: [{ id: 's1', label: '|F(ω)|', kind: 'stem', points: [[4, 3]] }], x: { label: 'ω (rad/s)', min: 0, max: 6 }, y: { label: '|F(ω)|' } }] }} />
+
+- $2 + \sin(t)$: pico en $\omega=0$ (componente DC) de altura 2, y pico en
+  $\omega=1$ de altura 1.
+
+  <Visualization viz={{ type: 'xy-chart', static: true, steps: [{ note: 'El término constante es la "frecuencia cero": un pico en ω=0.', series: [{ id: 's2', label: '|F(ω)|', kind: 'stem', points: [[0, 2], [1, 1]] }], x: { label: 'ω (rad/s)', min: 0, max: 3 }, y: { label: '|F(ω)|' } }] }} />
+
+- $\sin(3t) - 0.5\sin(9t)$: picos en $\omega=3$ (altura 1) y $\omega=9$ (altura 0.5).
+  El signo negativo del segundo término solo desplaza la fase en $\pi$: no cambia la
+  altura del pico en el espectro de **magnitud**.
+
+  <Visualization viz={{ type: 'xy-chart', static: true, steps: [{ note: 'El signo negativo afecta la fase, no la altura del pico de magnitud.', series: [{ id: 's3', label: '|F(ω)|', kind: 'stem', points: [[3, 1], [9, 0.5]] }], x: { label: 'ω (rad/s)', min: 0, max: 11 }, y: { label: '|F(ω)|' } }] }} />
+
+## Errores típicos
+
+- Confundir $\omega$ (rad/s) con $f$ (Hz): si el enunciado da $\sin(\omega t)$, el
+  pico va en $\omega$, no en $f$, salvo que se pida explícitamente convertir con
+  $f = \omega/2\pi$.
+- Olvidar el pico en $\omega = 0$ cuando hay un término constante en la señal.
+- Al trabajar con bins de una DFT real, olvidar la réplica espejo en $N-k$ (el
+  espectro de una señal real siempre es simétrico).
+- Pensar que la DFT en sí misma es "aproximada": la aproximación de esta cadena está
+  en el muestreo previo (continuo → discreto), no en la transformada.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Explique qué entiende por la Transformada de Fourier Discreta (DFT). ¿La DFT es una transformación exacta o aproximada? Luego, realice un bosquejo aproximado del espectro de frecuencias para la señal $f(t) = \\sin(2t) + 4\\sin(5t)$, y explique qué representan los picos observados en el espectro.",
+  hints: [
+    "La DFT convierte $N$ muestras del tiempo en $N$ coeficientes de frecuencia (bins).",
+    "Recuerda la regla del material: tiempo↔frecuencia es exacto; lo aproximado es solo el paso continuo→discreto, que ya ocurrió antes de aplicar la DFT.",
+    "Cada seno de la suma aporta un pico: posición = su frecuencia angular, altura = su amplitud.",
+  ],
+}}>
+
+**1. Qué es la DFT.** Toma $N$ muestras de $x[n]$ y devuelve $N$ coeficientes
+complejos $X[k]$, uno por bin de frecuencia $k$, que dicen cuánto pesa esa frecuencia
+en la señal.
+
+**2. ¿Exacta o aproximada?** Es $\boxed{\text{exacta}}$: la IDFT recupera $x[n]$ sin
+pérdida a partir de $X[k]$. La aproximación de toda la cadena ocurrió antes, en el
+muestreo (continuo → discreto); la DFT en sí, sobre muestras ya discretas, no pierde
+información.
+
+**3. Identificar los términos de $f(t)$:**
+
+$$A_1 = 1,\ \omega_1 = 2\ \text{rad/s} \qquad\qquad A_2 = 4,\ \omega_2 = 5\ \text{rad/s}$$
+
+**4. Bosquejo del espectro.** Un pico por término, altura = amplitud, posición =
+frecuencia angular:
+
+$$\boxed{\text{pico en } \omega=2 \text{ de altura } 1 \ ;\ \text{pico en } \omega=5 \text{ de altura } 4}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'f(t) = sin(2t) + 4sin(5t): tiempo y espectro',
+  steps: [{
+    note: 'En el tiempo domina visualmente la oscilación de amplitud 4 (ω=5); el espectro lo confirma con un pico más alto en ω=5 que en ω=2.',
+    series: [{ id: 'ft', label: 'f(t)', kind: 'line', fn: 'sin(2*x)+4*sin(5*x)', domain: [0, 12.6] }],
+    x: { label: 't (s)' },
+    y: { label: 'f(t)' },
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Espectro de magnitud |F(ω)|',
+  steps: [{
+    note: 'Dos picos: ω=2 (altura 1) y ω=5 (altura 4, la componente dominante).',
+    series: [{ id: 'F', label: '|F(ω)|', kind: 'stem', points: [[2, 1], [5, 4]], tone: 'current', state: 'answer' }],
+    x: { label: 'ω (rad/s)', min: 0, max: 7 },
+    y: { label: '|F(ω)|' },
+    vlines: [{ at: 2, label: 'ω₁ = 2' }, { at: 5, label: 'ω₂ = 5' }],
+  }],
+}} />
+
+**Qué representan los picos:** cada uno indica que la señal contiene una componente
+sinusoidal a esa frecuencia angular específica, y su altura es el peso (amplitud) de
+esa componente en la señal total. El pico en $\omega=5$ domina porque aporta más
+amplitud (4 > 1).
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Bosqueje el espectro de magnitud de $g(t) = 2 + \\sin(t) - 0.5\\cos(3t)$, indicando la posición y altura de cada pico.",
+  hints: [
+    "El término constante 2 va como pico en $\\omega = 0$.",
+    "El signo negativo del coseno no cambia la altura del pico de magnitud, solo la fase.",
+  ],
+}}>
+
+**1. Separar los términos:**
+
+$$\text{DC} = 2 \qquad A_1=1,\ \omega_1=1\ \text{rad/s} \qquad A_2=0.5,\ \omega_2=3\ \text{rad/s}$$
+
+**2. Ubicar cada pico.** El término constante es la "frecuencia cero"; el signo
+negativo del coseno solo desplaza la fase en $\pi$, no cambia la altura del pico de
+**magnitud**:
+
+$$\boxed{\omega=0 \to 2 \quad;\quad \omega=1 \to 1 \quad;\quad \omega=3 \to 0.5}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'g(t) = 2 + sin(t) − 0.5cos(3t): tiempo y espectro',
+  steps: [{
+    note: 'En el tiempo se ve una señal desplazada hacia arriba (DC=2) con una oscilación lenta dominante.',
+    series: [{ id: 'gt', label: 'g(t)', kind: 'line', fn: '2+sin(x)-0.5*cos(3*x)', domain: [0, 12.6] }],
+    x: { label: 't (s)' },
+    y: { label: 'g(t)' },
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Espectro de magnitud |G(ω)|',
+  steps: [{
+    note: 'Tres picos: DC en ω=0 (altura 2), ω=1 (altura 1) y ω=3 (altura 0.5, el más chico).',
+    series: [{ id: 'G', label: '|G(ω)|', kind: 'stem', points: [[0, 2], [1, 1], [3, 0.5]], tone: 'current', state: 'answer' }],
+    x: { label: 'ω (rad/s)', min: 0, max: 4 },
+    y: { label: '|G(ω)|' },
+    vlines: [{ at: 0, label: 'DC' }, { at: 1, label: 'ω₁' }, { at: 3, label: 'ω₂' }],
+  }],
+}} />
+
+</ExerciseBlock>

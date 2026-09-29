@@ -1,0 +1,37 @@
+id: planar-point-location
+title: "Localización de puntos en el plano"
+type: concept
+week: week-04
+
+prerequisites: []
+buildsOn: []
+usedBy: ["vertical-ray-shooting"]
+
+# Sólo "locate" tiene un costo que el profesor deriva vía la cadena de
+# reducciones. "edge-update" queda fuera a propósito: el material sólo lo
+# enuncia (#17) sin dar algoritmo ni costo propio del curso — sólo cita
+# resultados de la literatura (#60-61), que se explican en prosa en
+# theory.md y operations/edge-update.md, no en esta tabla, para no
+# mezclar "lo que el profesor derivó" con "lo que sólo citó".
+complexity:
+  locate:
+    worst: O(log n)
+    reasoning: >-
+      Se hereda de la cadena de reducciones, no se deriva aquí: PPL se
+      reduce a vertical ray shooting, que se reduce al caso especial de
+      intersección de segmentos, que se resuelve con un BBST sobre el que
+      se aplica persistencia (página 49-51): "Query(t_{x_i},
+      Successor(y_i))" contra la versión del BBST asociada a x_i. El
+      profesor dice textualmente que la consulta queda en O(log n) por
+      esa vía (#51). Dos variantes que el mazo también da para la misma
+      operación: la solución completa offline cuesta O((n+q) log n) en
+      total para las n aristas y q puntos de consulta (#47); y para mapas
+      ortogonales, restringiendo a retroactividad parcial, la consulta
+      dinámica sigue en O(log n), "lo cual es óptimo para este escenario"
+      (#55).
+    source: "Sem4_Planar_Point_Location.pdf#47-55"
+
+professorAnalysisStyle: "análisis por reducción"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

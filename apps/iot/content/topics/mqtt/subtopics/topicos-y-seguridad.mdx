@@ -1,0 +1,160 @@
+---
+kind: subtopic
+order: 4
+title: Tópicos y seguridad
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+Los tópicos son el mecanismo de direccionamiento de MQTT (a qué "canal" pertenece cada
+mensaje) y los comodines permiten suscribirse a varios a la vez sin enumerarlos uno por
+uno. Aparte, como los datos viajan por TCP, hace falta decidir qué tan protegida va esa
+conexión: en claro o cifrada, con o sin credenciales, con o sin control de quién puede
+publicar/suscribirse a qué.
+
+## Conceptos
+
+### Jerarquía de tópicos
+- Los tópicos son **jerárquicos**: `/` separa niveles.
+- Los publishers publican **a un tópico**; los subscribers se suscriben **a un filtro de
+  tópico** (que puede incluir comodines).
+- **Un tópico no es una cola**: es un mecanismo de direccionamiento/filtrado, no de
+  almacenamiento (salvo el único mensaje retenido por tópico, ver
+  [Retained, sesión y LWT](/topics/mqtt/subtopics/retained-sesion-lwt)).
+
+Ejemplo de la slide:
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Jerarquía de tópicos',
+  steps: [{
+    note: 'Cada nivel se separa con "/". "Home" es la raíz; de ahí cuelgan las habitaciones, y de cada habitación sus mediciones.',
+    nodes: [
+      { id: 'home', value: 'Home', parent: null },
+      { id: 'living', value: 'livingroom', parent: 'home' },
+      { id: 'living-temp', value: 'temperature', parent: 'living' },
+      { id: 'living-hum', value: 'humidity', parent: 'living' },
+      { id: 'bed', value: 'bedroom', parent: 'home' },
+      { id: 'bed-temp', value: 'temperature', parent: 'bed' },
+    ],
+  }],
+}} />
+
+### Comodines (wildcards)
+- **`+`** — comodín de **un solo nivel**. `Home/+/temperature` coincide con
+  `Home/livingroom/temperature` y con `Home/bedroom/temperature`, pero no con
+  `Home/livingroom/sensor1/temperature` (eso tiene un nivel de más).
+- **`#`** — comodín de **múltiples niveles**, siempre al final. `Home/livingroom/#`
+  coincide con `Home/livingroom/temperature`, `Home/livingroom/humidity` y con
+  cualquier cosa que cuelgue más abajo de `Home/livingroom/`.
+
+### Seguridad
+1. **Cifrado de la comunicación**: por defecto MQTT usa TCP en el **puerto 1883**, en
+   texto plano. Se recomienda TLS/SSL en el **puerto 8883** para proteger contra sniffing
+   o ataques man-in-the-middle — el mismo salto conceptual que usar https en vez de http.
+2. **Autenticación**: usuario/contraseña que el cliente envía al broker para
+   identificarse; puede combinarse con tokens (p. ej. JWT en sistemas modernos); en
+   entornos más robustos se usan **certificados X.509** para autenticar dispositivos IoT.
+3. **Autorización (control de acceso)**: el broker define qué cliente puede publicar o
+   suscribirse a qué tópicos, mediante **ACLs** (Access Control Lists). Ejemplo: un
+   sensor de temperatura puede publicar en `home/livingroom/temperature` pero no en
+   `home/door/open`.
+4. **Protección del Last Will**: como el LWT define qué se publica cuando un cliente
+   "desaparece", si no está cifrado/autenticado un atacante podría simular
+   desconexiones falsas y forzar mensajes de will arbitrarios — por eso también debe
+   viajar cifrado y autenticado.
+
+## Método paso a paso
+Para diseñar el árbol de tópicos y sus permisos:
+
+1. Modelar la jerarquía física/lógica del sistema (`ubicación/dispositivo/medición`, por
+   ejemplo).
+2. Elegir, por cada suscripción, si conviene un tópico exacto, `+` (un nivel) o `#`
+   (todo lo que cuelgue de ahí).
+3. Definir el ACL: qué cliente puede publicar y a qué puede suscribirse.
+4. Decidir el puerto/cifrado (1883 vs 8883) y el método de autenticación.
+
+## Ejemplo resuelto
+Ejercicio de emparejamiento con el árbol de arriba:
+
+| Filtro de suscripción | ¿Coincide con `Home/livingroom/temperature`? | ¿Coincide con `Home/bedroom/temperature`? | ¿Coincide con `Home/livingroom/humidity`? |
+|---|---|---|---|
+| `Home/+/temperature` | Sí | Sí | No (el último nivel no es `temperature`) |
+| `Home/livingroom/#` | Sí | No (otra rama) | Sí |
+| `Home/livingroom/temperature` | Sí (exacto) | No | No |
+
+## Errores típicos
+- Usar `#` en medio de un tópico: sólo es válido como **último** nivel del filtro.
+- Pensar que un tópico "existe" antes de que alguien publique en él: no hay que crearlo,
+  simplemente aparece cuando se publica o se suscribe.
+- Dejar el Last Will sin proteger, asumiendo que sólo el payload normal necesita
+  seguridad.
+- Usar sólo usuario/contraseña en producción sin TLS: las credenciales viajarían en
+  texto plano por el puerto 1883.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un sistema publica en los tópicos: Home/livingroom/temperature, Home/livingroom/humidity, Home/bedroom/temperature y Home/garage/door/status. Un cliente se suscribe a Home/+/temperature y otro a Home/livingroom/#. Indique a cuáles de los cuatro tópicos queda suscrito cada cliente.",
+  hints: [
+    "`+` cubre exactamente un nivel donde está el comodín.",
+    "`#` cubre ese nivel y todos los que cuelguen debajo, sin límite de profundidad.",
+  ],
+}}>
+
+| Filtro | `Home/livingroom/temperature` | `Home/livingroom/humidity` | `Home/bedroom/temperature` | `Home/garage/door/status` |
+|---|---|---|---|---|
+| `Home/+/temperature` | ✓ | ✗ | ✓ | ✗ |
+| `Home/livingroom/#` | ✓ | ✓ | ✗ | ✗ |
+
+- `Home/+/temperature` coincide con `Home/livingroom/temperature` y `Home/bedroom/temperature`
+  (no con `humidity`, que no termina en "temperature", ni con `garage/door/status`, que
+  tiene un nivel de más antes del final).
+- `Home/livingroom/#` coincide con `Home/livingroom/temperature` y `Home/livingroom/humidity`
+  (todo lo que cuelgue de `Home/livingroom/`), pero no con `Home/bedroom/temperature` ni con
+  `Home/garage/door/status` (otras ramas).
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un broker Mosquitto atiende sensores de temperatura y una cerradura eléctrica. Proponga, en una lista corta, las medidas de seguridad que aplicaría (puerto, autenticación, autorización) y justifique por qué el Last Will de la cerradura merece protección extra.",
+  hints: [
+    "¿Qué puerto y qué protocolo de transporte evita que las credenciales viajen en texto plano?",
+    "Si alguien pudiera simular la caída de la cerradura, ¿qué mensaje falso podría forzar y qué implicaría?",
+  ],
+}}>
+
+**Medidas de seguridad:**
+
+1. **Puerto/cifrado:** 8883 con TLS/SSL (en vez de 1883 en claro), para cifrar toda la
+   conexión, incluyendo credenciales.
+2. **Autenticación:** usuario/contraseña combinada con certificados X.509 para los
+   dispositivos críticos como la cerradura.
+3. **Autorización:** una ACL que le permita a cada sensor publicar sólo en su propio
+   tópico (p. ej. la cerradura no debería poder publicar en el tópico de otro dispositivo).
+
+**Por qué el Last Will de la cerradura merece protección extra:** si no está
+autenticado/cifrado, un atacante podría simular una desconexión inesperada y forzar que el
+broker publique un mensaje de estado falso (p. ej. "desbloqueada" u "offline"), engañando
+al sistema de monitoreo o a otros dispositivos que reaccionan a ese tópico.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Last Will sin proteger: un atacante fuerza un estado falso',
+  steps: [{
+    note: 'Sin TLS ni autenticación, el atacante puede suplantar al cliente de la cerradura y simular su caída para que el broker publique el will falso.',
+    actors: [{ id: 'lock', label: 'Cerradura' }, { id: 'atk', label: 'Atacante' }, { id: 'b', label: 'Broker' }, { id: 'sub', label: 'Suscriptores' }],
+    msgs: [
+      { from: 'lock', to: 'b', label: 'CONNECT', flags: 'will topic: cerradura/status · will: "desbloqueada"' },
+      { from: 'atk', to: 'b', label: 'suplanta / fuerza desconexión', flags: 'sin TLS/auth' },
+      { from: 'b', to: 'sub', label: 'PUBLISH "desbloqueada"', flags: 'will publicado por el broker (falso)' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

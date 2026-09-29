@@ -1,0 +1,66 @@
+id: binomial-heap
+title: "Montículo binomial"
+type: structure
+week: week-01
+
+prerequisites: ["binary-heap", "binomial-tree"]
+buildsOn: ["binomial-tree"]
+usedBy: ["fibonacci-heap"]
+
+complexity:
+  binomial-link:
+    worst: O(1)
+    reasoning: >-
+      Sólo mueve punteros (padre, hijo, siguiente-hermano, grado): nunca
+      copia ni recorre nodos. Argumento estructural, no una recurrencia.
+    source: "Sem_1_Heaps_I-1.pdf#48"
+  find-min:
+    worst: O(lg n)
+    reasoning: >-
+      Un montículo binomial con n nodos tiene a lo mucho floor(lg n) + 1
+      raíces (tantas como bits en la representación binaria de n).
+      Find-Min recorre esa lista de raíces una vez: argumento estructural,
+      no amortizado.
+    source: "Sem_1_Heaps_I-1.pdf#44"
+  union:
+    worst: O(lg n)
+    reasoning: >-
+      Mezclar dos listas de raíces de O(lg n) árboles cada una cuesta
+      O(lg n); recorrer la lista mezclada enlazando pares consecutivos del
+      mismo grado (el acarreo de la suma binaria) es, a su vez, O(lg n).
+      Cada enlace es O(1) (Binomial-Link), así que el total sigue en O(lg n).
+    source: "Sem_1_Heaps_I-1.pdf#45-46,49-50"
+  insert:
+    worst: O(lg n)
+    reasoning: >-
+      Insert(H, x) es Union(H, {x}) con x como un B0 nuevo: hereda el peor
+      caso de Union, O(lg n). Pero el análisis agregado (la analogía del
+      contador binario: el bit i cambia a lo mucho ceil(n / 2^i) veces en n
+      incrementos) muestra que el costo AMORTIZADO de cada Insert es O(1),
+      aunque un Insert individual pueda costar O(lg n).
+    source: "Sem_1_Heaps_I-1.pdf#50-53"
+  extract-min:
+    worst: O(lg n)
+    reasoning: >-
+      Encontrar la raíz mínima recorre a lo mucho floor(lg n) + 1 raíces:
+      O(lg n). Sus hijos forman a lo mucho lg n raíces nuevas, y Union(H, H')
+      vuelve a costar O(lg n). Suma de dos términos O(lg n): sigue en O(lg n).
+    source: "Sem_1_Heaps_I-1.pdf#54-55"
+  decrease-key:
+    worst: O(lg n)
+    reasoning: >-
+      Un nodo dentro de un árbol Bk está a profundidad a lo mucho k = O(lg n)
+      de su raíz. El ciclo de intercambios sube nivel por nivel hasta la
+      raíz en el peor caso: O(lg n) intercambios.
+    source: "Sem_1_Heaps_I-1.pdf#56-58"
+  delete:
+    worst: O(lg n)
+    reasoning: >-
+      Delete(H, x) es Decrease-Key(H, x, -infinito) seguido de
+      Extract-Min(H): O(lg n) + O(lg n) sigue siendo O(lg n).
+    source: "Sem_1_Heaps_I-1.pdf#56-58"
+
+professorAnalysisStyle: "estructural + amortizado"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

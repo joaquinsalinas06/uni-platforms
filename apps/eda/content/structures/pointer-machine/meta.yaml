@@ -1,0 +1,19 @@
+id: pointer-machine
+title: "Modelo pointer machine"
+type: concept
+week: week-03
+
+prerequisites: []
+buildsOn: []
+usedBy: ["fat-nodes", "path-copying"]
+
+# Concepto: no es una estructura con operaciones que costar, son las reglas
+# de un modelo de cómputo. El profesor da las tres reglas como axiomas, no
+# como cotas derivadas de un análisis, y no distingue mejor/prom/peor ni
+# habla de espacio. Se deja vacío a propósito, no por omisión.
+complexity: {}
+
+professorAnalysisStyle: "definición de modelo de cómputo"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

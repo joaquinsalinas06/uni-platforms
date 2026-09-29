@@ -1,0 +1,352 @@
+---
+kind: subtopic
+order: 1
+title: Delta ⇔ estrella
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Tres resistencias conectadas en **triángulo (Δ)** —cada una entre un par distinto de
+tres terminales— no están ni en serie ni en paralelo entre sí, y tampoco lo están las
+tres conectadas en **estrella (Y)** —cada una entre un terminal y un nodo central
+común—. Antes de poder reducirlas hay que **transformarlas** de una forma a la otra,
+manteniendo el comportamiento visto desde los mismos 3 terminales externos.
+
+## Conceptos
+
+### Cuándo hace falta
+
+Se necesita la transformación Δ↔Y cuando, mirando 3 resistencias, **ningún par**
+comparte exactamente los mismos dos nodos (no hay serie) y **ningún par** comparte
+exactamente un nodo con el mismo par de nodos abiertos (no hay paralelo). El caso más
+común en el curso es dentro de un **puente de Wheatstone desequilibrado**: ahí la
+rama central impide la reducción serie-paralelo directa, y transformar una de las dos
+"Y" del puente en "Δ" (o viceversa) desbloquea la reducción.
+
+### Fórmulas
+
+De Δ (R1, R2, R3) a Y (Ra, Rb, Rc), con R1 entre X-Z, R2 entre X-Y, R3 entre Z-Y:
+
+$$R_a = \frac{R_1 \cdot R_2}{R_1+R_2+R_3} \qquad R_b = \frac{R_2 \cdot R_3}{R_1+R_2+R_3} \qquad R_c = \frac{R_1 \cdot R_3}{R_1+R_2+R_3}$$
+
+Cada resistencia de la estrella queda en el terminal que **comparten** las dos
+resistencias del triángulo que la forman (p. ej. R1 y R2 comparten el terminal X, así
+que $R_a$ —la que queda conectada a X— es su producto sobre la suma).
+
+De Y a Δ (inversa):
+
+$$R_1 = R_a + R_c + \frac{R_a \cdot R_c}{R_b} \qquad R_2 = R_a + R_b + \frac{R_a \cdot R_b}{R_c} \qquad R_3 = R_b + R_c + \frac{R_b \cdot R_c}{R_a}$$
+
+> En ambos casos el denominador es siempre **la suma de las tres** resistencias del
+> lado de origen (los tres lados del triángulo, o los tres productos cruzados entre
+> pares de la estrella divididos por la resistencia opuesta).
+
+## Método paso a paso
+
+1. Identifica si el bloque de 3 resistencias está en Δ (triángulo, 3 nodos externos,
+   ninguno común a las tres) o en Y (estrella, con un nodo central propio de esas 3
+   resistencias, sin ninguna otra conexión).
+2. Decide hacia dónde conviene transformar: si el resto del circuito ya tiene una Y
+   vecina, súmalas en serie transformando la Δ a Y (o viceversa para juntar con una
+   Δ vecina).
+3. Aplica las fórmulas conservando qué par de resistencias del origen comparte cada
+   terminal — ese es el terminal donde va la resistencia equivalente.
+4. Sustituye el bloque completo por su equivalente (mismos 3 terminales externos) y
+   continúa la reducción serie-paralelo normalmente desde ahí.
+5. Si el bloque es un **puente de Wheatstone**, revisa primero la condición de
+   equilibrio ($R_1/R_2 = R_3/R_x$, ver
+   [Puente de Wheatstone](/topics/delta-wye-wheatstone/subtopics/puente-wheatstone)):
+   si se cumple, no hace falta transformar nada — la rama central no lleva corriente y
+   se elimina directamente.
+
+## Ejemplo resuelto
+
+### Transformación Δ → Y
+
+*(derivado)* Triángulo con $R_1$ (X-Z) $=6\,\text{k}\Omega$, $R_2$ (X-Y)
+$=3\,\text{k}\Omega$, $R_3$ (Z-Y) $=9\,\text{k}\Omega$. Suma $=18\,\text{k}\Omega$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Δ → Y: R1=6k, R2=3k, R3=9k',
+  steps: [
+    {
+      note: 'Triángulo original entre X, Y, Z: R1 y R2 comparten X, R2 y R3 comparten Y, R1 y R3 comparten Z.',
+      circuit: {
+        nodes: [
+          { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+        ],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'X', to: 'Z', value: 6000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'X', to: 'Y', value: 3000, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'Z', to: 'Y', value: 9000, label: 'R3' },
+        ],
+        groups: [{ parts: ['R1', 'R2', 'R3'], tone: 'bridge', label: 'Δ' }],
+      },
+    },
+    {
+      note: 'Equivalente en Y: Ra queda en X (comparte R1,R2), Rb en Y (comparte R2,R3), Rc en Z (comparte R1,R3). El motor calcula sus valores desde R1,R2,R3.',
+      circuit: {
+        nodes: [
+          { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+          { id: 'O', x: 4, y: 4 },
+        ],
+        parts: [
+          { id: 'Ra', kind: 'resistor', from: 'O', to: 'X', label: 'Ra', mergedFrom: ['R1', 'R2'], mergeKind: 'delta-wye', state: 'answer' },
+          { id: 'Rb', kind: 'resistor', from: 'O', to: 'Y', label: 'Rb', mergedFrom: ['R2', 'R3'], mergeKind: 'delta-wye', state: 'answer' },
+          { id: 'Rc', kind: 'resistor', from: 'O', to: 'Z', label: 'Rc', mergedFrom: ['R1', 'R3'], mergeKind: 'delta-wye', state: 'answer' },
+        ],
+        req: { between: ['X', 'Y'] },
+      },
+      expect: { 'Req(X,Y)': 2500 },
+    },
+  ],
+}} />
+
+Verificación cruzada: en el triángulo original, con Z sin ninguna otra conexión
+externa, $R_{XY} = R_2 \parallel (R_1+R_3) = 3\text{k} \parallel 15\text{k} =
+2.5\,\text{k}\Omega$ — el mismo valor que $R_a+R_b = 1\text{k}+1.5\text{k} =
+2.5\,\text{k}\Omega$ en la estrella. Ambas representaciones son equivalentes vistas
+desde X y Y.
+
+### Δ → Y en un puente desbalanceado (simulación del profe)
+
+*(Sem02_WheatstoneYDiodos#15, versión «desbalanceado»)* Es el puente del ejercicio 5
+de [Puente de Wheatstone](/topics/delta-wye-wheatstone/subtopics/puente-wheatstone)
+con 20 V, pero con el brazo C-D de 2 kΩ y la rama central de 2.13 kΩ. Ahora
+$3\text{k}\cdot 2\text{k} \neq 6\text{k}\cdot 2\text{k}$: el puente **no** está
+balanceado, la rama central conduce y la serie-paralelo no alcanza. Transformamos el
+triángulo B-A-C en estrella.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Δ → Y en el puente desbalanceado (Sem02#15)',
+  steps: [
+    {
+      note: 'Puente desbalanceado de la simulación (Sem02#15): 3k·2k ≠ 6k·2k. Ningún par de resistencias está en serie ni en paralelo. El triángulo B-A-C (3k, 6k, 2.13k) es una Δ: la transformamos a Y.',
+      circuit: {
+        nodes: [
+          { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' }, { id: 'A', x: 5, y: 5, label: 'A' }, { id: 'C', x: 15, y: 5, label: 'C' },
+          { id: 'sn', x: 0, y: 10 }, { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+          { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+          { id: 'R3k', kind: 'resistor', from: 'B', to: 'A', value: 3000, label: '3k' },
+          { id: 'R6k', kind: 'resistor', from: 'B', to: 'C', value: 6000, label: '6k' },
+          { id: 'R21', kind: 'resistor', from: 'A', to: 'C', value: 2130, label: '2.13k' },
+          { id: 'R2k', kind: 'resistor', from: 'A', to: 'D', value: 2000, label: '2k' },
+          { id: 'R2kb', kind: 'resistor', from: 'C', to: 'D', value: 2000, label: '2k' },
+          { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+        ],
+        groups: [{ parts: ['R3k', 'R6k', 'R21'], tone: 'bridge', label: 'Δ' }],
+        currents: [{ part: 'R21', label: 'I_{2.13k}', showValue: true }],
+      },
+      expect: { 'I(Rs1)': 0.003973, 'I(R21)': 0.000374322 },
+    },
+    {
+      note: 'Δ → Y con suma 3 + 6 + 2.13 = 11.13 kΩ. Cada rama va al terminal que comparten sus dos resistencias: RB = 3·6/11.13 ≈ 1.617k (B), RA = 3·2.13/11.13 ≈ 0.574k (A), RC = 6·2.13/11.13 ≈ 1.148k (C). Los potenciales de A, B y C no cambian.',
+      circuit: {
+        nodes: [
+          { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' }, { id: 'A', x: 5, y: 5, label: 'A' }, { id: 'C', x: 15, y: 5, label: 'C' },
+          { id: 'O', x: 10, y: 5, label: 'O' }, { id: 'sn', x: 0, y: 10 }, { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+          { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+          { id: 'RyB', kind: 'resistor', from: 'B', to: 'O', label: 'RB', mergedFrom: ['R3k', 'R6k'], mergeKind: 'delta-wye', tone: 'bridge' },
+          { id: 'RyA', kind: 'resistor', from: 'A', to: 'O', label: 'RA', mergedFrom: ['R3k', 'R21'], mergeKind: 'delta-wye', tone: 'bridge' },
+          { id: 'RyC', kind: 'resistor', from: 'C', to: 'O', label: 'RC', mergedFrom: ['R6k', 'R21'], mergeKind: 'delta-wye', tone: 'bridge' },
+          { id: 'R2k', kind: 'resistor', from: 'A', to: 'D', value: 2000, label: '2k' },
+          { id: 'R2kb', kind: 'resistor', from: 'C', to: 'D', value: 2000, label: '2k' },
+          { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+        ],
+        groups: [{ parts: ['RyA', 'R2k'], tone: 'series', label: 'serie' }, { parts: ['RyC', 'R2kb'], tone: 'series', label: 'serie' }],
+        voltages: [{ part: 'RyA', label: 'V_A', plus: 'from' }],
+      },
+      expect: { 'I(Rs1)': 0.003973, 'V(A,C)': 0.7973, 'V(A)': 4.3697 },
+    },
+    {
+      note: 'A ahora solo toca RA y el 2k: serie → 2.574k. Igual en C: RC + 2k → 3.148k. Las dos van de O a D: en paralelo.',
+      circuit: {
+        nodes: [
+          { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' }, { id: 'O', x: 10, y: 5, label: 'O' }, { id: 'sn', x: 0, y: 10 },
+          { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+          { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+          { id: 'RyB', kind: 'resistor', from: 'B', to: 'O', label: 'RB', mergedFrom: ['R3k', 'R6k'], mergeKind: 'delta-wye', tone: 'bridge' },
+          { id: 'RA2', kind: 'resistor', from: 'O', to: 'D', label: 'RA2', mergedFrom: ['RyA', 'R2k'], mergeKind: 'series', via: [[5, 5]] },
+          { id: 'RC2', kind: 'resistor', from: 'O', to: 'D', label: 'RC2', mergedFrom: ['RyC', 'R2kb'], mergeKind: 'series', via: [[15, 5]] },
+          { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+        ],
+        groups: [{ parts: ['RA2', 'RC2'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'RA2 ‖ RC2 ≈ 1.416k. Queda una sola malla: 1k + RB + 1.416k + 1k ≈ 5.033 kΩ, así que I1 = 20 V / 5.033 kΩ ≈ 3.973 mA (lo mismo que marca la simulación).',
+      circuit: {
+        nodes: [
+          { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' }, { id: 'O', x: 10, y: 5, label: 'O' }, { id: 'sn', x: 0, y: 10 },
+          { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+          { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+          { id: 'RyB', kind: 'resistor', from: 'B', to: 'O', label: 'RB', mergedFrom: ['R3k', 'R6k'], mergeKind: 'delta-wye', tone: 'bridge' },
+          { id: 'Rp', kind: 'resistor', from: 'O', to: 'D', label: 'Rp', mergedFrom: ['RA2', 'RC2'], mergeKind: 'parallel' },
+          { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+        ],
+        groups: [{ parts: ['Rs1', 'RyB', 'Rp', 'Rs2'], tone: 'series', label: 'serie' }],
+        req: { between: ['sp', 'sn'] },
+        currents: [{ part: 'Rs1', label: 'I_1', showValue: true }],
+      },
+      expect: { 'Req(sp,sn)': 5033.4, 'I(Rs1)': 0.003973 },
+    },
+  ],
+}} />
+
+Con $V_A$ y $V_C$ del paso 2 (que no cambian al transformar) se recupera la corriente de
+la rama central que desapareció: $I_{2.13\text{k}} = V_{AC}/2.13\,\text{k}\Omega \approx
+0.797\,\text{V}/2.13\,\text{k}\Omega \approx 374\,\mu\text{A}$, el valor que marca el
+amperímetro de la simulación.
+
+### ¿Y el EX PARCIAL 25-2?
+
+Ese ejercicio (20 resistencias entre A y B) **no** necesita Δ↔Y: el puente que esconde
+está **balanceado** ($R_{11}/R_{12} = 6/12$ y $(R_{13}\parallel R_{15})/R_{14} = 3/6$),
+así que su rama central (R16, R17, R18) se elimina y todo sale por serie-paralelo:
+$R_{eq} = 10\text{k}\parallel 10\text{k}\parallel 6\text{k}\parallel 10\text{k} \approx
+2.14\,\text{k}\Omega$. Está resuelto paso a paso en
+[Reducción serie-paralelo](/topics/basic-circuits/subtopics/reduccion-serie-paralelo).
+Moraleja: **antes** de transformar un puente, revisa si está balanceado.
+
+## Errores típicos
+
+- Usar como denominador sólo dos de las tres resistencias del lado de origen: el
+  denominador siempre es la **suma de las tres**.
+- Confundir a qué terminal va cada resistencia de la estrella: va en el terminal que
+  **comparten** las dos resistencias del triángulo que la originan.
+- Transformar un puente sin revisar antes si está equilibrado: si lo está, es mucho
+  más simple eliminar la rama central que hacer Δ→Y.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Triángulo del enunciado entre X, Y y Z. Z no tiene ninguna otra conexión.',
+    circuit: {
+      nodes: [
+        { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+      ],
+      parts: [
+        { id: 'R1', kind: 'resistor', from: 'X', to: 'Z', value: 4000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'X', to: 'Y', value: 2000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'Z', to: 'Y', value: 6000, label: 'R3' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un triángulo tiene $R_1 = 4\\,\\text{k}\\Omega$ entre los nodos $X$–$Z$, $R_2 = 2\\,\\text{k}\\Omega$ entre $X$–$Y$ y $R_3 = 6\\,\\text{k}\\Omega$ entre $Z$–$Y$. Conviértelo a su equivalente en estrella ($R_a$ en $X$, $R_b$ en $Y$, $R_c$ en $Z$) y calcula la resistencia equivalente vista entre $X$ e $Y$ si el nodo $Z$ queda sin ninguna otra conexión externa.",
+  hints: [
+    "El denominador de las tres fórmulas es siempre $R_1 + R_2 + R_3 = 4 + 2 + 6 = 12\\,\\text{k}\\Omega$.",
+    "$R_a$ (en $X$) usa las dos resistencias que tocan $X$: $R_1$ y $R_2$. $R_b$ (en $Y$) usa $R_2$ y $R_3$. $R_c$ (en $Z$) usa $R_1$ y $R_3$.",
+    "Con $Z$ sin conexión externa, $R_{eq}(X,Y)$ en la estrella es simplemente $R_a + R_b$ en serie.",
+  ],
+}}>
+
+**1. Denominador común.** Las tres fórmulas Δ → Y dividen por la suma del triángulo:
+
+$$
+\Sigma = R_1 + R_2 + R_3 = 4 + 2 + 6 = 12\,\text{k}\Omega
+$$
+
+**2. Cada rama de la estrella.** Producto de las dos resistencias que comparten ese terminal, sobre $\Sigma$:
+
+$$
+R_a = \frac{R_1 R_2}{\Sigma} = \frac{4 \cdot 2}{12} = \boxed{0.667\,\text{k}\Omega}
+\qquad
+R_b = \frac{R_2 R_3}{\Sigma} = \frac{2 \cdot 6}{12} = \boxed{1\,\text{k}\Omega}
+\qquad
+R_c = \frac{R_1 R_3}{\Sigma} = \frac{4 \cdot 6}{12} = \boxed{2\,\text{k}\Omega}
+$$
+
+**3. Quitar la rama colgante.** $Z$ no tiene conexión externa: por $R_c$ no circula corriente y no participa.
+
+**4. Serie $R_a + R_b$** (el centro $O$ sólo une $R_a$ con $R_b$):
+
+$$
+R_{eq}(X,Y) = R_a + R_b = 0.667 + 1 = \boxed{1.667\,\text{k}\Omega}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Resuelto: Δ → Y y luego serie',
+  steps: [
+    {
+      note: 'Triángulo original. R1 y R2 comparten X, R2 y R3 comparten Y, R1 y R3 comparten Z.',
+      circuit: {
+        nodes: [
+          { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+        ],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'X', to: 'Z', value: 4000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'X', to: 'Y', value: 2000, label: 'R2' },
+          { id: 'R3', kind: 'resistor', from: 'Z', to: 'Y', value: 6000, label: 'R3' },
+        ],
+        groups: [{ parts: ['R1', 'R2', 'R3'], tone: 'bridge', label: 'Δ' }],
+        req: { between: ['X', 'Y'] },
+      },
+      expect: { 'Req(X,Y)': 1666.67 },
+    },
+    {
+      note: 'Estrella equivalente: Ra = 0.667k en X, Rb = 1k en Y, Rc = 2k en Z.',
+      circuit: {
+        nodes: [
+          { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+          { id: 'O', x: 4, y: 4, label: 'O' },
+        ],
+        parts: [
+          { id: 'Ra', kind: 'resistor', from: 'O', to: 'X', label: 'Ra', mergedFrom: ['R1', 'R2'], mergeKind: 'delta-wye', state: 'answer' },
+          { id: 'Rb', kind: 'resistor', from: 'O', to: 'Y', label: 'Rb', mergedFrom: ['R2', 'R3'], mergeKind: 'delta-wye', state: 'answer' },
+          { id: 'Rc', kind: 'resistor', from: 'O', to: 'Z', label: 'Rc', mergedFrom: ['R1', 'R3'], mergeKind: 'delta-wye', state: 'answer' },
+        ],
+      },
+      expect: { 'Req(X,O)': 666.67, 'Req(O,Y)': 1000, 'Req(O,Z)': 2000 },
+    },
+    {
+      note: 'Z queda al aire: Rc no lleva corriente. Entre X e Y quedan Ra y Rb en serie.',
+      circuit: {
+        nodes: [
+          { id: 'X', x: 4, y: 0, label: 'X' }, { id: 'Y', x: 8, y: 4, label: 'Y' }, { id: 'Z', x: 0, y: 4, label: 'Z' },
+          { id: 'O', x: 4, y: 4, label: 'O' },
+        ],
+        parts: [
+          { id: 'Ra', kind: 'resistor', from: 'O', to: 'X', label: 'Ra', mergedFrom: ['R1', 'R2'], mergeKind: 'delta-wye' },
+          { id: 'Rb', kind: 'resistor', from: 'O', to: 'Y', label: 'Rb', mergedFrom: ['R2', 'R3'], mergeKind: 'delta-wye' },
+          { id: 'Rc', kind: 'resistor', from: 'O', to: 'Z', label: 'Rc', mergedFrom: ['R1', 'R3'], mergeKind: 'delta-wye', state: 'muted' },
+        ],
+        groups: [{ parts: ['Ra', 'Rb'], tone: 'series', label: 'serie' }],
+        req: { between: ['X', 'Y'] },
+      },
+      expect: { 'Req(X,Y)': 1666.67 },
+    },
+  ],
+}} />
+
+**Comprobación — con el triángulo original:** con $Z$ al aire, $R_1$ y $R_3$ quedan en serie y ésa en paralelo con $R_2$:
+
+$$
+R_{XY} = R_2 \parallel (R_1 + R_3) = \frac{2 \cdot 10}{2 + 10} = 1.667\,\text{k}\Omega \;\checkmark
+$$
+
+</ExerciseBlock>

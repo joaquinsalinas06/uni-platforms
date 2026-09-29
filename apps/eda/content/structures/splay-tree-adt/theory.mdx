@@ -1,0 +1,393 @@
+---
+kind: theory
+title: "TDA del splay tree"
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Un splay tree cualquiera, en reposo. No tiene ningún campo extra
+        respecto de lo que ya describe
+        [splay-tree](/structures/splay-tree): valor, padre, hijo izquierdo,
+        hijo derecho. Todo lo de esta página sale de reorganizar estos
+        mismos punteros.
+      nodes:
+        - { id: n50, value: 50, parent: null }
+        - { id: n30, value: 30, parent: n50, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
+        - { id: n70, value: 70, parent: n50, side: right }
+        - { id: n60, value: 60, parent: n70, side: left }
+        - { id: n80, value: 80, parent: n70, side: right }
+    - note: >-
+        Buscar(45) — y 45 NO está en el árbol. El descenso llega a un
+        puntero nulo, y entonces se splaya el ÚLTIMO nodo visitado, 40: el
+        predecesor de 45 (#14). Ésa es la única diferencia con el
+        [`search`](/structures/splay-tree/operations/search) de la semana 5,
+        y es la que abre todo lo demás.
+      highlight: ["n40"]
+      nodes:
+        - { id: n40, value: 40, parent: null, tag: r, state: marked }
+        - { id: n30, value: 30, parent: n40, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n50, value: 50, parent: n40, side: right }
+        - { id: n70, value: 70, parent: n50, side: right }
+        - { id: n60, value: 60, parent: n70, side: left }
+        - { id: n80, value: 80, parent: n70, side: right }
+    - note: >-
+        Lo que esa raíz regala, sin haber hecho nada extra: como r = 40 es el
+        predecesor de 45, TODO su subárbol izquierdo (30, 20) vale a lo más
+        45, y TODO su subárbol derecho (50, 70, 60, 80) vale más que 45. La
+        frontera entre los dos conjuntos ya está exactamente en la raíz.
+      highlight: ["n40"]
+      nodes:
+        - { id: n40, value: 40, parent: null, tag: r, state: marked }
+        - { id: n30, value: 30, parent: n40, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n50, value: 50, parent: n40, side: right }
+        - { id: n70, value: 70, parent: n50, side: right }
+        - { id: n60, value: 60, parent: n70, side: left }
+        - { id: n80, value: 80, parent: n70, side: right }
+    - note: >-
+        Separar(45) cobra ese regalo con UNA comparación y UN puntero a
+        nulo (#16). Quedan dos splay trees independientes, I con todo lo
+        que vale a lo más 45 y D con todo lo que vale más. Ninguna llamada
+        nueva a Splay, ningún recorrido del árbol.
+      highlight: ["n40", "n50"]
+      nodes:
+        - { id: n40, value: 40, parent: null, tag: I, state: answer }
+        - { id: n30, value: 30, parent: n40, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n50, value: 50, parent: null, tag: D, state: answer }
+        - { id: n70, value: 70, parent: n50, side: right }
+        - { id: n60, value: 60, parent: n70, side: left }
+        - { id: n80, value: 80, parent: n70, side: right }
+    - note: >-
+        Y con esos dos pedazos, Insertar(45) es colgar un nodo nuevo encima
+        de ambos (#18). El nodo 45 es nuevo en esta versión del árbol; todo
+        lo demás son los mismos nodos de antes, movidos pero no copiados.
+        Eliminar hace el camino inverso, pegando los dos pedazos con Unir.
+      highlight: ["n45"]
+      nodes:
+        - { id: n45, value: 45, parent: null, tag: x, state: copied }
+        - { id: n40, value: 40, parent: n45, side: left }
+        - { id: n30, value: 30, parent: n40, side: left }
+        - { id: n20, value: 20, parent: n30, side: left }
+        - { id: n50, value: 50, parent: n45, side: right }
+        - { id: n70, value: 70, parent: n50, side: right }
+        - { id: n60, value: 60, parent: n70, side: left }
+        - { id: n80, value: 80, parent: n70, side: right }
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+[splay-tree](/structures/splay-tree) dejó una estructura con exactamente una
+operación: `Splay(x)`, que lleva un nodo a la raíz con rotaciones. Pero
+"todo árbol de búsqueda necesita, como mínimo, **Buscar**, **Insertar** y
+**Eliminar**. Ya tenemos Splay — ¿alcanza con eso?" (#12).
+
+La pregunta no es retórica, y el profesor la plantea como tal: "¿Podemos
+construir las tres operaciones usando **solo** una función de búsqueda y
+Splay, sin ningún recorrido extra del árbol?" (#12). La respuesta es sí — y
+de regalo salen dos operaciones más, `Separar` y `Unir`, "dos primitivos casi
+gratuitos que hacen que Insertar y Eliminar salgan en pocas líneas" (#12).
+
+Eso es lo que resuelve este tema: **cerrar el TDA sin añadir maquinaria**.
+No hay un segundo algoritmo de descenso, ni un rebalanceo aparte, ni un campo
+nuevo en el nodo. Las cinco operaciones son recombinaciones de dos piezas que
+ya existen.
+
+## Intuición
+
+La idea entera cabe en una frase: **después de un Buscar, la raíz ya es la
+frontera**.
+
+Cuando `Buscar(k)` termina, la raíz del árbol es k (si k estaba) o el
+predecesor o sucesor de k (si no estaba, #14). En cualquiera de los dos casos
+uno de los dos subárboles de la raíz es todo menor o igual que k y el otro es
+todo mayor — no porque alguien lo haya calculado, sino porque es lo que
+significa ser la raíz de un BST con esa llave. El recorrido que haría falta
+para partir el árbol **ya se pagó**: Buscar lo hizo.
+
+A partir de ahí todo cae solo. Cortar un puntero parte el árbol
+(`Separar`). Pegar dos árboles ordenados es subir el máximo del izquierdo y
+colgar el derecho en el hueco que queda (`Unir`). Insertar es separar y
+colgar el nodo nuevo encima; eliminar es dejar a k en la raíz y volver a
+pegar sus dos hijos.
+
+El punto fino es que `Buscar` sirve igual cuando k **no** está, y sirve igual
+si lo que queda en la raíz es el predecesor o el sucesor. Las dos ramas del
+`si` de Separar (#15) existen exactamente para eso:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'El mismo árbol de partida, dos búsquedas fallidas distintas. Primero Buscar(45): el descenso 50 → 30 → 40 termina en nulo y splaya el último visitado, 40 — el PREDECESOR de 45.',
+      caption: 'Buscar(45) — el último visitado es el predecesor',
+      highlight: ['n40'],
+      nodes: [
+        { id: 'n40', value: 40, parent: null, tag: 'r', state: 'marked' },
+        { id: 'n30', value: 30, parent: 'n40', side: 'left' },
+        { id: 'n20', value: 20, parent: 'n30', side: 'left' },
+        { id: 'n50', value: 50, parent: 'n40', side: 'right' },
+        { id: 'n70', value: 70, parent: 'n50', side: 'right' },
+        { id: 'n60', value: 60, parent: 'n70', side: 'left' },
+        { id: 'n80', value: 80, parent: 'n70', side: 'right' },
+      ],
+    },
+    {
+      note: 'Como r = 40 es a lo más 45, la rama que corre es la primera: I ← r y D ← r.der. La raíz se queda del lado izquierdo, y el subárbol derecho entero se va con D.',
+      caption: 'r.valor ≤ k  ⇒  I ← r,  D ← r.der,  r.der ← NULO',
+      highlight: ['n40', 'n50'],
+      nodes: [
+        { id: 'n40', value: 40, parent: null, tag: 'I', state: 'answer' },
+        { id: 'n30', value: 30, parent: 'n40', side: 'left' },
+        { id: 'n20', value: 20, parent: 'n30', side: 'left' },
+        { id: 'n50', value: 50, parent: null, tag: 'D', state: 'answer' },
+        { id: 'n70', value: 70, parent: 'n50', side: 'right' },
+        { id: 'n60', value: 60, parent: 'n70', side: 'left' },
+        { id: 'n80', value: 80, parent: 'n70', side: 'right' },
+      ],
+    },
+    {
+      note: 'Ahora Buscar(55) sobre el MISMO árbol de partida: el descenso 50 → 70 → 60 termina en nulo y splaya 60 — esta vez el SUCESOR de 55, no el predecesor. La raíz que queda es otra, y está del lado equivocado respecto del caso anterior.',
+      caption: 'Buscar(55) — el último visitado es el sucesor',
+      highlight: ['n60'],
+      nodes: [
+        { id: 'n60', value: 60, parent: null, tag: 'r', state: 'marked' },
+        { id: 'n50', value: 50, parent: 'n60', side: 'left' },
+        { id: 'n30', value: 30, parent: 'n50', side: 'left' },
+        { id: 'n20', value: 20, parent: 'n30', side: 'left' },
+        { id: 'n40', value: 40, parent: 'n30', side: 'right' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+        { id: 'n80', value: 80, parent: 'n70', side: 'right' },
+      ],
+    },
+    {
+      note: 'Como r = 60 es mayor que 55, corre la SEGUNDA rama: D ← r y I ← r.izq. Es la imagen espejo de la anterior — misma cantidad de trabajo, un puntero — y por eso Separar no necesita saber si k estaba o no, ni si la raíz es predecesor o sucesor: la comparación r.valor ≤ k resuelve los cuatro casos de una vez.',
+      caption: 'r.valor > k  ⇒  D ← r,  I ← r.izq,  r.izq ← NULO',
+      highlight: ['n50', 'n60'],
+      nodes: [
+        { id: 'n50', value: 50, parent: null, tag: 'I', state: 'answer' },
+        { id: 'n30', value: 30, parent: 'n50', side: 'left' },
+        { id: 'n20', value: 20, parent: 'n30', side: 'left' },
+        { id: 'n40', value: 40, parent: 'n30', side: 'right' },
+        { id: 'n60', value: 60, parent: null, tag: 'D', state: 'answer' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+        { id: 'n80', value: 80, parent: 'n70', side: 'right' },
+      ],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+**No hay ninguna estructura interna nueva.** Es exactamente el nodo de
+[splay-tree](/structures/splay-tree) sobre el
+[modelo computacional BST](/structures/bst-computational-model): valor,
+puntero al padre, puntero al hijo izquierdo, puntero al hijo derecho. Sin
+altura, sin color, sin contador de tamaño, sin campo de rango.
+
+Eso no es un detalle de implementación: es el enunciado del tema. Si el TDA
+completo necesitara un campo extra, la respuesta a "¿alcanza con Splay?"
+(#12) sería "no". Lo único que cambia respecto de la semana 5 es el contrato
+de **Buscar**:
+
+| | [`search`](/structures/splay-tree/operations/search) (semana 5) | `Buscar(k)` (#13, acá) |
+| --- | --- | --- |
+| k está | devuelve el nodo, splaya k | devuelve `verdadero`, splaya k |
+| k no está | el modelo no lo define (#24) | devuelve `falso`, splaya el **último nodo visitado** (#14) |
+
+Esa segunda fila es toda la diferencia. Es "literalmente, la operación de
+'acceso' que vamos a analizar con el Lema de Acceso" (#14) — ver
+[access-lemma](/structures/access-lemma).
+
+## Operaciones
+
+`Buscar(k)` no se reexplica acá: es
+[`search`](/structures/splay-tree/operations/search) de la semana 5 con el
+contrato de arriba, y es la operación que **paga el recorrido**. Las otras
+cuatro se construyen encima:
+
+- [`split`](/structures/splay-tree-adt/operations/split) — `Separar(k)`
+  parte el árbol en (I, D) mirando la raíz. Precondición: ya corrió
+  `Buscar(k)`. $O(1)$ adicional (#15-16).
+- [`join`](/structures/splay-tree-adt/operations/join) — `Unir(A, B)` pega
+  dos árboles, con todo A menor que todo B, splayando el máximo de A (#17).
+- [`insert`](/structures/splay-tree-adt/operations/insert) — `Insertar(k)` =
+  Buscar + Separar + colgar el nodo nuevo (#18).
+- [`delete`](/structures/splay-tree-adt/operations/delete) — `Eliminar(k)` =
+  Buscar + Unir (#19).
+
+Ninguna de las cuatro descendió por el árbol por su cuenta. `Separar` mira
+sólo la raíz; `Insertar` y `Eliminar` delegan todo el descenso en `Buscar`;
+`Unir` recorre la espina derecha de A, que es el descenso que Splay va a
+cobrar de todos modos.
+
+## Análisis de complejidad
+
+El estilo es `amortized`, el mismo de
+[splay-tree](/structures/splay-tree), y por la misma razón: la cota que el
+profesor da es sobre el promedio de una secuencia, nunca sobre una operación
+aislada. Hay que seguir distinguiendo dos costos.
+
+**Costo real de una operación individual.** Sigue pudiendo ser $O(n)$. Un
+`Buscar` sobre una cadena degenerada recorre $n$ nodos y su Splay hace del
+orden de $n/2$ pasos; un `Unir` cuyo A sea una cadena hacia la derecha
+desciende $n$ niveles hasta el máximo. Nada de este tema arregla eso, ni lo
+pretende.
+
+**Costo amortizado.** Acá está el aporte del tema, y es un argumento de
+conteo, no de rotaciones. El profesor cuenta cuántas veces llama cada
+operación a Splay (#20):
+
+| operación | llamadas a Splay | de dónde salen |
+| --- | --- | --- |
+| `Buscar` | 1 | la propia |
+| `Insertar` | 1 | la de su `Buscar` |
+| `Unir` | 1 | la del máximo de A |
+| `Eliminar` | 2 | `Buscar` + `Unir` |
+| `Separar` | **0 propias** | reutiliza la que ya hizo `Buscar` |
+
+Y la consecuencia, textual: "Cada operación cuesta, amortizado, a lo más el
+**doble** de lo que cuesta un Splay — así que todo lo que probemos sobre el
+costo de Splay se hereda automáticamente a las cinco" (#20).
+
+Eso es lo que hace valioso el tema. No demuestra ninguna cota nueva:
+**transfiere** una. Cualquier cota que se pruebe sobre Splay —y el
+[Lema de Acceso](/structures/access-lemma) es exactamente esa prueba— vale
+de inmediato para las cinco operaciones, con una constante 2 y nada más. Una
+sola demostración, cinco operaciones cubiertas.
+
+Vale la pena ver dónde caen esas dos llamadas en la única operación que las
+gasta, `Eliminar`, para comprobar que no hay ninguna tercera escondida:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Eliminar(40). El árbol en reposo, contador de llamadas a Splay en 0. 40 está a profundidad 1.',
+      caption: 'llamadas a Splay: 0',
+      nodes: [
+        { id: 'n20', value: 20, parent: null },
+        { id: 'n10', value: 10, parent: 'n20', side: 'left' },
+        { id: 'n40', value: 40, parent: 'n20', side: 'right' },
+        { id: 'n30', value: 30, parent: 'n40', side: 'left' },
+        { id: 'n60', value: 60, parent: 'n40', side: 'right' },
+        { id: 'n50', value: 50, parent: 'n60', side: 'left' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+      ],
+    },
+    {
+      note: 'Llamada 1 — la de Buscar(40). El descenso encuentra 40 y lo splaya a la raíz. Éste es TODO el recorrido del árbol que va a ocurrir en la operación entera.',
+      caption: 'llamadas a Splay: 1  (Buscar)',
+      highlight: ['n40'],
+      nodes: [
+        { id: 'n40', value: 40, parent: null, tag: 'r', state: 'active' },
+        { id: 'n20', value: 20, parent: 'n40', side: 'left' },
+        { id: 'n10', value: 10, parent: 'n20', side: 'left' },
+        { id: 'n30', value: 30, parent: 'n20', side: 'right' },
+        { id: 'n60', value: 60, parent: 'n40', side: 'right' },
+        { id: 'n50', value: 50, parent: 'n60', side: 'left' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+      ],
+    },
+    {
+      note: 'Con 40 en la raíz, sus dos hijos YA cumplen la precondición de Unir: todo el subárbol izquierdo (20, 10, 30) es menor que todo el derecho (60, 50, 70). Verificar eso costaría un recorrido; acá no hace falta verificarlo, es el invariante del BST. Cero llamadas gastadas en este paso.',
+      caption: 'llamadas a Splay: 1  (nada que verificar)',
+      highlight: ['n20', 'n60'],
+      nodes: [
+        { id: 'n40', value: 40, parent: null, tag: 'r', state: 'muted' },
+        { id: 'n20', value: 20, parent: 'n40', side: 'left', tag: 'A', state: 'marked' },
+        { id: 'n10', value: 10, parent: 'n20', side: 'left' },
+        { id: 'n30', value: 30, parent: 'n20', side: 'right' },
+        { id: 'n60', value: 60, parent: 'n40', side: 'right', tag: 'B', state: 'marked' },
+        { id: 'n50', value: 50, parent: 'n60', side: 'left' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+      ],
+    },
+    {
+      note: 'Llamada 2 — la de Unir(A, B). Se desciende por la espina derecha de A hasta el máximo (20 → 30, así que m = 30) y se hace Splay(30) DENTRO de A. 40 ya está descartado: es el nodo que se elimina.',
+      caption: 'llamadas a Splay: 2  (Buscar + Unir)',
+      highlight: ['n30'],
+      nodes: [
+        { id: 'n30', value: 30, parent: null, tag: 'm', state: 'active' },
+        { id: 'n20', value: 20, parent: 'n30', side: 'left' },
+        { id: 'n10', value: 10, parent: 'n20', side: 'left' },
+        { id: 'n60', value: 60, parent: null, tag: 'B', state: 'marked' },
+        { id: 'n50', value: 50, parent: 'n60', side: 'left' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+      ],
+    },
+    {
+      note: 'B se cuelga en el hueco derecho que m dejó libre, y listo: 40 ya no está y el árbol sigue siendo un BST válido. Dos llamadas a Splay en total, ninguna más — el "doble de un Splay" del #20 no es una estimación, es el conteo exacto.',
+      caption: 'llamadas a Splay: 2 — el máximo de las cinco operaciones',
+      highlight: ['n30'],
+      nodes: [
+        { id: 'n30', value: 30, parent: null, state: 'answer' },
+        { id: 'n20', value: 20, parent: 'n30', side: 'left' },
+        { id: 'n10', value: 10, parent: 'n20', side: 'left' },
+        { id: 'n60', value: 60, parent: 'n30', side: 'right' },
+        { id: 'n50', value: 50, parent: 'n60', side: 'left' },
+        { id: 'n70', value: 70, parent: 'n60', side: 'right' },
+      ],
+    },
+  ],
+}} />
+
+> **Nota de apoyo** (no está en las diapositivas): el profesor escribe "a lo
+> más el doble" contando llamadas a Splay, no sumando el descenso previo de
+> `Buscar` ni el descenso por la espina derecha de `Unir` como términos
+> aparte. En la literatura estándar eso se justifica porque el costo de un
+> Splay(x) es proporcional a la profundidad de x, que es exactamente lo que
+> cuesta el descenso que lo precede — así que el descenso está dentro de la
+> misma cota, no encima de ella. El material no hace esa cuenta explícita.
+
+## Tabla de complejidad
+
+La tabla se genera desde `meta.yaml`. Dos notas de lectura que la tabla no
+puede dar:
+
+- La fila de `split` dice **$O(1)$ adicional**, no $O(1)$ a secas. El costo
+  total de "buscar y separar" es el de `Buscar`; lo que es constante es lo
+  que `Separar` añade por encima (#16). Leerlo como "partir un árbol cuesta
+  $O(1)$" es leerlo mal: partirlo por una llave arbitraria requiere primero
+  haber buscado esa llave.
+- No hay columnas de mejor caso, caso promedio ni espacio porque el profesor
+  no las da para ninguna de las cuatro. Dejarlas vacías es fiel al material.
+
+## Ejemplos
+
+Ver [examples.md](/structures/splay-tree-adt/examples).
+
+## Comparación con estructuras relacionadas
+
+Contra un [BST balanceado](/structures/balanced-bst), que es el punto de
+comparación que el curso ya tiene:
+
+| | [balanced-bst](/structures/balanced-bst) | TDA del splay tree (acá) |
+| --- | --- | --- |
+| recorridos por `Insertar` | dos: bajar a buscar el hueco, y subir rebalanceando | **uno**: el de `Buscar`, y nada más (#18) |
+| recorridos por `Eliminar` | dos o tres: buscar k, buscar el sucesor para reemplazarlo, subir rebalanceando | **uno**: el de `Buscar`; `Unir` reutiliza la espina derecha (#19) |
+| caso especial de borrado | sí — el nodo con dos hijos necesita su propio argumento | no: los dos hijos ya cumplen la precondición de `Unir` (#19) |
+| mantenimiento del invariante | rotaciones de rebalanceo con su propio código por caso | ninguno: no hay invariante de forma que mantener |
+| partir el árbol por una llave | no es una operación del TDA | `Separar`, $O(1)$ adicional (#15-16) |
+| garantía | $O(\lg n)$ peor caso, toda operación | $O(\log n)$ sólo **amortizado**, y a lo más el doble de un Splay (#20) |
+
+La columna izquierda paga la garantía de peor caso con código: cada
+operación tiene su propio descenso y su propia lógica de restauración del
+invariante. La derecha compra simplicidad con una garantía más débil — el
+mismo trato que ya hacía [splay-tree](/structures/splay-tree), extendido
+ahora al TDA entero.
+
+Y respecto del [modelo computacional BST](/structures/bst-computational-model),
+que sólo define `Buscar` (#22-24 del mazo de la semana 5): este tema es
+justamente el que lo cierra. Las cinco operaciones viven dentro del mismo
+modelo de costo — punteros y rotaciones $O(1)$ — sin postular ninguna
+primitiva nueva.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/splay-tree-adt/mastery-check).

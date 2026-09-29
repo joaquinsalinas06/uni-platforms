@@ -1,0 +1,230 @@
+---
+kind: subtopic
+order: 3
+title: Retained, sesión persistente y Last Will
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+Tres mecanismos de MQTT resuelven, cada uno, un problema distinto de "¿qué pasa si algo
+no está conectado en el momento justo?": el mensaje **retained** le da a un cliente nuevo
+el último valor de un tópico sin esperar el próximo publish; la **sesión persistente**
+guarda mensajes pendientes para un cliente que está offline; y el **Last Will** avisa a
+los demás cuando un cliente se cae sin despedirse.
+
+## Conceptos
+
+### Mensaje retenido (retained)
+- Guarda el **último mensaje por tópico** (uno solo).
+- Se almacena **en el broker**.
+- Se envía **inmediatamente** a cualquier cliente nuevo que se suscriba a ese tópico.
+- Representa el **estado actual** de ese tópico.
+
+Ejemplo de la slide: un publisher envía a `home/livingroom/temperature` el payload
+`"Temperature = 22°C"` con RETAIN=1. El broker lo guarda como el último retenido de ese
+tópico. Cuando un cliente nuevo se suscribe a `home/livingroom/temperature`, el broker le
+manda de inmediato ese mensaje guardado — sin esperar un PUBLISH nuevo.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'RETAIN=1: el broker entrega el último valor a un suscriptor nuevo',
+  steps: [{
+    note: 'El broker guarda el mensaje retenido y se lo manda a cualquier cliente que se suscriba después, aunque el publisher ya no vuelva a publicar.',
+    actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber nuevo' }],
+    msgs: [
+      { from: 'p', to: 'b', label: 'PUBLISH "Temperature=22°C"', flags: 'topic: home/livingroom/temperature · RETAIN=1', store: 'guarda como retained' },
+      { from: 's', to: 'b', label: 'SUBSCRIBE', flags: 'home/livingroom/temperature' },
+      { from: 'b', to: 's', label: 'PUBLISH "Temperature=22°C"', flags: 'mensaje retenido, sin esperar nuevo publish' },
+    ],
+  }],
+}} />
+
+### Sesión persistente
+- Guarda **mensajes pendientes por cliente** (no por tópico).
+- Actúa como un **buffer privado** para cada cliente.
+- Se usa cuando el cliente está **offline**.
+- Entrega los mensajes cuando el cliente **se reconecta**.
+- Funciona con **QoS 1 y QoS 2** (que sí quedan guardados hasta confirmarse; QoS 0 no
+  tiene esta garantía porque nunca se almacena).
+- Se activa con el flag **Clean Session** del CONNECT: Clean Session = 0 mantiene la
+  sesión (y su cola) entre reconexiones; Clean Session = 1 empieza siempre de cero.
+
+### Retained vs. persistent session
+
+| | Retained | Persistent session |
+|---|---|---|
+| Qué guarda | El último mensaje de un tópico | Mensajes pendientes de un cliente específico |
+| Cuántos | Uno por tópico | Varios, uno por cada mensaje pendiente |
+| Para quién | Cualquier cliente nuevo que se suscriba | Sólo ese cliente, cuando se reconecta |
+| Qué representa | El estado actual del tópico | Un histórico de entregas no completadas |
+| Depende de QoS | No (aplica igual) | Sólo QoS 1 y 2 |
+
+### Last Will and Testament (LWT)
+Se configura **en el propio CONNECT** (will topic + will message). Si el cliente se
+desconecta **inesperadamente** (no manda DISCONNECT, y el broker detecta la caída por el
+timeout de keep alive), el broker publica ese mensaje en el will topic en su nombre.
+
+Ejemplo de la slide con un ESP32:
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Last Will: el broker avisa que el ESP32 se cayó',
+  steps: [{
+    note: 'El will se define al conectar. Si el ESP32 se cae sin mandar DISCONNECT, el broker detecta la caída (keep alive) y publica el will en su nombre.',
+    actors: [{ id: 'e', label: 'ESP32' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Suscriptores' }],
+    msgs: [
+      { from: 'e', to: 'b', label: 'CONNECT', flags: 'will topic: device/esp32/status · will message: "offline"' },
+      { from: 'b', to: 'e', label: 'CONNACK' },
+      { from: 'e', to: 'b', label: '(desconexión inesperada)', lost: true },
+      { from: 'b', to: 's', label: 'PUBLISH "offline"', flags: 'topic: device/esp32/status (will publicado por el broker)' },
+    ],
+  }],
+}} />
+
+Como el LWT decide qué pasa cuando un cliente "desaparece", debe protegerse igual que
+cualquier otro mensaje: si no está cifrado/autenticado, un atacante podría simular
+desconexiones falsas (ver [Tópicos y seguridad](/topics/mqtt/subtopics/topicos-y-seguridad)).
+
+### FSM de la conexión de un cliente
+El ciclo de vida de la conexión, visto como máquina de estados:
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'FSM de la conexión de un cliente MQTT',
+  steps: [{
+    note: 'Desconectado → Conectando (CONNECT) → Conectado (CONNACK). Desde Conectado se vuelve a Desconectado por DISCONNECT ordenado o por caída detectada (keep alive), y en ese segundo caso el broker dispara el Last Will.',
+    shapes: [
+      { id: 'off', kind: 'state', label: 'Desconectado', initial: true },
+      { id: 'conn', kind: 'state', label: 'Conectando' },
+      { id: 'on', kind: 'state', label: 'Conectado' },
+    ],
+    arrows: [
+      { from: 'off', to: 'conn', label: 'CONNECT' },
+      { from: 'conn', to: 'on', label: 'CONNACK' },
+      { from: 'on', to: 'off', label: 'DISCONNECT (ordenado)' },
+      { from: 'on', to: 'off', label: 'timeout keep alive → broker publica Last Will' },
+    ],
+  }],
+}} />
+
+## Método paso a paso
+Frente a un requisito de "que el sistema recuerde/avise algo", preguntarse:
+
+1. ¿Necesito que un cliente nuevo vea el último estado sin esperar? → RETAIN=1.
+2. ¿Necesito que un cliente que estuvo offline reciba lo que se perdió al reconectarse?
+   → sesión persistente (Clean Session=0) + QoS 1/2.
+3. ¿Necesito que otros se enteren si este cliente se cae sin avisar? → Last Will en el CONNECT.
+
+## Ejemplo resuelto
+Ver arriba los dos ejemplos de las slides (retained de temperatura y LWT del ESP32).
+
+## Errores típicos
+- Confundir retained (estado de un tópico, en el broker) con persistent session (cola de
+  un cliente, privada).
+- Pensar que el Last Will se dispara con cualquier desconexión: sólo con una
+  **inesperada** (detectada por el broker); un DISCONNECT ordenado no lo activa.
+- Olvidar que la sesión persistente sólo tiene sentido con QoS 1 o 2 (QoS 0 no se guarda).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "(EP-2025II, Q2 — 1.5 pts) En el protocolo MQTT existen dos mecanismos relacionados con el almacenamiento temporal de mensajes: el mensaje retained y la persistent session. Explique la diferencia entre ambos conceptos y su función dentro del proceso de comunicación.",
+  hints: [
+    "¿Uno guarda por tópico y el otro por cliente, o al revés?",
+    "¿A quién se le entrega cada uno: a cualquier suscriptor nuevo, o sólo a un cliente específico que se reconecta?",
+  ],
+}}>
+
+| | Retained | Persistent session |
+|---|---|---|
+| Qué guarda | El último mensaje de un tópico | Mensajes pendientes de un cliente específico |
+| Cuántos | Uno por tópico | Varios, uno por cada mensaje pendiente |
+| Para quién | Cualquier cliente nuevo que se suscriba | Sólo ese cliente, cuando se reconecta |
+| Qué representa | El estado actual del tópico | Un histórico de entregas no completadas |
+| Depende de QoS | No (aplica igual) | Sólo QoS 1 y 2 |
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Retained (por tópico) vs. persistent session (por cliente)',
+  steps: [
+    {
+      note: 'Retained: el broker guarda el último mensaje del tópico y se lo manda a CUALQUIER suscriptor nuevo, sin esperar un publish nuevo.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's1', label: 'Subscriber nuevo' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH', flags: 'RETAIN=1', store: 'guarda como retained' },
+        { from: 's1', to: 'b', label: 'SUBSCRIBE' },
+        { from: 'b', to: 's1', label: 'PUBLISH', flags: 'mensaje retenido' },
+      ],
+    },
+    {
+      note: 'Persistent session: el broker acumula los mensajes de ESE cliente mientras está offline y se los entrega recién al reconectarse (Clean Session=0).',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's2', label: 'Cliente offline' }],
+      msgs: [
+        { from: 's2', to: 'b', label: '(desconectado)', state: 'muted' },
+        { from: 'p', to: 'b', label: 'PUBLISH', flags: 'QoS 1', store: 'guarda en cola de s2' },
+        { from: 's2', to: 'b', label: 'CONNECT', flags: 'Clean Session=0' },
+        { from: 'b', to: 's2', label: 'PUBLISH', flags: 'mensaje pendiente de la cola' },
+      ],
+    },
+  ],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "(EP-2026I, P4c y P4d — cadena de frío de vacunas) c) (0.5 pt) El panel de monitoreo debe mostrar la última temperatura conocida al conectarse. ¿Cómo debe configurarse el mensaje? Explique su respuesta. d) (0.5 pt) Si un sensor pierde conexión inesperadamente, la empresa desea que automáticamente se publique el mensaje \"Sensor desconectado\". ¿Qué característica de MQTT permitiría esto? Explique cómo funcionaría.",
+  hints: [
+    "Para (c): el panel se conecta después de que el sensor ya publicó; ¿qué flag hace que el broker le entregue el último valor sin esperar el próximo publish?",
+    "Para (d): es un mensaje que el BROKER publica en nombre del sensor cuando éste ya no responde; se configura al conectar el sensor, no cuando se cae.",
+  ],
+}}>
+
+**c) RETAIN=1.** El sensor debe publicar su temperatura con el flag RETAIN=1. Así, el
+broker guarda ese mensaje como el último valor del tópico y lo entrega de inmediato al
+panel de monitoreo apenas éste se suscribe, sin tener que esperar la siguiente
+publicación cada 5 s.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'c) RETAIN=1: el panel ve la última temperatura al conectarse',
+  steps: [{
+    note: 'El panel se suscribe después de que el sensor ya publicó, y aun así recibe el último valor.',
+    actors: [{ id: 'sen', label: 'Sensor' }, { id: 'b', label: 'Broker' }, { id: 'panel', label: 'Panel' }],
+    msgs: [
+      { from: 'sen', to: 'b', label: 'PUBLISH "Temp"', flags: 'RETAIN=1', store: 'guarda como retained' },
+      { from: 'panel', to: 'b', label: 'SUBSCRIBE' },
+      { from: 'b', to: 'panel', label: 'PUBLISH "Temp"', flags: 'mensaje retenido' },
+    ],
+  }],
+}} />
+
+**d) Last Will.** Se logra con un Last Will (Testament) configurado en el paquete CONNECT
+del sensor: se define un will topic y un will message ("Sensor desconectado"). Si el
+sensor se desconecta de forma inesperada (el broker lo detecta porque no llega tráfico
+dentro del intervalo de keep alive), el broker publica automáticamente ese mensaje en el
+tópico configurado, avisando a los suscriptores.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'd) Last Will: el broker avisa la desconexión del sensor',
+  steps: [{
+    note: 'El will se define al conectar. Si el sensor se cae sin DISCONNECT, el broker detecta la caída (keep alive) y publica el will en su nombre.',
+    actors: [{ id: 'sen', label: 'Sensor' }, { id: 'b', label: 'Broker' }, { id: 'sub', label: 'Suscriptores' }],
+    msgs: [
+      { from: 'sen', to: 'b', label: 'CONNECT', flags: 'will topic + will message: "Sensor desconectado"' },
+      { from: 'b', to: 'sen', label: 'CONNACK' },
+      { from: 'sen', to: 'b', label: '(desconexión inesperada)', lost: true },
+      { from: 'b', to: 'sub', label: 'PUBLISH "Sensor desconectado"', flags: 'will publicado por el broker' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

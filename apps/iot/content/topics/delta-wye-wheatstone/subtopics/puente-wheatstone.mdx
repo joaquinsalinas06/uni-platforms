@@ -1,0 +1,406 @@
+---
+kind: subtopic
+order: 2
+title: Puente de Wheatstone
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+El puente de Wheatstone es un circuito en forma de **rombo** hecho de cuatro
+resistencias en serie-paralelo, con una quinta rama (el "detector") cruzando el
+centro. Se usa para **medir resistencias desconocidas con alta precisión**,
+especialmente en sensores resistivos (galgas extensométricas, termistores,
+fotorresistencias). Su comportamiento cambia radicalmente según esté **equilibrado**
+o no: equilibrado, la rama central no lleva corriente y se puede ignorar;
+desequilibrado, hay que resolverlo completo (Kirchhoff o Δ↔Y).
+
+## Conceptos
+
+### Estructura en rombo
+
+Cuatro resistencias forman los lados del rombo entre los nodos A (arriba), C y D (los
+costados) y B (abajo); la fuente alimenta un par de vértices opuestos y el detector
+(galvanómetro o voltímetro) se conecta entre el otro par:
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Estructura del puente',
+  steps: [{
+    note: 'La fuente entra por A y B (vértices opuestos); el detector mide VCD entre los otros dos vértices, C y D.',
+    circuit: {
+      nodes: [
+        { id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' },
+        { id: 'C', x: 0, y: 4, label: 'C' }, { id: 'D', x: 8, y: 4, label: 'D' },
+        { id: 'B', x: 4, y: 8, label: 'B' },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 12, label: 'E' },
+        { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+        { id: 'R1', kind: 'resistor', from: 'A', to: 'C', value: 1000, label: 'R1' },
+        { id: 'R3', kind: 'resistor', from: 'A', to: 'D', value: 2000, label: 'R3' },
+        { id: 'R2', kind: 'resistor', from: 'C', to: 'B', value: 3000, label: 'R2' },
+        { id: 'Rx', kind: 'resistor', from: 'D', to: 'B', value: 6000, label: 'Rx' },
+        { id: 'Vg', kind: 'voltmeter', from: 'C', to: 'D', label: 'V' },
+      ],
+      groups: [{ parts: ['R1', 'R3', 'R2', 'Rx'], tone: 'bridge', label: 'rombo' }],
+      voltages: [{ part: 'Vg', label: 'V_CD' }],
+    },
+  }],
+}} />
+
+### Condición de equilibrio
+
+Cuando la razón entre resistencias adyacentes es la misma en ambas mitades del
+puente:
+
+$$\frac{R_1}{R_2} = \frac{R_3}{R_x}$$
+
+el voltaje entre los terminales del detector es **cero**, sin importar el voltaje de
+la fuente. Esto equivale a la regla de productos cruzados:
+
+$$R_1 \cdot R_x = R_2 \cdot R_3$$
+
+A partir de esta condición se puede **calcular una resistencia desconocida** $R_x$
+conociendo las otras tres — ésa es la aplicación clásica de medición del puente.
+
+### Balanceado → se elimina la rama central
+
+Si el puente está balanceado, no hay diferencia de potencial entre los nodos C y D:
+no pasa corriente por esa rama y se puede **prescindir de ella** al reducir el
+circuito (los productos de lados opuestos son iguales, así que el detector no aporta
+ninguna restricción adicional).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Puente balanceado: la rama central se apaga',
+  steps: [
+    {
+      note: 'R1=2k (A-C), R2=4k (C-B), R3=6k (A-D), Rx=12k (D-B): R1/R2 = 2/4 = 0.5 y R3/Rx = 6/12 = 0.5 — iguales, el puente está balanceado. VC = VD = 8 V: la rama del detector (C-D) no lleva corriente.',
+      circuit: {
+        nodes: [
+          { id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' },
+          { id: 'C', x: 0, y: 4, label: 'C' }, { id: 'D', x: 8, y: 4, label: 'D' },
+          { id: 'B', x: 4, y: 8, label: 'B' },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 12, label: 'E' },
+          { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'C', value: 2000, label: 'R1' },
+          { id: 'R3', kind: 'resistor', from: 'A', to: 'D', value: 6000, label: 'R3' },
+          { id: 'R2', kind: 'resistor', from: 'C', to: 'B', value: 4000, label: 'R2' },
+          { id: 'Rx', kind: 'resistor', from: 'D', to: 'B', value: 12000, label: 'Rx' },
+          { id: 'Vg', kind: 'voltmeter', from: 'C', to: 'D', label: 'V', state: 'muted' },
+        ],
+      },
+      expect: { 'V(C,D)': 0, 'V(C,B)': 8, 'V(D,B)': 8 },
+    },
+    {
+      note: 'Sin la rama del detector, el puente queda como dos series simples en paralelo: (R1+R2) ‖ (R3+Rx) = 6k ‖ 18k.',
+      circuit: {
+        nodes: [
+          { id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' },
+          { id: 'B', x: 4, y: 8, label: 'B' },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 12, label: 'E' },
+          { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+          { id: 'R1R2', kind: 'resistor', from: 'A', to: 'B', label: 'R1+R2', mergedFrom: ['R1', 'R2'], mergeKind: 'series', via: [[0, 0], [0, 8]] },
+          { id: 'R3Rx', kind: 'resistor', from: 'A', to: 'B', label: 'R3+Rx', mergedFrom: ['R3', 'Rx'], mergeKind: 'series', via: [[8, 0], [8, 8]] },
+        ],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 4500 },
+    },
+  ],
+}} />
+
+### Desequilibrado: Δ↔Y o Kirchhoff
+
+Si la condición de equilibrio **no** se cumple, la rama central sí lleva corriente y
+ya no se puede simplificar a simple vista. Hay dos caminos:
+
+1. **Transformar** una de las dos "Y" que forma el puente en su Δ equivalente (o
+   viceversa) —ver [Delta ⇔ estrella](/topics/delta-wye-wheatstone/subtopics/delta-estrella)— y
+   seguir reduciendo por serie-paralelo.
+2. **Resolver directamente por Kirchhoff** (nodos o mallas), sobre todo si además hay
+   fuentes en más de una rama, como en el ejemplo resuelto de abajo.
+
+### Aplicaciones en sensores resistivos
+
+| Sensor | Qué mide | Cómo se usa en el puente |
+|---|---|---|
+| Galga extensométrica (*strain gauge*) | Deformación mecánica | Su resistencia cambia con la deformación; ocupa el lugar de $R_x$ |
+| Termistor NTC/PTC | Temperatura | NTC baja su resistencia al subir la temperatura (PTC sube); se calibra el puente para leer temperatura como desbalance |
+| Fotorresistencia (LDR) | Luz/iluminancia | Su resistencia baja con más luz; el desbalance del puente es proporcional a la iluminación |
+
+También se usa para **compensar variaciones externas** (temperatura, envejecimiento
+de materiales) con configuraciones diferenciales, y en calibración/pruebas de
+laboratorio y monitoreo industrial de presión, fuerza y vibraciones.
+
+## Método paso a paso
+
+1. Identifica los 4 brazos del rombo y la rama del detector.
+2. Calcula $R_1/R_2$ y $R_3/R_x$ (o el producto cruzado $R_1 R_x$ vs. $R_2 R_3$).
+3. Si son iguales → puente **balanceado**: elimina la rama del detector y reduce por
+   serie-paralelo directo.
+4. Si no son iguales → puente **desequilibrado**: aplica Δ↔Y sobre una de las dos "Y"
+   que forma el rombo, o resuelve el sistema completo por Kirchhoff (nodos o mallas).
+5. Para "medir" una resistencia desconocida $R_x$: ajusta el resto de resistencias
+   (o un potenciómetro) hasta que el detector marque cero, y despeja $R_x$ de la
+   condición de equilibrio.
+
+## Ejemplo resuelto
+
+### Ejercicio 5 del material — puente balanceado
+
+*(Sem02_WheatstoneYDiodos#14, simulado en #15)* La fuente es de 20 V (+ arriba). Se
+pide: (a) la corriente $I_1$ que entrega la fuente, (b) la potencia que consume la
+resistencia de 6 kΩ, (c) el potencial del nodo C (D está a tierra), (d) $V_{AC}$,
+(e) la corriente por la resistencia de 2.1 kΩ.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 5 — puente con E = 20 V',
+  steps: [
+    {
+      note: 'El rombo es B (arriba), A y C (costados), D (abajo, tierra); la fuente entra por B y D a través de dos resistencias de 1k. Productos de lados opuestos: 3k·4k = 12 y 6k·2k = 12. Son iguales: el puente está BALANCEADO, A y C quedan al mismo potencial y por la 2.1k no pasa corriente.',
+      circuit: {
+      nodes: [
+        { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' },
+        { id: 'A', x: 5, y: 5, label: 'A' }, { id: 'C', x: 15, y: 5, label: 'C' },
+        { id: 'sn', x: 0, y: 10 }, { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+        { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+        { id: 'R3k', kind: 'resistor', from: 'B', to: 'A', value: 3000, label: '3k' },
+        { id: 'R6k', kind: 'resistor', from: 'B', to: 'C', value: 6000, label: '6k' },
+        { id: 'R21', kind: 'resistor', from: 'A', to: 'C', value: 2100, label: '2.1k', state: 'muted' },
+        { id: 'R2k', kind: 'resistor', from: 'A', to: 'D', value: 2000, label: '2k' },
+        { id: 'R4k', kind: 'resistor', from: 'C', to: 'D', value: 4000, label: '4k' },
+        { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+      ],
+        groups: [{ parts: ['R3k', 'R6k', 'R2k', 'R4k'], tone: 'bridge', label: 'rombo' }],
+        voltages: [{ part: 'R21', label: 'V_{AC}', showValue: true }],
+      },
+      expect: { 'V(A,C)': 0, 'I(R21)': 0 },
+    },
+    {
+      note: 'Sin la 2.1k: (3k+2k) ‖ (6k+4k) = 5k ‖ 10k ≈ 3.33 kΩ, en serie con los dos 1k: Req ≈ 5.33 kΩ, así que I1 = 20 V / 5.33 kΩ = 3.75 mA. Se reparte 2.5 mA por la rama de 3k y 1.25 mA por la de 6k (lo mismo que marcan los amperímetros de la simulación).',
+      circuit: {
+      nodes: [
+        { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' },
+        { id: 'A', x: 5, y: 5, label: 'A' }, { id: 'C', x: 15, y: 5, label: 'C' },
+        { id: 'sn', x: 0, y: 10 }, { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+        { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+        { id: 'R3k', kind: 'resistor', from: 'B', to: 'A', value: 3000, label: '3k' },
+        { id: 'R6k', kind: 'resistor', from: 'B', to: 'C', value: 6000, label: '6k' },
+        { id: 'R21', kind: 'resistor', from: 'A', to: 'C', value: 2100, label: '2.1k' },
+        { id: 'R2k', kind: 'resistor', from: 'A', to: 'D', value: 2000, label: '2k' },
+        { id: 'R4k', kind: 'resistor', from: 'C', to: 'D', value: 4000, label: '4k' },
+        { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+      ],
+        currents: [
+          { part: 'Rs1', label: 'I_1', showValue: true },
+          { part: 'R3k', label: 'I_{3k}', showValue: true },
+          { part: 'R6k', label: 'I_{6k}', showValue: true },
+        ],
+      },
+      expect: { 'I(Rs1)': 0.00375, 'I(R3k)': 0.0025, 'I(R6k)': 0.00125, 'P(R6k)': 0.009375, 'V(C)': 5, 'V(A,C)': 0, 'I(R21)': 0, 'P(E)': 0.075 },
+    },
+    {
+      note: 'Versión DESBALANCEADA de la simulación (#15): el brazo C-D pasa de 4k a 2k (y la rama central es de 2.13 kΩ; el simulador la rotula «2.1k»). Ahora 3k·2k ≠ 6k·2k, A y C ya no están al mismo potencial y la 2.1k sí conduce. Ya no se reduce por serie-paralelo: hace falta Δ→Y (resuelto en Delta ⇔ estrella) o mallas.',
+      circuit: {
+      nodes: [
+        { id: 'sp', x: 0, y: -3 }, { id: 'B', x: 10, y: 0, label: 'B' },
+        { id: 'A', x: 5, y: 5, label: 'A' }, { id: 'C', x: 15, y: 5, label: 'C' },
+        { id: 'sn', x: 0, y: 10 }, { id: 'D', x: 10, y: 10, label: 'D', ground: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'sn', to: 'sp', value: 20, label: '20V' },
+        { id: 'Rs1', kind: 'resistor', from: 'sp', to: 'B', value: 1000, label: '1k' },
+        { id: 'R3k', kind: 'resistor', from: 'B', to: 'A', value: 3000, label: '3k' },
+        { id: 'R6k', kind: 'resistor', from: 'B', to: 'C', value: 6000, label: '6k' },
+        { id: 'R21', kind: 'resistor', from: 'A', to: 'C', value: 2130, label: '2.13k' },
+        { id: 'R2k', kind: 'resistor', from: 'A', to: 'D', value: 2000, label: '2k' },
+        { id: 'R4k', kind: 'resistor', from: 'C', to: 'D', value: 2000, label: '2k' },
+        { id: 'Rs2', kind: 'resistor', from: 'D', to: 'sn', value: 1000, label: '1k' },
+      ],
+        currents: [
+          { part: 'Rs1', label: 'I_1', showValue: true },
+          { part: 'R21', label: 'I_{2.1k}', showValue: true },
+        ],
+      },
+      expect: { 'I(Rs1)': 0.003973, 'I(R3k)': 0.00256, 'I(R6k)': 0.001413, 'I(R21)': 0.000374322, 'I(R2k)': 0.002186, 'I(R4k)': 0.001787 },
+    },
+  ],
+}} />
+
+**Lectura de resultados** (balanceado): $I_1 = 3.75\,\text{mA}$; la resistencia de
+6 kΩ lleva 1.25 mA y consume $P = (1.25\,\text{mA})^2 \cdot 6\,\text{k}\Omega \approx
+9.38\,\text{mW}$; $V_C = 4\,\text{k}\Omega \cdot 1.25\,\text{mA} = 5\,\text{V}$;
+$V_{AC} = 0$ y por la 2.1 kΩ pasan **0 A** (puente balanceado). En la versión
+desbalanceada (4k → 2k, rama central de 2.13 kΩ), la simulación del profe marca
+$I_1 = 3.973\,\text{mA}$ y 374.3 µA por la rama central; ese caso se reduce con Δ→Y en
+[Delta ⇔ estrella](/topics/delta-wye-wheatstone/subtopics/delta-estrella).
+
+## Errores típicos
+
+- Aplicar la condición de equilibrio ($R_1/R_2=R_3/R_x$) a un puente que **no** está
+  equilibrado: primero hay que verificar la igualdad de razones antes de eliminar la
+  rama central.
+- Olvidar que, si el puente no está equilibrado, la rama central **sí** importa para
+  el cálculo de corrientes y potencias — no se puede ignorar "por simetría".
+- Confundir qué par de resistencias va en el numerador/denominador de la razón: son
+  los brazos **adyacentes** al mismo vértice, no los opuestos.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Puente del enunciado: E = 20 V entre A y B; R es el potenciómetro a calibrar; V es el detector entre C y D.',
+    circuit: {
+      nodes: [
+        { id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' },
+        { id: 'C', x: 0, y: 4, label: 'C' }, { id: 'D', x: 8, y: 4, label: 'D' },
+        { id: 'B', x: 4, y: 8, label: 'B' },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 20, label: 'E' },
+        { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+        { id: 'R1', kind: 'resistor', from: 'A', to: 'C', value: 2000, label: 'R1' },
+        { id: 'R3', kind: 'resistor', from: 'A', to: 'D', value: 6000, label: 'R3' },
+        { id: 'R2', kind: 'resistor', from: 'C', to: 'B', value: 4000, label: 'R2' },
+        { id: 'Rx', kind: 'resistor', from: 'D', to: 'B', label: 'R' },
+        { id: 'Vg', kind: 'voltmeter', from: 'C', to: 'D', label: 'V' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un puente de Wheatstone balanceado se usa para calibrar un potenciómetro $R$ (figura). Los brazos conocidos son $R_1 = 2\\,\\text{k}\\Omega$, $R_2 = 4\\,\\text{k}\\Omega$ y $R_3 = 6\\,\\text{k}\\Omega$, donde $R_1$ y $R_2$ comparten el vértice $C$, y $R_3$ y $R$ comparten el vértice opuesto $D$. (a) Halla $R$ para que el puente esté balanceado. (b) Con ese $R$ y una fuente de $20$ V entre los vértices de alimentación $A$ y $B$, halla la potencia total que consume el circuito.",
+  hints: [
+    "La condición de equilibrio es $R_1/R_2 = R_3/R$: despeja $R$ de ahí.",
+    "Con el puente balanceado, ya puedes ignorar la rama del detector: el circuito queda como dos ramas en serie, en paralelo entre sí.",
+    "Cada rama en serie es $(R_1 + R_2)$ o $(R_3 + R)$; la potencia total es $E^2/R_{eq}$.",
+  ],
+}}>
+
+**1. (a) Condición de equilibrio.** Las razones de los brazos de cada lado deben ser iguales:
+
+$$
+\frac{R_1}{R_2} = \frac{R_3}{R} \;\Rightarrow\; R = \frac{R_2\,R_3}{R_1} = \frac{4 \cdot 6}{2} = \boxed{12\,\text{k}\Omega}
+$$
+
+**2. Quitar el detector.** Balanceado, $V_C = V_D$ y por la rama $C$–$D$ no pasa corriente: se elimina.
+
+**3. Dos series.** $C$ ya sólo une $R_1$ con $R_2$, y $D$ sólo une $R_3$ con $R$:
+
+$$
+R_{12} = R_1 + R_2 = 2 + 4 = 6\,\text{k}\Omega \qquad R_{3R} = R_3 + R = 6 + 12 = 18\,\text{k}\Omega
+$$
+
+**4. Paralelo** (las dos ramas van de $A$ a $B$):
+
+$$
+R_{eq} = \frac{R_{12}\,R_{3R}}{R_{12} + R_{3R}} = \frac{6 \cdot 18}{6 + 18} = 4.5\,\text{k}\Omega
+$$
+
+**5. (b) Potencia total:**
+
+$$
+P = \frac{E^2}{R_{eq}} = \frac{20^2}{4500} = \boxed{88.9\,\text{mW}}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Resuelto: balance, series, paralelo',
+  steps: [
+    {
+      note: 'Con R = 12 kΩ: R1/R2 = 0.5 = R3/R. V_C = V_D = 13.33 V: el detector marca 0.',
+      circuit: {
+        nodes: [
+          { id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' },
+          { id: 'C', x: 0, y: 4, label: 'C', showPotential: true }, { id: 'D', x: 8, y: 4, label: 'D', showPotential: true },
+          { id: 'B', x: 4, y: 8, label: 'B' },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 20, label: 'E' },
+          { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'C', value: 2000, label: 'R1' },
+          { id: 'R3', kind: 'resistor', from: 'A', to: 'D', value: 6000, label: 'R3' },
+          { id: 'R2', kind: 'resistor', from: 'C', to: 'B', value: 4000, label: 'R2' },
+          { id: 'Rx', kind: 'resistor', from: 'D', to: 'B', value: 12000, label: 'R', state: 'answer' },
+          { id: 'Vg', kind: 'voltmeter', from: 'C', to: 'D', label: 'V', state: 'muted' },
+        ],
+        groups: [{ parts: ['R1', 'R2', 'R3', 'Rx'], tone: 'bridge', label: 'balanceado' }],
+      },
+      expect: { 'V(C,D)': 0, 'V(C,B)': 13.333, 'V(D,B)': 13.333 },
+    },
+    {
+      note: 'Sin detector: R1–R2 en serie por C y R3–R en serie por D.',
+      circuit: {
+        nodes: [
+          { id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' },
+          { id: 'C', x: 0, y: 4, label: 'C' }, { id: 'D', x: 8, y: 4, label: 'D' },
+          { id: 'B', x: 4, y: 8, label: 'B' },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 20, label: 'E' },
+          { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'C', value: 2000, label: 'R1' },
+          { id: 'R3', kind: 'resistor', from: 'A', to: 'D', value: 6000, label: 'R3' },
+          { id: 'R2', kind: 'resistor', from: 'C', to: 'B', value: 4000, label: 'R2' },
+          { id: 'Rx', kind: 'resistor', from: 'D', to: 'B', value: 12000, label: 'R' },
+        ],
+        groups: [{ parts: ['R1', 'R2'], tone: 'series', label: 'serie' }, { parts: ['R3', 'Rx'], tone: 'series', label: 'serie' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 4500 },
+    },
+    {
+      note: 'R12 = 6 kΩ y R3R = 18 kΩ, ambas de A a B: paralelo.',
+      circuit: {
+        nodes: [{ id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' }, { id: 'B', x: 4, y: 8, label: 'B' }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 20, label: 'E' },
+          { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+          { id: 'R12', kind: 'resistor', from: 'A', to: 'B', label: 'R12', mergedFrom: ['R1', 'R2'], mergeKind: 'series', via: [[0, 0], [0, 8]] },
+          { id: 'R3R', kind: 'resistor', from: 'A', to: 'B', label: 'R3R', mergedFrom: ['R3', 'Rx'], mergeKind: 'series', via: [[8, 0], [8, 8]] },
+        ],
+        groups: [{ parts: ['R12', 'R3R'], tone: 'parallel', label: 'paralelo' }],
+        req: { between: ['A', 'B'] },
+      },
+      expect: { 'Req(A,B)': 4500 },
+    },
+    {
+      note: 'Req = 6k ‖ 18k = 4.5 kΩ. I = 20 / 4.5k = 4.44 mA y P = 88.9 mW.',
+      circuit: {
+        nodes: [{ id: 'top', x: -4, y: -2 }, { id: 'A', x: 4, y: 0, label: 'A' }, { id: 'B', x: 4, y: 8, label: 'B' }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'B', to: 'top', value: 20, label: 'E' },
+          { id: 'wtop', kind: 'wire', from: 'top', to: 'A' },
+          { id: 'Req', kind: 'resistor', from: 'A', to: 'B', label: 'Req', mergedFrom: ['R12', 'R3R'], mergeKind: 'parallel', state: 'answer', via: [[8, 0], [8, 8]] },
+        ],
+        req: { between: ['A', 'B'] },
+        currents: [{ part: 'E', label: 'I', showValue: true }],
+      },
+      expect: { 'Req(A,B)': 4500, 'I(E)': 0.004444, 'P(E)': 0.08889 },
+    },
+  ],
+}} />
+
+**Comprobación — potencia por rama:** $P_{12} = 20^2/6\text{k} = 66.7$ mW y $P_{3R} = 20^2/18\text{k} = 22.2$ mW; suman $88.9$ mW ✓.
+
+</ExerciseBlock>

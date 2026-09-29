@@ -1,0 +1,54 @@
+id: search-sequence-properties
+title: "Propiedades de análisis de secuencias de búsqueda"
+type: concept
+week: week-05
+
+prerequisites: ["bst-computational-model"]
+buildsOn: ["bst-computational-model"]
+usedBy: ["dynamic-optimality", "splay-tree", "static-optimality"]
+
+# Es un concepto: cinco propiedades sobre secuencias de búsqueda + dos lemas
+# de implicación, no una estructura con su propia interfaz. `operations: []`
+# en el knowledge map. Aun así cada propiedad SÍ trae su propia cota, así que
+# (a diferencia de potential-method) complexity no queda vacío: se indexa por
+# el nombre de la propiedad, no por una operación.
+complexity:
+  acceso-secuencial:
+    worst: "O(1) amortizado por búsqueda"
+    reasoning: >-
+      Vale cuando la secuencia de búsqueda es {1, 2, ..., n} en orden; el
+      profesor la da directo, sin derivación, como la más simple de las
+      cinco propiedades.
+    source: "Sem5_Dynamic_Optimality_I.pdf#30"
+  puntero-dinamico:
+    worst: "O(log k_i) amortizado por búsqueda"
+    reasoning: >-
+      k_i es la distancia |x_i − x_{i−1}| entre búsquedas consecutivas; el
+      profesor la enuncia como generalización de la propiedad de acceso
+      secuencial (k_i = 1 la recupera).
+    source: "Sem5_Dynamic_Optimality_I.pdf#32"
+  cota-de-entropia:
+    worst: "O(Σ_k p_k log(1/p_k)) por búsqueda"
+    reasoning: >-
+      p_k es la fracción de la secuencia que pide el valor k; es la cota de
+      optimalidad estática, ya promediada sobre toda la secuencia (por eso
+      es redundante añadirle "amortizado" encima, aunque el profesor lo hace).
+    source: "Sem5_Dynamic_Optimality_I.pdf#34"
+  conjunto-de-trabajo:
+    worst: "O(log t_i) amortizado por búsqueda"
+    reasoning: >-
+      t_i cuenta valores distintos buscados entre la última ocurrencia de
+      x_i y la posición i; el profesor la presenta como "ortogonal" a la
+      del puntero dinámico: ninguna implica a la otra.
+    source: "Sem5_Dynamic_Optimality_I.pdf#38"
+  propiedad-unificada:
+    worst: "O(log min_{i<j} {|x_i − x_j| + t_{i,j} + 2}) amortizado"
+    reasoning: >-
+      Generaliza a las cuatro anteriores tomando el mínimo sobre todo i<j;
+      el profesor aclara que se sabe alcanzable con máquina de punteros pero
+      queda abierto si un BST puede lograrla.
+    source: "Sem5_Dynamic_Optimality_I.pdf#45"
+
+professorAnalysisStyle: "amortized"
+hasVisualization: true
+placeholder: false

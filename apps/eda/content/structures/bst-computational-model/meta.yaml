@@ -1,0 +1,40 @@
+id: bst-computational-model
+title: Modelo computacional del BST
+type: concept
+week: week-05
+
+prerequisites: [balanced-bst]
+buildsOn: []
+usedBy: [search-sequence-properties, dynamic-optimality, splay-tree, splay-tree-adt]
+
+complexity:
+  pointer-move:
+    worst: O(1)
+    reasoning: >-
+      El profesor lo postula como costo unitario del modelo, no lo deriva:
+      moverse al padre o a alguno de los dos hijos por el puntero
+      correspondiente es O(1), sin importar n (#19).
+  rotate:
+    worst: O(1)
+    reasoning: >-
+      También postulado como costo unitario (#20), no derivado: rotar un
+      nodo con su padre reasigna una cantidad constante de punteros entre
+      el nodo, su padre y el subárbol que cambia de lado. El mecanismo
+      exacto vive en /structures/balanced-bst; lo que aporta este modelo es
+      que ese mecanismo cuesta O(1) sea cual sea el tamaño de los subárboles
+      que mueve.
+  search:
+    worst: O(log n)
+    reasoning: >-
+      Buscar(x) es una secuencia de pointer-move desde la raíz hasta x, así
+      que su costo real es la profundidad de x en el árbol vigente. El
+      profesor señala que, en el peor caso y sobre todas las formas
+      posibles de BST, O(log n) es el mejor tiempo posible (#26) — pero
+      remarca de inmediato que "el trabajo de las búsquedas depende de la
+      secuencia de elementos que se buscan" (#27): la misma secuencia puede
+      costar O(n) en un árbol degenerado.
+
+professorAnalysisStyle: definición de modelo de costo
+hasVisualization: true
+visualizationType: tree
+placeholder: false

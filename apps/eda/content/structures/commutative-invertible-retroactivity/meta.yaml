@@ -1,0 +1,33 @@
+id: commutative-invertible-retroactivity
+title: "Retroactividad conmutativa e invertible"
+type: algorithm
+week: week-03
+
+prerequisites: ["retroactivity"]
+buildsOn: ["retroactivity"]
+usedBy: []
+
+complexity:
+  insert-retroactive:
+    worst: "O(1) amortizado"
+    reasoning: >-
+      Argumento algebraico, no de conteo: por conmutatividad, la posición
+      temporal de `op` es irrelevante, así que `Insert(t, op) ≡
+      Insert(ahora, op)` — se aplica op directamente sobre la estructura
+      actual. El costo es el de aplicar op una vez, sin trabajo adicional
+      por ser "retroactiva": "igual que la operación original" (tabla hash
+      O(1) amortizado, arreglo con A[i] += Δ, O(1)).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#25-28"
+  delete-retroactive:
+    worst: "O(1) amortizado"
+    reasoning: >-
+      Se reduce a un Insert: por invertibilidad existe op⁻¹, así que
+      `Delete(t) ≡ Insert(ahora, op⁻¹)` y hereda exactamente el mismo
+      argumento y el mismo costo que insert-retroactive — aplicar la
+      inversa cuesta lo mismo que aplicar la operación original.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#25-28"
+
+professorAnalysisStyle: "argumento algebraico (reducción por propiedades)"
+hasVisualization: true
+visualizationType: persistent
+placeholder: false

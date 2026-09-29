@@ -1,0 +1,37 @@
+id: segment-tree
+title: Segment tree
+type: structure
+week: week-03
+
+prerequisites: []
+buildsOn: []
+usedBy: [path-copying, decomposable-search-problem, segment-intersection-sweep-line]
+
+complexity:
+  build:
+    worst: O(n)
+    reasoning: >-
+      Derivación estándar (no dada por el profesor: sourceSlides vacío para
+      este concepto). Hay 2n-1 nodos en total (n hojas + n-1 internos para un
+      arreglo de tamaño n), y cada nodo se construye en O(1) combinando a sus
+      dos hijos ya construidos: la recursión visita cada nodo una sola vez.
+  update:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar. Actualizar una hoja sólo afecta a los O(lg n)
+      nodos en el camino raíz-hoja de esa posición (la altura del árbol es
+      ⌈lg n⌉ porque cada nivel parte el rango a la mitad); cada nodo del
+      camino se recalcula en O(1) a partir de sus hijos.
+  query:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar. Un rango [l, r] se descompone en a lo más O(lg n)
+      nodos "completos" del árbol: en cada nivel, a lo más dos llamadas no
+      triviales continúan (una por cada extremo del rango que no está
+      alineado), el resto se resuelve en O(1) al estar el nodo totalmente
+      dentro o fuera del rango.
+
+professorAnalysisStyle: derivación estándar (no atribuible al profesor; ver nota en theory.md)
+hasVisualization: true
+visualizationType: tree
+placeholder: false

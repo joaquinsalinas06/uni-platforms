@@ -1,0 +1,319 @@
+---
+kind: operation
+title: Consulta de rango 2D
+order: 7
+cppSteps:
+  - step-1-point.cpp
+  - step-2-build-1d.cpp
+  - step-7-build-2d.cpp
+  - step-8-range-query-2d.cpp
+  - full-implementation.cpp
+visualization:
+  type: range-tree
+  steps:
+    - note: >-
+        Consulta 2D [5,16] × [-3,8] sobre el árbol 2D de build-2d. Primer
+        sub-paso: una consulta 1D en X, [5,16], sobre el árbol primario —
+        igual que range-query-1d.
+      highlight: []
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i }
+        - { id: p27, value: 1, parent: n18i }
+    - note: >-
+        Predecessor(5) = el punto (4,7), Successor(16) = el punto (18,3):
+        delimitadores en X, las mismas hojas 4 y 18 de range-query-1d,
+        ahora cada una con su punto (x,y) completo.
+      highlight: [p4, p18]
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i, state: marked }
+        - { id: p27, value: 1, parent: n18i }
+    - note: >-
+        Subárboles canónicos en X: {7, 13} — cubren los puntos (7,11),
+        (9,6), (13,0), (15,-2).
+      highlight: [n7i, n13i]
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4, state: answer }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15, state: answer }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i, state: marked }
+        - { id: p27, value: 1, parent: n18i }
+    - note: >-
+        Sobre el subárbol 7, consulta 1D en Y [-3,8] sobre su secundario
+        (el mismo de build-2d): incluye el punto con Y=6, es decir (9,6);
+        excluye Y=11 — (7,11) queda fuera de la respuesta.
+      highlight: [n7i]
+      panels:
+        - { id: secY7, label: "Consulta en Y del secundario de 7", anchor: n7i }
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4, state: marked }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15, state: answer }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i, state: marked }
+        - { id: p27, value: 1, parent: n18i }
+        - { id: secY7_root, value: 6, parent: null, panel: secY7 }
+        - { id: secY7_p9, value: 6, parent: secY7_root, panel: secY7, state: answer }
+        - { id: secY7_p7, value: 11, parent: secY7_root, panel: secY7, state: muted }
+    - note: >-
+        Sobre el subárbol 13, la consulta en Y [-3,8] incluye ambos puntos
+        de su secundario: (15,-2) y (13,0).
+      highlight: [n13i]
+      panels:
+        - { id: secY13, label: "Consulta en Y del secundario de 13", anchor: n13i }
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4, state: answer }
+        - { id: p7, value: 11, parent: n7i }
+        - { id: p9, value: 6, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15, state: marked }
+        - { id: p13, value: 0, parent: n13i }
+        - { id: p15, value: -2, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i, state: marked }
+        - { id: p27, value: 1, parent: n18i }
+        - { id: secY13_root, value: -2, parent: null, panel: secY13 }
+        - { id: secY13_p15, value: -2, parent: secY13_root, panel: secY13, state: answer }
+        - { id: secY13_p13, value: 0, parent: secY13_root, panel: secY13, state: answer }
+    - note: >-
+        Resultado final de [5,16] × [-3,8]: {(9,6), (13,0), (15,-2)} — 3 de
+        los 4 puntos en los subárboles canónicos en X pasan el filtro en
+        Y; (7,11) queda excluido por su Y.
+      highlight: [p9, p13, p15]
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: p3, value: 10, parent: n3i }
+        - { id: p4, value: 7, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4, state: answer }
+        - { id: p7, value: 11, parent: n7i, state: muted }
+        - { id: p9, value: 6, parent: n7i, state: answer }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15, state: answer }
+        - { id: p13, value: 0, parent: n13i, state: answer }
+        - { id: p15, value: -2, parent: n13i, state: answer }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: p18, value: 3, parent: n18i, state: marked }
+        - { id: p27, value: 1, parent: n18i }
+      caption: "[5,16] × [-3,8] → {(9,6), (13,0), (15,-2)}"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+
+{/* El profesor da la complejidad y la intuición ("una consulta de O(log n)
+     en O(log n) árboles", #50) pero nunca el procedimiento paso a paso —
+     está entre los huecos que señala el análisis. Todo lo de abajo,
+     incluida la mecánica exacta, es derivado. */}
+
+## Qué hace
+
+Responde una consulta de caja `[x1,x2] × [y1,y2]` sobre el range tree 2D de
+[build-2d](/structures/range-tree/operations/build-2d).
+
+## Intuición
+
+Se resuelve como una consulta 1D en X que, en lugar de devolver
+directamente las hojas, devuelve subárboles canónicos; y en cada uno de
+esos subárboles se resuelve **otra** consulta 1D — ahora en `[y1,y2]` —
+sobre su árbol secundario ya construido. El profesor lo resume así: "una
+consulta de O(log n) en O(log n) árboles" (#50).
+
+## Algoritmo
+
+*(Derivado; el mazo no detalla este procedimiento — #50 sólo da la
+complejidad y la intuición general.)*
+
+1. `subarboles_x ← RangeQuery1D(raiz_x, x1, x2)` — los mismos O(log n)
+   subárboles canónicos de
+   [range-query-1d](/structures/range-tree/operations/range-query-1d),
+   ahora sobre el árbol primario en X.
+2. Para cada subárbol canónico `s` en `subarboles_x`: ejecutar
+   `RangeQuery1D(s.secundario, y1, y2)` sobre su árbol secundario en Y, y
+   combinar los resultados (existencia: basta uno no vacío; conteo: sumar;
+   enumeración: concatenar).
+
+La visualización de arriba muestra el RESULTADO de ese paso 2 sobre el
+secundario de 7 (incluye/excluye), pero no el CÓMO: `RangeQuery1D` en el
+secundario es la misma rutina de
+[range-query-1d](/structures/range-tree/operations/range-query-1d) —
+predecessor/successor y descomposición canónica — aplicada ahora en Y.
+
+<Visualization viz={{
+  type: 'range-tree',
+  steps: [
+    {
+      note: "Sobre el subárbol canónico 7 (hojas 7, 9 en X), el paso 2 llama RangeQuery1D(secundario, -3, 8) — la misma rutina de range-query-1d, ahora sobre el árbol en Y de ese subárbol.",
+      highlight: ["n7i"],
+      panels: [{ id: "secY7b", label: "RangeQuery1D en Y, secundario de 7", anchor: "n7i" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "active" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "secY7b_root", value: 6, parent: null, panel: "secY7b", state: "idle" },
+        { id: "secY7b_p9", value: 6, parent: "secY7b_root", panel: "secY7b", state: "idle" },
+        { id: "secY7b_p7", value: 11, parent: "secY7b_root", panel: "secY7b", state: "idle" },
+      ],
+    },
+    {
+      note: "Predecessor(-3) no existe: ningún punto de este secundario es menor que -3, así que el límite izquierdo es 'antes de la primera hoja'. Successor(8) = la hoja Y=11: el primer punto que se sale del rango por arriba — el mismo rol que Predecessor/Successor cumplen en X, ahora en Y.",
+      highlight: ["secY7b_p7"],
+      panels: [{ id: "secY7b", label: "RangeQuery1D en Y, secundario de 7", anchor: "n7i" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "marked" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "secY7b_root", value: 6, parent: null, panel: "secY7b", state: "idle" },
+        { id: "secY7b_p9", value: 6, parent: "secY7b_root", panel: "secY7b", state: "idle" },
+        { id: "secY7b_p7", value: 11, parent: "secY7b_root", panel: "secY7b", state: "marked" },
+      ],
+    },
+    {
+      note: "Descomposición canónica en Y: al no haber predecessor, el único subárbol canónico que queda dentro de [-3,8] es la hoja Y=6 sola — ninguna arista se cruza a la izquierda de ella.",
+      highlight: ["secY7b_p9"],
+      panels: [{ id: "secY7b", label: "RangeQuery1D en Y, secundario de 7", anchor: "n7i" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "p3", value: 10, parent: "n3i" },
+        { id: "p4", value: 7, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "marked" },
+        { id: "p7", value: 11, parent: "n7i" },
+        { id: "p9", value: 6, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "p13", value: 0, parent: "n13i" },
+        { id: "p15", value: -2, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "p18", value: 3, parent: "n18i" },
+        { id: "p27", value: 1, parent: "n18i" },
+        { id: "secY7b_root", value: 6, parent: null, panel: "secY7b", state: "idle" },
+        { id: "secY7b_p9", value: 6, parent: "secY7b_root", panel: "secY7b", state: "answer" },
+        { id: "secY7b_p7", value: 11, parent: "secY7b_root", panel: "secY7b", state: "muted" },
+      ],
+      caption: "RangeQuery1D(secundario de 7, -3, 8) = {Y=6} → (9,6). Mismo resultado que la visualización de arriba, ahora mostrando el predecessor/successor y la descomposición canónica que lo producen.",
+    },
+  ],
+}} />
+
+## Pseudocódigo
+
+```
+RangeQuery2D(raiz_x, x1, x2, y1, y2)              // derivado
+subarboles_x ← RangeQuery1D(raiz_x, x1, x2)
+respuesta ← []
+para cada s en subarboles_x
+    respuesta.agregar(RangeQuery1D(s.secundario, y1, y2))
+devolver respuesta   // unión de las sub-respuestas por Y
+```
+
+## C++
+
+Ver `step-8-range-query-2d.cpp` y `full-implementation.cpp` en el editor
+de arriba.
+
+## Complejidad temporal
+
+$O(\log^2 n + k)$: $O(\log n)$ subárboles canónicos en X, cada uno con una
+consulta 1D de $O(\log n)$ en su secundario de Y —
+"$O(\log n)$ en $O(\log n)$ árboles" (#50) — más $O(k)$ de salida.
+
+## Complejidad espacial
+
+$O(\log n)$ adicional para las listas intermedias de subárboles (el espacio
+de la estructura misma, $O(n \log n)$, ya se pagó en
+[build-2d](/structures/range-tree/operations/build-2d)).
+
+## Ejemplo
+
+Ver la visualización de arriba: consulta `[5,16] × [-3,8]` sobre los puntos
+de build-2d. `RangeQuery1D` en X sobre `[5,16]` da los mismos subárboles
+canónicos que range-query-1d, `{7, 13}` (los puntos (7,11), (9,6), (13,0),
+(15,−2)). Sobre el secundario de 7, `RangeQuery1D` en Y con `[-3,8]`
+descarta (7,11) (Y=11 fuera de rango) y conserva (9,6); sobre el secundario
+de 13, conserva ambos, (13,0) y (15,−2). Resultado: `{(9,6), (13,0),
+(15,−2)}` — 3 de los 4 puntos de los subárboles canónicos en X.
+
+## Casos límite
+
+- **Caja vacía en X o en Y**: ninguno de los dos niveles de consulta 1D
+  devuelve subárboles, la respuesta es vacía.
+- **d=1 en la práctica** (`y1=-∞, y2=+∞`): la consulta en Y siempre
+  devuelve todo el secundario, degenerando a
+  [range-query-1d](/structures/range-tree/operations/range-query-1d) puro.
+- **Todos los puntos en la misma X**: un único subárbol canónico en X
+  (posiblemente la raíz), y toda la selectividad la aporta la consulta en Y.

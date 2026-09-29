@@ -1,0 +1,66 @@
+---
+// Único sitio con conocimiento del despacho familia → componente.
+//
+// El registro real (qué familias existen y si tienen componente) vive en
+// src/visualizations/registry.ts, con un `satisfies` que obliga a declarar
+// cada miembro de VISUALIZATION_TYPES — añadir uno sin registrar su
+// componente ahí es error de compilación, no un fallo silencioso.
+//
+// Astro necesita resolver el entrypoint de hidratación de `client:visible`
+// en tiempo de compilación: pasar el componente como valor dinámico
+// (`<Family client:visible ...>`) revienta el build con
+// `NoMatchingImport: Could not render 'Family'`. Por eso el despacho en sí
+// es una cadena de ifs — pero acotada a este único archivo, y sigue siendo
+// el registro quien decide qué familias existen.
+//
+// Ninguna de las 5 familias de este curso está implementada todavía (ver
+// registry.ts): a medida que el agente de visualizaciones registre cada
+// componente, añade aquí su import + la línea de despacho correspondiente,
+// siguiendo exactamente el patrón comentado abajo.
+import { VISUALIZATIONS } from '../visualizations/registry';
+import { visualizationSchema } from '../lib/schemas';
+import XyChartVisualization from '../visualizations/xy-chart/XyChartVisualization';
+import DagVisualization from '../visualizations/dag/DagVisualization';
+import NetworkTopologyVisualization from '../visualizations/network-topology/NetworkTopologyVisualization';
+import TimelineVisualization from '../visualizations/timeline/TimelineVisualization';
+import MemoryLayoutVisualization from '../visualizations/memory-layout/MemoryLayoutVisualization';
+
+interface Props {
+  viz: { type: keyof typeof VISUALIZATIONS; mode?: string; steps: any[] };
+}
+
+const raw = Astro.props.viz;
+
+// Un .mdx pasa el objeto a mano y NO pasa por Zod, así que se queda sin los
+// valores por defecto del schema. Validar aquí le da al MDX exactamente el
+// mismo contrato que al frontmatter, y un bloque mal escrito revienta el
+// build en vez de renderizar nada.
+const parsed = visualizationSchema.safeParse(raw);
+if (!parsed.success) {
+  throw new Error(
+    `Bloque visualization inválido en ${Astro.url.pathname}:\n` +
+      JSON.stringify(parsed.error.issues, null, 2),
+  );
+}
+const viz = parsed.data;
+
+// El `mode` del bloque es el DEFAULT de todos sus pasos. Los componentes
+// sólo reciben `steps`, así que se aplica aquí.
+const steps = viz.mode ? viz.steps.map((s) => ({ mode: viz.mode, ...s })) : viz.steps;
+
+const notImplemented = VISUALIZATIONS[viz.type] === null;
+---
+
+{viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} />}
+{viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
+{viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
+{viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
+{viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
+
+{
+  notImplemented && (
+    <p class="tag rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
+      visualización "{viz.type}" pendiente de implementar
+    </p>
+  )
+}

@@ -1,0 +1,11 @@
+id: iot-architecture
+title: Arquitectura IoT
+type: concept
+unit: s2
+prerequisites: [iot-intro]
+buildsOn: []
+usedBy: [edge-fog-cloud, sensors, mcu-mpu, wireless-tech]
+hasVisualization: true
+visualizationType: dag
+placeholder: false
+formulas: []

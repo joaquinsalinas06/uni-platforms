@@ -1,0 +1,21 @@
+id: d3-separation-node
+title: "D₃ — nodo de separación"
+type: structure
+week: week-05
+
+prerequisites: [d2-bound-x]
+buildsOn: [d2-bound-x]
+usedBy: [d4-bound-z]
+
+complexity: {}
+# El profesor no da cota numérica propia para D_3: da el argumento cualitativo
+# de conteo de consultas ("dos disparos, un solo nodo", #43) frente a lo que
+# costaría descomponer canónicamente en y ("O(lg n) nodos canónicos en y:
+# O(lg² n) consultas. Perdimos el O(lg n) que queríamos", #36). Rellenar un
+# Θ(...) aquí sería inventar: la cota final de la pila completa la cierra
+# generalized-fractional-cascading (#53-54, #59-63).
+
+professorAnalysisStyle: composición estructural
+hasVisualization: true
+visualizationType: tree
+placeholder: false

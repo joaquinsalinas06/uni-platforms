@@ -1,0 +1,23 @@
+id: vertical-ray-shooting
+title: "Vertical ray shooting"
+type: concept
+week: week-04
+
+prerequisites: ["planar-point-location"]
+buildsOn: ["planar-point-location"]
+usedBy: ["segment-intersection-sweep-line", "dominance-2d"]
+
+complexity:
+  ray-query:
+    worst: "O(log n) por consulta (heredado de la reducción a sweep line)"
+    reasoning: >-
+      El profesor no analiza ray-query por sí sola: la complejidad la hereda
+      de la estructura a la que se reduce (segment-intersection-sweep-line,
+      #51). Aquí no hay cálculo propio, sólo la equivalencia; por eso no se
+      rellenan best/avg/space, que el profesor tampoco da para este tema.
+    source: "Sem4_Planar_Point_Location.pdf#22,51"
+
+professorAnalysisStyle: "reducción"
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

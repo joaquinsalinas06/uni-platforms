@@ -1,0 +1,260 @@
+---
+kind: theory
+title: Sensores
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un microcontrolador no "entiende" temperatura, presión o luz: solo lee voltaje y
+corriente. Para que el mundo físico entre a un sistema IoT hace falta un traductor
+universal entre ambos dominios. Ese traductor es el **sensor**, y el mecanismo que
+usa por dentro es la **transducción**. Antes de programar nada (Semana 4) hay que
+saber clasificar un sensor y saber qué hacer con su señal cruda para que el ADC del
+microcontrolador la pueda leer sin dañarse ni perder información.
+
+## Conceptos
+
+### Transducción
+
+**Transducción**: el proceso de convertir una forma de energía (un parámetro
+físico) en otra (una señal eléctrica), o viceversa.
+
+- Mundo físico: temperatura, presión, luz, aceleración, …
+- Mundo digital: voltaje, corriente, frecuencia, resistencia, …
+
+$$\text{Parámetro físico} \xrightarrow{\text{transductor}} \text{Señal eléctrica}$$
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  steps: [{
+    note: 'El transductor es el puente entre el parámetro físico que existe en el mundo y la señal eléctrica que el microcontrolador sabe leer.',
+    nodes: [
+      { id: 'fis', value: 'Parámetro físico\n(T, P, luz, aceleración…)', parent: null },
+      { id: 'tr', value: 'Transductor', parent: 'fis' },
+      { id: 'ele', value: 'Señal eléctrica\n(V, I, f, R)', parent: 'tr' },
+    ],
+  }],
+}} />
+
+### Sensor
+
+**Definición**: dispositivo que mide una magnitud física y convierte esa lectura en
+una representación digital, típicamente entregada a otro dispositivo que la
+transforma en datos útiles para un sistema o una persona.
+
+### Clasificación de sensores
+
+El material propone seis criterios de clasificación, que no son excluyentes: un
+mismo sensor se clasifica en los seis a la vez.
+
+| Criterio | Distinción | Basado en… |
+|---|---|---|
+| Activo / pasivo | produce o no un flujo de energía de salida | si necesita alimentación externa (activo) o no (pasivo) |
+| Invasivo / no invasivo | forma parte del entorno que mide o es externo a él | si el sensor se inserta en el sistema medido |
+| Contacto / sin contacto | requiere tocar físicamente lo medido | contacto directo vs. medición remota |
+| Absoluto / relativo | escala absoluta o diferencia contra una referencia | si compara contra una referencia fija o variable |
+| Área de aplicación | industria o vertical donde se usa | el rubro (industrial, salud, automotriz, agro…) |
+| Cómo mide | mecanismo físico interno | termoeléctrico, electroquímico, piezorresistivo, óptico, fluido-mecánico, fotoelástico… |
+| Qué mide | variable física de salida | la aplicación (posición, temperatura, fuerza…) |
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  steps: [{
+    note: 'Un sensor se ubica simultáneamente en cada una de estas seis clasificaciones; no son categorías excluyentes.',
+    nodes: [
+      { id: 's', value: 'Sensor', parent: null },
+      { id: 'c1', value: 'Activo / pasivo', parent: 's' },
+      { id: 'c2', value: 'Invasivo / no invasivo', parent: 's' },
+      { id: 'c3', value: 'Contacto / sin contacto', parent: 's' },
+      { id: 'c4', value: 'Absoluto / relativo', parent: 's' },
+      { id: 'c5', value: 'Área de aplicación', parent: 's' },
+      { id: 'c6', value: 'Cómo mide (mecanismo)', parent: 's' },
+      { id: 'c7', value: 'Qué mide (variable)', parent: 's' },
+    ],
+  }],
+}} />
+
+### Tipos de sensor (qué miden)
+
+De las slides, la tabla de tipos según la variable física medida:
+
+| Tipo | Qué detecta | Ejemplos |
+|---|---|---|
+| Posición | posición absoluta o relativa de un objeto; lineal, angular o multi-eje | potenciómetro, inclinómetro, sensor de proximidad |
+| Ocupación y movimiento | presencia (ocupación, señal aunque el objeto esté quieto) o movimiento | célula fotoeléctrica, radar |
+| Velocidad y aceleración | rapidez (lineal o angular) y cambios de velocidad | acelerómetro, giroscopio |
+| Fuerza | si se aplica una fuerza y si supera un umbral | galga de fuerza, viscosímetro, sensor táctil |
+| Presión | fuerza por unidad de área aplicada por líquidos o gases | barómetro, manómetro Bourdon, piezómetro |
+| Flujo | volumen o tasa de fluido que pasa por un sistema | anemómetro, caudalímetro, medidor de agua |
+| Acústico | nivel de sonido, lo convierte en señal digital o analógica | micrófono, geófono, hidrófono |
+| Humedad | vapor de agua en el aire o en una masa (absoluta o relativa) | higrómetro, humistor, sensor de humedad de suelo |
+| Luz | presencia de luz visible o invisible | sensor infrarrojo, fotodetector, detector de llama |
+| Radiación | radiación ambiental, por centelleo o ionización | contador Geiger-Müller, centellador, detector de neutrones |
+| Temperatura | calor o frío presente; de contacto o sin contacto | termómetro, calorímetro, galga de temperatura |
+| Químico | concentración de una sustancia específica | etilómetro, olfatómetro, detector de humo |
+| Biosensores | elementos biológicos: organismos, tejidos, enzimas, anticuerpos | glucómetro, oxímetro de pulso, electrocardiógrafo |
+
+### Acondicionamiento de señal
+
+Un sensor real entrega una señal débil (del orden de milivoltios) y con ruido; el
+microcontrolador necesita 0–3.3 V limpios para su ADC. El acondicionamiento tiene
+tres etapas típicas:
+
+- **Amplificación**: lleva la señal débil del sensor al rango dinámico del
+  microcontrolador (0–3.3 V) usando amplificadores operacionales (Op-Amps), con
+  ganancias típicas de 100×–1000×.
+- **Filtrado**: elimina ruido de alta frecuencia y la interferencia de la red
+  eléctrica (50/60 Hz) con filtros pasa-bajos, pasivos (RC) o activos.
+- **Protección y aislamiento**: evita sobrevoltaje y picos que dañen el
+  microcontrolador, usando diodos Zener, divisores de voltaje y optocopladores.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  steps: [{
+    note: 'Orden típico del acondicionamiento: primero se protege la entrada (clipping con Zener), luego se amplifica al rango 0–3.3 V, y al final se filtra el ruido de alta frecuencia antes de entrar al ADC.',
+    shapes: [
+      { id: 'in', kind: 'io', label: 'Señal cruda\n(~10 mVpp, con ruido)', initial: true },
+      { id: 'prot', kind: 'process', label: 'Protección\n(Zener, divisor, optocoplador)' },
+      { id: 'amp', kind: 'process', label: 'Amplificación\n(Op-Amp, G = 100–1000×)' },
+      { id: 'filt', kind: 'process', label: 'Filtrado\n(pasa-bajos, quita 50/60 Hz)' },
+      { id: 'adc', kind: 'end', label: 'ADC del MCU\n(0–3.3 V)' },
+    ],
+    arrows: [
+      { from: 'in', to: 'prot' },
+      { from: 'prot', to: 'amp' },
+      { from: 'amp', to: 'filt' },
+      { from: 'filt', to: 'adc' },
+    ],
+  }],
+}} />
+
+> **Nota de apoyo** (no está en el material): el orden protección → amplificación →
+> filtrado no es arbitrario: conviene recortar picos peligrosos *antes* de
+> amplificar, porque amplificar un pico ya recortado no vuelve a dañar al
+> microcontrolador, mientras que amplificar primero podría generar voltajes que el
+> Zener recién limita después de haber pasado por el amplificador.
+
+## Método paso a paso
+
+Para clasificar un sensor dado (típico enunciado de examen):
+
+1. Identifica **qué variable física mide** (temperatura, posición, fuerza…) → eso
+   fija su fila en la tabla de "Qué mide".
+2. Pregunta si **necesita alimentación externa** para producir su señal de salida →
+   activo o pasivo.
+3. Pregunta si el sensor **está inserto en el sistema medido** o lo observa desde
+   afuera → invasivo o no invasivo.
+4. Pregunta si **debe tocar físicamente** lo que mide → contacto o sin contacto.
+5. Pregunta si su lectura es una **magnitud absoluta** o una **diferencia contra una
+   referencia** → absoluto o relativo.
+6. Identifica el **mecanismo físico interno** (resistivo, óptico, piezoeléctrico…) y
+   la **industria** donde se aplicaría.
+7. Si el enunciado da una señal de salida débil o ruidosa, decide qué etapa de
+   acondicionamiento hace falta (amplificar si el rango es muy chico, filtrar si hay
+   ruido de alta frecuencia o de red, proteger si hay riesgo de sobrevoltaje).
+
+## Ejemplo resuelto
+
+**Termistor NTC en un divisor de voltaje** (canal de temperatura analógico de la
+slide de transducción):
+
+- Transducción: el calor cambia la resistencia del NTC (energía térmica → cambio de
+  resistencia eléctrica).
+- Qué mide: temperatura.
+- Cómo mide: mecanismo resistivo (termoeléctrico/resistivo).
+- Activo o pasivo: el NTC en sí es pasivo (no genera energía), pero el circuito
+  divisor necesita $V_{CC}$ externo para producir $V_{out}$ — en la práctica se
+  analiza como parte activa del sistema de medición.
+- Contacto: sí, necesita contacto térmico directo con el objeto o el ambiente.
+- Invasivo: no invasivo si mide el ambiente sin ser parte de un proceso interno.
+- Absoluto o relativo: absoluto (da una lectura de temperatura, no una diferencia).
+- Salida: $V_{out}$ no lineal (curva decreciente), señal analógica; requiere
+  linealización o una tabla de conversión antes del ADC, y si el rango de $V_{out}$
+  no llega a 3.3 V conviene amplificar.
+
+## Errores típicos
+
+- Tratar "activo/pasivo" como sinónimo de "necesita cable de alimentación": el
+  criterio real es si el sensor **produce una salida de energía** por sí mismo, no
+  solo si tiene una fuente de poder en el circuito.
+- Confundir invasivo con "que requiere contacto": son dos criterios distintos e
+  independientes (invasivo se refiere a si el sensor es parte del sistema medido).
+- Olvidar que un sensor se clasifica en **los seis criterios a la vez**, no en solo
+  uno: la pregunta de examen puede pedir dos o tres clasificaciones para el mismo
+  sensor.
+- Meter el orden de acondicionamiento al revés (filtrar antes de amplificar la señal
+  ya saturada, o amplificar antes de proteger un pico peligroso).
+- Confundir el filtro anti-50/60 Hz con un filtro pasa-altos: es un **pasa-bajos**
+  porque el ruido de red está en baja frecuencia relativa a la señal útil de interés
+  o porque se busca dejar pasar la componente de continua/lenta y cortar el resto
+  de alta frecuencia.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un sensor de humedad de suelo (dos electrodos metálicos enterrados que miden la resistencia del suelo, alimentados con $5$ V) se usa en un sistema de riego automático. Clasifíquelo según los seis criterios vistos en clase y justifique cada uno en una línea.",
+  hints: [
+    "Para activo/pasivo pregúntate: ¿el sensor produce una salida de energía por sí solo, o solo modula una alimentación externa?",
+    "Para invasivo/no invasivo pregúntate si el sensor pasa a formar parte del sistema que mide (el suelo) o solo lo observa desde afuera.",
+  ],
+}}>
+
+Se clasifica en los seis criterios a la vez, no en uno solo:
+
+| Criterio | Clasificación | Justificación |
+|---|---|---|
+| Activo / pasivo | **Activo** | Necesita alimentación externa de 5 V para producir $V_{out}$ |
+| Invasivo / no invasivo | **Invasivo** | Los electrodos se entierran: pasan a ser parte del sistema medido (el suelo) |
+| Contacto / sin contacto | **Contacto** | Requiere tocar físicamente el suelo con los electrodos |
+| Absoluto / relativo | **Absoluto** | Da una lectura directa de humedad, no una diferencia contra otra medición |
+| Área de aplicación | Agricultura de precisión | Riego automático es un caso típico de esa vertical |
+| Cómo mide | Mecanismo **resistivo** | La humedad cambia la conductividad (y por tanto la resistencia) del suelo |
+
+Qué mide: **humedad**.
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un acelerómetro entrega una señal analógica de $\\pm 50$ mV alrededor de un punto medio, con ruido de alta frecuencia notorio y picos ocasionales de hasta $5$ V ante vibraciones fuertes. Se debe conectar al ADC de un microcontrolador de $3.3$ V. Proponga, en orden, las etapas de acondicionamiento necesarias y justifique el orden elegido.",
+  hints: [
+    "Piensa qué pasa si amplificas primero un pico de 5 V con ganancia 100×: ¿qué le llega al microcontrolador?",
+    "El orden que protege primero al microcontrolador ante cualquier escenario es el más seguro.",
+  ],
+}}>
+
+**1. Protección (diodos Zener).** Recorta los picos de $5$ V a un rango seguro antes de que lleguen a cualquier otra etapa. Si se amplificara primero un pico de $5$ V con ganancia $100\times$, llegarían $500$ V a la siguiente etapa: inaceptable.
+
+**2. Amplificación (Op-Amp).** Lleva los $\pm 50$ mV útiles, ya sin picos peligrosos, al rango $0$–$3.3$ V del ADC.
+
+**3. Filtrado (pasa-bajos).** Elimina el ruido de alta frecuencia que quedó después de amplificar, sin arriesgar aliasing sobre la señal ya escalada.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Acondicionamiento del acelerómetro (orden justificado)',
+  steps: [{
+    note: 'Proteger antes de amplificar evita dañar el Op-Amp o el ADC con el pico de 5 V; amplificar antes de filtrar aprovecha todo el rango del ADC y el filtro deja la señal lista sin aliasing.',
+    shapes: [
+      { id: 'in', kind: 'io', label: '±50 mV + ruido\n+ picos de 5 V', initial: true },
+      { id: 'prot', kind: 'process', label: '1. Protección\n(Zener)', state: 'answer' },
+      { id: 'amp', kind: 'process', label: '2. Amplificación\n(Op-Amp)' },
+      { id: 'filt', kind: 'process', label: '3. Filtrado\n(pasa-bajos)' },
+      { id: 'adc', kind: 'end', label: 'ADC 0–3.3 V' },
+    ],
+    arrows: [
+      { from: 'in', to: 'prot' },
+      { from: 'prot', to: 'amp' },
+      { from: 'amp', to: 'filt' },
+      { from: 'filt', to: 'adc' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

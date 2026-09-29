@@ -1,0 +1,51 @@
+id: segment-intersection-sweep-line
+title: "Intersección de segmentos con barrido"
+type: algorithm
+week: week-04
+
+prerequisites: ["vertical-ray-shooting", "segment-tree", "balanced-bst", "path-copying"]
+buildsOn: ["vertical-ray-shooting"]
+usedBy: []
+
+complexity:
+  segment-activation:
+    worst: "O(n log n) total (caso simple, con Segment tree o Fenwick tree)"
+    reasoning: >-
+      El profesor no cuenta pasos de activar/desactivar: atribuye el costo
+      completo del caso simple a la estructura elegida — "usando un Segment
+      tree o un Fenwick tree se puede resolver este caso especial en
+      O(n log n)" (#38). Es herencia de cota, no una recurrencia propia de
+      esta operación.
+    source: "Sem4_Planar_Point_Location.pdf#38"
+  intersection-count:
+    worst: "O(n log n) total (caso simple, con Segment tree o Fenwick tree)"
+    reasoning: >-
+      Misma cota que segment-activation y por la misma razón: contar cuántas
+      posiciones activas cubre un segmento vertical es una consulta de rango
+      sobre la estructura elegida (RSQ, #32), así que el costo se hereda de
+      ella, no se deriva aparte.
+    source: "Sem4_Planar_Point_Location.pdf#37-38"
+  crossing-order:
+    worst: "O((n+q) log n) total (caso general offline)"
+    reasoning: >-
+      El profesor atribuye el costo del caso general a la BBST que mantiene
+      el orden de cruces con la recta de barrido (#43): con n eventos de
+      segmento y q puntos de consulta, cada uno cuesta O(log n) sobre esa
+      estructura, así que el total es O((n+q) log n) (#47). De nuevo, la
+      cota viene de la estructura elegida, no de contar pasos del barrido.
+    source: "Sem4_Planar_Point_Location.pdf#43,47"
+  persistent-online-query:
+    worst: "O(log n) por consulta"
+    reasoning: >-
+      Al aplicar persistencia (ver path-copying) sobre la BBST de cruces, el
+      profesor afirma que cada consulta pasa a costar O(log n) sin importar
+      cuándo ocurrió en el barrido (#51) — la cota se hereda de que una
+      consulta a una versión pasada cuesta lo mismo que una consulta normal
+      sobre esa estructura, el mismo argumento que ya usa path-copying para
+      query-old-version.
+    source: "Sem4_Planar_Point_Location.pdf#49-51"
+
+professorAnalysisStyle: "reducción + herencia de cota"
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

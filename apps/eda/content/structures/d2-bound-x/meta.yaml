@@ -1,0 +1,17 @@
+id: d2-bound-x
+title: "D₂ — acotar x"
+type: structure
+week: week-05
+
+prerequisites: [dominance-2d, range-tree]
+buildsOn: [dominance-2d]
+usedBy: [d3-separation-node]
+
+complexity: {}
+# El profesor no da cota propia para D_2: "Nada nuevo todavía — lo interesante
+# empieza al agregar la segunda dimensión acotada." (#34). La cota se infiere
+# más adelante, en el cierre general (#53-54, #59-63) y le toca a esa sección.
+
+professorAnalysisStyle: composición estructural
+hasVisualization: true
+placeholder: false

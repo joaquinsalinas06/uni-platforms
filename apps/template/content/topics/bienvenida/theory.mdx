@@ -1,0 +1,62 @@
+---
+kind: "theory"
+title: "Introducción al Curso"
+order: 1
+visualization:
+  type: "dag"
+  title: "Flujo de Procesamiento Distribuido"
+  steps:
+    - title: "Etapa 1: Ingesta de Datos"
+      note: "Los datos llegan en streams hacia los nodos de particionado $P_i$."
+      nodes:
+        - id: "source"
+          label: "Data Source"
+          state: "active"
+        - id: "n1"
+          label: "Node 1"
+          state: "idle"
+        - id: "n2"
+          label: "Node 2"
+          state: "idle"
+      edges:
+        - from: "source"
+          to: "n1"
+          flow: true
+          state: "active"
+        - from: "source"
+          to: "n2"
+          flow: true
+          state: "active"
+    - title: "Etapa 2: Procesamiento Paralelo"
+      note: "Ambos nodos procesan los bloques de forma concurrente."
+      nodes:
+        - id: "source"
+          label: "Data Source"
+          state: "idle"
+        - id: "n1"
+          label: "Node 1"
+          state: "active"
+        - id: "n2"
+          label: "Node 2"
+          state: "active"
+---
+
+# Bienvenido a tu Nueva Plataforma
+
+Esta plataforma fue generada a partir de la arquitectura modular **uni-platforms**.
+
+## ¿Cómo agregar contenido?
+1. Escribe tus notas y explicaciones en formato Markdown / MDX en esta carpeta `content/topics/`.
+2. Para añadir diagramas, simulaciones de circuitos, grafos o árboles, simplemente declara el bloque `visualization` en el frontmatter o incluye componentes interactivos.
+
+## Visualizaciones disponibles
+Puedes usar cualquiera de las 11 familias universales compartidas:
+- `tree` (Árboles binarios, AVL, Segment Tree)
+- `persistent` (Estructuras persistentes, Fat Nodes, Path Copying)
+- `circuit` (Circuitos con resistencias, fuentes y solver nodal KVL)
+- `dag` (Grafos dirigidos acíclicos y paralelismo)
+- `timeline` (Líneas de tiempo, hilos y pipelines)
+- `memory-layout` (Disposición de memoria y cachés)
+- `flow` (Diagramas de flujo con formas geométricas)
+- `sequence` (Diagramas de secuencia temporal)
+- `xy-chart` (Gráficos matemáticos)

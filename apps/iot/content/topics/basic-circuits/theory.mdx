@@ -1,0 +1,58 @@
+---
+kind: theory
+title: "Circuitos eléctricos básicos"
+---
+
+## Idea
+
+Antes de sensar nada, un ingeniero de IoT necesita poder **leer y resolver un
+circuito**: saber cuánta corriente pasa por cada rama, qué tensión cae en cada
+elemento y cuánta potencia se consume. Esta semana repasa las herramientas mínimas
+para hacerlo — exactamente las que el examen parcial evalúa con más peso: reducción
+de resistencias y las Leyes de Kirchhoff. El material de la sesión de laboratorio lo
+resume así:
+
+1. Aplicar las Leyes de Kirchhoff para determinar corrientes y tensiones en nodos y
+   mallas.
+2. Reducir circuitos con múltiples resistencias (serie y paralelo) a su resistencia
+   equivalente.
+3. Calcular la potencia consumida por cada elemento y la entregada por la fuente
+   (y verificar que ambas coincidan: balance de potencia).
+
+## Conceptos
+
+Este tema se organiza en cuatro subtemas, cada uno con sus propios ejemplos
+resueltos y ejercicios tipo examen:
+
+- **[Ley de Ohm y potencia](/topics/basic-circuits/subtopics/ley-ohm-potencia)**:
+  la relación $V=IR$, las tres formas de calcular potencia y el balance entre lo que
+  entrega la fuente y lo que consumen las resistencias.
+- **[Reducción serie-paralelo](/topics/basic-circuits/subtopics/reduccion-serie-paralelo)**:
+  cómo identificar qué elementos están en serie y cuáles en paralelo, y cómo reducir
+  un circuito completo hasta una única $R_{eq}$ entre dos nodos.
+- **[Divisores de tensión y de corriente](/topics/basic-circuits/subtopics/divisores)**:
+  los dos atajos más usados en la práctica (y en el diseño de sensores) para repartir
+  voltaje o corriente entre dos resistencias sin resolver el circuito completo.
+- **[Leyes de Kirchhoff](/topics/basic-circuits/subtopics/kirchhoff)**: el método
+  general (LCK + LTK, análisis de mallas) para cualquier circuito que no se deje
+  reducir con serie/paralelo puro — el tema más denso y el que más pide el parcial.
+
+## Errores típicos
+
+- Intentar aplicar Kirchhoff directamente sin antes reducir lo que sí se puede
+  reducir por serie/paralelo: casi siempre conviene simplificar primero.
+- Olvidar que un divisor de tensión/corriente **solo vale tal cual** cuando la rama
+  de salida no carga al divisor (no se conecta nada más a ese nodo); si se conecta
+  una carga, hay que re-derivar con Kirchhoff o recalcular el paralelo.
+- No verificar el resultado con el balance de potencia (potencia entregada por las
+  fuentes = potencia consumida por las resistencias): es la forma más rápida de
+  detectar un error de signo o de topología.
+
+## Pregunta tipo examen
+
+El examen combina siempre reducción de resistencias y Kirchhoff sobre el mismo tipo
+de circuitos que se ven en esta semana (con bloques que se reducen por separado y
+luego se combinan, y a veces un puente de Wheatstone balanceado). Los ejercicios
+completos, paso a paso, están en cada subtema — en particular en
+[reducción serie-paralelo](/topics/basic-circuits/subtopics/reduccion-serie-paralelo)
+y en [Kirchhoff](/topics/basic-circuits/subtopics/kirchhoff).

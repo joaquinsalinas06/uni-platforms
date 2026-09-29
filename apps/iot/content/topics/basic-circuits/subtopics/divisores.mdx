@@ -1,0 +1,338 @@
+---
+kind: subtopic
+order: 3
+title: "Divisores de tensión y de corriente"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Cuando dos resistencias están simplemente en **serie** (alimentadas por una
+fuente de tensión) o simplemente en **paralelo** (alimentadas por una fuente de
+corriente), no hace falta plantear Kirchhoff: hay un atajo directo para repartir
+la tensión o la corriente entre ellas. Estos dos atajos —el **divisor de
+tensión** y el **divisor de corriente**— son además la base del diseño de
+muchos sensores resistivos (el material los usa explícitamente para leer un
+sensor analógico con un microcontrolador).
+
+## Conceptos
+
+### Divisor de tensión
+
+Dos resistencias $R_1$ y $R_2$ en serie, alimentadas por una fuente $V$. La salida
+se toma entre $R_1$ y $R_2$:
+
+$$
+V_{R_2} = V \cdot \dfrac{R_2}{R_1+R_2}
+$$
+
+Nótese que la tensión de salida usa en el numerador la resistencia del MISMO lado
+donde se mide la salida.
+
+### Divisor de corriente
+
+Dos resistencias $R_1$ y $R_2$ en paralelo, alimentadas por una fuente de
+corriente $I$. Primero se calcula la resistencia equivalente y la tensión común:
+
+$$
+R_{eq} = \dfrac{R_1 R_2}{R_1+R_2}, \qquad e = I \cdot R_{eq}
+$$
+
+Y la corriente que pasa por $R_2$ es $i_2 = e/R_2$, lo que da:
+
+$$
+i_2 = I \cdot \dfrac{R_1}{R_1+R_2}
+$$
+
+Nótese lo contrario del divisor de tensión: la corriente de la rama $R_2$ usa en
+el numerador la resistencia de la OTRA rama ($R_1$) — la corriente prefiere el
+camino de menor resistencia, así que a mayor $R_1$ (más "cerrado" el otro camino),
+más corriente se desvía hacia $R_2$.
+
+### Aplicación real: leer un sensor resistivo
+
+El material muestra el uso más común de un divisor de tensión en IoT: un sensor
+cuya resistencia $R_{IC}$ cambia con la variable física medida (luz, temperatura,
+flexión, etc.) se pone en serie con una resistencia de referencia fija $R_{REF}$,
+y se lee la tensión intermedia con una entrada analógica (A0):
+
+$$
+V_{A0} = V_{CC} \cdot \dfrac{R_{REF}}{R_{IC}+R_{REF}}
+$$
+
+Cambiar $R_{IC}$ (el sensor) cambia $V_{A0}$, que es lo que el microcontrolador
+puede leer con su ADC.
+
+## Método paso a paso
+
+**Divisor de tensión:**
+1. Confirma que las dos resistencias están realmente en serie y que nada más se
+   conecta al nodo intermedio (si se conecta una carga, el divisor "ideal" deja de
+   valer tal cual).
+2. Aplica $V_{R2} = V \cdot R_2/(R_1+R_2)$ directamente.
+
+**Divisor de corriente:**
+1. Confirma que las dos resistencias están en paralelo (mismos dos nodos).
+2. Aplica $i_2 = I \cdot R_1/(R_1+R_2)$ para la rama de $R_2$ (usando la OTRA
+   resistencia en el numerador).
+3. Si hay más de dos resistencias en paralelo, generaliza usando conductancias:
+   $i_x = I \cdot G_x / G_{total}$, con $G=1/R$.
+
+## Ejemplo resuelto — Divisor de tensión
+
+Fuente $E=40\text{ V}$ en serie con $R_1=8\ \Omega$, $R_2=5\ \Omega$ (donde se mide
+$V$) y $R_3=3\ \Omega$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Divisor de tensión: hallar V',
+  steps: [{
+    note: 'Un solo lazo serie: R_T = 8+5+3 = 16 Ω. I = 40/16 = 2.5 A. V = I·R2 = 2.5×5 = 12.5 V.',
+    circuit: {
+      nodes: [
+        { id: 'a', x: 0, y: 0 }, { id: 'b', x: 4, y: 0 }, { id: 'c', x: 8, y: 0 },
+        { id: 'd', x: 8, y: 4 }, { id: 'g', x: 0, y: 4, ground: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 'a', value: 40, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'b', value: 8, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'c', value: 5, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'c', to: 'd', value: 3, label: 'R3' },
+        { id: 'w1', kind: 'wire', from: 'd', to: 'g' },
+      ],
+      voltages: [{ part: 'R2', label: 'V', plus: 'from', showValue: true }],
+    },
+    expect: { 'V(b,c)': 12.5 },
+  }],
+}} />
+
+## Ejemplo resuelto — Divisor de corriente (1)
+
+Fuente de corriente $I=25\text{ A}$ en paralelo con $R_1=20\ \Omega$, $R_2=30\ \Omega$
+y $R_3=6\ \Omega$ (se pide la corriente por $R_3$).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Divisor de corriente: tres ramas en paralelo',
+  steps: [{
+    note: 'Req = 1/(1/20+1/30+1/6) = 4 Ω. La tensión común es I·Req = 25×4 = 100 V. i(R3) = 100/6 ≈ 16.67 A.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0 }, { id: 'b', x: 0, y: 8 },
+      ],
+      parts: [
+        { id: 'I', kind: 'isource', from: 'b', to: 't', value: 25, label: 'I' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'b', value: 20, label: 'R1', via: [[4, 0], [4, 8]] },
+        { id: 'R2', kind: 'resistor', from: 't', to: 'b', value: 30, label: 'R2', via: [[8, 0], [8, 8]] },
+        { id: 'R3', kind: 'resistor', from: 't', to: 'b', value: 6, label: 'R3', via: [[12, 0], [12, 8]] },
+      ],
+      currents: [{ part: 'R3', label: 'i', showValue: true }],
+    },
+    expect: { 'I(R3)': 16.667 },
+  }],
+}} />
+
+## Ejemplo resuelto — Divisor de corriente (2)
+
+Fuente $E=300\text{ V}$. Arriba: $R_6=6\ \Omega$ y $R_3'=3\ \Omega$ en paralelo
+(rama por la que se mide $i_1$, la de $3\ \Omega$). Abajo: $R_1'=1\ \Omega$,
+$R_2'=2\ \Omega$ y $R_2''=2\ \Omega$ en paralelo (rama donde se mide $e_2$, sobre
+la de $2\ \Omega$).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Divisor de corriente: determinar i1 y e2',
+  steps: [{
+    note: 'Rtop = 6‖3 = 2 Ω. Rbot = 1‖2‖2 = 0.5 Ω. R_T = 2.5 Ω. I_T = 300/2.5 = 120 A. i1 (por la rama de 3 Ω) = 120×6/9 = 80 A. e2 = I_T×Rbot = 120×0.5 = 60 V.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 't6', x: 6, y: 0 }, { id: 't3', x: 10, y: 0 },
+        { id: 'm1', x: 4, y: 4 }, { id: 'm6', x: 6, y: 4 }, { id: 'm2', x: 8, y: 4 }, { id: 'm3', x: 10, y: 4 }, { id: 'm4', x: 12, y: 4 },
+        { id: 'b1', x: 4, y: 8 }, { id: 'b2', x: 8, y: 8 }, { id: 'b4', x: 12, y: 8 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 300, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 't', to: 't6' },
+        { id: 'w2', kind: 'wire', from: 't6', to: 't3' },
+        { id: 'R6', kind: 'resistor', from: 't6', to: 'm6', value: 6, label: 'R6' },
+        { id: 'R3p', kind: 'resistor', from: 't3', to: 'm3', value: 3, label: 'R3' },
+        { id: 'w3', kind: 'wire', from: 'm1', to: 'm6' },
+        { id: 'w4', kind: 'wire', from: 'm6', to: 'm2' },
+        { id: 'w5', kind: 'wire', from: 'm2', to: 'm3' },
+        { id: 'w6', kind: 'wire', from: 'm3', to: 'm4' },
+        { id: 'R1p', kind: 'resistor', from: 'm1', to: 'b1', value: 1, label: 'R1' },
+        { id: 'R2a', kind: 'resistor', from: 'm2', to: 'b2', value: 2, label: 'R2a' },
+        { id: 'R2b', kind: 'resistor', from: 'm4', to: 'b4', value: 2, label: 'R2b' },
+        { id: 'w7', kind: 'wire', from: 'g', to: 'b1' },
+        { id: 'w8', kind: 'wire', from: 'b1', to: 'b2' },
+        { id: 'w9', kind: 'wire', from: 'b2', to: 'b4' },
+      ],
+      currents: [{ part: 'R3p', label: 'i1', showValue: true }],
+      voltages: [{ part: 'R2b', label: 'e2', plus: 'from', showValue: true }],
+    },
+    expect: { 'I(R3p)': 80, 'V(m4,b4)': 60 },
+  }],
+}} />
+
+## Errores típicos
+
+- Invertir la fórmula del divisor de tensión y de corriente (usar la MISMA
+  resistencia en el numerador en los dos casos): recuerda que en tensión se usa
+  la propia, y en corriente se usa la del vecino.
+- Aplicar el divisor de tensión "de memoria" cuando el nodo intermedio tiene una
+  tercera conexión (una carga): en ese caso ya no es un divisor simple y hay que
+  volver a reducir o usar Kirchhoff.
+- Con más de dos resistencias en paralelo, olvidar que la fórmula corta
+  ($i_2 = I\cdot R_1/(R_1+R_2)$) es solo para EXACTAMENTE dos ramas; con tres o
+  más conviene ir por conductancias o por $Req$ y luego $e=I\cdot Req$.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Divisor a armar: E = 5 V, dos resistores en serie; el sensor lee V_out sobre el de abajo.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 6, y: 0 },
+        { id: 'o', x: 6, y: 4, label: 'V_{out}' }, { id: 'b', x: 6, y: 8 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 't', to: 'a' },
+        { id: 'Rar', kind: 'resistor', from: 'a', to: 'o', label: 'R_{arriba}' },
+        { id: 'Rab', kind: 'resistor', from: 'o', to: 'b', label: 'R_{abajo}' },
+        { id: 'w2', kind: 'wire', from: 'b', to: 'g' },
+      ],
+      voltages: [{ part: 'Rab', label: 'V_{out}' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Tienes un sensor que funciona correctamente sólo si recibe una señal de entrada entre $0$ y $3.3$ V. La fuente entrega $5$ V y dispones de resistores de $10$, $20$, $30$, $40$ y $50\\,\\text{k}\\Omega$. ¿Cómo armarías el divisor de la figura con dos de esos resistores para que $V_{out}$ no supere los $3.3$ V? Calcula $V_{out}$ y justifica la elección.",
+  hints: [
+    "La salida del divisor se toma sobre la resistencia de abajo (la más cercana a tierra): $V_{out} = E\\,\\dfrac{R_{abajo}}{R_{arriba} + R_{abajo}}$.",
+    "Prueba con la pareja $20\\,\\text{k}\\Omega$ (arriba) y $30\\,\\text{k}\\Omega$ (abajo): $V_{out} = 5 \\cdot \\dfrac{30}{20 + 30}$.",
+  ],
+}}>
+
+**1. Condición.** El sensor pide $V_{out} \le 3.3$ V, así que la fracción del divisor debe cumplir
+
+$$
+\frac{R_{abajo}}{R_{arriba} + R_{abajo}} \le \frac{3.3}{5} = 0.66
+$$
+
+**2. Elegir la pareja.** Con $R_{arriba} = 20\,\text{k}\Omega$ y $R_{abajo} = 30\,\text{k}\Omega$ la fracción es $30/50 = 0.6 \le 0.66$ ✓:
+
+$$
+V_{out} = E\,\frac{R_{abajo}}{R_{arriba} + R_{abajo}} = 5 \cdot \frac{30}{20 + 30} = \boxed{3\,\text{V}}
+$$
+
+**3. Corriente del divisor** (para ver que el consumo es bajo):
+
+$$
+I = \frac{E}{R_{arriba} + R_{abajo}} = \frac{5\,\text{V}}{50\,\text{k}\Omega} = 0.1\,\text{mA}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Resuelto: 20 kΩ arriba y 30 kΩ abajo. I = 0.1 mA, V_out = 3 V < 3.3 V.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 6, y: 0 },
+        { id: 'o', x: 6, y: 4, label: 'V_{out}', showPotential: true }, { id: 'b', x: 6, y: 8 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 't', to: 'a' },
+        { id: 'Rar', kind: 'resistor', from: 'a', to: 'o', value: 20000, label: 'R_{arriba}' },
+        { id: 'Rab', kind: 'resistor', from: 'o', to: 'b', value: 30000, label: 'R_{abajo}', state: 'answer' },
+        { id: 'w2', kind: 'wire', from: 'b', to: 'g' },
+      ],
+      currents: [{ part: 'Rar', label: 'I', showValue: true }],
+      voltages: [{ part: 'Rab', label: 'V_{out}', showValue: true }],
+    },
+    expect: { 'V(o)': 3, 'I(Rar)': 0.0001 },
+  }],
+}} />
+
+**Comprobación — otras parejas** ($R_{arriba}$ / $R_{abajo}$):
+
+| Pareja | Fracción | $V_{out}$ | ¿Sirve? |
+|---|---|---|---|
+| $20$ / $30$ k | $0.600$ | $3.00$ V | ✓ (la elegida) |
+| $30$ / $50$ k | $0.625$ | $3.13$ V | ✓ (también vale) |
+| $10$ / $20$ k | $0.667$ | $3.33$ V | ✗ se pasa por poco |
+| $10$ / $50$ k | $0.833$ | $4.17$ V | ✗ dañaría el sensor |
+
+Cualquier pareja con fracción $\le 0.66$ sirve; $20/30$ deja margen frente a la tolerancia
+de los resistores y aprovecha casi todo el rango del sensor.
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "¿Cuál es la fórmula general de la resistencia equivalente para $n$ resistencias en paralelo, y cómo se deduce a partir de la ley de Ohm y la conservación de la corriente (KCL)?",
+  hints: [
+    "Todas las resistencias en paralelo comparten la misma tensión $V$.",
+    "La corriente total que entrega la fuente es la **suma** de las corrientes de cada rama (KCL en el nodo común).",
+  ],
+}}>
+
+**1. Misma tensión.** Las $n$ ramas cuelgan de los mismos dos nodos, así que todas ven $V$. Por Ohm, cada rama lleva
+
+$$
+I_k = \frac{V}{R_k}, \qquad k = 1, \dots, n
+$$
+
+**2. KCL en el nodo común.** La corriente total se reparte entre las ramas:
+
+$$
+I_T = I_1 + I_2 + \dots + I_n = V\left(\frac{1}{R_1} + \frac{1}{R_2} + \dots + \frac{1}{R_n}\right)
+$$
+
+**3. Definición de $R_{eq}$.** La resistencia equivalente es la que, con la misma $V$, pide la misma $I_T$: $I_T = V/R_{eq}$. Igualando:
+
+$$
+\boxed{\frac{1}{R_{eq}} = \sum_{k=1}^{n} \frac{1}{R_k}} \qquad\Leftrightarrow\qquad R_{eq} = \frac{1}{\sum_k 1/R_k}
+$$
+
+Para $n = 2$ se reduce a la conocida $R_{eq} = \dfrac{R_1 R_2}{R_1 + R_2}$.
+
+**4. Con números** ($E = 12$ V; $R_1 = 6$, $R_2 = 12$, $R_3 = 4\,\Omega$):
+
+$$
+\frac{1}{R_{eq}} = \frac{1}{6} + \frac{1}{12} + \frac{1}{4} = \frac{6}{12} \;\Rightarrow\; R_{eq} = 2\,\Omega \qquad I_T = \frac{12}{2} = 6\,\text{A}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Las tres ramas ven 12 V: 2 A + 1 A + 3 A = 6 A = E / Req, con Req = 2 Ω.',
+    circuit: {
+      nodes: [{ id: 't', x: 0, y: 0 }, { id: 'b', x: 0, y: 8, ground: true }],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'b', to: 't', value: 12, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'b', value: 6, label: 'R1', via: [[4, 0], [4, 8]] },
+        { id: 'R2', kind: 'resistor', from: 't', to: 'b', value: 12, label: 'R2', via: [[8, 0], [8, 8]] },
+        { id: 'R3', kind: 'resistor', from: 't', to: 'b', value: 4, label: 'R3', via: [[12, 0], [12, 8]] },
+      ],
+      groups: [{ parts: ['R1', 'R2', 'R3'], tone: 'parallel', label: 'paralelo' }],
+      currents: [{ part: 'E', label: 'I_T', showValue: true }, { part: 'R1', label: 'I_1', showValue: true }, { part: 'R2', label: 'I_2', showValue: true }, { part: 'R3', label: 'I_3', showValue: true }],
+    },
+    expect: { 'I(E)': 6, 'I(R1)': 2, 'I(R2)': 1, 'I(R3)': 3, 'P(E)': 72 },
+  }],
+}} />
+
+**Comprobación — KCL:** $I_1 + I_2 + I_3 = 2 + 1 + 3 = 6\,\text{A} = I_T$ ✓, y $R_{eq} = 2\,\Omega$ es
+menor que la menor de las ramas ($4\,\Omega$), como debe pasar en todo paralelo.
+
+</ExerciseBlock>

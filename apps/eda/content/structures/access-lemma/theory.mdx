@@ -1,0 +1,655 @@
+---
+kind: theory
+title: "Lema de Acceso"
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Las tres definiciones del profesor (#22) son "solo para el análisis,
+        no para el código": ningún nodo guarda nada de esto. Se empieza con
+        el peso, `w_x`, un número positivo arbitrario por nodo. Para toda la
+        prueba basta el caso `w_x = 1` para todos.
+      caption: "w_x = 1 en los 7 nodos"
+      nodes:
+        - { id: n4, value: 4, tag: "w=1" }
+        - { id: n2, value: 2, parent: n4, side: left, tag: "w=1" }
+        - { id: n6, value: 6, parent: n4, side: right, tag: "w=1" }
+        - { id: n1, value: 1, parent: n2, side: left, tag: "w=1" }
+        - { id: n3, value: 3, parent: n2, side: right, tag: "w=1" }
+        - { id: n5, value: 5, parent: n6, side: left, tag: "w=1" }
+        - { id: n7, value: 7, parent: n6, side: right, tag: "w=1" }
+    - note: >-
+        Segunda definición: `s(x)`, la suma de los pesos en el subárbol de x
+        — su "tamaño". Con todos los pesos en 1 es literalmente contar
+        nodos, x incluido: las hojas valen 1, los nodos 2 y 6 valen 3, la
+        raíz vale 7. Nótese que s crece hacia la raíz y que s(raíz) = n.
+      caption: "s(hoja)=1   s(2)=s(6)=3   s(4)=7=n"
+      nodes:
+        - { id: n4, value: 4, tag: "s=7", state: active }
+        - { id: n2, value: 2, parent: n4, side: left, tag: "s=3" }
+        - { id: n6, value: 6, parent: n4, side: right, tag: "s=3" }
+        - { id: n1, value: 1, parent: n2, side: left, tag: "s=1" }
+        - { id: n3, value: 3, parent: n2, side: right, tag: "s=1" }
+        - { id: n5, value: 5, parent: n6, side: left, tag: "s=1" }
+        - { id: n7, value: 7, parent: n6, side: right, tag: "s=1" }
+    - note: >-
+        Tercera definición: el rango, `r(x) = lg s(x)`. Es el tamaño medido
+        en bits — lg 1 = 0 para las hojas, lg 3 ≈ 1.58 para los nodos de
+        subárbol 3, lg 7 ≈ 2.81 para la raíz. El rango es la cantidad que la
+        cota del lema va a comparar antes y después.
+      caption: "r(hoja)=0   r(2)=r(6)=lg 3≈1.58   r(4)=lg 7≈2.81"
+      nodes:
+        - { id: n4, value: 4, tag: "r=2.81", state: active }
+        - { id: n2, value: 2, parent: n4, side: left, tag: "r=1.58" }
+        - { id: n6, value: 6, parent: n4, side: right, tag: "r=1.58" }
+        - { id: n1, value: 1, parent: n2, side: left, tag: "r=0" }
+        - { id: n3, value: 3, parent: n2, side: right, tag: "r=0" }
+        - { id: n5, value: 5, parent: n6, side: left, tag: "r=0" }
+        - { id: n7, value: 7, parent: n6, side: right, tag: "r=0" }
+    - note: >-
+        El potencial es la suma de los rangos de TODOS los nodos,
+        Φ = Σ r(x) — "intuitivamente, cuánto trabajo diferido hay guardado
+        en la forma del árbol" (#22). Sobre este árbol balanceado de 7 nodos
+        sale Φ ≈ 5.98. Guardar ese número: el siguiente paso lo compara
+        contra la peor forma posible.
+      caption: "Φ = 4·0 + 2·1.58 + 2.81 ≈ 5.98"
+      highlight: ["n4", "n2", "n6"]
+      nodes:
+        - { id: n4, value: 4, tag: "r=2.81", state: answer }
+        - { id: n2, value: 2, parent: n4, side: left, tag: "r=1.58", state: answer }
+        - { id: n6, value: 6, parent: n4, side: right, tag: "r=1.58", state: answer }
+        - { id: n1, value: 1, parent: n2, side: left, tag: "r=0" }
+        - { id: n3, value: 3, parent: n2, side: right, tag: "r=0" }
+        - { id: n5, value: 5, parent: n6, side: left, tag: "r=0" }
+        - { id: n7, value: 7, parent: n6, side: right, tag: "r=0" }
+    - note: >-
+        Las MISMAS 7 llaves, ahora en cadena degenerada. Los tamaños son
+        1,2,3,4,5,6,7 de abajo hacia arriba, así que Φ = lg(7!) ≈ 12.30 —
+        más del doble que la forma balanceada. Ahí se ve la lectura de Φ
+        como "trabajo diferido guardado": una cadena tiene mucho potencial
+        acumulado, y por eso un Splay caro sobre ella puede pagarse
+        derrumbando ese potencial. *(Contraste derivado; el mazo no lo
+        calcula.)*
+      caption: "Φ = lg 1+lg 2+…+lg 7 = lg(7!) ≈ 12.30, contra 5.98 del balanceado"
+      nodes:
+        - { id: c7, value: 7, tag: "r=2.81" }
+        - { id: c6, value: 6, parent: c7, side: left, tag: "r=2.58" }
+        - { id: c5, value: 5, parent: c6, side: left, tag: "r=2.32" }
+        - { id: c4, value: 4, parent: c5, side: left, tag: "r=2" }
+        - { id: c3, value: 3, parent: c4, side: left, tag: "r=1.58" }
+        - { id: c2, value: 2, parent: c3, side: left, tag: "r=1" }
+        - { id: c1, value: 1, parent: c2, side: left, tag: "r=0" }
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+La semana 5 dejó una deuda explícita. El [splay tree](/structures/splay-tree)
+se define como un BST **amortizado** y el profesor enuncia que cada operación
+cuesta $O(\lg n)$ amortizado (Sem5 #63, #68) — pero no lo demuestra: no define
+una función de potencial, no da un argumento de rango, no prueba nada. La
+cota queda dicha y no derivada.
+
+Este tema es el pago de esa deuda. El **Lema de Acceso** (Sleator & Tarjan,
+1985) es el teorema que acota el costo amortizado de
+[`Splay(x)`](/structures/splay-tree/operations/splay), y de él sale todo lo
+demás: el profesor ya estableció que las cinco operaciones del
+[TDA del splay tree](/structures/splay-tree-adt) cuestan, amortizado, a lo
+más el doble de un Splay (#20), así que **probar la cota de Splay las cubre a
+las cinco automáticamente**. "Vamos a probar exactamente eso" (#20).
+
+## Intuición
+
+La pregunta que el profesor pone antes del enunciado es la que da la forma de
+la respuesta: "si pudiéramos acotar el costo amortizado de Splay en términos
+de **cuánto cambia el rango de x**, ¿qué forma tendría esa cota?" (#23).
+
+La imagen mental: a cada nodo se le asigna un número —su rango— que mide qué
+tan "grande" es el subárbol que cuelga de él, en bits. Splay(x) arrastra a x
+hasta la raíz, así que el rango de x sube desde lo que era hasta el rango de
+la raíz. El lema dice que **el costo amortizado es proporcional a ese
+ascenso**: si x ya estaba arriba, sube poco y cuesta poco; si estaba muy
+abajo, sube mucho y cuesta mucho — pero un nodo sólo puede subir mucho una
+vez, porque después ya está arriba.
+
+> **Lema de Acceso** (Sleator & Tarjan, 1985 — #23). El costo amortizado de
+> $\mathrm{Splay}(x)$, en un árbol con raíz $t$, es a lo más
+>
+> $$3\big(r(t) - r(x)\big) + 1.$$
+
+Como x termina siendo la raíz, su rango final es $r(t)$ — así que esta cota
+dice, esencialmente, "el costo amortizado es proporcional a cuánto **sube** el
+rango de x" (#23).
+
+## Estructura interna
+
+No hay estructura que describir: el splay tree no cambia. El profesor es
+explícito en el encabezado de la diapositiva — son **"definiciones sólo para
+el análisis, no para el código"** (#22). Ningún nodo guarda un peso, un
+tamaño ni un rango; son cantidades que existen únicamente en la demostración.
+
+Lo que sí hay que fijar son esos tres objetos, y en este orden (el diagrama
+de arriba los revela uno por uno sobre un árbol de 7 nodos):
+
+- **$w_x$** — un peso positivo arbitrario por nodo. "Empezaremos con
+  $w_x = 1$ para todos" (#22). Que el peso sea *arbitrario* no es decoración:
+  es lo que deja reutilizar el mismo lema con pesos distintos más adelante
+  (ver [optimalidad estática](/structures/static-optimality)).
+- **$s(x)$** — la suma de los pesos en el subárbol de x, su "tamaño". Con
+  todos los pesos en 1, $s(x)$ es el número de nodos del subárbol de x,
+  x incluido, y $s(t) = n$ para la raíz.
+- **$r(x) = \lg s(x)$** — el **rango** de x.
+
+Y con ellos, el potencial:
+
+$$\Phi = \sum_{x} r(x)$$
+
+sobre todos los nodos del árbol — "intuitivamente, cuánto trabajo diferido
+hay guardado en la forma del árbol" (#22).
+
+El [método del potencial](/structures/potential-method) es el que explica qué
+significa esa suma y por qué $\hat{c} = c + \Delta\Phi$ acota el costo real de
+una secuencia; aquí sólo se instancia su $\Phi$ con esta elección concreta y
+se verifica la cota. No se vuelve a derivar el método.
+
+## Operaciones
+
+`operations: []` en el knowledge map. El Lema de Acceso no es un algoritmo:
+es la cota de un algoritmo que ya existe en otro lado. Las operaciones que
+este lema acota viven donde les corresponde:
+
+- [`splay`](/structures/splay-tree/operations/splay) — la operación cuyo
+  costo amortizado acota el lema directamente.
+- [`zig`](/structures/splay-tree/operations/zig),
+  [`zig-zig`](/structures/splay-tree/operations/zig-zig),
+  [`zig-zag`](/structures/splay-tree/operations/zig-zag) — los tres pasos que
+  la prueba analiza uno por uno. Aquí se usan sus **formas antes/después**
+  como dato; qué rotación va primero y por qué ya está explicado allá.
+- Las cinco del [TDA del splay tree](/structures/splay-tree-adt), que heredan
+  la cota vía el factor 2 de #20.
+
+## Análisis de complejidad
+
+`professorAnalysisStyle: potential-method`. Toda esta sección es **la prueba**
+(#24-33). Va en el orden en que el profesor la da.
+
+### La estrategia
+
+Splay(x) no es un paso: es una **secuencia** de pasos zig-zig / zig-zag, más
+quizá un zig final. La estrategia (#25) es analizar **un paso a la vez**:
+
+> Si mostramos que cada paso cuesta, amortizado, a lo más $3\big(r'(x) - r(x)\big)$
+> — con $r'$ el rango **después** de ese paso —, la suma telescopa: los rangos
+> intermedios se cancelan, dejando $3\big(r(t) - r(x)\big)$, exactamente el
+> Lema de Acceso. (#25)
+
+Esa cancelación es el esqueleto entero de la prueba, y conviene verla antes de
+pelear con el álgebra de un paso:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Un Splay(x) que necesita tres pasos. Llamemos r₀(x) al rango de x antes del primer paso, r₁(x) al rango después del primero, y así hasta r₃(x), el rango cuando x ya llegó a la raíz. Son cuatro números, no cuatro nodos: cada caja es el valor del rango de x en un instante distinto.',
+      caption: 'r₀(x) = r(x) inicial   ·   r₃(x) = rango de x ya en la raíz',
+      nodes: [
+        { id: 'r0', value: 'r₀(x)', tag: 'antes' },
+        { id: 'r1', value: 'r₁(x)', tag: 'paso 1' },
+        { id: 'r2', value: 'r₂(x)', tag: 'paso 2' },
+        { id: 'r3', value: 'r₃(x)', tag: 'paso 3' },
+      ],
+    },
+    {
+      note: 'Lo que la prueba va a establecer, paso por paso: el paso i cuesta amortizado a lo más 3(rᵢ(x) − rᵢ₋₁(x)). Cada paso "cobra" sólo el ascenso de rango que él mismo produjo. Nada más se usa de cada paso.',
+      caption: 'paso 1 ≤ 3(r₁−r₀)   paso 2 ≤ 3(r₂−r₁)   paso 3 ≤ 3(r₃−r₂)',
+      highlight: ['r1', 'r2', 'r3'],
+      nodes: [
+        { id: 'r0', value: 'r₀(x)', tag: 'antes' },
+        { id: 'r1', value: 'r₁(x)', tag: '+3(r₁−r₀)', state: 'active' },
+        { id: 'r2', value: 'r₂(x)', tag: '+3(r₂−r₁)', state: 'active' },
+        { id: 'r3', value: 'r₃(x)', tag: '+3(r₃−r₂)', state: 'active' },
+      ],
+    },
+    {
+      note: 'Al sumar las tres cotas, r₁ aparece con signo + (como final del paso 1) y con signo − (como inicial del paso 2): se cancela. Lo mismo r₂. Los rangos intermedios están atenuados porque ya no cuentan — es el mismo mecanismo telescópico del método del potencial, sólo que aquí telescopan los rangos de x, no los Φ.',
+      caption: '3(r₁−r₀) + 3(r₂−r₁) + 3(r₃−r₂):  +3r₁ − 3r₁ = 0,  +3r₂ − 3r₂ = 0',
+      nodes: [
+        { id: 'r0', value: 'r₀(x)', tag: 'antes' },
+        { id: 'r1', value: 'r₁(x)', tag: 'se cancela', state: 'muted' },
+        { id: 'r2', value: 'r₂(x)', tag: 'se cancela', state: 'muted' },
+        { id: 'r3', value: 'r₃(x)', tag: 'raíz' },
+      ],
+    },
+    {
+      note: 'Sólo sobreviven los dos extremos: r₃(x), que es r(t) porque x terminó siendo la raíz, y r₀(x) = r(x), el rango inicial. La suma completa queda 3(r(t) − r(x)), y el +1 lo agrega el zig final si lo hubo. Eso ES el Lema de Acceso (#33).',
+      caption: 'Σ ≤ 3(r₃(x) − r₀(x)) + 1 = 3(r(t) − r(x)) + 1',
+      highlight: ['r0', 'r3'],
+      nodes: [
+        { id: 'r0', value: 'r₀(x)', tag: '= r(x)', state: 'answer' },
+        { id: 'r1', value: 'r₁(x)', tag: 'cancelado', state: 'muted' },
+        { id: 'r2', value: 'r₂(x)', tag: 'cancelado', state: 'muted' },
+        { id: 'r3', value: 'r₃(x)', tag: '= r(t)', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+Queda entonces una sola obligación: probar la cota **de un paso**. El caso
+difícil es zig-zig.
+
+### Zig-zig: qué cambia
+
+Dos hechos, antes de cualquier álgebra (#26):
+
+- El **costo real es 2** — dos rotaciones.
+- **Sólo $x$, $y$, $z$ cambian de rango.** Todo lo demás (los subárboles
+  $A$, $B$, $C$, $D$) queda igual: ningún nodo dentro de ellos ve cambiar el
+  conjunto de nodos que cuelga de él, así que su $s$ y su $r$ son los mismos
+  antes y después. Por eso $\Delta\Phi$ tiene exactamente seis términos y no $n$.
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Zig-zig, ANTES. z arriba, y su hijo, x nieto — los tres en línea, del mismo lado. A y B cuelgan de x, C de y, D de z. Los cuatro subárboles se dibujan colapsados (triángulo): su contenido interno no importa, sólo de quién cuelgan. La forma exacta de la rotación está en /structures/splay-tree/operations/zig-zig; aquí sólo se usa el antes y el después.',
+      caption: 'costo real = 2 rotaciones',
+      highlight: ['z', 'y', 'x'],
+      nodes: [
+        { id: 'z', value: 'z', tag: 'r(z)' },
+        { id: 'y', value: 'y', parent: 'z', tag: 'r(y)' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true },
+        { id: 'x', value: 'x', parent: 'y', tag: 'r(x)' },
+        { id: 'C', value: 'C', parent: 'y', collapsed: true },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true },
+        { id: 'B', value: 'B', parent: 'x', collapsed: true },
+      ],
+    },
+    {
+      note: 'Zig-zig, DESPUÉS. x quedó arriba, con y colgando y z colgando de y — en cascada, no como dos hermanos. Los rangos con prima (r′) son los de después.',
+      caption: 'x arriba; y y z en cascada bajo él',
+      highlight: ['x'],
+      nodes: [
+        { id: 'x', value: 'x', tag: "r'(x)", state: 'active' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true },
+        { id: 'y', value: 'y', parent: 'x', tag: "r'(y)" },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true },
+        { id: 'z', value: 'z', parent: 'y', tag: "r'(z)" },
+        { id: 'C', value: 'C', parent: 'z', collapsed: true },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true },
+      ],
+    },
+    {
+      note: 'Quién cambió de rango y quién no. x, y, z están activos: son los únicos tres nodos cuyo subárbol cambió de contenido. A, B, C, D están en "compartido, no se tocó" (contorno discontinuo, atenuado): cambiaron de padre, pero el conjunto de nodos que cuelga de cada uno de ellos —y por lo tanto su s y su r— es idéntico. Esa es la razón de que ΔΦ sólo tenga seis términos.',
+      caption: "ΔΦ = (r'(x)+r'(y)+r'(z)) − (r(x)+r(y)+r(z))",
+      highlight: ['x', 'y', 'z'],
+      nodes: [
+        { id: 'x', value: 'x', tag: 'cambia', state: 'active' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'shared' },
+        { id: 'y', value: 'y', parent: 'x', tag: 'cambia', state: 'active' },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true, state: 'shared' },
+        { id: 'z', value: 'z', parent: 'y', tag: 'cambia', state: 'active' },
+        { id: 'C', value: 'C', parent: 'z', collapsed: true, state: 'shared' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true, state: 'shared' },
+      ],
+    },
+  ],
+}} />
+
+Y entonces la pregunta que el profesor deja como "¡Piénsalo!" (#26): después
+del zig-zig, x ocupa exactamente el lugar —y por lo tanto el subárbol
+completo— que antes ocupaba z. ¿Qué dice eso de $r'(x)$ comparado con $r(z)$?
+
+La respuesta (#27) es la pieza central de toda la prueba:
+
+$$r'(x) = r(z)$$
+
+"El conjunto de nodos bajo x después es **exactamente** el mismo que estaba
+bajo z antes — misma suma de pesos, mismo rango" (#27). No es una desigualdad
+que se acota: es una igualdad exacta, y por eso el término que aparece con
+$r(z)$ se puede intercambiar libremente por $r'(x)$.
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'ANTES: el subárbol de z es todo el cuadro — z, y, x y los cuatro subárboles A, B, C, D. Marcado en ámbar como delimitador: ese conjunto de nodos es la frontera que se va a comparar. Su suma de pesos es s(z), su rango r(z).',
+      caption: 's(z) = w_z + w_y + w_x + |A| + |B| + |C| + |D|',
+      highlight: ['z'],
+      nodes: [
+        { id: 'z', value: 'z', tag: 's(z)', state: 'marked' },
+        { id: 'y', value: 'y', parent: 'z', state: 'marked' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true, state: 'marked' },
+        { id: 'x', value: 'x', parent: 'y', state: 'marked' },
+        { id: 'C', value: 'C', parent: 'y', collapsed: true, state: 'marked' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'marked' },
+        { id: 'B', value: 'B', parent: 'x', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'DESPUÉS: el subárbol de x es, otra vez, todo el cuadro — los mismos siete elementos, reacomodados. Ningún nodo entró ni salió: el zig-zig sólo reorganiza quién cuelga de quién dentro de ese mismo conjunto. Misma suma de pesos ⇒ mismo tamaño ⇒ mismo rango.',
+      caption: "s'(x) = misma suma de pesos que s(z)  ⇒  r'(x) = r(z)",
+      highlight: ['x'],
+      nodes: [
+        { id: 'x', value: 'x', tag: "s'(x)", state: 'marked' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'marked' },
+        { id: 'y', value: 'y', parent: 'x', state: 'marked' },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true, state: 'marked' },
+        { id: 'z', value: 'z', parent: 'y', state: 'marked' },
+        { id: 'C', value: 'C', parent: 'z', collapsed: true, state: 'marked' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: "Las otras dos relaciones de #27, ahora sí desigualdades y no igualdades. r'(x) ≥ r(x): x sólo puede crecer, porque su subárbol de después contiene al de antes (A y B siguen bajo x, y se le sumó todo lo demás). r'(z) ≤ r(z): z sólo puede achicarse, porque su subárbol de después (C, D) está contenido en el de antes. Ambas salen de pura contención de subárboles, no hace falta ninguna cuenta.",
+      caption: "r'(x) ≥ r(x)   (x sólo crece)      r'(z) ≤ r(z)   (z sólo se achica)",
+      highlight: ['x', 'z'],
+      nodes: [
+        { id: 'x', value: 'x', tag: "r'(x) ≥ r(x)", state: 'active' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'shared' },
+        { id: 'y', value: 'y', parent: 'x', state: 'shared' },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true, state: 'shared' },
+        { id: 'z', value: 'z', parent: 'y', tag: "r'(z) ≤ r(z)", state: 'muted' },
+        { id: 'C', value: 'C', parent: 'z', collapsed: true, state: 'shared' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true, state: 'shared' },
+      ],
+    },
+  ],
+}} />
+
+### Zig-zig: acotando el costo amortizado
+
+Costo amortizado = costo real + $\Delta\Phi$, y como sólo tres nodos cambian de
+rango (#28):
+
+$$2 + \big(r'(x) + r'(y) + r'(z)\big) - \big(r(x) + r(y) + r(z)\big)$$
+
+Sustituyendo $r'(x) = r(z)$, y usando $r'(y) \le r'(x)$ y $r(x) \le r(y)$ —ambas
+por contención de subárboles: después, y cuelga de x; antes, x colgaba de
+y— se obtiene (#28):
+
+$$\le\; 2 + \big(r'(z) - r(x)\big) + \big(r'(x) - r(x)\big)$$
+
+**Falta un último paso.** Queremos que esto sea $\le 3\big(r'(x) - r(x)\big)$; es
+decir, necesitamos
+
+$$2 + r'(z) - r(x) \;\le\; 2\big(r'(x) - r(x)\big),$$
+
+o equivalentemente $r'(z) + r(x) - 2r'(x) \le -2$. ¿De dónde sale esa
+desigualdad? (#28)
+
+### El lema de los logaritmos, instanciado
+
+De aquí (#29):
+
+> Si $a, b > 0$ y $a + b \le c$, entonces $\lg a + \lg b \le 2 \lg c - 2$.
+
+Su enunciado, su demostración por AM-GM y el caso de igualdad viven en
+[el lema de los logaritmos](/structures/logarithm-lemma) — no se repiten aquí.
+Lo que sí es parte de *esta* prueba es **cómo se instancia**: el profesor
+elige (#30)
+
+$$a = s'(z), \qquad b = s(x), \qquad c = s'(x),$$
+
+"ya que los subárboles de z (después) y x (antes) son **disjuntos** y ambos
+**caben** dentro del subárbol de x (después)". Esa frase es la hipótesis
+$a + b \le c$ del lema, y es puramente geométrica — se ve en el árbol:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Primer conjunto: a = s′(z), el subárbol de z DESPUÉS del zig-zig. Son z, C y D. Marcado en ámbar porque es un delimitador: define una de las dos regiones que el lema va a comparar.',
+      caption: "a = s'(z) = w_z + |C| + |D|",
+      highlight: ['z'],
+      nodes: [
+        { id: 'x', value: 'x', state: 'idle' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true },
+        { id: 'y', value: 'y', parent: 'x' },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true },
+        { id: 'z', value: 'z', parent: 'y', tag: "a = s'(z)", state: 'marked' },
+        { id: 'C', value: 'C', parent: 'z', collapsed: true, state: 'marked' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'Segundo conjunto, sobre el árbol de ANTES: b = s(x), el subárbol de x antes del zig-zig. Son x, A y B. También delimitador. Ojo: es el mismo conjunto de nodos que en el árbol de después aparece repartido (A cuelga de x, B cuelga de y) — lo que importa es el conjunto, no la forma.',
+      caption: 'b = s(x) = w_x + |A| + |B|',
+      highlight: ['x'],
+      nodes: [
+        { id: 'z', value: 'z' },
+        { id: 'y', value: 'y', parent: 'z' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true },
+        { id: 'x', value: 'x', parent: 'y', tag: 'b = s(x)', state: 'marked' },
+        { id: 'C', value: 'C', parent: 'y', collapsed: true },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'marked' },
+        { id: 'B', value: 'B', parent: 'x', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'Los dos conjuntos, dibujados sobre el árbol de DESPUÉS. {x, A, B} y {z, C, D} no comparten ni un nodo: son disjuntos. Y ambos caben dentro del subárbol de x después, que es el árbol entero — de hecho el único elemento que sobra es y (atenuado: no lo cuenta ni a ni b). Por eso a + b ≤ c, con holgura exactamente w_y.',
+      caption: "a + b + w_y = c = s'(x)  ⇒  a + b ≤ c",
+      highlight: ['x', 'z'],
+      nodes: [
+        { id: 'x', value: 'x', tag: 'b', state: 'marked' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'marked' },
+        { id: 'y', value: 'y', parent: 'x', tag: 'sobra', state: 'muted' },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true, state: 'marked' },
+        { id: 'z', value: 'z', parent: 'y', tag: 'a', state: 'marked' },
+        { id: 'C', value: 'C', parent: 'z', collapsed: true, state: 'marked' },
+        { id: 'D', value: 'D', parent: 'z', collapsed: true, state: 'marked' },
+      ],
+    },
+    {
+      note: 'Con la hipótesis a + b ≤ c verificada geométricamente, el lema de los logaritmos da lg a + lg b ≤ 2 lg c − 2. Traduciendo cada lg a su rango: r′(z) + r(x) − 2r′(x) ≤ −2, que es exactamente la desigualdad que faltaba en #28. Marcado como respuesta: es la pieza que cierra el hueco.',
+      caption: "lg a + lg b ≤ 2 lg c − 2  ⇔  r'(z) + r(x) − 2r'(x) ≤ −2  ⇔  2 + r'(z) − r(x) ≤ 2(r'(x) − r(x))",
+      highlight: ['res'],
+      nodes: [
+        { id: 'res', value: "r'(z)+r(x)−2r'(x) ≤ −2", state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+En símbolos (#30): con $a = s'(z)$, $b = s(x)$, $c = s'(x)$ se obtiene
+
+$$r'(z) + r(x) - 2r'(x) \le -2,$$
+
+que es exactamente $2 + r'(z) - r(x) \le 2\big(r'(x) - r(x)\big)$.
+
+### Cerrando zig-zig (y zig-zag, por simetría)
+
+Sustituyendo en la cota de #28, el costo amortizado de un paso zig-zig es
+(#31):
+
+$$\le\; 2 + \big(r'(x) - r(x)\big) + 2\big(r'(x) - r(x)\big) \;\le\; 3\big(r'(x) - r(x)\big).$$
+
+Para zig-zag el profesor no desarrolla el álgebra: "se demuestra con el mismo
+esquema (misma desigualdad de logaritmos, aplicada a la configuración
+reflejada) — no vamos a repetir el álgebra completa, pero el resultado es
+idéntico: $\le 3\big(r'(x) - r(x)\big)$" (#31).
+
+> **Nota de apoyo** (no está en las diapositivas): quien quiera la cuenta de
+> zig-zag, sale así. Igual que antes, $r'(x) = r(z)$ y sólo x, y, z cambian
+> de rango, así que el costo amortizado es
+> $2 + r'(y) + r'(z) - r(x) - r(y)$; usando $r(y) \ge r(x)$ queda
+> $\le 2 + r'(y) + r'(z) - 2r(x)$. La instanciación del lema cambia: ahora
+> $a = s'(y)$, $b = s'(z)$, $c = s'(x)$ — los subárboles de y y de z
+> **después** son los dos hijos de x, disjuntos y ambos dentro del de x —,
+> y da $r'(y) + r'(z) \le 2r'(x) - 2$. Sustituyendo:
+> $\le 2\big(r'(x) - r(x)\big) \le 3\big(r'(x) - r(x)\big)$. El profesor sólo
+> afirma el resultado, no esta derivación.
+
+### El caso base: zig
+
+Una sola rotación, sin abuelo. Costo real 1, y sólo x e y cambian de rango
+(#32):
+
+$$1 + \big(r'(x) - r(x)\big) + \big(r'(y) - r(y)\big) \;\le\; 1 + \big(r'(x) - r(x)\big) \;\le\; 3\big(r'(x) - r(x)\big) + 1$$
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Zig, ANTES: x es hijo directo de la raíz y — no hay abuelo, por eso es el caso base y por eso ocurre a lo más UNA vez en todo el Splay (después de él, x ya es la raíz). A y B cuelgan de x, C de y.',
+      caption: 'costo real = 1 rotación',
+      highlight: ['x'],
+      nodes: [
+        { id: 'y', value: 'y', tag: 'r(y)' },
+        { id: 'x', value: 'x', parent: 'y', tag: 'r(x)', state: 'active' },
+        { id: 'C', value: 'C', parent: 'y', collapsed: true },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true },
+        { id: 'B', value: 'B', parent: 'x', collapsed: true },
+      ],
+    },
+    {
+      note: "Zig, DESPUÉS: x es la raíz, y cuelga de él con B y C. Sólo x e y cambian de rango (A, B, C compartidos, no se tocaron). Y el ΔΦ se acota con las mismas dos relaciones de contención de siempre: r′(y) ≤ r(y) (y perdió todo el lado de A y se quedó abajo) y r′(x) ≥ r(x) (x ganó C).",
+      caption: "ΔΦ = (r'(x)−r(x)) + (r'(y)−r(y)) ≤ r'(x) − r(x)",
+      highlight: ['x'],
+      nodes: [
+        { id: 'x', value: 'x', tag: "r'(x) ≥ r(x)", state: 'active' },
+        { id: 'A', value: 'A', parent: 'x', collapsed: true, state: 'shared' },
+        { id: 'y', value: 'y', parent: 'x', tag: "r'(y) ≤ r(y)", state: 'muted' },
+        { id: 'B', value: 'B', parent: 'y', collapsed: true, state: 'shared' },
+        { id: 'C', value: 'C', parent: 'y', collapsed: true, state: 'shared' },
+      ],
+    },
+    {
+      note: 'La cota del zig (#32). Es la única de las tres que lleva un término aditivo sin descuento: el "+1" del costo real de la rotación no queda absorbido por ΔΦ. Ese +1 es exactamente el +1 del Lema de Acceso, y sobrevive a la suma telescópica porque el zig ocurre a lo más una vez.',
+      caption: "amortizado(zig) = 1 + (r'(x)−r(x)) + (r'(y)−r(y)) ≤ 3(r'(x)−r(x)) + 1",
+      highlight: ['res'],
+      nodes: [
+        { id: 'res', value: "≤ 3(r'(x)−r(x)) + 1", state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+### Sumando todo
+
+Splay(x) es una cadena de pasos zig-zig / zig-zag, terminando quizás en un
+zig. Sumando el costo amortizado de cada paso, los rangos intermedios se
+cancelan (#33):
+
+$$\sum \;\le\; 3\big(r_{\text{final}}(x) - r_{\text{inicial}}(x)\big) + 1 \;=\; 3\big(r(t) - r(x)\big) + 1.$$
+
+**Esto es exactamente el Lema de Acceso — demostrado** (#33). $\blacksquare$
+
+Nótese dónde entra cada pieza: el $3$ sale del zig-zig (es la única de las
+tres cotas que necesita el factor 3); el $+1$ sale del zig y sobrevive porque
+el zig ocurre a lo más una vez; y el que sobreviva $r(t)$ y no otro rango
+sale de que x termina en la raíz.
+
+### Y de aquí sale el $O(\lg n)$
+
+Con la elección de pesos del profesor, $w_x = 1$ para todos, se tiene
+$s(t) = n$ y por lo tanto $r(t) = \lg n$; y $r(x) = \lg s(x) \ge \lg 1 = 0$. La
+cota queda
+
+$$3\big(r(t) - r(x)\big) + 1 \;\le\; 3\lg n + 1 \;=\; O(\lg n),$$
+
+que es la cota que la semana 5 enunciaba sin derivar (Sem5 #63). Y como cada
+una de las cinco operaciones del [TDA](/structures/splay-tree-adt) cuesta a lo
+más el doble de un Splay (#20), las cinco quedan en $O(\lg n)$ amortizado de
+un golpe.
+
+El peso arbitrario $w_x$ no se usó en ningún lado de la prueba — sólo se pidió
+que fuera positivo. Esa generalidad es lo que
+[optimalidad estática](/structures/static-optimality) va a cobrar después,
+eligiendo pesos distintos de 1.
+
+### Una traza numérica completa
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: 'Cadena degenerada de 5 nodos (5 arriba, 1 hasta abajo, todos hijos izquierdos) — el peor árbol posible. Pesos w=1, así que s(x) es contar nodos: 1, 2, 3, 4, 5 de abajo hacia arriba. Φ₀ = lg(5!) ≈ 6.91. Vamos a hacer Splay(1): x = nodo 1, t = nodo 5, r(x) = lg 1 = 0, r(t) = lg 5 ≈ 2.32. El Lema de Acceso predice un costo amortizado de a lo más 3(2.32 − 0) + 1 ≈ 7.97. *(Traza derivada; el mazo no da ninguna.)*',
+      caption: 'Φ₀ = 0+1+1.58+2+2.32 ≈ 6.91   ·   cota del lema: 3(2.32−0)+1 ≈ 7.97',
+      highlight: ['a1'],
+      nodes: [
+        { id: 'a5', value: 5, tag: 'r=2.32' },
+        { id: 'a4', value: 4, parent: 'a5', side: 'left', tag: 'r=2' },
+        { id: 'a3', value: 3, parent: 'a4', side: 'left', tag: 'r=1.58' },
+        { id: 'a2', value: 2, parent: 'a3', side: 'left', tag: 'r=1' },
+        { id: 'a1', value: 1, parent: 'a2', side: 'left', tag: 'r=0', state: 'active' },
+      ],
+    },
+    {
+      note: 'Paso 1 — zig-zig sobre (1, 2, 3): x=1, y=2, z=3, los tres hijos izquierdos en línea. Costo real c₁ = 2 rotaciones. Los tamaños después: 3 vale 1, 2 vale 2, 1 vale 3, y 4 y 5 no cambiaron (4 sigue teniendo 4 nodos debajo, 5 sigue teniendo 5). Φ₁ ≈ 6.91: igual que antes, ΔΦ = 0. Costo amortizado ĉ₁ = 2 + 0 = 2. La cota del paso: 3(r′(x) − r(x)) = 3(1.58 − 0) ≈ 4.75 ≥ 2 ✓',
+      caption: 'c₁=2   Φ₁≈6.91   ΔΦ=0   ĉ₁=2   ≤ 3(1.58−0)≈4.75 ✓',
+      highlight: ['b1'],
+      nodes: [
+        { id: 'b5', value: 5, tag: 'r=2.32' },
+        { id: 'b4', value: 4, parent: 'b5', side: 'left', tag: 'r=2' },
+        { id: 'b1', value: 1, parent: 'b4', side: 'left', tag: 'r=1.58', state: 'active' },
+        { id: 'b2', value: 2, parent: 'b1', side: 'right', tag: 'r=1' },
+        { id: 'b3', value: 3, parent: 'b2', side: 'right', tag: 'r=0' },
+      ],
+    },
+    {
+      note: 'Paso 2 — otro zig-zig, ahora sobre (1, 4, 5): x=1, y=4, z=5, otra vez los tres en línea a la izquierda. Costo real c₂ = 2. Y aquí se ve el pago: z=5 se derrumbó de tener 5 nodos bajo él a tener sólo 1 (su rango cayó de 2.32 a 0) mientras x=1 subió de 3 a 5 (rango 1.58 → 2.32) — exactamente el r′(x) = r(z) de la prueba. Φ₂ = 0+1+0+2+2.32 ≈ 5.32, así que ΔΦ = 5.32 − 6.91 = −1.58: el potencial CAE, y esa caída paga casi todo el costo real. ĉ₂ = 2 − 1.58 = 0.42. Cota del paso: 3(2.32 − 1.58) ≈ 2.21 ≥ 0.42 ✓',
+      caption: 'c₂=2   Φ₂≈5.32   ΔΦ=−1.58   ĉ₂=0.42   ≤ 3(2.32−1.58)≈2.21 ✓',
+      highlight: ['c1'],
+      nodes: [
+        { id: 'c1', value: 1, tag: 'r=2.32', state: 'active' },
+        { id: 'c4', value: 4, parent: 'c1', side: 'right', tag: 'r=2' },
+        { id: 'c2', value: 2, parent: 'c4', side: 'left', tag: 'r=1' },
+        { id: 'c3', value: 3, parent: 'c2', side: 'right', tag: 'r=0' },
+        { id: 'c5', value: 5, parent: 'c4', side: 'right', tag: 'r=0' },
+      ],
+    },
+    {
+      note: 'x = 1 llegó a la raíz: el Splay terminó, y no hizo falta ningún zig (la cadena tenía longitud par). Total real Σc = 4, total amortizado Σĉ = 2 + 0.42 = 2.42. El Lema de Acceso predecía a lo más 7.97, así que la cota se cumple con holgura — como casi siempre, porque el lema es una cota superior, no una igualdad. Y nótese que Φ terminó por DEBAJO de donde empezó (5.32 < 6.91): la cadena degenerada tenía trabajo diferido guardado, y este Splay lo gastó.',
+      caption: 'Σc = 4   Σĉ ≈ 2.42   ≤   3(r(t)−r(x))+1 ≈ 7.97 ✓',
+      highlight: ['ok'],
+      nodes: [
+        { id: 'ok', value: 'Σĉ ≈ 2.42 ≤ 7.97', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+## Tabla de complejidad
+
+La tabla se genera desde `meta.yaml` y tiene una sola fila, `splay`, con la
+cota del lema. Lo que la tabla no puede decir:
+
+- La cota es **amortizada**, no de peor caso real. Un `Splay(x)` individual
+  puede costar $O(n)$ real; lo que el lema garantiza es que esa operación cara
+  tuvo que haber sido prepagada (ver la traza numérica de arriba, donde
+  $\Delta\Phi$ negativo absorbe casi todo el costo real del segundo paso).
+- La cota está en términos de **rangos**, no de $n$. Instanciarla con
+  $w_x = 1$ da $O(\lg n)$, pero otras elecciones de peso dan otras lecturas —
+  esa es justamente la puerta que abre
+  [optimalidad estática](/structures/static-optimality).
+- No hay `best`, `avg` ni `space` porque el profesor no los da para este
+  resultado. La cota del lema es la única que el mazo enuncia.
+
+## Ejemplos
+
+Ver [examples.md](/structures/access-lemma/examples): cálculo de $\Phi$ a mano
+sobre un árbol balanceado y sobre una cadena degenerada, verificación del lema
+en un caso chico, y el caso límite donde x ya es la raíz y del lema no queda
+más que el $+1$.
+
+## Comparación con estructuras relacionadas
+
+| | [método del potencial](/structures/potential-method) | Lema de Acceso (aquí) |
+| --- | --- | --- |
+| qué es | una técnica de análisis, aplicable a cualquier estructura | un teorema concreto sobre una operación concreta |
+| qué es $\Phi$ | cualquier función del estado que quien analiza elija, sujeta a la condición de validez | fijo: $\Phi = \sum r(x)$ con $r(x) = \lg s(x)$ |
+| ejemplo del curso | $\Phi = t(H) + 2m(H)$ sobre el [montículo de Fibonacci](/structures/fibonacci-heap) | $\Phi = \sum \lg s(x)$ sobre el [splay tree](/structures/splay-tree) |
+| qué produce | la cuenta $\hat{c} = c + \Delta\Phi$ y la telescópica que la valida | la cota $3(r(t) - r(x)) + 1$ |
+
+Y contra lo que la semana 5 sólo enunciaba:
+
+| | semana 5 ([splay-tree](/structures/splay-tree)) | semana 6 (aquí) |
+| --- | --- | --- |
+| la cota de Splay | enunciada: $O(\lg n)$ amortizado (Sem5 #63) | demostrada: $3(r(t) - r(x)) + 1$, y de ahí $O(\lg n)$ |
+| función de potencial | ninguna — el mazo no la define | $\Phi = \sum \lg s(x)$, definida en #22 |
+| por qué zig-zig rota el abuelo primero | nota de apoyo, sin prueba | la usa la prueba: $r'(x) = r(z)$ sólo vale con esa forma final |
+| el álgebra de zig-zag | no aplica | el profesor la omite a propósito (#31); aquí va como nota de apoyo |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/access-lemma/mastery-check).

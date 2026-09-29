@@ -1,0 +1,27 @@
+id: rc-lowpass
+title: Capacitores y filtro pasa bajo
+type: method
+unit: s4
+prerequisites: [basic-circuits]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Carga de un capacitor
+    tex: "V(t) = V_E\\left(1 - e^{-t/\\tau}\\right)"
+    reasoning: "Describe cómo sube el voltaje en un capacitor que se carga desde 0 V hacia VE a través de una resistencia; la constante de tiempo τ fija qué tan rápido sube."
+    source: "Sem4_IoTT-SignalRepr#39"
+  - name: Constante de tiempo RC
+    tex: "\\tau = RC"
+    reasoning: "Determina la velocidad de carga/descarga del capacitor: en t = τ se alcanza 63.2 % de VE, y en t = 5τ se considera prácticamente cargado (= VE)."
+    source: "Sem4_IoTT-SignalRepr#40"
+  - name: Reactancia capacitiva
+    tex: "X_C = \\dfrac{1}{2\\pi f C}"
+    reasoning: "El capacitor se comporta como una resistencia dependiente de la frecuencia cuando la fuente es alterna (AC); a mayor frecuencia, menor reactancia."
+    source: "Sem4_IoTT-SignalRepr#41"
+  - name: Frecuencia de corte del filtro pasa bajo RC
+    tex: "f_c = \\dfrac{1}{2\\pi R C}"
+    reasoning: "Frecuencia a partir de la cual el capacitor empieza a 'cortocircuitar' las componentes de alta frecuencia a tierra, atenuando la señal de salida."
+    source: "Sem4_IoTT-SignalRepr#41"

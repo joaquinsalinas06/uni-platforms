@@ -1,0 +1,68 @@
+id: binary-heap
+title: Montículo Binario
+type: structure
+week: week-01
+
+prerequisites: []
+buildsOn: []
+usedBy: [binomial-heap, fibonacci-heap]
+
+complexity:
+  max-heapify:
+    worst: O(lg n)
+    reasoning: >-
+      Recurrencia por conteo de niveles: O(1) de trabajo de comparación e
+      intercambio por nivel, y a lo más O(lg n) niveles en el camino
+      raíz-hoja que la llamada recursiva puede recorrer (Sem_1_Heaps_I-1.pdf#19).
+    source: Sem_1_Heaps_I-1.pdf#19
+  build-max-heap:
+    worst: Θ(n)
+    reasoning: >-
+      Suma agregada (no amortizada) sobre niveles: Σ_{h=0}^{⌊lg n⌋} ⌈n/2^(h+1)⌉·O(h),
+      que el profesor acota por O(n·Σh/2^h) y cierra usando que esa serie
+      geométrica derivada converge a 2 (Sem_1_Heaps_I-1.pdf#25-27).
+    source: Sem_1_Heaps_I-1.pdf#25-27
+  insert:
+    worst: Θ(lg n)
+    reasoning: >-
+      Mismo argumento de altura que Max-Heapify: el sift-up recorre a lo
+      más ⌊lg n⌋ niveles desde una hoja hasta la raíz. El profesor sólo da
+      el valor en la tabla comparativa, sin pseudocódigo propio para esta operación.
+    source: Sem_1_Heaps_I-1.pdf#35-42
+  find-min:
+    worst: Θ(1)
+    reasoning: >-
+      La raíz del arreglo (índice 1) es siempre el extremo del montículo;
+      leer A[1] no depende de n. Valor de tabla, sin derivación propia del profesor.
+    source: Sem_1_Heaps_I-1.pdf#35-42
+  extract-min:
+    worst: Θ(lg n)
+    reasoning: >-
+      Retirar la raíz exige mover el último elemento a la raíz y restaurar
+      el invariante con Max-Heapify, acotado por O(lg n) por el mismo
+      argumento de altura que esa operación.
+    source: Sem_1_Heaps_I-1.pdf#35-42
+  union:
+    worst: Θ(n)
+    reasoning: >-
+      Concatenar los dos arreglos y reconstruir con Build-Max-Heap: el
+      mismo análisis agregado por niveles de Build-Max-Heap, ahora sobre
+      n = n1 + n2 elementos.
+    source: Sem_1_Heaps_I-1.pdf#35-42
+  decrease-key:
+    worst: Θ(lg n)
+    reasoning: >-
+      Cambiar la llave y restaurar el invariante exige subir o bajar el
+      elemento a lo más ⌊lg n⌋ niveles, igual que insert o extract-min.
+    source: Sem_1_Heaps_I-1.pdf#35-42
+  delete:
+    worst: Θ(lg n)
+    reasoning: >-
+      Se sustituye el elemento por el último del arreglo y se restaura el
+      invariante con sift-up o sift-down, ambos acotados por la altura ⌊lg n⌋.
+    source: Sem_1_Heaps_I-1.pdf#35-42
+
+professorAnalysisStyle: recurrence-based
+hasVisualization: true
+visualizationType: tree
+placeholder: false

@@ -1,0 +1,29 @@
+id: fenwick-tree
+title: Fenwick tree
+type: structure
+week: week-04
+
+prerequisites: []
+buildsOn: []
+usedBy: [segment-intersection-sweep-line]
+
+complexity:
+  update:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar (no dada por el profesor: sourceSlides vacío para
+      este concepto). Desde la posición i, sumar i + (i & -i) sube al
+      siguiente índice que la incluye; cada paso al menos duplica el bit más
+      bajo activado, así que hay a lo más ⌈lg n⌉ pasos antes de superar n.
+  prefix-query:
+    worst: O(lg n)
+    reasoning: >-
+      Derivación estándar. Desde la posición i, restar i - (i & -i) baja al
+      índice anterior no cubierto todavía; cada paso apaga el bit más bajo
+      activado, y un entero de ⌈lg n⌉ bits sólo puede apagar bits esa
+      cantidad de veces antes de llegar a 0.
+
+professorAnalysisStyle: derivación estándar (no atribuible al profesor; ver nota en theory.md)
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

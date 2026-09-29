@@ -1,0 +1,51 @@
+id: dag-cost-model
+title: "DAGs: trabajo, span y clasificación SPA/NSPA"
+type: concept
+unit: u1
+
+prerequisites: ["flynn-foster-pcam"]
+buildsOn: []
+usedBy: ["performance-metrics", "pram-algorithms"]
+
+complexity:
+  span-lower-bound:
+    worst: "T_p \\ge T_\\infty"
+    reasoning: >-
+      El span T_infinito = MAX(suma de t_i) es la longitud del camino
+      crítico del DAG: ninguna cantidad de procesadores puede ejecutar el
+      DAG en menos tiempo que su camino crítico, porque las tareas de ese
+      camino tienen dependencia estricta entre sí y deben ejecutarse en
+      orden. Por eso T_p >= T_infinito es una cota inferior independiente de p.
+    source: "U1.3-Fundamentos_DAG-apuntes.pdf#3"
+  work-lower-bound:
+    worst: "T_p \\ge \\tfrac{T_s}{p}"
+    reasoning: >-
+      El trabajo W equivale al tiempo secuencial optimo T_s (la cantidad
+      total de operaciones). Con p procesadores, el trabajo total W debe
+      repartirse entre ellos, y ningun procesador puede hacer mas de 1/p del
+      trabajo por unidad de tiempo en promedio, de donde T_p >= T_s/p. Un
+      speedup S=T_s/T_p igual (o proporcional) a p es especficamente el
+      speedup lineal optimo, ya que S <= p.
+    source: "U1.3-Fundamentos_DAG-apuntes.pdf#3"
+  ejemplo-suma-n16-p8:
+    worst: "T_s=15,\\ T_\\infty=4,\\ W=15,\\ S=\\tfrac{15}{4},\\ E=0.47"
+    reasoning: >-
+      DAG de suma de 16 numeros con arbol binario balanceado y p=8: 15
+      sumas totales en 4 niveles (log2 16), por lo que T_s=W=15 (cada suma
+      es O(1)) y T_infinito=4 (el camino mas largo, nivel a nivel). Speedup
+      S=T_s/T_infinito=15/4 y eficiencia E=S/p=(15/4)/8=0.47.
+    source: "U1.3-Fundamentos_DAG-apuntes.pdf#5"
+  ejemplo-suma-n16-p5:
+    worst: "T_s=15,\\ T_\\infty=5,\\ W=15,\\ S=\\tfrac{15}{5},\\ E=0.60"
+    reasoning: >-
+      Mismo DAG de 16 numeros pero distribuido sobre solo 5 procesadores: el
+      camino critico crece a 5 pasos porque un procesador reutiliza mas de
+      un nodo del arbol en serie. S=15/5=3 y E=S/p=3/5=0.60: menor speedup
+      pero mayor eficiencia que con p=8, por mejor aprovechamiento de los
+      recursos disponibles.
+    source: "U1.3-Fundamentos_DAG-apuntes.pdf#5"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: dag
+placeholder: false

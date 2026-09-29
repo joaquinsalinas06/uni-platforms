@@ -1,0 +1,50 @@
+id: decomposable-search-problem
+title: "Problemas de búsqueda descomponibles"
+type: concept
+week: week-03
+
+prerequisites: ["retroactivity", "segment-tree"]
+buildsOn: ["retroactivity"]
+usedBy: []
+
+complexity:
+  decomposability:
+    worst: O(1)
+    reasoning: >-
+      No es un costo derivado: es la HIPÓTESIS que exige la definición ("para
+      alguna función f calculable en O(1)", página 32-33). No se verifica con
+      un argumento — se verifica caso por caso sobre cada f candidata (mín,
+      máx, suma, ∨ sí lo son; un contraejemplo la refuta).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#32-33"
+  time-segment-tree-build:
+    worst: O(m)
+    reasoning: >-
+      El profesor no repite esta cota aquí ("¡el mismo Update que ya
+      conocemos!" — la da por conocida): se hereda directamente la
+      construcción del segment tree (ver /structures/segment-tree#build),
+      aplicada a m hojas (instantes de tiempo) en vez de n posiciones de
+      arreglo. Es reducción, no derivación nueva.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#34-35"
+  update:
+    worst: O(lg m)
+    reasoning: >-
+      Textual (página 34-35): "Insertar/eliminar una operación en el tiempo t
+      actualiza O(lg m) nodos del Segment Tree (donde m es el número de
+      operaciones) — ¡el mismo Update que ya conocemos!". Es el mismo
+      argumento de /structures/segment-tree#update (camino raíz-hoja de
+      altura ⌈lg m⌉), reducido sin repetir la prueba.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#34-35"
+  query:
+    worst: O(q lg m)
+    reasoning: >-
+      Textual (página 36-37): "Si la estructura original respondía en O(q),
+      la versión retroactiva responde en O(q · lg m)". Query recorre las
+      O(lg m) llamadas canónicas de /structures/segment-tree#query para
+      cubrir el rango de tiempo pedido, y en cada una reconstruye/consulta el
+      resultado local con el costo original O(q) de la estructura de base:
+      O(lg m) nodos × O(q) por nodo.
+
+professorAnalysisStyle: "reducción estructural a una estructura conocida"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

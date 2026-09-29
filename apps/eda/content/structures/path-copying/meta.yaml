@@ -1,0 +1,52 @@
+id: path-copying
+title: "Path Copying"
+type: algorithm
+week: week-03
+
+prerequisites: ["pointer-machine", "persistence-levels", "segment-tree"]
+buildsOn: ["persistence-levels"]
+usedBy: ["segment-intersection-sweep-line"]
+
+complexity:
+  stack-push:
+    worst: "O(1)"
+    reasoning: >-
+      Un stack como lista enlazada ya es un "camino" de un solo nodo de
+      largo: no hay nada que copiar aparte del nodo nuevo. Se crea un nodo
+      con valor x y siguiente apuntando a la versión vieja de la pila, que
+      queda intacta. Conteo directo, no amortizado: exactamente un nodo
+      nuevo, en cualquier nivel de persistencia.
+    source: "Sem_3_Persistencia-1.pdf#55-56"
+  segment-tree-update:
+    worst: "O(lg n)"
+    space: "O(lg n)"
+    reasoning: >-
+      Conteo directo del camino: Update copia exactamente un nodo por
+      nivel del segment tree, desde la raíz hasta la hoja de la posición
+      modificada. La altura del árbol es O(lg n), así que se copian O(lg n)
+      nodos y todo lo demás se comparte con la versión anterior sin
+      tocarlo.
+    source: "Sem_3_Persistencia-1.pdf#59-61"
+  query-old-version:
+    worst: "O(lg n)"
+    reasoning: >-
+      Basta guardar el puntero a la raíz de esa versión (el que devolvió
+      Update en su momento) y hacer la consulta normal del segment tree
+      desde ahí: el mismo costo O(lg n) de una consulta cualquiera, "sin
+      ningún costo adicional por ser una versión del pasado".
+    source: "Sem_3_Persistencia-1.pdf#59-61"
+  trie-insert:
+    worst: "O(L)"
+    space: "O(L)"
+    reasoning: >-
+      Conteo directo: Insert copia exactamente un nodo por carácter de la
+      cadena s, uno por cada nivel del camino desde la raíz hasta la hoja
+      final. Con L = |s|, son O(L) nodos copiados y O(L) espacio nuevo;
+      tras n inserciones el espacio total es O(Σ Lᵢ), el mismo orden que
+      un trie efímero normal.
+    source: "Sem_3_Persistencia-1.pdf#62-65"
+
+professorAnalysisStyle: "conteo directo del camino"
+hasVisualization: true
+visualizationType: persistent
+placeholder: false

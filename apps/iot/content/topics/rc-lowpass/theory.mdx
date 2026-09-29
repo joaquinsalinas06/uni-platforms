@@ -1,0 +1,231 @@
+---
+kind: theory
+title: Capacitores y filtro pasa bajo
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un capacitor no responde instantáneamente a un cambio de voltaje: se carga y descarga
+de forma exponencial, con una velocidad que depende de la resistencia con la que se
+alimenta. Ese mismo comportamiento, visto en el dominio de la frecuencia, hace que un
+circuito RC simple deje pasar las frecuencias bajas y atenúe las altas: un **filtro
+pasa bajo**, la base de casi cualquier acondicionamiento de señal analógica.
+
+## Conceptos
+
+### Carga de un capacitor
+
+Al conectar un capacitor descargado a una fuente $V_E$ a través de una resistencia $R$,
+el voltaje en el capacitor sube según:
+
+$$V(t) = V_E\left(1 - e^{-t/\tau}\right) \qquad \tau = RC$$
+
+$\tau$ es la **constante de tiempo**: en $t=\tau$ el capacitor alcanza el 63.2 % de
+$V_E$; en $t=5\tau$ se considera prácticamente cargado por completo ($\approx V_E$).
+
+| $t$ | $V(t)$ |
+|---|---|
+| 0 | 0 |
+| $\tau$ | $0.632\,V_E$ |
+| $5\tau$ | $\approx V_E$ |
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Carga de un capacitor (eje t en unidades de τ)',
+  steps: [{
+    note: 'La curva sube rápido al principio y se aplana después: en t=τ ya lleva 63.2 % de VE, y en t=5τ está prácticamente en VE.',
+    series: [{ id: 'vt', label: 'V(t)', kind: 'line', fn: '5*(1-exp(-x))', domain: [0, 6] }],
+    x: { label: 't (múltiplos de τ)' },
+    y: { label: 'V(t)', min: 0, max: 5.5 },
+    vlines: [{ at: 1, label: 'τ' }, { at: 5, label: '5τ' }],
+    hlines: [{ at: 3.16, label: '0.632·VE' }, { at: 5, label: 'VE' }],
+  }],
+}} />
+
+**Circuito de carga** (E = fuente, R en serie, C entre el nodo de salida y tierra): en
+estado estacionario (capacitor totalmente cargado) no circula corriente, por lo que no
+hay caída en $R$ y todo el voltaje de la fuente aparece en el capacitor.
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Circuito RC de carga',
+  steps: [{
+    note: 'Con el capacitor ya cargado (estado estacionario) no circula corriente: no hay caída en R, así que Vout = E.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 },
+        { id: 'a', x: 4, y: 0 }, { id: 'b', x: 4, y: 4, label: 'Vout', showPotential: true },
+        { id: 'g2', x: 4, y: 8 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 't', to: 'a' },
+        { id: 'R', kind: 'resistor', from: 'a', to: 'b', value: 1000, label: 'R' },
+        { id: 'C', kind: 'capacitor', from: 'b', to: 'g2', value: 0.0000001, label: 'C' },
+        { id: 'w2', kind: 'wire', from: 'g2', to: 'g' },
+      ],
+    },
+    expect: { 'V(b)': 5 },
+  }],
+}} />
+
+### El capacitor como reactancia (en AC)
+
+Cuando la fuente es alterna (AC), el capacitor se comporta como una resistencia que
+depende de la frecuencia $f$ de la señal, llamada **reactancia capacitiva**:
+
+$$X_C = \frac{1}{2\pi f C}$$
+
+A mayor frecuencia, menor reactancia (el capacitor "deja pasar" más fácil las
+frecuencias altas hacia tierra).
+
+### Filtro pasa bajo RC
+
+El mismo circuito R–C (fuente → R → nodo de salida → C a tierra) actúa como divisor de
+voltaje dependiente de la frecuencia: a bajas frecuencias $X_C$ es grande y casi todo
+el voltaje de entrada llega a la salida; a altas frecuencias $X_C$ se hace pequeña y
+"cortocircuita" la señal a tierra. Se define una **frecuencia de corte**:
+
+$$f_c = \frac{1}{2\pi R C}$$
+
+- Para $f < f_c$: el capacitor casi no afecta → la señal **pasa**.
+- Para $f > f_c$: el capacitor cortocircuita las altas frecuencias a tierra → la señal
+  **se reduce** (se atenúa).
+
+En $f = f_c$ ocurre siempre que $X_C = R$ (es la definición del cruce entre "domina R"
+y "domina $X_C$").
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Reactancia Xc(f) — R = 10 kΩ, C = 100 nF',
+  steps: [{
+    note: 'Xc cae al subir la frecuencia. En f = fc (≈159 Hz), Xc coincide exactamente con R = 10 kΩ: ahí ocurre el cruce entre "pasa" y "se atenúa".',
+    series: [{ id: 'xc', label: 'Xc(f)', kind: 'line', fn: '1/(2*PI*x*0.0000001)', domain: [10, 10000], samples: 300 }],
+    x: { label: 'f (Hz)', log: true },
+    y: { label: 'Xc (Ω)', log: true },
+    vlines: [{ at: 159.15, label: 'fc' }],
+    hlines: [{ at: 10000, label: 'R' }],
+  }],
+}} />
+
+## Método paso a paso
+
+1. Identifica $R$ y $C$ del circuito.
+2. Calcula $\tau = RC$: fija la escala de tiempo de carga/descarga (63.2 % en $\tau$,
+   prácticamente completo en $5\tau$).
+3. Si la fuente es AC de frecuencia $f$, calcula $X_C = 1/(2\pi f C)$ para saber cómo
+   se comporta el capacitor a esa frecuencia.
+4. Calcula $f_c = 1/(2\pi RC)$: es la frontera entre "la señal pasa casi intacta"
+   ($f \ll f_c$) y "la señal se atenúa fuerte" ($f \gg f_c$).
+5. Compara la frecuencia de la señal contra $f_c$ para decidir si el filtro deja
+   pasar o atenúa esa componente.
+
+## Ejemplo resuelto (derivado)
+
+Con $R = 10\ \text{k}\Omega$ y $C = 100\ \text{nF}$:
+
+$$\tau = RC = (10{,}000)(100\times10^{-9}) = 1\times10^{-3}\ \text{s} = 1\ \text{ms}$$
+
+$$f_c = \frac{1}{2\pi RC} = \frac{1}{2\pi (10^{-3})} \approx 159.15\ \text{Hz}$$
+
+Verificación de que en $f_c$ se cumple $X_C = R$:
+
+$$X_C(f_c) = \frac{1}{2\pi (159.15)(100\times10^{-9})} \approx 10{,}000\ \Omega = R \ ✓$$
+
+A una década por debajo de $f_c$ ($f=15.9$ Hz): $X_C = 1/(2\pi(15.9)(10^{-7})) \approx
+100{,}000\ \Omega \gg R$ → el capacitor casi no conduce, la señal **pasa** casi sin
+atenuar. A una década por encima ($f=1{,}592$ Hz): $X_C \approx 1{,}000\ \Omega \ll R$
+→ el capacitor cortocircuita gran parte de la señal a tierra, que se **atenúa**
+fuertemente.
+
+## Errores típicos
+
+- Confundir $\tau$ con "el tiempo en que el capacitor termina de cargar": en $\tau$
+  solo lleva 63.2 %, no el 100 %; recién en $5\tau$ se aproxima a $V_E$.
+- Invertir la fórmula de $X_C$ (pensar que a mayor frecuencia hay mayor reactancia,
+  cuando es al revés: $X_C$ disminuye con $f$).
+- Olvidar que $f_c$ depende de **ambos** $R$ y $C$, no solo de uno de los dos.
+- Asumir que "pasa bajo" significa que el capacitor bloquea todo por encima de
+  $f_c$ de forma abrupta: en realidad la atenuación es gradual (depende de la
+  relación entre $X_C$ y $R$ a cada frecuencia), $f_c$ es solo el punto de cruce.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un filtro RC pasa bajo se arma con $R = 4.7\\,\\text{k}\\Omega$ y $C = 220$ nF. (a) Calcule la constante de tiempo $\\tau$. (b) Calcule la frecuencia de corte $f_c$. (c) ¿El filtro deja pasar o atenúa una señal de $50$ Hz? Justifique comparando $X_C$ contra $R$ a esa frecuencia. (derivado, no está en las slides)",
+  hints: [
+    "$\\tau = RC$; $f_c = 1/(2\\pi RC)$.",
+    "Calcula $X_C$ a $f = 50$ Hz y compáralo con $R$: si $X_C \\gg R$, la señal pasa; si $X_C \\ll R$, se atenúa.",
+  ],
+}}>
+
+**1. Constante de tiempo.**
+
+$$\tau = RC = (4700)(220\times10^{-9}) = \boxed{1.034\,\text{ms}}$$
+
+**2. Frecuencia de corte:**
+
+$$f_c = \frac{1}{2\pi RC} = \frac{1}{2\pi(1.034\times10^{-3})} = \boxed{153.9\,\text{Hz}}$$
+
+**3. Reactancia a $f=50$ Hz:**
+
+$$X_C = \frac{1}{2\pi f C} = \frac{1}{2\pi(50)(220\times10^{-9})} \approx \boxed{14.47\,\text{k}\Omega}$$
+
+**4. Comparar contra $R$.** $X_C \approx 14.47\,\text{k}\Omega \gg R = 4.7\,\text{k}\Omega$
+(coherente con que $50\,\text{Hz} < f_c \approx 154\,\text{Hz}$): el capacitor casi no
+conduce, así que $\boxed{\text{la señal de 50 Hz pasa casi sin atenuar}}$.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Reactancia Xc(f) — R = 4.7 kΩ, C = 220 nF',
+  steps: [{
+    note: 'A f=50 Hz, Xc (≈14.47 kΩ) está muy por encima de R: la señal está en la zona de paso. En fc=153.9 Hz, Xc cruza exactamente R.',
+    series: [{ id: 'xc', label: 'Xc(f)', kind: 'line', fn: '1/(2*PI*x*0.00000022)', domain: [10, 2000], samples: 300 }],
+    x: { label: 'f (Hz)', log: true },
+    y: { label: 'Xc (Ω)', log: true },
+    vlines: [{ at: 153.9, label: 'fc', state: 'answer' }, { at: 50, label: 'f = 50 Hz', state: 'answer' }],
+    hlines: [{ at: 4700, label: 'R' }],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un capacitor se carga con $V_E = 12$ V y $\\tau = 2$ ms. ¿Qué voltaje tiene el capacitor en $t = 2$ ms y en $t = 10$ ms? (derivado)",
+  hints: [
+    "$t=2$ ms es exactamente $t=\\tau$: usa el $63.2\\,\\%$ directamente.",
+    "$t=10$ ms es $5\\tau$: el capacitor está prácticamente cargado.",
+  ],
+}}>
+
+**1. En $t=\tau=2$ ms** el capacitor ya alcanzó el $63.2\,\%$ de $V_E$:
+
+$$V(\tau) = 0.632\,V_E = 0.632 \times 12 = \boxed{7.58\,\text{V}}$$
+
+**2. En $t=5\tau=10$ ms** el capacitor está prácticamente cargado por completo:
+
+$$V(5\tau) \approx V_E = \boxed{12\,\text{V}}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Carga del capacitor (VE = 12 V, τ = 2 ms)',
+  steps: [{
+    note: 'En t=τ=2 ms el capacitor lleva 7.58 V (63.2 % de VE); en t=5τ=10 ms está prácticamente en 12 V.',
+    series: [{ id: 'vt', label: 'V(t)', kind: 'line', fn: '12*(1-exp(-x/2))', domain: [0, 12] }],
+    x: { label: 't (ms)' },
+    y: { label: 'V(t) (V)', min: 0, max: 13 },
+    vlines: [{ at: 2, label: 'τ = 2 ms', state: 'answer' }, { at: 10, label: '5τ = 10 ms', state: 'answer' }],
+    hlines: [{ at: 7.58, label: '7.58 V', state: 'answer' }, { at: 12, label: 'VE = 12 V' }],
+  }],
+}} />
+
+</ExerciseBlock>

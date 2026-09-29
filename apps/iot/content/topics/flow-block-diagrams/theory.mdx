@@ -1,0 +1,341 @@
+---
+kind: theory
+title: Diagramas de flujo y de bloques
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Antes de programar o de armar un circuito, un proyecto IoT se planifica con dos herramientas
+gráficas: el **diagrama de flujo** (la lógica del programa) y el **diagrama de bloques** (la
+arquitectura del hardware). Seguir su simbología y sus reglas al pie de la letra es lo que el
+laboratorio evalúa: un diagrama ambiguo (sin único inicio, con decisiones abiertas, con
+potencia y datos mezclados) no sirve para comunicar el diseño a otra persona.
+
+## Conceptos
+
+### Simbología normalizada (diagramas de flujo)
+
+| Forma | Nombre | Función |
+|---|---|---|
+| Óvalo | Inicio / Fin | Punto de entrada o salida del proceso: inicio y final de un algoritmo. |
+| Rectángulo | Proceso | Una acción, tarea u operación lógica/matemática. |
+| Rombo | Decisión | Bifurcación basada en una condición lógica (sí/no), verdadero o falso. |
+| Paralelogramo | Entrada / Salida | Ingreso de datos (ej. leer un sensor) o presentación de resultados. |
+| Flecha | Línea de flujo | Indica el orden de ejecución; apunta a la siguiente instrucción. |
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Leyenda de símbolos normalizados',
+  steps: [{
+    note: 'Cada forma tiene un único significado; no se intercambian entre sí.',
+    shapes: [
+      { id: 'ini', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'io', kind: 'io', label: 'Entrada/Salida (ej. leer sensor)' },
+      { id: 'proc', kind: 'process', label: 'Proceso (acción)' },
+      { id: 'dec', kind: 'decision', label: '¿Condición? (V/F)' },
+      { id: 'fin', kind: 'end', label: 'Fin' },
+    ],
+    arrows: [
+      { from: 'ini', to: 'io' }, { from: 'io', to: 'proc' },
+      { from: 'proc', to: 'dec' }, { from: 'dec', to: 'fin' },
+    ],
+  }],
+}} />
+
+### Reglas de diseño de diagramas de flujo
+
+Al diseñar un diagrama de flujo para un microcontrolador (ej. Arduino):
+
+- **Direccionalidad**: el flujo general va siempre de arriba hacia abajo y de izquierda a
+  derecha.
+- **Unicidad de inicio**: todo diagrama tiene un único símbolo de "Inicio", aunque puede tener
+  múltiples rutas de retorno si se trata de un bucle continuo (típico en sistemas embebidos
+  que monitorean sin parar).
+- **Precisión en las decisiones**: las condiciones dentro del rombo se formulan como
+  preguntas cerradas (ej. "¿Botón presionado?", "¿Temp > 30 °C?"). De sus vértices salen
+  exclusivamente dos líneas, etiquetadas "V" (Verdadero) y "F" (Falso).
+
+### Diagramas de bloques (arquitectura de hardware)
+
+Un diagrama de bloques representa un sistema electrónico describiendo sus funciones o
+subsistemas principales mediante bloques rectangulares interconectados; cada bloque es una
+función específica sin detallar su implementación interna (abstracción).
+
+**Reglas de diseño**:
+- **Centralidad del controlador**: el microcontrolador va en el centro del diagrama; los
+  periféricos de entrada apuntan hacia él, y los de salida reciben flechas desde él.
+- **Separación de potencia y control**: las líneas que transportan energía se diferencian de
+  las que transportan datos.
+- **Especificación de interfaces**: las flechas de conexión indican el tipo de protocolo (ej.
+  I2C, SPI, Analógico, Digital).
+
+### Ejemplo: termostato básico (diagrama de flujo)
+
+Algoritmo de control continuo típico en sistemas embebidos (Guía de laboratorio, Figura 1):
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Diagrama de flujo — termostato básico',
+  steps: [{
+    note: 'Es un bucle continuo: no hay "Fin", ambas ramas de la decisión regresan a leer el sensor.',
+    shapes: [
+      { id: 'ini', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'cfg', kind: 'process', label: 'Configurar pines y Monitor Serial' },
+      { id: 'lee', kind: 'io', label: 'Lectura del sensor de Temperatura' },
+      { id: 'dec', kind: 'decision', label: '¿Temp > 27 °C?' },
+      { id: 'on', kind: 'process', label: 'Activar Relé (Ventilador ON)' },
+      { id: 'off', kind: 'process', label: 'Desactivar Relé (Ventilador OFF)' },
+    ],
+    arrows: [
+      { from: 'ini', to: 'cfg' },
+      { from: 'cfg', to: 'lee' },
+      { from: 'lee', to: 'dec' },
+      { from: 'dec', to: 'on', label: 'V' },
+      { from: 'dec', to: 'off', label: 'F' },
+      { from: 'on', to: 'lee', label: 'vuelve a leer' },
+      { from: 'off', to: 'lee', label: 'vuelve a leer' },
+    ],
+  }],
+}} />
+
+### Ejemplo: nodo de monitoreo agrícola (diagrama de bloques)
+
+Abstracción de hardware que separa la lógica de control de la etapa de potencia, con
+distribución radial para evitar cruce de líneas (Guía de laboratorio, Figura 2):
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Diagrama de bloques — nodo de monitoreo agrícola',
+  steps: [{
+    note: 'El microcontrolador queda al centro; entradas (sensor, botón) apuntan hacia él; salidas (LCD, relé) reciben flecha desde él. La alimentación (9 V / 5 V) va separada del bus de datos (I2C, analógico, digital).',
+    shapes: [
+      { id: 'sensor', kind: 'block', label: 'Sensor de Humedad' },
+      { id: 'boton', kind: 'block', label: 'Botón Selector' },
+      { id: 'mcu', kind: 'block', label: 'Microcontrolador (Arduino Uno)' },
+      { id: 'lcd', kind: 'block', label: 'Pantalla LCD 16x2' },
+      { id: 'rele', kind: 'block', label: 'Módulo Relé' },
+      { id: 'motor', kind: 'block', label: 'Motor DC (Ventilador)' },
+      { id: 'fuente', kind: 'block', label: 'Fuente 9V' },
+    ],
+    arrows: [
+      { from: 'sensor', to: 'mcu', label: 'Analógica', kind: 'data' },
+      { from: 'boton', to: 'mcu', label: 'Digital', kind: 'data' },
+      { from: 'mcu', to: 'lcd', label: 'Bus I2C', kind: 'data' },
+      { from: 'mcu', to: 'rele', label: 'Control (5V)', kind: 'data' },
+      { from: 'rele', to: 'motor', label: '9V Conmutado', kind: 'power' },
+      { from: 'fuente', to: 'mcu', label: '5V Regulado', kind: 'power' },
+      { from: 'fuente', to: 'rele', label: '9V (Potencia)', kind: 'power' },
+    ],
+  }],
+}} />
+
+## Método paso a paso
+
+**Cómo construir el diagrama de bloques de un nodo IoT**:
+
+1. Identifica el microcontrolador y colócalo al centro.
+2. Lista los periféricos de **entrada** (sensores, botones) y dibújalos apuntando hacia el
+   controlador.
+3. Lista los periféricos de **salida** (pantallas, relés, motores, LEDs, buzzers) y dibújalos
+   recibiendo flecha desde el controlador.
+4. Etiqueta cada flecha con el tipo de interfaz (I2C, SPI, analógico, digital).
+5. Traza aparte las líneas de **potencia** (fuente → microcontrolador, fuente → módulos que
+   consumen más corriente como relés/motores), diferenciándolas de las líneas de **datos**.
+
+**Cómo construir el diagrama de flujo de la lógica de un nodo IoT**:
+
+1. Coloca un único símbolo de "Inicio" arriba.
+2. Agrega el bloque de configuración inicial (pines, pantallas, variables en cero).
+3. Ordena las condiciones por **prioridad**: si hay una condición de seguridad/emergencia,
+   va primero (debe evaluarse siempre, incluso interrumpiendo el flujo normal).
+4. Cada decisión es una pregunta cerrada con dos salidas etiquetadas V/F.
+5. Si el sistema debe monitorear sin parar, cierra el ciclo devolviendo el flujo al punto de
+   lectura correspondiente en vez de terminar en un "Fin".
+
+## Ejemplo resuelto
+
+**LAB 2 — Control de Aforo y Seguridad Ambiental**: un dispositivo cuenta el ingreso/salida de
+personas en un recinto (sensor PIR + botón) y, en paralelo, vigila la calidad del aire
+(sensor de gas MQ2) para activar una evacuación automática.
+
+**Diagrama de bloques** (Guía de laboratorio, Figura 3) — separa entradas de salidas y
+especifica el tipo de señal de cada interfaz:
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Diagrama de bloques — nodo de seguridad y aforo (LAB 2)',
+  steps: [{
+    note: 'Tres entradas (PIR, gas, botón) convergen al microcontrolador; tres salidas (LCD, LEDs, buzzer) parten de él. Cada flecha indica si la señal es digital o analógica.',
+    shapes: [
+      { id: 'pir', kind: 'block', label: 'Sensor PIR (Movimiento)' },
+      { id: 'gas', kind: 'block', label: 'Sensor Gas MQ2' },
+      { id: 'boton', kind: 'block', label: 'Botón (Simulador Salida)' },
+      { id: 'mcu', kind: 'block', label: 'Microcontrolador (Arduino MEGA2560)' },
+      { id: 'lcd', kind: 'block', label: 'Pantalla LCD 16x2' },
+      { id: 'leds', kind: 'block', label: 'LEDs (Rojo y Verde)' },
+      { id: 'buzzer', kind: 'block', label: 'Buzzer (Alarma)' },
+    ],
+    arrows: [
+      { from: 'pir', to: 'mcu', label: 'Señal Digital', kind: 'data' },
+      { from: 'gas', to: 'mcu', label: 'Señal Analógica', kind: 'data' },
+      { from: 'boton', to: 'mcu', label: 'Señal Digital', kind: 'data' },
+      { from: 'mcu', to: 'lcd', label: 'Bus I2C / Digital', kind: 'data' },
+      { from: 'mcu', to: 'leds', label: 'Pines Digitales', kind: 'data' },
+      { from: 'mcu', to: 'buzzer', label: 'Pin Digital', kind: 'data' },
+    ],
+  }],
+}} />
+
+**Diagrama de flujo** (Guía de laboratorio, Figura 4) — evalúa permanentemente la condición de
+mayor prioridad (gas); solo si el ambiente es seguro, evalúa la ocupación:
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Diagrama de flujo — control de aforo y seguridad ambiental (LAB 2)',
+  steps: [{
+    note: 'Jerarquía de prioridades: gas > aforo completo > movimiento (ingreso) > botón (salida). Todas las ramas terminan mostrando el LCD y vuelven a leer el sensor de gas: es un control no bloqueante y continuo.',
+    shapes: [
+      { id: 'ini', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'cfg', kind: 'process', label: 'Configurar I/O, LCD · Aforo = 0' },
+      { id: 'leergas', kind: 'io', label: 'Leer Sensor Gas (MQ2)' },
+      { id: 'dgas', kind: 'decision', label: '¿Nivel > Umbral?' },
+      { id: 'alarma', kind: 'process', label: 'LCD: "PELIGRO: EVACUAR" · Buzzer ON · Parpadear LED Rojo' },
+      { id: 'dcupo', kind: 'decision', label: '¿Aforo ≥ 50?' },
+      { id: 'full', kind: 'process', label: 'LCD: "AFORO COMPLETO" · LED Rojo Fijo · Ignorar PIR' },
+      { id: 'verde', kind: 'process', label: 'Encender LED Verde' },
+      { id: 'leerpir', kind: 'io', label: 'Leer PIR (Ingreso)' },
+      { id: 'dmov', kind: 'decision', label: '¿Movimiento?' },
+      { id: 'inc', kind: 'process', label: 'Aforo = Aforo + 1 · Delay 5s (Debounce)' },
+      { id: 'leerbtn', kind: 'io', label: 'Leer Botón (Salida)' },
+      { id: 'dsal', kind: 'decision', label: '¿Presionado y Aforo > 0?' },
+      { id: 'dec', kind: 'process', label: 'Aforo = Aforo - 1' },
+      { id: 'mostrar', kind: 'io', label: 'Mostrar en LCD: "AFORO: XX"' },
+    ],
+    arrows: [
+      { from: 'ini', to: 'cfg' },
+      { from: 'cfg', to: 'leergas' },
+      { from: 'leergas', to: 'dgas' },
+      { from: 'dgas', to: 'alarma', label: 'V' },
+      { from: 'dgas', to: 'dcupo', label: 'F' },
+      { from: 'alarma', to: 'leergas', label: 'repite' },
+      { from: 'dcupo', to: 'full', label: 'V' },
+      { from: 'dcupo', to: 'verde', label: 'F' },
+      { from: 'full', to: 'leergas', label: 'repite' },
+      { from: 'verde', to: 'leerpir' },
+      { from: 'leerpir', to: 'dmov' },
+      { from: 'dmov', to: 'inc', label: 'V' },
+      { from: 'dmov', to: 'leerbtn', label: 'F' },
+      { from: 'inc', to: 'leergas', label: 'repite' },
+      { from: 'leerbtn', to: 'dsal' },
+      { from: 'dsal', to: 'dec', label: 'V' },
+      { from: 'dsal', to: 'mostrar', label: 'F' },
+      { from: 'dec', to: 'mostrar' },
+      { from: 'mostrar', to: 'leergas', label: 'repite' },
+    ],
+  }],
+}} />
+
+## Errores típicos
+
+- Poner más de un óvalo de "Inicio", o ninguno.
+- Formular una decisión como pregunta abierta ("¿Qué temperatura hay?") en vez de cerrada
+  ("¿Temp > 27 °C?"): un rombo solo puede tener dos salidas, V y F.
+- Dibujar el diagrama de bloques sin centrar el microcontrolador, o mezclando flechas de
+  entrada y salida sin indicar la dirección real de la señal.
+- No diferenciar potencia de datos: dibujar la alimentación de 9 V con la misma línea que el
+  bus I2C hace ilegible el diagrama y oculta errores de diseño eléctrico real.
+- Omitir la etiqueta de interfaz (I2C, SPI, analógico, digital) en las flechas de un diagrama
+  de bloques: sin eso, el diagrama no dice cómo se conectan realmente los bloques.
+- En un sistema con condiciones de distinta prioridad (como el LAB 2), evaluarlas en el orden
+  equivocado: la condición de seguridad (gas) debe evaluarse siempre antes que la lógica de
+  negocio (aforo).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Diseña (en palabras, describiendo símbolo por símbolo) el diagrama de flujo de un sistema de riego automático: un sensor de humedad de suelo se lee continuamente; si la humedad es menor a $30\\%$, se enciende una electroválvula durante $10$ segundos y luego se vuelve a leer el sensor; si la humedad es mayor o igual a $30\\%$, se mantiene la válvula apagada y se vuelve a leer.",
+  hints: [
+    "Empieza por identificar cuántos símbolos de Inicio necesitas.",
+    "La decisión debe ser una pregunta cerrada con dos salidas V/F.",
+    "Es un sistema de monitoreo continuo: ¿a dónde deberían volver ambas ramas?",
+  ],
+}}>
+
+**Diagrama de flujo resuelto** — un único Inicio, una decisión cerrada, y ambas ramas vuelven a leer el sensor (bucle continuo, sin Fin):
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Riego automático — solución',
+  steps: [{
+    note: 'Ambas ramas (V y F) regresan al mismo punto de lectura: es un sistema de monitoreo continuo, igual que el termostato del ejemplo resuelto.',
+    shapes: [
+      { id: 'ini', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'cfg', kind: 'process', label: 'Configurar pines' },
+      { id: 'lee', kind: 'io', label: 'Leer sensor de humedad de suelo' },
+      { id: 'dec', kind: 'decision', label: '¿Humedad < 30%?' },
+      { id: 'on', kind: 'process', label: 'Activar electroválvula', state: 'answer' },
+      { id: 'delay', kind: 'process', label: 'Delay 10 s', state: 'answer' },
+      { id: 'off', kind: 'process', label: 'Mantener válvula apagada' },
+    ],
+    arrows: [
+      { from: 'ini', to: 'cfg' },
+      { from: 'cfg', to: 'lee' },
+      { from: 'lee', to: 'dec' },
+      { from: 'dec', to: 'on', label: 'V' },
+      { from: 'on', to: 'delay' },
+      { from: 'delay', to: 'lee', label: 'vuelve a leer' },
+      { from: 'dec', to: 'off', label: 'F' },
+      { from: 'off', to: 'lee', label: 'vuelve a leer' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un nodo IoT tiene: un sensor ultrasónico (analógico) que mide nivel de agua en un tanque, un microcontrolador ESP32, una bomba de agua (controlada por relé, alimentada a $12$ V) y un display OLED por I2C. Describe el diagrama de bloques completo, indicando qué va al centro, qué flechas son de entrada, cuáles de salida, y separando claramente potencia de datos.",
+  hints: [
+    "El microcontrolador siempre va al centro.",
+    "Identifica qué necesita alimentación de 12V y qué de 5V/3.3V, y no mezcles esas líneas con las de datos.",
+  ],
+}}>
+
+**Diagrama de bloques resuelto** — ESP32 al centro; la entrada (sensor) apunta hacia él, las salidas (relé, OLED) reciben flecha desde él; potencia separada de datos:
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Nodo de nivel de agua — diagrama de bloques',
+  steps: [{
+    note: 'Entrada: sensor ultrasónico → ESP32 (analógica). Salidas: ESP32 → relé (control digital) y ESP32 → OLED (I2C). Potencia: fuente 12V → relé → bomba; fuente → regulador → ESP32/OLED (5V/3.3V), en líneas separadas de los datos.',
+    shapes: [
+      { id: 'sensor', kind: 'block', label: 'Sensor ultrasónico' },
+      { id: 'mcu', kind: 'block', label: 'ESP32', state: 'answer' },
+      { id: 'rele', kind: 'block', label: 'Módulo relé' },
+      { id: 'oled', kind: 'block', label: 'Display OLED' },
+      { id: 'bomba', kind: 'block', label: 'Bomba de agua' },
+      { id: 'fuente', kind: 'block', label: 'Fuente 12V' },
+    ],
+    arrows: [
+      { from: 'sensor', to: 'mcu', label: 'Analógica', kind: 'data' },
+      { from: 'mcu', to: 'rele', label: 'Control digital', kind: 'data' },
+      { from: 'mcu', to: 'oled', label: 'Bus I2C', kind: 'data' },
+      { from: 'fuente', to: 'rele', label: '12V Conmutado', kind: 'power' },
+      { from: 'rele', to: 'bomba', label: '12V', kind: 'power' },
+      { from: 'fuente', to: 'mcu', label: '5V/3.3V Regulado', kind: 'power' },
+      { from: 'fuente', to: 'oled', label: '3.3V Regulado', kind: 'power' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

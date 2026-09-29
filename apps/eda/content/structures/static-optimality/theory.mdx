@@ -1,0 +1,536 @@
+---
+kind: theory
+title: "Optimalidad estática y la cota de entropía"
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Pesos uniformes, primera elección (#35). El árbol es un BST cualquiera
+        sobre siete llaves — lo que sigue no depende de su forma. Todavía no
+        hay pesos: esto es sólo lo que está en memoria.
+      nodes:
+        - { id: k4, value: 4 }
+        - { id: k2, value: 2, parent: k4, side: left }
+        - { id: k6, value: 6, parent: k4, side: right }
+        - { id: k1, value: 1, parent: k2, side: left }
+        - { id: k3, value: 3, parent: k2, side: right }
+        - { id: k5, value: 5, parent: k6, side: left }
+        - { id: k7, value: 7, parent: k6, side: right }
+    - note: >-
+        Se elige w_x = 1 para todo nodo. Los pesos son una etiqueta del
+        análisis, no un campo del nodo — el profesor lo dice en la misma
+        diapositiva que los define: "solo para el análisis, no para el código"
+        (#22).
+      caption: "w_x = 1 para los siete nodos; peso total W = 7"
+      nodes:
+        - { id: k4, value: 4, tag: "w=1" }
+        - { id: k2, value: 2, parent: k4, side: left, tag: "w=1" }
+        - { id: k6, value: 6, parent: k4, side: right, tag: "w=1" }
+        - { id: k1, value: 1, parent: k2, side: left, tag: "w=1" }
+        - { id: k3, value: 3, parent: k2, side: right, tag: "w=1" }
+        - { id: k5, value: 5, parent: k6, side: left, tag: "w=1" }
+        - { id: k7, value: 7, parent: k6, side: right, tag: "w=1" }
+    - note: >-
+        Con esa elección, s(x) —la suma de pesos del subárbol de x— degenera
+        en algo que ya conocemos: el número de nodos del subárbol de x (#35).
+        Las hojas valen 1, la raíz vale n.
+      caption: "s(hoja) = 1, s(2) = s(6) = 3, s(4) = 7 = n"
+      nodes:
+        - { id: k4, value: 4, tag: "s=7" }
+        - { id: k2, value: 2, parent: k4, side: left, tag: "s=3" }
+        - { id: k6, value: 6, parent: k4, side: right, tag: "s=3" }
+        - { id: k1, value: 1, parent: k2, side: left, tag: "s=1" }
+        - { id: k3, value: 3, parent: k2, side: right, tag: "s=1" }
+        - { id: k5, value: 5, parent: k6, side: left, tag: "s=1" }
+        - { id: k7, value: 7, parent: k6, side: right, tag: "s=1" }
+    - note: >-
+        El rango es r(x) = lg s(x). La raíz va marcada porque su rango es el
+        techo de la cota del Lema de Acceso: r(raíz) = lg n, el delimitador
+        contra el que se mide todo lo demás. Ningún rango baja de 0, porque
+        todo subárbol tiene al menos un nodo.
+      highlight: ["k4"]
+      nodes:
+        - { id: k4, value: 4, tag: "r=lg 7", state: marked }
+        - { id: k2, value: 2, parent: k4, side: left, tag: "r=lg 3" }
+        - { id: k6, value: 6, parent: k4, side: right, tag: "r=lg 3" }
+        - { id: k1, value: 1, parent: k2, side: left, tag: "r=0" }
+        - { id: k3, value: 3, parent: k2, side: right, tag: "r=0" }
+        - { id: k5, value: 5, parent: k6, side: left, tag: "r=0" }
+        - { id: k7, value: 7, parent: k6, side: right, tag: "r=0" }
+    - note: >-
+        Sustitución en el Lema de Acceso para el peor x posible, una hoja
+        (r(x) = 0, la distancia máxima al techo). El nodo activo es el que se
+        accede; el marcado sigue siendo el techo r(raíz) = lg n. La cota sale
+        O(lg n) — y no se usó nada de la forma del árbol, así que vale para
+        cualquier x y cualquier árbol.
+      caption: "3(r(raíz) − r(x)) + 1 = 3(lg 7 − 0) + 1 ≈ 9.4 → O(lg n)"
+      highlight: ["k1", "k4"]
+      nodes:
+        - { id: k4, value: 4, tag: "r(t)=lg 7", state: marked }
+        - { id: k2, value: 2, parent: k4, side: left }
+        - { id: k6, value: 6, parent: k4, side: right }
+        - { id: k1, value: 1, parent: k2, side: left, tag: "r(x)=0", state: active }
+        - { id: k3, value: 3, parent: k2, side: right }
+        - { id: k5, value: 5, parent: k6, side: left }
+        - { id: k7, value: 7, parent: k6, side: right }
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+La semana pasada quedó una promesa sin pagar. Las
+[propiedades de las secuencias de búsqueda](/structures/search-sequence-properties)
+enuncian cinco formas de que una secuencia sea "fácil", y una de ellas es la
+**cota de entropía / optimalidad estática**: si el valor $k$ aparece en una
+fracción $p_k$ de la secuencia, atenderla debería costar
+$O(\sum_k p_k \lg(1/p_k))$ amortizado por búsqueda (Sem5 #34). Pero ese tema
+cierra diciendo explícitamente que **ninguna de las propiedades dice cómo
+lograr esa cota** — son descripciones de qué sería una buena estructura, no
+una estructura.
+
+Este tema paga esa promesa. Con el [Lema de Acceso](/structures/access-lemma)
+ya demostrado, las dos consecuencias caen solas (#34-36):
+
+1. Con $w_x = 1$, el splay tree cuesta $O(\lg n)$ amortizado por acceso —
+   "esto confirma lo que anunciamos la clase pasada" (#35).
+2. Con $w_x \propto p_x$, el mismo lema da exactamente la cota de entropía —
+   "la propiedad de cota de entropía que vimos la clase pasada, **ahora
+   demostrada**" (#36).
+
+Lo que cambia de estatus es importante: la cota de entropía deja de ser una
+propiedad deseable enunciada sin prueba y pasa a ser un **teorema sobre el
+[splay tree](/structures/splay-tree)**.
+
+## Intuición
+
+El Lema de Acceso se demostró sin fijar los pesos: vale para **cualquier**
+elección de $w_x$ positivos. Eso lo convierte en algo más parecido a una
+plantilla que a un teorema único — el analista elige los pesos *después* de
+que el algoritmo ya corrió, y cada elección produce un teorema distinto sobre
+el mismo código.
+
+La imagen mental: el árbol en memoria no cambia. Lo único que cambia es la
+etiqueta que el analista escribe encima de cada nodo. Con todas las etiquetas
+iguales, la cota que sale habla de $n$. Con las etiquetas proporcionales a
+qué tan seguido se busca cada llave, la cota que sale habla de la
+distribución de accesos. Un solo lema, dos teoremas (#37).
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Lo que existe en memoria: un BST y nada más. El splay tree no guarda pesos, ni frecuencias, ni contadores de acceso — su código es exactamente el de /structures/splay-tree, sin un solo campo extra.",
+      nodes: [
+        { id: "k4", value: 4 },
+        { id: "k2", value: 2, parent: "k4", side: "left" },
+        { id: "k6", value: 6, parent: "k4", side: "right" },
+        { id: "k1", value: 1, parent: "k2", side: "left" },
+        { id: "k3", value: 3, parent: "k2", side: "right" },
+        { id: "k5", value: 5, parent: "k6", side: "left" },
+        { id: "k7", value: 7, parent: "k6", side: "right" }
+      ]
+    },
+    {
+      note: "Primera lectura del analista: todas las llaves valen lo mismo. Nada del árbol se movió — sólo aparecieron etiquetas. De aquí sale O(lg n).",
+      caption: "elección 1 — w_x = 1 para todo x",
+      nodes: [
+        { id: "k4", value: 4, tag: "w=1" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "w=1" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "w=1" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "w=1" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "w=1" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "w=1" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "w=1" }
+      ]
+    },
+    {
+      note: "Segunda lectura del mismo árbol, misma ejecución: las etiquetas ahora son las frecuencias de acceso. La llave 5 se pide en la mitad de las búsquedas, así que carga la mitad del peso. De aquí sale la cota de entropía.",
+      caption: "elección 2 — w_x ∝ p_x, con p_5 = 1/2 (distribución derivada; ver examples.md)",
+      highlight: ["k5"],
+      nodes: [
+        { id: "k4", value: 4, tag: "w=1/32" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "w=1/32" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "w=1/8" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "w=1/32" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "w=1/4" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "w=1/2", state: "active" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "w=1/32" }
+      ]
+    }
+  ]
+}} />
+
+## Estructura interna
+
+No aplica, y por una razón que es el corazón del tema: **no hay nada que
+guardar**. La diapositiva que introduce peso, tamaño y rango los rotula
+"Definiciones (solo para el análisis, no para el código)" (#22). El splay
+tree que ejecuta estas búsquedas es idéntico al de
+[splay-tree](/structures/splay-tree) y su
+[interfaz](/structures/splay-tree-adt): no almacena $w_x$, no cuenta accesos,
+no estima $p_x$.
+
+Esa es exactamente la razón por la que el resultado es fuerte. La estructura
+alcanza la cota de entropía **sin conocer la distribución**; el que conoce la
+distribución es el analista, y sólo para escribir la demostración.
+
+## Operaciones
+
+`operations: []` en el knowledge map. Este tema no define operaciones: son
+dos corolarios sobre el costo amortizado de `Splay(x)`, la operación que ya
+definió [splay-tree](/structures/splay-tree). Todo lo que se dice aquí se
+dice sobre esa operación, sin modificarla en nada.
+
+## Análisis de complejidad
+
+`professorAnalysisStyle: amortized`. El punto de partida es el
+[Lema de Acceso](/structures/access-lemma) ya demostrado — no se reexplica
+aquí: el costo amortizado de `Splay(x)` en un árbol con raíz $t$ es a
+lo más
+
+$$3\,(r(t) - r(x)) + 1$$
+
+con $r(x) = \lg s(x)$ y $s(x)$ la suma de pesos $w_x$ del subárbol de $x$.
+
+### Consecuencia 1: pesos uniformes → $O(\lg n)$
+
+Con $w_x = 1$ para todo nodo, $s(x)$ es simplemente el número de nodos del
+subárbol de $x$, y por lo tanto $r(\text{raíz}) = \lg n$ (#35). El diagrama
+de la cabecera de esta página recorre esa sustitución paso a paso sobre un
+árbol de siete llaves. Sustituyendo en el lema:
+
+$$\text{amortizado} \le 3\,(\lg n - r(x)) + 1 = O(\lg n)$$
+
+para **cualquier** $x$, porque $s(x) \ge 1$ implica $r(x) \ge 0$, así que la
+diferencia $\lg n - r(x)$ nunca pasa de $\lg n$. El profesor subraya que esto
+"confirma lo que anunciamos la clase pasada" (#35): el $O(\log n)$ amortizado
+del splay tree ya se había enunciado, ahora está probado.
+
+### Consecuencia 2: pesos por frecuencia → cota de entropía
+
+El Lema de Acceso vale para **cualquier** elección de pesos, no sólo
+$w_x = 1$. El profesor plantea la pregunta explícitamente: "¿qué pasaría si
+eligiéramos $w_x$ proporcional a qué tan seguido se busca $x$?" (#36). La
+respuesta: con $w_x \propto p_x$ el Lema de Acceso da exactamente
+$O(\sum_x p_x \lg(1/p_x))$ amortizado — la cota de entropía, ahora demostrada.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Mismo árbol, mismas llaves, misma ejecución del splay tree. Lo único distinto respecto del diagrama de cabecera es la elección de pesos: w_x = p_x, la fracción de la secuencia que pide cada llave. Los pesos suman 1, así que el peso total es W = 1.",
+      caption: "p = (1/32, 1/32, 1/4, 1/32, 1/2, 1/8, 1/32) para las llaves 1..7 — distribución derivada, ver examples.md",
+      nodes: [
+        { id: "k4", value: 4, tag: "w=1/32" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "w=1/32" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "w=1/8" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "w=1/32" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "w=1/4" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "w=1/2" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "w=1/32" }
+      ]
+    },
+    {
+      note: "s(x) sigue siendo la suma de pesos del subárbol de x — la misma definición de siempre, con otros sumandos. Ya no cuenta nodos: mide cuánta masa de accesos cuelga de x. La llave fría 1 arrastra 1/32; la caliente 5 arrastra 1/2 ella sola.",
+      caption: "s(1)=1/32, s(3)=1/4, s(2)=5/16, s(5)=1/2, s(7)=1/32, s(6)=21/32, s(4)=1",
+      nodes: [
+        { id: "k4", value: 4, tag: "s=1" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "s=5/16" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "s=21/32" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "s=1/32" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "s=1/4" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "s=1/2" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "s=1/32" }
+      ]
+    },
+    {
+      note: "r(x) = lg s(x). Como ahora los tamaños son fracciones, los rangos son negativos y el techo de la raíz baja a r(t) = lg 1 = 0 — sigue siendo el delimitador de la cota, por eso va marcado. Lo que importa no es el signo sino la DISTANCIA de cada nodo al techo: la llave caliente 5 queda a distancia 1, la fría 1 a distancia 5.",
+      caption: "r(4)=0 (techo), r(5)=−1, r(6)≈−0.61, r(2)≈−1.68, r(3)=−2, r(1)=r(7)=−5",
+      highlight: ["k4"],
+      nodes: [
+        { id: "k4", value: 4, tag: "r(t)=0", state: "marked" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "r≈−1.68" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "r≈−0.61" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "r=−5" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "r=−2" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "r=−1" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "r=−5" }
+      ]
+    },
+    {
+      note: "Buscar la llave caliente 5. Su rango es alto (−1, cerca del techo 0) precisamente porque concentra mucho peso, y el Lema de Acceso cobra proporcional a la distancia al techo: cuesta 4 amortizado, una constante, sin importar que 5 esté a profundidad 3 en el árbol dibujado.",
+      caption: "3(r(t) − r(5)) + 1 = 3(0 − (−1)) + 1 = 4 amortizado",
+      highlight: ["k5", "k4"],
+      nodes: [
+        { id: "k4", value: 4, tag: "r(t)=0", state: "marked" },
+        { id: "k2", value: 2, parent: "k4", side: "left" },
+        { id: "k6", value: 6, parent: "k4", side: "right" },
+        { id: "k1", value: 1, parent: "k2", side: "left" },
+        { id: "k3", value: 3, parent: "k2", side: "right" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "r=−1", state: "active" },
+        { id: "k7", value: 7, parent: "k6", side: "right" }
+      ]
+    },
+    {
+      note: "Buscar la llave fría 1. Rango bajo (−5), lejos del techo: cuesta 16 amortizado, cuatro veces más que la caliente. La cota NO es uniforme entre llaves — y eso es justo lo que la hace mejor en promedio: lo caro se paga pocas veces (p=1/32) y lo barato se paga muchas (p=1/2).",
+      caption: "3(r(t) − r(1)) + 1 = 3(0 − (−5)) + 1 = 16 amortizado, pero sólo en 1/32 de las búsquedas",
+      highlight: ["k1", "k4"],
+      nodes: [
+        { id: "k4", value: 4, tag: "r(t)=0", state: "marked" },
+        { id: "k2", value: 2, parent: "k4", side: "left" },
+        { id: "k6", value: 6, parent: "k4", side: "right" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "r=−5", state: "active" },
+        { id: "k3", value: 3, parent: "k2", side: "right" },
+        { id: "k5", value: 5, parent: "k6", side: "left" },
+        { id: "k7", value: 7, parent: "k6", side: "right" }
+      ]
+    },
+    {
+      note: "Promediando sobre la secuencia, cada llave aporta su cota multiplicada por su frecuencia. El resultado es 3H + 1 con H = 2 bits la entropía de esta distribución: 7 amortizado por búsqueda, contra los ≈9.4 que daba la cota uniforme sobre el mismo árbol. Mismo lema, misma estructura, otra elección de pesos.",
+      caption: "Σ_x p_x · (3 lg(1/p_x) + 1) = 3·2.000 + 1 = 7 — contra 3·lg 7 + 1 ≈ 9.4 con pesos uniformes",
+      highlight: ["k5"],
+      nodes: [
+        { id: "k4", value: 4, tag: "p=1/32" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "p=1/32" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "p=1/8" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=1/32" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "p=1/4" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "p=1/2", state: "active" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=1/32" }
+      ]
+    }
+  ]
+}} />
+
+> **Nota de apoyo** (no está en las diapositivas): el mazo enuncia el
+> resultado —"con $w_x \propto p_x$, el Lema de Acceso da exactamente
+> $O(\sum_x p_x \lg(1/p_x))$"— sin escribir el álgebra intermedia. Los dos
+> pasos que faltan son éstos. Primero, como $s(x)$ suma el peso de todo el
+> subárbol de $x$, incluido el propio $x$, siempre vale $s(x) \ge w_x$, de
+> modo que el lema se puede aflojar a una forma que sólo mira el peso propio
+> de $x$ y el peso total $W = s(t)$:
+> $$3\,(r(t) - r(x)) + 1 \;\le\; 3\lg\frac{W}{w_x} + 1.$$
+> Segundo, normalizando $w_x = p_x$ (así $W = 1$), la cota por acceso a $x$
+> queda $3\lg(1/p_x) + 1$; promediando sobre la secuencia, donde $x$ aparece
+> una fracción $p_x$ de las veces, da
+> $\sum_x p_x\,(3\lg(1/p_x)+1) = 3\sum_x p_x \lg(1/p_x) + 1$, que es
+> $O(\sum_x p_x \lg(1/p_x))$. Esa suma es la **entropía de Shannon** de la
+> distribución de accesos; el profesor usa la fórmula pero nunca la nombra
+> así.
+
+Esa forma aflojada, $3\lg(W/w_x) + 1$, deja ver que las dos consecuencias son
+literalmente la misma cuenta con distintos números:
+
+| elección de pesos | $W$ | $w_x$ | cota por acceso |
+| --- | --- | --- | --- |
+| uniforme (#35) | $n$ | $1$ | $3\lg n + 1 = O(\lg n)$ |
+| por frecuencia (#36) | $1$ | $p_x$ | $3\lg(1/p_x) + 1$, que promedia a $O(\sum_x p_x \lg(1/p_x))$ |
+
+### Por qué la cota de entropía nunca es peor que $\lg n$
+
+La cota de entropía no es una cota distinta que a veces gana y a veces
+pierde: nunca es peor. El caso extremo es el de la distribución uniforme
+—$p_x = 1/n$ para toda llave— donde $\sum_x p_x \lg(1/p_x) = \lg n$ exactamente,
+y las dos consecuencias coinciden. Cualquier sesgo en la distribución la
+separa hacia abajo.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Distribución uniforme sobre las siete llaves: p_x = 1/7 para todas. Es el caso de máxima entropía — ninguna llave es más probable que otra, así que no hay nada que un árbol pueda explotar.",
+      caption: "H = Σ p lg(1/p) = 7 · (1/7) · lg 7 = lg 7 ≈ 2.807 bits",
+      nodes: [
+        { id: "k4", value: 4, tag: "p=1/7" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "p=1/7" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "p=1/7" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=1/7" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "p=1/7" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "p=1/7" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=1/7" }
+      ]
+    },
+    {
+      note: "Con esa distribución la cota de entropía vale lg 7, que es exactamente la cota uniforme del diagrama de cabecera. No hay ganancia — ni pérdida: la consecuencia 2 se reduce a la consecuencia 1. Por eso el caso uniforme es el TECHO de la cota de entropía, y va marcado como el delimitador de todo el rango de valores posibles.",
+      caption: "H = lg n: la cota de entropía recupera exactamente O(lg n)",
+      highlight: ["k4"],
+      nodes: [
+        { id: "k4", value: 4, tag: "H=lg 7", state: "marked" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "p=1/7" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "p=1/7" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=1/7" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "p=1/7" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "p=1/7" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=1/7" }
+      ]
+    },
+    {
+      note: "La distribución sesgada de la sección anterior, sobre las mismas siete llaves y el mismo árbol. La masa se concentra en 5 (mitad de las búsquedas) y 3 (un cuarto); las otras cinco llaves se reparten las sobras. La entropía cae a 2 bits.",
+      caption: "H = 1/2·1 + 1/4·2 + 1/8·3 + 4·(1/32·5) = 2.000 bits < lg 7 ≈ 2.807",
+      highlight: ["k5", "k3"],
+      nodes: [
+        { id: "k4", value: 4, tag: "p=1/32" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "p=1/32" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "p=1/8" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=1/32" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "p=1/4", state: "active" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "p=1/2", state: "active" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=1/32" }
+      ]
+    },
+    {
+      note: "El límite del sesgo: toda la masa en una sola llave, p_5 = 1 y el resto 0. La entropía es 0, y la cota de entropía colapsa a O(1) por búsqueda — las llaves que nunca se piden quedan atenuadas porque no aportan nada a la suma. Entre este extremo y el uniforme vive todo lo demás.",
+      caption: "H = 1 · lg 1 = 0 → O(1) amortizado por búsqueda (caso degenerado; ver examples.md)",
+      highlight: ["k5"],
+      nodes: [
+        { id: "k4", value: 4, tag: "p=0", state: "muted" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "p=0", state: "muted" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "p=0", state: "muted" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=0", state: "muted" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "p=0", state: "muted" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "p=1", state: "active" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=0", state: "muted" }
+      ]
+    }
+  ]
+}} />
+
+### Por qué esto se llama optimalidad *estática*
+
+El nombre viene de con quién se compara. La referencia es el mejor árbol
+**fijo** —uno solo, elegido de antemano conociendo la distribución $p$ y sin
+tocarlo nunca más— y el resultado dice que el splay tree lo iguala
+asintóticamente. Lo sorprendente es la asimetría de información: ese árbol de
+referencia se construye *sabiendo* $p$; el splay tree no sabe nada.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El árbol balanceado de siempre, evaluado contra la distribución sesgada. Un diseñador offline que conoce p lo DESCARTA: paga profundidad 3 por la llave 5, que es la mitad de las búsquedas. Va atenuado porque es la opción rechazada.",
+      caption: "profundidad esperada = Σ p_x · prof(x) = 2.78 (derivado; ver examples.md)",
+      nodes: [
+        { id: "k4", value: 4, tag: "p=1/32", state: "muted" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "p=1/32", state: "muted" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "p=1/8", state: "muted" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=1/32", state: "muted" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "p=1/4", state: "muted" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "p=1/2", state: "muted" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=1/32", state: "muted" }
+      ]
+    },
+    {
+      note: "El árbol que ese diseñador sí construye: la llave más frecuente en la raíz, la segunda justo debajo, y las frías al fondo. Va como respuesta canónica porque es la referencia contra la que se mide la optimalidad estática. Cuesta 1.66 contra 2.78 — y sigue siendo un árbol FIJO: no rota nunca.",
+      caption: "profundidad esperada = 1/2·1 + 1/4·2 + 1/8·2 + 3·(1/32·3) + 1/32·4 = 1.66 (derivado)",
+      highlight: ["k5"],
+      nodes: [
+        { id: "k5", value: 5, tag: "p=1/2", state: "answer" },
+        { id: "k3", value: 3, parent: "k5", side: "left", tag: "p=1/4" },
+        { id: "k6", value: 6, parent: "k5", side: "right", tag: "p=1/8" },
+        { id: "k2", value: 2, parent: "k3", side: "left", tag: "p=1/32" },
+        { id: "k4", value: 4, parent: "k3", side: "right", tag: "p=1/32" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "p=1/32" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "p=1/32" }
+      ]
+    },
+    {
+      note: "Y esto es todo lo que el splay tree tiene: un BST, sin etiquetas. No leyó p, no la estimó, no la almacena. Sin embargo su costo amortizado está acotado por la misma entropía que gobierna al árbol de referencia — porque el Lema de Acceso vale para cualquier elección de pesos, y el analista puede elegir w_x = p_x A POSTERIORI, cuando la ejecución ya terminó.",
+      caption: "los pesos son del análisis, no del código (#22)",
+      nodes: [
+        { id: "k4", value: 4 },
+        { id: "k2", value: 2, parent: "k4", side: "left" },
+        { id: "k6", value: 6, parent: "k4", side: "right" },
+        { id: "k1", value: 1, parent: "k2", side: "left" },
+        { id: "k3", value: 3, parent: "k2", side: "right" },
+        { id: "k5", value: 5, parent: "k6", side: "left" },
+        { id: "k7", value: 7, parent: "k6", side: "right" }
+      ]
+    },
+    {
+      note: "El mismo árbol con la lectura del analista superpuesta: los pesos que hacen funcionar la cuenta existen sólo en la demostración. Nada de esto se ejecuta. Ahí está la asimetría que hace interesante el resultado — el árbol de referencia necesita conocer p para construirse, el splay tree no.",
+      caption: "w_x = p_x, elegidos por el analista después de los hechos",
+      highlight: ["k5"],
+      nodes: [
+        { id: "k4", value: 4, tag: "w=1/32" },
+        { id: "k2", value: 2, parent: "k4", side: "left", tag: "w=1/32" },
+        { id: "k6", value: 6, parent: "k4", side: "right", tag: "w=1/8" },
+        { id: "k1", value: 1, parent: "k2", side: "left", tag: "w=1/32" },
+        { id: "k3", value: 3, parent: "k2", side: "right", tag: "w=1/4" },
+        { id: "k5", value: 5, parent: "k6", side: "left", tag: "w=1/2", state: "active" },
+        { id: "k7", value: 7, parent: "k6", side: "right", tag: "w=1/32" }
+      ]
+    }
+  ]
+}} />
+
+> **Nota de apoyo** (no está en las diapositivas): el mazo no construye
+> árboles estáticos óptimos ni da un algoritmo para hallarlos; el árbol de
+> referencia del diagrama de arriba es una construcción a mano para hacer
+> tangible contra quién se compara. Lo único que el material afirma es la
+> cota amortizada del splay tree, no una comparación numérica árbol por
+> árbol.
+
+## Tabla de complejidad
+
+Las dos filas salen de `meta.yaml` y son las dos consecuencias de #35 y #36.
+Tres cosas que la tabla no puede decir:
+
+- **Son la misma cota**, no dos resultados independientes: la única
+  diferencia entre las dos filas es qué se puso en $w_x$ antes de aplicar el
+  [Lema de Acceso](/structures/access-lemma). "Un solo lema prueba ambas
+  propiedades" (#37).
+- **La segunda nunca es peor que la primera**: $\sum_x p_x \lg(1/p_x) \le \lg n$
+  siempre, con igualdad exactamente en la distribución uniforme.
+- **Ambas son amortizadas**, no peor caso. Un acceso individual al splay tree
+  puede costar $\Theta(n)$; lo que está acotado es el promedio sobre la
+  secuencia. Las columnas `best`, `avg` y `space` quedan vacías porque el
+  profesor no las da para este resultado.
+
+## Ejemplos
+
+Ver [examples.md](/structures/static-optimality/examples): la distribución
+uniforme sobre 8 llaves (donde la entropía vale exactamente $\lg 8 = 3$ bits y
+la cota coincide con la uniforme), una distribución muy sesgada (donde queda
+muy por debajo de $\lg n$) y el caso degenerado de una sola llave con $p = 1$
+(entropía 0). El mazo no instancia la cota numéricamente, así que los tres
+casos están derivados.
+
+## Comparación con estructuras relacionadas
+
+La confusión más fácil de este tema es tomar "optimalidad estática" por
+"optimalidad dinámica". Son dos preguntas distintas y su estatus es
+opuesto — una está demostrada en esta misma sesión, la otra sigue abierta:
+
+| | optimalidad estática (aquí) | [optimalidad dinámica](/structures/dynamic-optimality) |
+| --- | --- | --- |
+| referencia de comparación | el mejor árbol **fijo** para $p$, que nunca rota | $OPT(S)$: el mejor **algoritmo offline**, que puede rotar entre accesos viendo $S$ completa |
+| qué conoce la referencia | la distribución $p$ de frecuencias | la secuencia $S$ entera, en orden |
+| estatus | **teorema**, probado en esta sesión (#36) | **conjetura abierta** (Sem5 #56) |
+| qué se prueba del splay tree | iguala la cota de entropía sin conocer $p$ | se desconoce si es $O(1)$-competitivo |
+| herramienta | [Lema de Acceso](/structures/access-lemma) con $w_x \propto p_x$ | ninguna conocida que cierre el argumento |
+
+La diferencia de fondo está en cuánta libertad tiene la referencia. La
+optimalidad estática compara contra algo que **no se reestructura**: un árbol
+fijo puede aprovechar que unas llaves son más frecuentes que otras, pero no
+puede aprovechar *en qué orden* llegan. Por eso la cota depende sólo de las
+frecuencias $p_x$ y no de la secuencia. La optimalidad dinámica compara contra
+algo que sí rota entre accesos y, por lo tanto, puede explotar patrones
+temporales que ninguna distribución de frecuencias captura — bloques,
+localidad, alternancias. Vencer a lo primero no dice nada sobre lo segundo.
+
+Y contra el resto de la semana 5:
+
+| | [propiedades de secuencias](/structures/search-sequence-properties) | optimalidad estática (aquí) |
+| --- | --- | --- |
+| qué aporta | enuncia la cota de entropía como propiedad deseable (Sem5 #34) | la **demuestra** para el splay tree (#36) |
+| cómo lograrla | "ninguna de las propiedades dice cómo lograr esa cota" | vía el Lema de Acceso, eligiendo $w_x \propto p_x$ |
+| estructura involucrada | ninguna en particular | [splay tree](/structures/splay-tree), sin modificaciones |
+
+La cota de entropía es, de las cinco propiedades de la semana 5, la única que
+esta sesión cierra por completo. Las otras cuatro siguen enunciadas sin
+demostración en el material del curso.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/static-optimality/mastery-check).

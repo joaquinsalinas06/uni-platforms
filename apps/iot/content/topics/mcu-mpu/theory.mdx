@@ -1,0 +1,244 @@
+---
+kind: theory
+title: Microcontroladores y microprocesadores
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Todo nodo IoT necesita "un cerebro" que lea sensores, tome decisiones y hable con el resto
+del sistema. Ese cerebro es un microcontrolador (MCU) o un microprocesador (MPU), y la
+diferencia entre ambos —qué traen integrado, cómo acceden a la memoria y qué tan rápido
+ejecutan— determina en qué capa de la arquitectura IoT aparece cada uno: el MCU vive dentro
+del nodo sensor/actuador; el MPU aparece donde se necesita cómputo general (gateway,
+smartphone, servidor).
+
+## Conceptos
+
+### Arquitectura Von Neumann vs Harvard
+
+La forma en que la CPU accede a memoria de datos y de instrucciones define dos familias de
+arquitectura:
+
+| Aspecto | Arquitectura Von Neumann | Arquitectura Harvard |
+|---|---|---|
+| Memoria | Compartida para datos e instrucciones | Separada para datos e instrucciones |
+| Buses de datos | Un solo bus para instrucciones y datos | Buses separados de datos e instrucciones |
+| Desempeño | Más lento (memoria y bus compartidos) | Más rápido (rutas de datos en paralelo) |
+| Complejidad | Más simple, menor costo | Más compleja, mayor costo |
+| Ejemplos | Computadoras de propósito general, PCs, sistemas embebidos | DSP (Digital Signal Processors), microcontroladores (ej. ARM Cortex) |
+
+<Visualization viz={{
+  type: 'dag',
+  title: 'Von Neumann vs Harvard',
+  steps: [
+    {
+      note: 'Von Neumann: la CPU comparte un único bus para leer instrucciones y datos de la misma memoria.',
+      nodes: [
+        { id: 'cpu', value: 'CPU', parent: null },
+        { id: 'mem', value: 'Memoria (datos + instrucciones)', parent: null },
+      ],
+      links: [{ from: 'cpu', to: 'mem', kind: 'shared', label: 'bus único', bidirectional: true }],
+    },
+    {
+      note: 'Harvard: la CPU tiene dos buses independientes, uno hacia la memoria de instrucciones y otro hacia la de datos, así puede leer ambos al mismo tiempo.',
+      nodes: [
+        { id: 'cpu', value: 'CPU', parent: null },
+        { id: 'memI', value: 'Memoria de instrucciones', parent: null },
+        { id: 'memD', value: 'Memoria de datos', parent: null },
+      ],
+      links: [
+        { from: 'cpu', to: 'memI', kind: 'tree', label: 'bus de instrucciones', bidirectional: true },
+        { from: 'cpu', to: 'memD', kind: 'tree', label: 'bus de datos', bidirectional: true },
+      ],
+    },
+  ],
+}} />
+
+### CISC vs RISC
+
+Clasificación por el tipo de conjunto de instrucciones que ejecuta la CPU:
+
+| | CISC (Complex Instruction Set Computer) | RISC (Reduced Instruction Set Computer) |
+|---|---|---|
+| Ciclos de reloj | Muchos ciclos por instrucción | Un ciclo por instrucción |
+| Uso de memoria | Mejor aprovechamiento de la RAM (instrucciones más "densas") | Acceso intenso a RAM (instrucciones simples y frecuentes) |
+| Ejemplos | AMD y Intel x86 | ARM y SPARC |
+
+### Microprocesador (MPU) vs microcontrolador (MCU)
+
+En 1971 aparecen los dos hitos que fijan esta distinción: el **Intel 4004** (microprocesador,
+arquitectura Von Neumann, necesita memoria e I/O externos) y el **TMS 1000** (microcontrolador,
+concepto de "computadora en un chip", arquitectura Harvard, con memoria e I/O integrados para
+sistemas embebidos).
+
+| Aspecto | Microprocesador (MPU) | Microcontrolador (MCU) |
+|---|---|---|
+| Definición | Solo CPU; necesita componentes externos (RAM, ROM, I/O) | Sistema completo en un chip (CPU + RAM + ROM + I/O) |
+| Integración | Baja (solo la CPU adentro) | Alta (CPU, memoria y periféricos adentro) |
+| Uso principal | Cómputo complejo (PCs, servidores) | Sistemas embebidos (electrodomésticos, robots) |
+| Consumo de energía | Mayor | Menor |
+| Capacidad de proceso | Alta velocidad, multitarea potente | Velocidad moderada, optimizada para control |
+| Gestión de memoria | RAM/ROM externas | RAM/ROM internas |
+| Costo | Más caro | Más barato |
+| Ejemplos típicos | Intel Core i7, AMD Ryzen | ATmega328P (Arduino), STM32, ESP32 |
+| Complejidad de programación | Sistemas operativos complejos (Linux, Windows) | Firmware simple o RTOS |
+
+**Ejemplos de microprocesadores**: Intel Quark SoC, Broadcom BCM2835, ARM11, Cortex A20 (los
+pines de estas placas vienen soldados, pensados para desarrollo).
+
+**Ejemplos de microcontroladores**: Arduino, Atmel AVR, PIC (Microchip Technology).
+
+### Pines comunes de un microcontrolador
+
+| Pin | Nombre | Función |
+|---|---|---|
+| Vin | Voltage in | Voltaje de entrada / alimentación |
+| GND | Ground | Tierra / referencia de 0 V |
+| RST | Reset | Reinicia el programa en ejecución |
+| CLK | Clock | Señal de reloj del sistema |
+| TX | Transmit | Transmisión de datos serial |
+| GPIO | General Purpose Input/Output | Pin digital configurable como entrada o salida |
+| I2C | Inter-Integrated Circuit | Bus serial de dos hilos (SDA/SCL) para comunicarse con periféricos |
+
+### Dónde aparecen en la arquitectura IoT
+
+La arquitectura general de un sistema IoT se puede ver como un embudo: *Things* (los
+dispositivos físicos) → *Local network* → *Global network* → *Cloud service* → *Controlling
+device*. El MCU vive **dentro del "Thing"**: es el chip que lee sensores y acciona salidas en
+el nodo embebido. El MPU aparece donde se necesita cómputo general: un gateway tipo Raspberry
+Pi en la red local, o el smartphone/servidor que hace de "controlling device" y de nube.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Arquitectura IoT: ¿dónde vive el MCU y dónde el MPU?',
+  steps: [{
+    note: 'El MCU está embebido en el "Thing" (sensor/actuador). El MPU aparece donde hay cómputo general: el gateway de red local y el dispositivo de control (smartphone) o los servidores en la nube.',
+    nodes: [
+      { id: 'things', value: 'Things (sensores/actuadores)', parent: null, state: 'marked', tag: 'MCU' },
+      { id: 'local', value: 'Local network (gateway)', parent: null, state: 'answer', tag: 'MPU' },
+      { id: 'global', value: 'Global network (Internet)', parent: null },
+      { id: 'cloud', value: 'Cloud service', parent: null, state: 'answer', tag: 'MPU' },
+      { id: 'ctrl', value: 'Controlling device (smartphone)', parent: null, state: 'answer', tag: 'MPU' },
+    ],
+    links: [
+      { from: 'things', to: 'local', kind: 'tree' },
+      { from: 'local', to: 'global', kind: 'tree' },
+      { from: 'global', to: 'cloud', kind: 'tree' },
+      { from: 'cloud', to: 'ctrl', kind: 'tree' },
+    ],
+  }],
+}} />
+
+## Método paso a paso
+
+Para decidir si un chip dado es MCU o MPU (y dónde ubicarlo en un diagrama de arquitectura):
+
+1. **¿Trae memoria e I/O integrados, o los necesita externos?** Integrados → MCU. Externos
+   (necesita RAM/ROM/I/O aparte) → MPU.
+2. **¿Para qué se usa?** Control embebido de un proceso acotado (leer sensores, mover un
+   motor) → MCU. Cómputo de propósito general (SO completo, multitarea) → MPU.
+3. **¿Qué arquitectura de memoria usa?** Harvard (buses separados, típico de control en
+   tiempo real) → suele ser MCU. Von Neumann (bus compartido) → suele ser MPU o DSP.
+4. **¿Dónde se ubicaría en la arquitectura IoT?** Si va soldado al nodo sensor/actuador →
+   capa *Things*, es el MCU del sistema. Si es la placa que agrega, procesa o reenvía datos de
+   varios nodos → capa *Local/Global network* o *Cloud*, es un MPU.
+
+## Ejemplo resuelto
+
+Un **Arduino Uno** (ATmega328P) controla un sensor de humedad y un motor DC; una **Raspberry
+Pi 4** recibe esos datos por Wi-Fi y los sube a la nube.
+
+- ATmega328P: memoria y periféricos integrados en un solo chip, arquitectura Harvard,
+  firmware simple sin sistema operativo → es un **MCU**. En la arquitectura IoT ocupa la capa
+  *Things* (dentro del nodo agrícola).
+- Raspberry Pi 4 (Broadcom BCM2835/2711): necesita memoria RAM externa y corre Linux
+  (sistema operativo completo, multitarea) → es un **MPU**. En la arquitectura ocupa la capa
+  *Local network* (gateway) o *Controlling device*, según el rol que cumpla.
+
+## Errores típicos
+
+- Confundir "microcontrolador" con "placa de desarrollo": el Arduino Uno es una placa; el
+  MCU es el chip ATmega328P soldado en ella.
+- Pensar que RISC siempre es "más simple de programar": RISC reduce el hardware de
+  decodificación, pero exige más instrucciones (más accesos a RAM) para lograr lo mismo que
+  una instrucción CISC.
+- Asumir que todo lo que está "adentro del gateway" es un MCU: un gateway (p. ej. Raspberry
+  Pi) suele llevar un MPU corriendo Linux, no un MCU.
+- Olvidar que Harvard no es "sin memoria compartida en absoluto": lo que se separa son los
+  buses de instrucciones y datos, no necesariamente los chips físicos de memoria.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un fabricante anuncia un chip que trae CPU, RAM y ROM en una sola pastilla, pensado para correr el firmware de una lavadora sin sistema operativo. a) ¿Es un MCU o un MPU? b) ¿En qué capa de la arquitectura IoT (Things, Local network, Global network, Cloud service, Controlling device) lo ubicarías?",
+  hints: [
+    "Revisa si necesita memoria/I2O externos o los trae integrados.",
+    "Piensa en qué tan cerca del sensor/actuador físico está corriendo ese firmware.",
+  ],
+}}>
+
+**1. Integración.** El chip trae CPU + RAM + ROM en la misma pastilla, sin memoria externa:
+
+| Criterio | Este chip | MCU | MPU |
+|---|---|---|---|
+| Memoria/I-O | Integrados | Integrados | Externos |
+| Sistema operativo | Sin SO (firmware simple) | Firmware/RTOS | SO completo |
+| Uso | Control de un proceso acotado (lavadora) | Control embebido | Cómputo general |
+
+$$\Rightarrow \boxed{\text{Es un MCU}}$$
+
+**2. Capa de arquitectura IoT.** El chip corre pegado al actuador/sensor físico de la lavadora; no agrega ni reenvía datos de otros nodos.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Ubicación del MCU de la lavadora',
+  steps: [{
+    note: 'El chip vive dentro del "Thing" (la lavadora): es el MCU embebido, igual que el ATmega328P del ejemplo resuelto.',
+    nodes: [
+      { id: 'things', value: 'Things (lavadora)', parent: null, state: 'answer', tag: 'MCU' },
+      { id: 'local', value: 'Local network (gateway)', parent: null },
+      { id: 'global', value: 'Global network (Internet)', parent: null },
+      { id: 'cloud', value: 'Cloud service', parent: null },
+      { id: 'ctrl', value: 'Controlling device', parent: null },
+    ],
+    links: [
+      { from: 'things', to: 'local', kind: 'tree' },
+      { from: 'local', to: 'global', kind: 'tree' },
+      { from: 'global', to: 'cloud', kind: 'tree' },
+      { from: 'cloud', to: 'ctrl', kind: 'tree' },
+    ],
+  }],
+}} />
+
+$$\boxed{\text{Capa } \textit{Things}}$$
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Explica por qué el Intel 4004 ($1971$) se clasifica como microprocesador y el TMS 1000 ($1971$), del mismo año, se clasifica como microcontrolador, aunque ambos son \"el primer chip\" de su categoría.",
+  hints: [
+    "Compara qué trae cada uno integrado en la pastilla.",
+    "Relaciona con Von Neumann vs Harvard.",
+  ],
+}}>
+
+**1. Qué trae integrado cada chip:**
+
+| Aspecto | Intel 4004 | TMS 1000 |
+|---|---|---|
+| Integración | Solo CPU | CPU + memoria + I/O |
+| Arquitectura | Von Neumann | Harvard |
+| Necesita memoria/I-O externos | Sí | No |
+| Categoría | Microprocesador | Microcontrolador |
+
+**2. Conclusión.** La fecha no define la categoría: la define el nivel de integración.
+
+$$\boxed{\text{4004 = MPU (solo CPU)} \qquad \text{TMS 1000 = MCU (CPU+RAM+ROM+I/O)}}$$
+
+</ExerciseBlock>

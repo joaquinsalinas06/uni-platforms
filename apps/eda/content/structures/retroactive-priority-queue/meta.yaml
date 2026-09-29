@@ -1,0 +1,54 @@
+id: retroactive-priority-queue
+title: "Cola de prioridad retroactiva"
+type: structure
+week: week-03
+
+prerequisites: ["retroactivity", "binary-heap"]
+buildsOn: ["retroactivity"]
+usedBy: []
+
+complexity:
+  bridge:
+    worst: O(1)
+    reasoning: >-
+      El profesor no da un costo propio para "decidir si un tiempo es
+      puente" ni para "encontrar el más cercano": el concepto se presenta
+      como definición (páginas 56-57), no como algoritmo con su propia
+      cota. El costo real de encontrar el puente más cercano queda
+      encapsulado en la estructura agregada del BST balanceado de
+      compute-m, que es donde el mazo sí anota una cota.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#56-57"
+  compute-m:
+    worst: O(r)
+    reasoning: >-
+      El cálculo ingenuo de M (recorrer todo lo eliminado desde t) es
+      "de vuelta al O(r) del rollback genérico" (páginas 54-55) — el
+      profesor lo da explícitamente como el costo que el puente + BST
+      balanceado con agregados existen para evitar, sin desarrollar ahí
+      mismo la cota mejorada con su propio análisis.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#54-55"
+  insert-retroactive:
+    worst: O(lg n)
+    reasoning: >-
+      Cota amortizada citada como resultado externo (Demaine, Iacono,
+      Langerman, 2007), no demostrada por el profesor: "con la estructura
+      de puentes mantenida sobre un árbol balanceado, Insert y Delete
+      retroactivos parciales sobre una priority queue cuestan O(lg n)
+      amortizado" (páginas 63-64). El argumento propio del profesor es
+      estructural (el efecto neto se reduce a un único intercambio, páginas
+      50-51); el paso de ese argumento a la cota O(lg n) amortizada no
+      está desarrollado en el mazo.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#63-64"
+  delete-retroactive:
+    worst: O(lg n)
+    reasoning: >-
+      Misma cota y misma cita que insert-retroactive: el mazo menciona
+      Delete retroactivo sólo en el enunciado del resultado final (páginas
+      63-64), sin pseudocódigo, sin fórmula de efecto neto propia y sin
+      ejemplo. No hay desarrollo del profesor más allá de esta línea.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#63-64"
+
+professorAnalysisStyle: "argumento estructural"
+hasVisualization: true
+visualizationType: persistent
+placeholder: false

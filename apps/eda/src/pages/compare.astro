@@ -1,0 +1,131 @@
+---
+import Base from '../layouts/Base.astro';
+import { structureIds, loadMeta } from '../lib/structures';
+import { knowledgeMap } from '../lib/knowledge-map';
+import { growthWeight } from '../lib/complexity';
+import type { Meta } from '../lib/schemas';
+
+// El curso ES comparar montículos: el profesor tiene su propia tabla
+// comparativa binario/binomial/Fibonacci (insert, find-min, extract-min,
+// union, decrease-key, delete — content/analysis/week-01-sem-1-heaps-i.md
+// § binary-heap, y la de Fibonacci en el análisis de semana 2).
+const HEAP_FAMILY = ['binary-heap', 'binomial-heap', 'fibonacci-heap'] as const;
+// Exactamente esas 6 operaciones, en ese orden — no la unión de todo lo que
+// cada estructura declara (max-heapify, binomial-link, cascading-cut... son
+// pasos internos, no lo que el profesor pone lado a lado).
+const OPERATIONS = ['insert', 'find-min', 'extract-min', 'union', 'decrease-key', 'delete'] as const;
+
+const onDisk = new Set(structureIds());
+const columns = HEAP_FAMILY.map((id) => ({
+  id,
+  title: knowledgeMap.topics[id]?.title ?? id,
+  meta: onDisk.has(id) ? loadMeta(id) : null,
+}));
+
+type Cell = { kind: 'missing' } | { kind: 'no-data' } | { kind: 'value'; meta: Meta['complexity'][string] };
+
+function cellFor(meta: Meta | null, op: string): Cell {
+  if (!meta) return { kind: 'missing' };
+  const c = meta.complexity[op];
+  if (!c) return { kind: 'no-data' };
+  return { kind: 'value', meta: c };
+}
+---
+
+<Base title="Comparar montículos" crumb="comparar">
+  <header class="stagger mb-12">
+    <p class="tag">comparación</p>
+    <h1 class="mt-2 max-w-[24ch] text-[clamp(2rem,5vw,3.25rem)] leading-[1.02] font-semibold tracking-[-0.03em]">
+      Montículos
+    </h1>
+    <p class="mt-5 max-w-[62ch] text-[1.0625rem] leading-relaxed text-[var(--muted)]">
+      El profesor compara binario, binomial y Fibonacci lado a lado. Muchas celdas quedan
+      vacías a propósito — casi nunca da mejor/promedio/espacio, y rellenarlas sería
+      inventar. Toca el peor caso de una celda para ver su razonamiento.
+    </p>
+  </header>
+
+  <div class="reveal overflow-hidden rounded-lg border border-[var(--rule)]">
+    <div class="overflow-x-auto">
+      <table class="w-full border-collapse">
+        <thead>
+          <tr class="bg-[var(--fill)]">
+            <th class="tag border-b border-[var(--rule)] px-4 py-2.5 text-left font-medium whitespace-nowrap">
+              operación
+            </th>
+            {
+              columns.map((c) => (
+                <th class="border-b border-[var(--rule)] px-4 py-2.5 text-left font-medium whitespace-nowrap">
+                  {c.meta ? (
+                    <a href={`/structures/${c.id}`} class="no-underline hover:text-[var(--accent)]">
+                      {c.title}
+                    </a>
+                  ) : (
+                    <span class="text-[var(--faint)]">
+                      {c.title} <span class="tag ml-1">pendiente</span>
+                    </span>
+                  )}
+                </th>
+              ))
+            }
+          </tr>
+        </thead>
+        <tbody>
+          {
+            OPERATIONS.map((op) => (
+              <tr class="border-b border-[var(--rule)] last:border-0 hover:bg-[var(--fill)]">
+                <td class="px-4 py-3.5 font-mono text-[0.9375rem] font-medium whitespace-nowrap">{op}</td>
+                {columns.map((col) => {
+                  const cell = cellFor(col.meta, op);
+                  if (cell.kind === 'missing') {
+                    return (
+                      <td class="px-4 py-3.5 text-center">
+                        <span class="tag" title="la estructura todavía no está generada">
+                          —
+                        </span>
+                      </td>
+                    );
+                  }
+                  if (cell.kind === 'no-data') {
+                    return (
+                      <td class="px-4 py-3.5 text-center">
+                        <span class="text-[var(--faint)]" title="esta estructura no tiene esta operación">
+                          n/a
+                        </span>
+                      </td>
+                    );
+                  }
+                  const c = cell.meta;
+                  return (
+                    <td class="px-4 py-3.5">
+                      <details class="group">
+                        <summary class="flex cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+                          <span class="font-mono text-[1.0625rem] font-medium whitespace-nowrap">{c.worst}</span>
+                          <span class="flex h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-[var(--sunken)]">
+                            <span
+                              class="h-full rounded-full bg-[var(--accent)]"
+                              style={`width:${growthWeight(c.worst) * 10}%`}
+                            />
+                          </span>
+                        </summary>
+                        <div class="mt-2 max-w-[38ch] rounded-r border-l-2 border-[var(--accent)] bg-[var(--accent-wash)] py-2 pr-3 pl-3">
+                          <p class="text-[0.8125rem] leading-relaxed">{c.reasoning}</p>
+                          {c.source && <p class="tag mt-1">{c.source}</p>}
+                        </div>
+                      </details>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="tag mt-4">
+    — = estructura sin generar todavía · n/a = esta estructura no tiene esa operación · toca
+    el peor caso para el razonamiento
+  </p>
+</Base>

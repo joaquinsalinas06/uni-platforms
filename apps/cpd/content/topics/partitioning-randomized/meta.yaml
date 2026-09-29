@@ -1,0 +1,51 @@
+id: partitioning-randomized
+title: "Particionamiento de datos/tareas y algoritmos aleatorizados"
+type: concept
+unit: u2
+
+prerequisites: ["performance-metrics"]
+buildsOn: []
+usedBy: ["mpi-collectives"]
+
+complexity:
+  comm-cost-model:
+    worst: "T_{comm} = f(p)(\\alpha + x\\beta)"
+    reasoning: >-
+      alpha es la latencia (tiempo de enviar un mensaje de tamaño cero) y
+      beta el tiempo de enviar un byte (inverso del ancho de banda); x es el
+      tamaño del mensaje. f(p) depende de la topologia de comunicacion usada
+      (lineal, arbol, etc), y multiplica el costo base segun cuantos saltos
+      o mensajes requiere esa topologia para distribuir/recolectar entre p
+      procesos.
+    source: "U2.4-Diseño_en_paralelo-Particionamiento-Random.pdf#4"
+  broadcast-linear:
+    worst: "T_{bcast} = O(p(\\alpha + m\\beta))"
+    reasoning: >-
+      En un arreglo lineal de p procesos, el maestro reenvia el mensaje a su
+      vecino y este al siguiente, formando una cadena de hasta p-1 saltos (si
+      el maestro esta en un extremo) o p/2 (si esta en el medio); cada salto
+      paga la latencia alpha mas el tiempo de transferir el mensaje de
+      tamaño m, de ahi el factor p multiplicando (alpha + m*beta).
+    source: "U2.4-Diseño_en_paralelo-Particionamiento-Random.pdf#7"
+  broadcast-tree:
+    worst: "T_{bcast} = O(\\log(p)(\\alpha + m\\beta))"
+    reasoning: >-
+      Con p procesadores dispuestos en árbol binario, el broadcast desciende
+      un nivel del arbol por paso: en cada uno de los log p niveles se
+      duplica el numero de receptores, por lo que solo se necesitan log p
+      saltos en vez de p, reduciendo el factor lineal a logaritmico.
+    source: "U2.4-Diseño_en_paralelo-Particionamiento-Random.pdf#8"
+  granularity:
+    worst: "G = \\tfrac{T_{comp}}{T_{comm}}"
+    reasoning: >-
+      La granularidad es el cociente entre el tiempo de computo y el tiempo
+      de comunicacion de una tarea paralela. Un G alto (paralelismo grueso)
+      favorece el balance de Tcomm a costa de dificultar el balance de
+      cargas; un G bajo (paralelismo fino) favorece el balance de cargas a
+      costa de mas comunicacion relativa.
+    source: "U2.4-Diseño_en_paralelo-Particionamiento-Random.pdf#38"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: network-topology
+placeholder: false

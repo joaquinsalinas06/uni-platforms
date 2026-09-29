@@ -1,0 +1,33 @@
+id: access-lemma
+title: "Lema de Acceso"
+type: concept
+week: week-06
+
+prerequisites: ["splay-tree", "potential-method", "logarithm-lemma"]
+buildsOn: ["potential-method"]
+usedBy: ["static-optimality"]
+
+# No es una estructura con operaciones propias: es el teorema que le pone
+# cota al Splay que ya vive en /structures/splay-tree/operations/splay. La
+# única cota que el profesor enuncia aquí es la del lema mismo (#23), y va
+# tal cual, sin best/avg/space — el mazo nunca los da para este resultado y
+# rellenarlos sería inventar.
+complexity:
+  splay:
+    worst: "3(r(t) − r(x)) + 1 amortizado"
+    reasoning: >-
+      Cota del Lema de Acceso (Sleator & Tarjan, 1985), con r(x) = lg s(x) y
+      s(x) la suma de pesos del subárbol de x. Sale de sumar la cota de cada
+      paso: cada zig-zig y cada zig-zag cuesta, amortizado, a lo más
+      3(r'(x) − r(x)), y el único zig posible agrega el +1. Al sumar la
+      cadena de pasos los rangos intermedios se cancelan (suma telescópica) y
+      quedan sólo el rango final de x —que es r(t), porque x termina siendo
+      la raíz— y su rango inicial. Con todos los pesos w_x = 1 se tiene
+      s(t) = n y r(x) ≥ 0, así que la cota se lee como O(lg n) amortizado,
+      que es exactamente la deuda que la semana 5 dejó enunciada sin probar.
+    source: "Sem6_Dynamic_Optimality_II.pdf#23"
+
+professorAnalysisStyle: potential-method
+hasVisualization: true
+visualizationType: tree
+placeholder: false

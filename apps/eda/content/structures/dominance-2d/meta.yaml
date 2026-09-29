@@ -1,0 +1,25 @@
+id: dominance-2d
+title: "Dominancia 2D (D₁)"
+type: structure
+week: week-05
+
+prerequisites: ["vertical-ray-shooting"]
+buildsOn: ["vertical-ray-shooting"]
+usedBy: ["d2-bound-x"]
+
+complexity:
+  dominance-query:
+    worst: "O(lg n + k)"
+    space: "O(n)"
+    reasoning: >-
+      Conteo directo por pasos, output-sensitive: O(lg n) de la búsqueda
+      binaria inicial en la columna izquierda, más O(1) por cada cara
+      visitada. Se visita exactamente una cara por punto reportado (más un
+      puñado de caras vacías), así que el total es O(lg n + k) (#31). El
+      espacio es O(n) segmentos porque no todos los rayos se extienden hasta
+      el final: algunos se cortan (#25).
+    source: "Sem5_Fractional_Cascading_II.pdf#26-31"
+
+professorAnalysisStyle: "conteo directo por pasos, output-sensitive"
+hasVisualization: true
+placeholder: false

@@ -1,0 +1,83 @@
+id: fibonacci-heap
+title: "Montículo de Fibonacci"
+type: structure
+week: week-02
+
+prerequisites: ["binomial-heap", "potential-method"]
+buildsOn: ["binomial-heap"]
+usedBy: []
+
+complexity:
+  insert:
+    worst: "O(1)"
+    reasoning: >-
+      Costo real O(1): sólo se agrega x como árbol de un solo nodo a la
+      lista de raíces y se actualiza min(H) si hace falta, sin reorganizar
+      nada más. Con el potencial Φ(H) = t(H) + 2·m(H), insertar sube t(H)
+      en 1 y no toca m(H), así que ΔΦ = 1; el costo amortizado
+      ĉ = O(1) + 1 = O(1).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#7-9,34-35"
+  union:
+    worst: "O(1)"
+    reasoning: >-
+      Costo real O(1): concatenar dos listas circulares de raíces es
+      empalme de punteros, no recorrido. t(H) y m(H) no cambian al
+      concatenar (se suman, no se recalculan), así que ΔΦ = 0 y el costo
+      amortizado ĉ = O(1) + 0 = O(1).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#7-9,34-35"
+  cut:
+    worst: "O(1)"
+    reasoning: >-
+      Costo real O(1): quitar x de la lista de hijos de p y agregarlo a la
+      lista de raíces es empalme de punteros más decrementar grado(p), sin
+      recorrer nada. El profesor lo enuncia directo, sin distinguir
+      amortizado (el análisis amortizado se hace sobre Decrease-Key, que es
+      quien la invoca).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#12-13"
+  cascading-cut:
+    worst: "O(c)"
+    reasoning: >-
+      Costo real proporcional a la longitud c de la cadena de cortes: cada
+      nivel de recursión hace O(1) de trabajo (una marca, o un Cut más
+      llamada recursiva al padre) y la recursión para en la primera raíz o
+      en el primer nodo sin marcar que encuentra. El profesor no da esta
+      cota por separado: se absorbe dentro del análisis amortizado de
+      Decrease-Key, que es su único invocador en este mazo.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#12-13,36-38"
+  decrease-key:
+    worst: "O(c)"
+    reasoning: >-
+      Costo real O(c) con c el número de cortes en cascada disparados
+      (página 37). Con Φ(H) = t(H) + 2·m(H): cada corte agrega un árbol a
+      la raíz (t(H) sube 1) y desmarca al nodo cortado (m(H) baja 1), salvo
+      el último nodo de la cadena que sólo se marca (m(H) sube 1) sin
+      cortarse; el profesor acota ΔΦ ≤ 4 − c, y el costo amortizado
+      ĉᵢ = O(c) + (4 − c) = O(1): los c cortes reales quedan pagados por la
+      caída de potencial que ellos mismos producen.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#14-15,36-38"
+  consolidate:
+    worst: "O(D(n) + t(H))"
+    reasoning: >-
+      Costo real, no amortizado: recorrer las t(H) raíces originales más el
+      trabajo de enlazar por grado en el arreglo A[0..D(n)], cuyo tamaño es
+      O(D(n)) con D(n) = O(lg n) el grado máximo posible (cota probada por
+      la recurrencia de Fibonacci). Es la pieza real que Extract-Min paga y
+      cuya reducción de t(H) (de hasta t(H) árboles a lo más D(n)+1) es lo
+      que hace que el análisis amortizado de Extract-Min salga O(D(n)).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#22-23"
+  extract-min:
+    worst: "O(D(n) + t(H))"
+    reasoning: >-
+      Costo real O(D(n) + t(H)): mover los hijos de la raíz mínima a la
+      lista de raíces es O(grado del mínimo) ≤ O(D(n)), y Consolidate
+      recorre las t(H) raíces resultantes. Con Φ(H) = t(H) + 2·m(H):
+      después de consolidar quedan a lo más D(n) + 1 raíces y m(H) no
+      aumenta, así que ΔΦ ≤ (D(n) + 1) − t(H); el costo amortizado
+      ĉ = O(D(n) + t(H)) + (D(n) + 1) − t(H) = O(D(n)) = O(lg n), porque
+      D(n) = O(lg n) por la cota de grado vía números de Fibonacci.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (1)-1.pdf#19-21,39-42"
+
+professorAnalysisStyle: potential-method
+hasVisualization: true
+visualizationType: tree
+placeholder: false

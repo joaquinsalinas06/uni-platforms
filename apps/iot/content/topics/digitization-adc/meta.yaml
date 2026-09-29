@@ -1,0 +1,27 @@
+id: digitization-adc
+title: Digitalización y ADC
+type: method
+unit: s4
+prerequisites: [signals-domains]
+buildsOn: []
+usedBy: [arduino-sensors]
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Instante de muestreo
+    tex: "t = nT_s = \\dfrac{n}{f_s}"
+    reasoning: "Cada muestra n de la señal discreta corresponde al instante continuo t = n·Ts, con fs = 1/Ts la frecuencia de muestreo."
+    source: "Sem4_IoTT-SignalRepr#24"
+  - name: Voltaje del bit menos significativo (VLSB)
+    tex: "V_{LSB} = \\dfrac{V_H - V_L}{2^{n}}"
+    reasoning: "Reparte el rango de voltaje del ADC (VH - VL) en 2^n niveles equiespaciados; es el cambio de voltaje más pequeño que el ADC puede distinguir."
+    source: "Sem4_IoTT-SignalRepr#28"
+  - name: Código digital a partir del voltaje analógico
+    tex: "D = \\mathrm{round}\\left(\\dfrac{V_{in} - V_L}{V_{LSB}}\\right)"
+    reasoning: "Invierte la relación lineal código-voltaje para hallar el entero D que el ADC entrega dado un voltaje de entrada Vin."
+    source: "Sem04_LAB_Sensores#12"
+  - name: Voltaje analógico a partir del código digital
+    tex: "V_{in} = V_L + D \\cdot V_{LSB}"
+    reasoning: "Relación lineal usada para reconstruir el voltaje equivalente a partir de una lectura digital D del ADC, como en el ejemplo del laboratorio (D = 670, 12 bits)."
+    source: "Sem04_LAB_Sensores#12"

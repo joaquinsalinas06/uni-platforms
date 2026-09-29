@@ -1,0 +1,433 @@
+---
+kind: theory
+title: Arduino y sensores comerciales
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Todo lo visto sobre señales y ADC se vuelve concreto en el laboratorio: una placa
+Arduino lee sensores comerciales por sus pines analógicos y digitales, y un programa
+en su IDE decide qué hacer con esa lectura. Esta página junta el hardware (GPIO,
+pull-up/pull-down, ADC de 10 bits) con los sensores más usados en el curso y el
+código mínimo para leerlos.
+
+## Conceptos
+
+### Microcontrolador y placas de desarrollo
+
+Un **microcontrolador (MCU)** integra CPU, memoria y periféricos de E/S en un solo
+chip, pensado para tareas específicas sin sistema operativo complejo — a diferencia
+de un **microprocesador (MPU)**, que necesita memoria y E/S externos (ver el tema
+*Microcontroladores y microprocesadores* para la comparación completa). **Arduino**
+es una plataforma de hardware y software abiertos: el hardware es una placa (PCB) con
+un MCU y pines de E/S; el software es el Arduino IDE, que compila y carga un programa
+("sketch") escrito en una variante de C++.
+
+| | Arduino Uno R3 (ATmega328P) | Arduino Mega (ATmega2560) |
+|---|---|---|
+| Reloj | 16 MHz | 16 MHz |
+| Pines digitales E/S | 14 (6 con PWM) | 54 (15 con PWM) |
+| Entradas analógicas | 6 | 16 |
+| Memoria flash (programa) | 32 KB | 256 KB (8 KB para bootloader) |
+| SRAM | 2 KB | 8 KB |
+| EEPROM | 1 KB | 4 KB |
+| ADC | 10 bits | 10 bits |
+
+Todo sketch de Arduino tiene dos funciones obligatorias: `setup()` (corre una sola vez
+al encender, para configurar pines y comunicaciones) y `loop()` (corre en bucle
+infinito después, para leer sensores y accionar salidas).
+
+### GPIO digital: pinMode, digitalWrite, digitalRead
+
+Los pines digitales solo manejan dos niveles: HIGH (≈5 V) y LOW (0 V).
+
+- **`pinMode(pin, modo)`**: configura un pin como `OUTPUT` (el Arduino entrega
+  voltaje) o `INPUT` (el Arduino detecta si hay voltaje externo). Va siempre dentro
+  de `setup()`.
+- **`digitalWrite(pin, estado)`**: en un pin `OUTPUT`, fija su voltaje: `HIGH` (5 V)
+  o `LOW` (0 V). En un pin configurado como `INPUT`, en cambio, activa (`HIGH`) o
+  desactiva (`LOW`) la resistencia de pull-up interna del pin — aunque para eso se
+  recomienda usar directamente `INPUT_PULLUP` en `pinMode()`.
+- **`digitalRead(pin)`**: lee el estado lógico de un pin `INPUT` y devuelve `HIGH` o
+  `LOW`.
+- **`INPUT_PULLUP`**: modo de pin que habilita la resistencia de pull-up interna del
+  microcontrolador, para no tener que cablear una resistencia externa.
+
+### Pull-up vs. pull-down
+
+Un botón por sí solo no fija un nivel definido cuando está abierto (el pin quedaría
+"flotando"). Para eso se usa una resistencia de referencia:
+
+- **Pull-down**: el pin se conecta a tierra (GND) a través de una resistencia; el
+  botón conecta el pin a +5 V. En reposo (botón abierto) el pin lee **LOW** (0 V); al
+  presionar, lee **HIGH** (5 V).
+- **Pull-up**: el pin se conecta a +5 V a través de una resistencia; el botón conecta
+  el pin a GND. En reposo el pin lee **HIGH**; al presionar, lee **LOW** (por eso el
+  código para pull-up suele evaluar `if (digitalRead(pin) == LOW)` para detectar
+  "presionado").
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Configuración pull-down (R = 20 kΩ)',
+  steps: [
+    {
+      note: 'Botón sin presionar (abierto): el pin queda conectado a tierra solo a través de R1, así que lee 0 V (LOW).',
+      circuit: {
+        nodes: [
+          { id: 'gnd', x: 0, y: 8, ground: true, label: 'GND' },
+          { id: 'vplus', x: 0, y: 0, label: '+5V' },
+          { id: 'top', x: 4, y: 0 },
+          { id: 'pin', x: 4, y: 4, label: 'pin 3', showPotential: true },
+          { id: 'rbot', x: 4, y: 8 },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'gnd', to: 'vplus', value: 5, label: 'E' },
+          { id: 'w1', kind: 'wire', from: 'vplus', to: 'top' },
+          { id: 'SW', kind: 'button', from: 'top', to: 'pin', value: 0, label: 'SW' },
+          { id: 'R1', kind: 'resistor', from: 'pin', to: 'rbot', value: 20000, label: 'R1' },
+          { id: 'w2', kind: 'wire', from: 'rbot', to: 'gnd' },
+        ],
+      },
+      expect: { 'V(pin)': 0 },
+    },
+    {
+      note: 'Botón presionado (cerrado): conecta el pin directamente a +5V; digitalRead(pin) devuelve HIGH.',
+      circuit: {
+        nodes: [
+          { id: 'gnd', x: 0, y: 8, ground: true, label: 'GND' },
+          { id: 'vplus', x: 0, y: 0, label: '+5V' },
+          { id: 'top', x: 4, y: 0 },
+          { id: 'pin', x: 4, y: 4, label: 'pin 3', showPotential: true },
+          { id: 'rbot', x: 4, y: 8 },
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'gnd', to: 'vplus', value: 5, label: 'E' },
+          { id: 'w1', kind: 'wire', from: 'vplus', to: 'top' },
+          { id: 'SW', kind: 'button', from: 'top', to: 'pin', value: 1, label: 'SW', state: 'answer' },
+          { id: 'R1', kind: 'resistor', from: 'pin', to: 'rbot', value: 20000, label: 'R1' },
+          { id: 'w2', kind: 'wire', from: 'rbot', to: 'gnd' },
+        ],
+      },
+      expect: { 'V(pin)': 5 },
+    },
+  ],
+}} />
+
+> **Nota de apoyo** (no está en el material): el circuito pull-up es el mismo
+> esquema espejado — la resistencia va del pin a +5 V, y el botón del pin a GND —,
+> por eso no se repite el diagrama; solo cambia a qué rail queda conectada la
+> resistencia y a cuál el botón.
+
+### Entrada analógica: analogRead
+
+`analogRead(pin)` lee el voltaje de un pin analógico usando el ADC interno de la
+placa. Arduino Uno/Mega usan un ADC de **10 bits multicanal**: mapea el rango de 0 al
+voltaje de operación (5 V o 3.3 V) a un entero entre 0 y 1023. Con referencia de 5 V:
+
+$$V = \text{lectura} \times \frac{5}{1024}$$
+
+Nunca se debe usar `pinMode()` sobre un pin puramente analógico para "declararlo como
+entrada": `analogRead()` ya lo lee directamente; usar `pinMode()` ahí lo volvería
+digital.
+
+### Comunicación serial
+
+Los pines TX/RX (o el puerto USB) permiten enviar datos entre la placa y la
+computadora. Se inicializa una sola vez en `setup()` con `Serial.begin(baudrate)`
+(p. ej. `Serial.begin(9600)` o `Serial.begin(115200)`); el **baudrate** es la
+velocidad de comunicación en bits por segundo, y debe coincidir en ambos lados. Para
+enviar datos: `Serial.print(...)` (sin salto de línea) y `Serial.println(...)` (con
+salto de línea).
+
+### Sensores comerciales
+
+- **LDR (fotorresistor)**: su resistencia baja cuando aumenta la luz incidente
+  (semiconductor de sulfuro de cadmio, CdS). Se usa casi siempre en un **divisor de
+  voltaje**, leyendo el voltaje intermedio por un pin ADC.
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'LDR en divisor de voltaje',
+  steps: [{
+    note: 'El LDR y R1 = 10 kΩ (Rbottom de la slide) forman un divisor: a más luz, menor resistencia del LDR, más voltaje llega al pin A0. LDR = 5 kΩ es un valor ilustrativo (derivado).',
+    circuit: {
+      nodes: [
+        { id: 'gnd', x: 0, y: 8, ground: true, label: 'GND' },
+        { id: 'vplus', x: 0, y: 0, label: '+5V' },
+        { id: 'top', x: 4, y: 0 },
+        { id: 'a0', x: 4, y: 4, label: 'A0', showPotential: true },
+        { id: 'bot', x: 4, y: 8 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'gnd', to: 'vplus', value: 5, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 'vplus', to: 'top' },
+        { id: 'LDR', kind: 'resistor', from: 'top', to: 'a0', value: 5000, label: 'LDR' },
+        { id: 'R1', kind: 'resistor', from: 'a0', to: 'bot', value: 10000, label: 'R1' },
+        { id: 'w2', kind: 'wire', from: 'bot', to: 'gnd' },
+      ],
+    },
+    expect: { 'V(a0)': 3.3333333 },
+  }],
+}} />
+
+Ejemplo de la slide (LDR en A1, con LED indicador en el pin 4):
+
+```cpp
+int LDR0 = A1; // Declaración de pin analógico para LDR
+int LED = 4;
+void setup() {
+  pinMode(LED, OUTPUT); // Se declara como salida DIGITAL.
+  Serial.begin(115200);
+  Serial.println("Inicio de Lectura");
+}
+void loop() {
+  int lecturaLDR = analogRead(LDR0);
+  Serial.print("Lectura LDR \t = ");
+  Serial.println(lecturaLDR);
+  // V = 5/1024 * lecturaLDR = 4.88 mV * lecturaLDR
+  Serial.print("Lectura en Voltaje \t= ");
+  Serial.print(4.88 * lecturaLDR);
+  Serial.println(" mV");
+  if (lecturaLDR > 750) digitalWrite(LED, 1);
+  else digitalWrite(LED, 0);
+  delay(1000);
+}
+```
+
+- **Sensor ultrasónico**: mide distancia con el tiempo de vuelo de una onda. El pin
+  **Trig** dispara un pulso ultrasónico; el pin **Echo** entrega un pulso cuya
+  duración es proporcional al tiempo que tarda en volver la onda reflejada.
+
+- **Humedad de suelo YL-69 (+ módulo YL-38)**: aplica una pequeña tensión entre los
+  terminales del sensor; al aumentar la humedad del suelo, baja su resistencia y
+  crece la corriente que circula. El módulo YL-38 (con comparador LM393) entrega dos
+  salidas: **A0** (analógica, proporcional a la humedad) y **D0** (digital, con
+  umbral ajustable por potenciómetro). En el sensor usado en el laboratorio, **una
+  lectura analógica más alta corresponde a suelo más seco** (menor humedad): hay que
+  invertir la escala al mapear a 0–100 %.
+
+```cpp
+// Lectura de humedad de suelo (YL-69/YL-38) en A1, mapeada a 0–100 %
+int humedadPin = A1;
+int lectura = analogRead(humedadPin);
+// Mayor humedad ⇒ menor lectura analógica: se invierte el mapeo (1023→0%, 0→100%)
+int humedad = map(lectura, 1023, 0, 0, 100);
+Serial.print("Humedad: ");
+Serial.print(humedad);
+Serial.println(" %");
+```
+
+- **DHT22 (temperatura y humedad)**: salida digital (no usa pin analógico), nuevo
+  dato como mínimo cada 2 s. Rango de temperatura −40 °C a 80 °C (precisión ±0.5 °C);
+  rango de humedad 0–100 %RH (precisión ±2 %RH).
+- **Termistor NTC**: resistencia que baja al subir la temperatura ("coeficiente de
+  temperatura negativo"); se conecta igual que el LDR, en un divisor de voltaje.
+- **Sensor de pulso cardiaco**: fototransistor + LED infrarrojo; el cambio de presión
+  sanguínea en los capilares del dedo cambia la resistencia del fototransistor.
+- **Sensores de gas MQ** (MQ-2 combustible/humo, MQ-3 alcohol, MQ-7 CO, MQ-135
+  calidad de aire): sensores electroquímicos analógicos; un calentador interno eleva
+  la temperatura para que el sensor reaccione ante el gas, cambiando su resistencia.
+
+## Método paso a paso
+
+Para conectar y leer cualquier sensor analógico simple (LDR, termistor, YL-69 en A0):
+
+1. Decide si es **digital** (HIGH/LOW, usa `pinMode`+`digitalRead`/`digitalWrite`) o
+   **analógico** (usa `analogRead`, sin `pinMode`).
+2. Si es analógico y de resistencia variable (LDR, termistor), arma un **divisor de
+   voltaje** con una resistencia fija y lee el nodo intermedio.
+3. En `setup()`: configura pines digitales con `pinMode` e inicializa
+   `Serial.begin(baudrate)` si vas a imprimir resultados.
+4. En `loop()`: lee el sensor, conviértelo a la unidad física que corresponda
+   (voltios con `lectura*5/1024`, o el mapeo 0–100 % que pida el sensor), decide una
+   acción (`digitalWrite`, comparación con umbral) e imprime por `Serial` si hace
+   falta depurar.
+5. Si el enunciado pide **detectar errores** en un sketch dado: revisa que
+   `Serial.begin()` esté bien escrito, que todo pin usado con `digitalWrite` tenga su
+   `pinMode(..., OUTPUT)` correspondiente en `setup()`, y que las constantes usadas
+   (`HIGH`, `LOW`, `ON`, etc.) estén realmente definidas en Arduino.
+
+## Ejemplo resuelto
+
+### Detección de errores en un sketch (estilo examen)
+
+```cpp
+#define Boton 3
+#define LED1 4
+#define LED2 5
+void setup() {
+  Serial.start(115200);
+  pinMode(Boton, INPUT);
+}
+void loop() {
+  Serial.print("Estado del boton: ");
+  Serial.println(digitalRead(Boton));
+  if (digitalRead(Boton)) {
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED2, 0);
+  } else {
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, ON);
+  }
+  delay(500);
+}
+```
+
+Errores encontrados:
+
+1. **`Serial.start(115200)`** no existe: la función correcta es **`Serial.begin(115200)`**.
+2. Falta **`pinMode(LED1, OUTPUT)`** y **`pinMode(LED2, OUTPUT)`** en `setup()`: sin
+   eso, `digitalWrite` sobre esos pines no tiene efecto garantizado (quedan en su
+   modo por defecto, `INPUT`).
+3. **`ON`** no es una constante definida en Arduino (solo existen `HIGH`/`LOW`, o
+   los valores enteros `1`/`0`): esa línea no compila. Debería ser
+   `digitalWrite(LED2, HIGH)`.
+
+Versión corregida (solo lo necesario):
+
+```cpp
+void setup() {
+  Serial.begin(115200);
+  pinMode(Boton, INPUT);
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+}
+// … loop() igual, cambiando "ON" por HIGH
+```
+
+## Errores típicos
+
+- Usar `pinMode()` sobre un pin puramente analógico antes de `analogRead()`: lo
+  vuelve digital y rompe la lectura.
+- Olvidar el `pinMode(pin, OUTPUT)` de un LED/actuador y esperar que `digitalWrite`
+  funcione solo.
+- Confundir pull-up con pull-down: en pull-up, "presionado" se lee como **LOW**, no
+  HIGH.
+- Mezclar `Serial.begin()` (una vez, en `setup()`) con la velocidad configurada en el
+  Monitor Serial de la computadora: si no coinciden, se ve texto ilegible.
+- Asumir que todos los sensores de humedad de suelo suben su lectura analógica con
+  la humedad: depende del cableado del módulo; en el usado en el laboratorio es al
+  revés (mayor humedad → menor lectura en A0).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Dada su experiencia de laboratorio con el sensor de humedad de suelos: escriba la sección de código que abarca la lectura de la humedad conectado al pin A1, y la conversión a escala de 0 al 100 %, donde 100 % es la máxima humedad (considere el sensor usado en el laboratorio, no el del simulador).",
+  hints: [
+    "El sensor YL-69/YL-38 usado en el laboratorio da una lectura analógica más ALTA cuando el suelo está más SECO.",
+    "Usa map(lectura, 1023, 0, 0, 100) para invertir la escala al mapear a porcentaje.",
+  ],
+}}>
+
+**1. Declarar el pin y leerlo.** Es analógico: sin `pinMode`, directo con `analogRead`.
+
+**2. Invertir la escala.** El sensor de laboratorio da lectura ALTA cuando está SECO,
+así que hay que mapear $1023 \to 0\,\%$ y $0 \to 100\,\%$ (invertido respecto al mapeo
+"normal").
+
+```cpp
+int humedadPin = A1;
+int lectura = analogRead(humedadPin);
+// Se invierte: 1023 (seco) -> 0 %, 0 (húmedo) -> 100 %
+int humedad = map(lectura, 1023, 0, 0, 100);
+Serial.print(humedad);
+Serial.println(" %");
+```
+
+**Comprobación:** con lectura $=0$ (máxima humedad, sensor sumergido), `map` da
+$\boxed{100\,\%}$; con lectura $=1023$ (seco), `map` da $\boxed{0\,\%}$ — coincide con
+el enunciado (100 % = máxima humedad).
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Se le brinda una sección de código en Arduino que enciende y apaga dos LED alternando de acuerdo al uso de un botón: si el botón está presionado se enciende solo el LED 1, y si no está presionado, solo el LED 2. Identifique si hay errores en el código: #define Boton 3 / #define LED1 4 / #define LED2 5 / void setup(){ Serial.start(115200); pinMode(Boton, INPUT); } / void loop(){ ... if(digitalRead(Boton)){ digitalWrite(LED1,HIGH); digitalWrite(LED2,0);} else{ digitalWrite(LED1,LOW); digitalWrite(LED2,ON);} delay(500); }",
+  hints: [
+    "Revisa el nombre exacto de la función para iniciar el puerto serial.",
+    "Revisa si todos los pines usados con digitalWrite tienen su pinMode como OUTPUT.",
+    "¿Existe la constante ON en Arduino?",
+  ],
+}}>
+
+**1. Recorrer el sketch línea por línea** buscando funciones inexistentes, pines sin
+configurar y constantes no definidas — la misma checklist del *Método paso a paso*.
+
+| # | Línea | Bug | Corrección |
+|---|---|---|---|
+| 1 | `Serial.start(115200);` | Esa función no existe en Arduino | `Serial.begin(115200);` |
+| 2 | `void setup(){ ... }` | Falta `pinMode` de `LED1` y `LED2` como salida | agregar `pinMode(LED1, OUTPUT); pinMode(LED2, OUTPUT);` |
+| 3 | `digitalWrite(LED2, ON);` | `ON` no es una constante de Arduino | `digitalWrite(LED2, HIGH);` |
+
+**2. Versión corregida** (solo las líneas que cambian):
+
+```cpp
+void setup() {
+  Serial.begin(115200);        // (1) begin, no start
+  pinMode(Boton, INPUT);
+  pinMode(LED1, OUTPUT);        // (2) faltaba
+  pinMode(LED2, OUTPUT);        // (2) faltaba
+}
+void loop() {
+  if (digitalRead(Boton)) {
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED2, 0);
+  } else {
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, HIGH);   // (3) ON -> HIGH
+  }
+  delay(500);
+}
+```
+
+$$\boxed{\text{3 errores: } \texttt{Serial.start} \to \texttt{Serial.begin};\ \text{faltan 2 } \texttt{pinMode(OUTPUT)};\ \texttt{ON} \to \texttt{HIGH}}$$
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Referente a la conexión de botones con Arduino, realice un diagrama esquemático (conexión de componentes) para la configuración PULL-DOWN, donde el pin lee 5 V cuando el botón está presionado y 0 V cuando no lo está. Use una resistencia de 20 kΩ y un botón de dos pines.",
+  hints: [
+    "En pull-down, la resistencia va del pin a GND, y el botón conecta el pin a +5V.",
+    "Revisa el diagrama de esta página: es exactamente ese circuito.",
+  ],
+}}>
+
+**1. Rail y resistencia a tierra.** $R_1 = 20\,\text{k}\Omega$ conecta el pin de
+lectura a GND: fija el nivel LOW cuando el botón está abierto.
+
+**2. Botón a +5V.** El botón conecta el mismo pin a $+5$ V cuando se presiona.
+
+$$\boxed{\text{botón abierto} \Rightarrow V_{pin}=0\,\text{V} \quad;\quad \text{botón presionado} \Rightarrow V_{pin}=5\,\text{V}}$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Configuración pull-down (R = 20 kΩ) — botón presionado',
+  steps: [{
+    note: 'Botón cerrado: conecta el pin directo a +5V; la resistencia R1 a GND no altera ese valor (no circula corriente relevante por el pin de lectura).',
+    circuit: {
+      nodes: [
+        { id: 'gnd', x: 0, y: 8, ground: true, label: 'GND' },
+        { id: 'vplus', x: 0, y: 0, label: '+5V' },
+        { id: 'top', x: 4, y: 0 },
+        { id: 'pin', x: 4, y: 4, label: 'pin', showPotential: true },
+        { id: 'rbot', x: 4, y: 8 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'gnd', to: 'vplus', value: 5, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 'vplus', to: 'top' },
+        { id: 'SW', kind: 'button', from: 'top', to: 'pin', value: 1, label: 'SW', state: 'answer' },
+        { id: 'R1', kind: 'resistor', from: 'pin', to: 'rbot', value: 20000, label: 'R1' },
+        { id: 'w2', kind: 'wire', from: 'rbot', to: 'gnd' },
+      ],
+    },
+    expect: { 'V(pin)': 5 },
+  }],
+}} />
+
+</ExerciseBlock>

@@ -1,0 +1,11 @@
+id: flow-block-diagrams
+title: Diagramas de flujo y de bloques
+type: lab
+unit: s5
+prerequisites: []
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: flow
+placeholder: false
+formulas: []

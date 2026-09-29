@@ -1,0 +1,67 @@
+---
+import { getCollection, render } from 'astro:content';
+import TopicLayout from '../../layouts/TopicLayout.astro';
+import PrerequisiteBanner from '../../components/PrerequisiteBanner.astro';
+import ComplexityTable from '../../components/ComplexityTable.astro';
+import SectionRail from '../../components/SectionRail.astro';
+import CodeEditor from '../../components/CodeEditor';
+import Visualization from '../../components/Visualization.astro';
+import { loadMeta, readCppSteps } from '../../lib/topics';
+
+// Una sola ruta para todos los documentos de un tema: la teoría vive en
+// /topics/<id> y el resto conserva su ruta ("algorithms/bcast", "models/logp"…).
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+
+  return docs.map((doc) => {
+    const topicId = doc.id.split('/')[0];
+    const siblings = docs.filter((d) => d.id.split('/')[0] === topicId);
+    const tabs = [
+      ...siblings
+        .filter((d) => d.data.kind === 'theory')
+        .map(() => ({ href: `/topics/${topicId}`, label: 'teoría' })),
+      ...siblings
+        .filter((d) => d.data.kind === 'algorithm')
+        .sort((a, b) => (a.data as any).order - (b.data as any).order)
+        .map((d) => ({ href: `/topics/${d.id}`, label: d.data.title })),
+    ];
+    return {
+      params: { path: doc.data.kind === 'theory' ? topicId : doc.id },
+      props: { doc, topicId, tabs },
+    };
+  });
+}
+
+const { doc, topicId, tabs } = Astro.props;
+const meta = loadMeta(topicId);
+const { Content, headings } = await render(doc);
+
+const data = doc.data;
+const section = data.kind === 'theory' ? 'teoría' : data.title;
+
+const cppSteps = data.kind === 'algorithm' ? readCppSteps(topicId, data.cppSteps) : [];
+const hasRail = headings.some((h) => h.depth === 2);
+---
+
+<TopicLayout meta={meta} section={section} tabs={tabs} rail={hasRail}>
+  {data.kind === 'theory' && <PrerequisiteBanner id={topicId} />}
+  {data.kind === 'theory' && <ComplexityTable meta={meta} />}
+
+  {data.visualization && <Visualization viz={data.visualization} />}
+  {
+    /*
+      client:only (no client:visible): CodeMirror toca `document`/mide texto
+      en el DOM real y su salida servidor-renderizada nunca coincide con la
+      del cliente. client:only nunca intenta SSR-earlo, así que no hay nada
+      que desajustar; el editor sigue siendo progresivo, sólo que aparece
+      tras hidratar en vez de tener un HTML previo.
+    */
+  }
+  {data.kind === 'algorithm' && cppSteps.length > 0 && <CodeEditor client:only="react" steps={cppSteps} />}
+
+  <div class="prose">
+    <Content />
+  </div>
+
+  <SectionRail slot="rail" headings={headings} meta={meta} />
+</TopicLayout>

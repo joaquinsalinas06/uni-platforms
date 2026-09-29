@@ -1,0 +1,32 @@
+id: fractional-cascading
+title: Fractional cascading
+type: algorithm
+week: week-05
+
+prerequisites: [range-tree]
+buildsOn: []
+usedBy: [layered-range-tree, generalized-fractional-cascading]
+
+complexity:
+  build:
+    worst: O(n)
+    reasoning: >-
+      Recurrencia de tamaño (no de tiempo): |L'i| ≤ |Li| + ½|L'i+1|. Promoviendo
+      sólo la mitad de cada lista hacia la anterior, la suma se cierra como una
+      serie geométrica que converge a |L'1| = O(n) en total, sin importar k
+      (CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#26).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#26"
+  query:
+    worst: O(k + lg n)
+    reasoning: >-
+      Conteo directo de pasos: una única búsqueda binaria real en L'1 cuesta
+      O(lg n); desde ahí, bajar el puente más cercano hacia cada L'i siguiente
+      cae a lo más ±1 posición del lugar correcto y se ajusta con O(1)
+      comparaciones, repetido k−1 veces
+      (CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#21-24).
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026+(6).pdf#21-24"
+
+professorAnalysisStyle: conteo directo + serie geométrica
+hasVisualization: true
+visualizationType: range-tree
+placeholder: false

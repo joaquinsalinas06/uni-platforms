@@ -1,0 +1,106 @@
+---
+import type { Meta } from '../lib/schemas';
+
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+  meta: Meta;
+}
+const { headings, meta } = Astro.props;
+const sections = headings.filter((h) => h.depth === 2);
+---
+
+<div class="sticky top-20 space-y-8">
+  {
+    sections.length > 0 && (
+      <nav aria-label="Secciones de esta página">
+        <p class="tag mb-3">En esta página</p>
+        <ol id="section-rail" class="space-y-px border-l border-[var(--rule)]">
+          {sections.map((h, i) => (
+            <li>
+              <a
+                href={`#${h.slug}`}
+                data-rail={h.slug}
+                class="-ml-px flex gap-2 border-l-2 border-transparent py-1.5 pl-3 text-[0.8125rem] leading-snug text-[var(--muted)] no-underline transition-all hover:text-[var(--ink)]"
+              >
+                <span class="font-mono text-[0.6875rem] text-[var(--faint)]">
+                  {String(i + 1).padStart(2, '0')}
+                </span>
+                <span class="min-w-0">{h.text}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )
+  }
+
+  <dl class="space-y-3 border-t border-[var(--rule)] pt-5 text-[0.8125rem]">
+    <div>
+      <dt class="tag">Unidad</dt>
+      <dd class="font-mono">{meta.unit}</dd>
+    </div>
+    {
+      meta.professorAnalysisStyle && (
+        <div>
+          <dt class="tag">Estilo de análisis</dt>
+          <dd class="font-mono">{meta.professorAnalysisStyle}</dd>
+        </div>
+      )
+    }
+    {
+      meta.usedBy.length > 0 && (
+        <div>
+          <dt class="tag">Se usa en</dt>
+          <dd>
+            {meta.usedBy.map((id) => (
+              <a href={`/topics/${id}`} class="mr-2 font-mono text-[0.75rem]">
+                {id}
+              </a>
+            ))}
+          </dd>
+        </div>
+      )
+    }
+  </dl>
+</div>
+
+<script>
+  // Resalta en azul la sección que estás leyendo. Sin esto, en una página
+  // larga no hay forma de saber dónde vas.
+  //
+  // Este componente se remonta en cada navegación (no está persistido: cada
+  // página tiene sus propias secciones), pero su script es TEXTUALMENTE
+  // idéntico en todas las páginas — con el router de Astro activo, un
+  // <script> cuyo contenido ya se ejecutó una vez no se vuelve a ejecutar en
+  // navegaciones futuras. `astro:page-load` sí dispara en cada una
+  // (incluida la primera), así que la inicialización va ahí, no suelta.
+  let observer: IntersectionObserver | undefined;
+
+  function initSectionRail() {
+    observer?.disconnect();
+    const links = document.querySelectorAll<HTMLElement>('[data-rail]');
+    if (!links.length) return;
+
+    const on = 'border-l-[var(--accent)]';
+    observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          for (const l of links) {
+            const active = l.dataset.rail === e.target.id;
+            l.classList.toggle(on, active);
+            l.classList.toggle('text-[var(--accent)]', active);
+            l.classList.toggle('font-medium', active);
+          }
+        }
+      },
+      { rootMargin: '-70px 0px -70% 0px' },
+    );
+    for (const l of links) {
+      const target = document.getElementById(l.dataset.rail!);
+      if (target) observer.observe(target);
+    }
+  }
+
+  document.addEventListener('astro:page-load', initSectionRail);
+</script>

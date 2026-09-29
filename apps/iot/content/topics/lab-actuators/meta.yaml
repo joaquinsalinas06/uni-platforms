@@ -1,0 +1,19 @@
+id: lab-actuators
+title: "Actuadores en el laboratorio: PWM, motor y relé"
+type: lab
+unit: s6
+prerequisites: [actuators, arduino-sensors]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas:
+  - name: Voltaje promedio de una señal PWM
+    tex: "V_{avg} = V_{low} + D\\,(V_{high} - V_{low})"
+    reasoning: "El PWM alterna entre V_low y V_high; la carga percibe un promedio que interpola linealmente entre ambos niveles según la fracción de tiempo D en que la señal está en alto."
+    source: "Sem06_LAB_Slides_Actuadores#3"
+  - name: Duty cycle
+    tex: "D = \\dfrac{t_{ON}}{T} = \\dfrac{t_{ON}}{t_{ON} + t_{OFF}}"
+    reasoning: "D es la fracción del periodo T en la que la señal permanece en nivel alto (t_ON); el resto del periodo T la señal está en t_OFF."
+    source: "Sem06_LAB_Slides_Actuadores#3"

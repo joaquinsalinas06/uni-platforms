@@ -1,0 +1,28 @@
+# Interfaz de coordinación entre subagentes. Copiar a
+# content/structures/<id>/meta.yaml y rellenar desde el material fuente.
+# Si algo aquí no cuadra con el schema, el build falla (src/lib/schemas.ts).
+
+id: <id-kebab-case>            # mismo que el nombre de la carpeta y del knowledge map
+title: <nombre como lo usa el profesor>
+type: structure                # structure | algorithm
+week: week-0X
+
+prerequisites: []              # ids del knowledge map. Se referencian, NO se reexplican.
+buildsOn: []
+usedBy: []
+
+complexity:
+  <operacion>:
+    best: O(...)
+    avg: O(...)
+    worst: O(...)
+    space: O(...)
+    # Obligatorio y mínimo 20 caracteres: el brief prohíbe la notación sin su
+    # razonamiento. Explicar de dónde sale, en el estilo del profesor.
+    reasoning: >-
+      ...
+
+professorAnalysisStyle: <recurrence-based | amortized | potential-method | ...>
+hasVisualization: false
+# visualizationType: tree      # tree | graph | persistent | range-tree
+placeholder: false             # true sólo mientras sea contenido de relleno

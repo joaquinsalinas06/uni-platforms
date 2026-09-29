@@ -1,0 +1,49 @@
+id: nbody-divide-conquer
+title: "N-Body y divide y vencerás"
+type: algorithm
+unit: u2
+
+prerequisites: ["performance-metrics", "prefix-sum-recurrences"]
+buildsOn: []
+usedBy: []
+
+complexity:
+  nbody-direct:
+    worst: "T_p = O\\left(\\tfrac{n(n-1)}{p}\\right)"
+    reasoning: >-
+      Cada uno de los n cuerpos es afectado por los n-1 restantes, dando
+      N(N-1)/2 pares de interaccion (o n(n-1) evaluaciones de fuerza si se
+      cuentan ambos sentidos); con particionamiento directo de cuerpos entre
+      p procesos ese trabajo total se reparte entre p, dando O(n(n-1)/p).
+    source: "U2.5-Diseño_en_paralelo-NBody-DivideYVenceras.pdf#6"
+  nbody-barnes-hut:
+    worst: "T_p = O\\left(\\tfrac{n\\log n}{p}\\right)"
+    reasoning: >-
+      Barnes-Hut aproxima un cluster de cuerpos distantes como un unico
+      cuerpo equivalente, evitando calcular explicitamente cada interaccion
+      par a par; esto reduce el trabajo de O(n(n-1)) a O(n log n), que
+      repartido entre p procesos da O(n log(n)/p).
+    source: "U2.5-Diseño_en_paralelo-NBody-DivideYVenceras.pdf#6"
+  mergesort-parallel:
+    worst: "T_p(n,p) = O\\left(\\tfrac{n\\log n}{p} + n\\right)"
+    reasoning: >-
+      El trabajo del merge paralelo sigue W(n)=2W(n/2)+O(n), que resuelve a
+      O(n log n) (caso 4 de la tabla de recurrencias). El span sigue
+      T∞(n)=T∞(n/2)+O(n), que resuelve a O(n) porque el merge secuencial de
+      cada nivel domina sobre la mitad del trabajo recursivo. Aplicando
+      Brent con estos W y T∞ se obtiene la cota Tp.
+    source: "U2.5-Diseño_en_paralelo-NBody-DivideYVenceras.pdf#16"
+  matrix-mult-3d:
+    worst: "T_p(n,p) = O\\left(\\tfrac{n^3}{p} + \\log n\\right)"
+    reasoning: >-
+      La expansion (paso 1) calcula las n^3 multiplicaciones C'(i,j,k) de
+      forma independiente, dando W=O(n^3) y T∞=O(1) para ese paso. La
+      reduccion (paso 2) suma en arbol sobre k en log(n) niveles, dando
+      T∞=O(log n) para todo el algoritmo. Aplicando Brent con W=O(n^3) y
+      T∞=O(log n) se obtiene la cota Tp.
+    source: "U2.5-Diseño_en_paralelo-NBody-DivideYVenceras.pdf#19"
+
+professorAnalysisStyle: recurrence-based
+hasVisualization: true
+visualizationType: dag
+placeholder: false

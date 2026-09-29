@@ -1,0 +1,11 @@
+id: app-protocols
+title: "Protocolos de aplicación: HTTP, WebSocket, CoAP, AMQP"
+type: concept
+unit: s6
+prerequisites: [transmission-models]
+buildsOn: []
+usedBy: [mqtt]
+hasVisualization: true
+visualizationType: sequence
+placeholder: false
+formulas: []

@@ -1,0 +1,216 @@
+---
+kind: theory
+title: Actuadores
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Si el sensor es la entrada del sistema IoT (mundo físico → mundo digital), el
+**actuador** es la salida: toma una decisión digital (del microcontrolador) y la
+convierte de vuelta en un efecto físico (mover, calentar, abrir una válvula). El
+ejemplo más simple del patrón sensor–CPU–actuador es el propio cuerpo humano:
+sentidos (sensores) → cerebro (CPU) → manos y pies (actuadores).
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  steps: [{
+    note: 'El mismo patrón sensor → procesamiento → actuador aparece tanto en el cuerpo humano (sentidos → cerebro → manos/pies) como en un sistema embebido (sensor → CPU → actuador).',
+    nodes: [
+      { id: 'sen', value: 'Sensor\n(sentidos / transductor)', parent: null },
+      { id: 'cpu', value: 'Procesamiento\n(cerebro / CPU)', parent: 'sen' },
+      { id: 'act', value: 'Actuador\n(manos, pies / motor, válvula)', parent: 'cpu' },
+    ],
+  }],
+}} />
+
+## Conceptos
+
+### Definición
+
+**Actuador**: dispositivo que convierte una señal de control (típicamente
+eléctrica) en un movimiento o efecto físico sobre el entorno.
+
+### Clasificación de actuadores
+
+| Criterio | Distinción |
+|---|---|
+| Tipo de movimiento | lineal, rotatorio, de uno/dos/tres ejes |
+| Potencia | alta potencia, baja potencia, micropotencia |
+| Binario o continuo | según el número de estados estables de salida |
+| Área de aplicación | industria o vertical donde se usa |
+| Tipo de energía | fuente de energía que usa para operar |
+
+### Clasificación por fuente de energía
+
+| Fuente | Principio | Ejemplos / uso típico |
+|---|---|---|
+| Hidráulico | aprovecha potencia hidráulica (líquido a presión) para producir movimiento mecánico | prensas, frenos, brazos de maquinaria pesada |
+| Neumático | usa vacío o aire comprimido a alta presión | pistones neumáticos, actuadores blandos (soft actuators) |
+| Eléctrico | usa energía eléctrica directamente; el más usado en automatización industrial | motores, solenoides, relés — casi todos los demás tipos terminan usando electricidad como conversión intermedia |
+| Térmico | material sensible a la temperatura que produce movimiento lineal al cambiar de temperatura | válvulas que se cierran solas, pestillos y switches térmicos |
+| Magnético | convierte energía electromagnética en salida mecánica lineal o rotatoria | actuadores automotrices y aeroespaciales, operación mecánica continua |
+
+> **Nota de apoyo** (no está en el material): casi todos los actuadores no
+> eléctricos (hidráulicos, neumáticos, térmicos, magnéticos) terminan dependiendo de
+> electricidad en algún punto de su cadena de control (una válvula solenoide abre el
+> paso de aceite o aire); por eso el material dice que "el resto de actuadores
+> depende de la energía eléctrica como conversión intermedia".
+
+### Actuadores blandos (soft actuators)
+
+Los *soft actuators* son estructuras flexibles (con frecuencia impresas en 3D) que
+se deforman con aire a presión o con materiales activos, en vez de usar piezas
+rígidas articuladas. Se usan cuando se necesita un movimiento suave y adaptable —
+por ejemplo, para sujetar objetos frágiles sin dañarlos (ver el gripper blando del
+Caso 3 más abajo).
+
+### Sensor inteligente: el caso Arduino
+
+Una placa Arduino es un ejemplo de **sensor/actuador inteligente**: integra en un
+solo dispositivo la lectura de sensores (ADC), el procesamiento (microcontrolador)
+y el control de actuadores (salidas digitales/PWM), en vez de que cada bloque sea
+un chip separado. Esto se retoma con más detalle en la Semana 4 (Arduino y
+sensores comerciales).
+
+### Casos de estudio
+
+**Caso 1 — Casa inteligente (smarthome).** Una comparación de sistemas de
+domótica publicados en los últimos 10 años muestra la misma arquitectura repetida:
+comunicación (Bluetooth, ZigBee, Wi-Fi…) + controlador (PIC, Arduino, Raspberry
+Pi…) + interfaz de usuario (app móvil, panel táctil, web) + aplicación (control de
+iluminación, HVAC, riego, alarma). La lección: no hay un estándar único, cada
+plataforma abierta (OpenHAB, Home Assistant, Domoticz…) elige su propio lenguaje y
+protocolo, pero casi todas terminan soportando MQTT como capa común de mensajería.
+
+**Caso 2 — Agricultura de precisión (dron + DInSAR).** Un dron equipado con
+sensores multibanda (L, C, P) sobrevuela un cultivo y mide el crecimiento de las
+plantas por interferometría de radar (DInSAR), generando mapas de crecimiento
+(por ejemplo, de 5 cm a 15 cm en pocos meses). Aquí sensor (radar) y actuador
+(el propio dron que se posiciona y vuela) trabajan juntos: el sensor da la
+información y el actuador permite recolectarla sin contacto y a escala de campo
+completo.
+
+**Caso 3 — Gemelo digital (digital twin) en agricultura inteligente.** Un gemelo
+digital es una réplica virtual de un producto físico que se mantiene sincronizada
+en las cuatro fases de su ciclo de vida (diseño, realización, uso, retiro): el
+mundo virtual (modelo, especificaciones, comportamiento) predice y refleja el
+estado del mundo real (el producto físico), y viceversa. El ejemplo del brazo
+robótico con sensores de fricción (TENG) que reconoce objetos por su señal táctil
+y los clasifica con un modelo de ML (PCA + SVM) para luego actuar (mover, sujetar)
+muestra el ciclo completo: sensor → predicción → actuador, corrido en un gemelo
+digital antes y durante la operación real.
+
+**Caso 4 — Robots microscópicos.** Robots del tamaño de una célula (decenas de
+micrómetros), fabricados en masa con procesos de semiconductores, con patas
+electroquímicas (SEAs) que se activan con láser. Se mueven a una velocidad del
+orden de un largo de su cuerpo por minuto. La lección: el mismo patrón sensor–
+actuador–control se puede miniaturizar hasta la escala microscópica, usando la luz
+como señal de control en vez de un cable.
+
+## Método paso a paso
+
+Para clasificar un actuador dado (típico enunciado de examen):
+
+1. Identifica el **movimiento que produce** (lineal, rotatorio, cuántos ejes).
+2. Identifica su **fuente de energía** (hidráulica, neumática, eléctrica, térmica,
+   magnética) — pregunta qué lo hace moverse físicamente, no qué lo controla.
+3. Pregunta si tiene **salida binaria** (on/off) o **continua** (rango de
+   posiciones/velocidades).
+4. Estima su **potencia** (alta/baja/micro) según la magnitud de fuerza o par que
+   entrega.
+5. Ubica su **área de aplicación** (industrial, automotriz, doméstico, agro…).
+
+## Ejemplo resuelto
+
+**Válvula de riego automático accionada por un solenoide eléctrico**, que además
+tiene un mecanismo de cierre térmico de seguridad ante sobrecalentamiento:
+
+- Fuente de energía primaria: eléctrica (el solenoide mueve el vástago de la
+  válvula).
+- Tipo de movimiento: lineal (abre/cierra el paso de agua).
+- Binario o continuo: binario (abierta o cerrada).
+- Potencia: baja potencia.
+- Área de aplicación: agricultura de precisión / riego (Caso 2).
+- Nota: el mecanismo de seguridad térmico es un **segundo actuador**, de fuente de
+  energía térmica, montado en cascada con el primero.
+
+## Errores típicos
+
+- Confundir la fuente de energía del actuador con la fuente de energía de su
+  *señal de control*: un motor eléctrico controlado por una señal PWM de 3.3 V
+  sigue siendo un actuador eléctrico, no "de bajo voltaje" como categoría aparte.
+- Tratar "binario/continuo" como sinónimo de "digital/analógico": el criterio es el
+  número de **estados estables de salida física**, no el tipo de señal de entrada.
+- Pensar que un actuador neumático o hidráulico no depende de electricidad en
+  absoluto: casi siempre una válvula solenoide eléctrica controla el paso del aire
+  o el líquido a presión.
+- Olvidar que el laboratorio del puente de Wheatstone de esta semana no es un tema
+  nuevo de actuadores: es el mismo circuito de medición de resistencia ya visto,
+  ver [Puente de Wheatstone](/topics/delta-wye-wheatstone/subtopics/puente-wheatstone).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un brazo robótico industrial usa un pistón que se extiende con aire comprimido a alta presión, controlado por una electroválvula. Clasifique el actuador según tipo de movimiento, tipo de energía, y binario/continuo. Justifique cada respuesta.",
+  hints: [
+    "Distingue la energía que produce el movimiento (el aire) de la energía que controla la válvula (electricidad).",
+    "Un pistón que solo puede estar extendido o retraído, ¿cuántos estados estables tiene?",
+  ],
+}}>
+
+| Criterio | Clasificación | Justificación |
+|---|---|---|
+| Tipo de movimiento | **Lineal** | El pistón se extiende/retrae en una sola dirección |
+| Tipo de energía | **Neumático** | El aire comprimido produce la fuerza mecánica; la electroválvula solo controla el paso del aire — es un actuador eléctrico auxiliar en cascada, no la fuente de energía primaria |
+| Binario / continuo | **Binario** | Dos estados estables: extendido o retraído |
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Cascada: control eléctrico → energía neumática → movimiento',
+  steps: [{
+    note: 'La electroválvula (eléctrica) controla el paso del aire, pero la energía que mueve el pistón es neumática: son dos actuadores en cascada, y el que clasifica al sistema es el que produce el movimiento final.',
+    nodes: [
+      { id: 'ctrl', value: 'Electroválvula (control eléctrico)', parent: null },
+      { id: 'aire', value: 'Aire comprimido (energía neumática)', parent: 'ctrl' },
+      { id: 'piston', value: 'Pistón: lineal · binario', parent: 'aire', state: 'answer' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "En el caso de estudio del gemelo digital con el gripper blando (soft actuator) que reconoce objetos por señales de fricción (TENG) y los clasifica con un modelo SVM antes de sujetarlos: identifique cuál es el sensor, cuál el actuador, y explique por qué este caso requiere un gemelo digital y no solo un lazo sensor–actuador directo.",
+  hints: [
+    "El sensor entrega una señal de voltaje por canal; el actuador es lo que finalmente sujeta el objeto.",
+    "Piensa en qué aporta la capa de 'Real-time prediction' / 'ML training' que no aporta un lazo de control simple.",
+  ],
+}}>
+
+**1. Sensor:** el arreglo de contactos triboeléctricos (L-TENG/T-TENG), que genera una señal de voltaje por canal al tocar el objeto.
+
+**2. Actuador:** el gripper blando (*soft actuator*) que se cierra para sujetar el objeto.
+
+**3. Por qué hace falta un gemelo digital y no un lazo directo.** Entre sensor y actuador hay una etapa de reconocimiento (PCA + SVM) que primero debe identificar QUÉ objeto se está tocando a partir de la señal cruda; esa predicción se valida y entrena contra un modelo virtual antes de decidir cómo debe actuar el gripper. El actuador no reacciona a la señal cruda: reacciona a la predicción del modelo.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Gripper blando: sensor → predicción (gemelo digital) → actuador',
+  steps: [{
+    note: 'A diferencia de un lazo sensor-actuador directo, aquí se inserta una capa de predicción entrenada/validada contra un modelo virtual antes de decidir la acción física.',
+    nodes: [
+      { id: 'sensor', value: 'Sensor: L-TENG/T-TENG\n(voltaje por canal)', parent: null },
+      { id: 'model', value: 'Gemelo digital: PCA + SVM\n(reconoce el objeto)', parent: 'sensor' },
+      { id: 'act', value: 'Actuador: gripper blando\n(sujeta según la predicción)', parent: 'model', state: 'answer' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

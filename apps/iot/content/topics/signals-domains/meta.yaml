@@ -1,0 +1,15 @@
+id: signals-domains
+title: Señales y dominios
+type: concept
+unit: s4
+prerequisites: [sensors]
+buildsOn: []
+usedBy: [digitization-adc, fourier-dft]
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Ecuación de codificación lineal (temperatura desde voltaje)
+    tex: "T = 2V - 10"
+    reasoning: "Se despeja de la tabla T-V del sensor de temperatura: la pendiente es 0.5 V/°C y el intercepto es V = 5 V en T = 0°C; invirtiendo esa recta se obtiene T en función de V."
+    source: "Sem4_IoTT-SignalRepr#22"

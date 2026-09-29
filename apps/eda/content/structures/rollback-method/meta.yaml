@@ -1,0 +1,26 @@
+id: rollback-method
+title: "Método de rollback"
+type: algorithm
+week: week-03
+
+prerequisites: ["retroactivity"]
+buildsOn: ["retroactivity"]
+usedBy: []
+
+complexity:
+  rollback-replay:
+    worst: "O(r) veces el costo de una operación individual, con r = número de operaciones posteriores a t"
+    reasoning: >-
+      Conteo directo: deshacer r operaciones, aplicar el cambio, rehacer r
+      operaciones — sin recurrencia ni potencial de por medio. El profesor
+      añade una cota inferior Ω(r) (esbozo de adversario, no prueba formal):
+      existen estructuras y secuencias donde modificar el tiempo t
+      necesariamente cambia el resultado de consultas que dependen de las r
+      operaciones posteriores, así que alguna estructura debe reflejar ese
+      cambio en Ω(r) de sus partes.
+    source: "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (2).pdf#41-44"
+
+professorAnalysisStyle: "conteo directo del trabajo rehecho, más un argumento de cota inferior (adversario informal)"
+hasVisualization: true
+visualizationType: persistent
+placeholder: false

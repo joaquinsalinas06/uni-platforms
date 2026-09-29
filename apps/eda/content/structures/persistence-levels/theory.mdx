@@ -1,0 +1,247 @@
+---
+kind: theory
+title: "Niveles de persistencia"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Toda estructura vista hasta ahora es **efímera**: actualizarla destruye el
+estado anterior, sólo existe "el ahora". Textual del profesor: "Una
+estructura de datos es persistente si, al modificarla, conserva todas sus
+versiones anteriores: cada operación se realiza sobre una versión específica,
+y una actualización crea (y devuelve) una versión nueva sin destruir la
+anterior." La persistencia agrega una **dimensión de tiempo** a la
+estructura: en vez de un único estado presente, hay una colección de
+versiones consultables.
+
+Pero "conservar versiones" no es una sola cosa: distintos problemas necesitan
+distinta cantidad de eso, y la cantidad que se necesita determina qué técnica
+alcanza. Esta sección da el vocabulario para distinguir cuánta persistencia
+hace falta antes de elegir cómo lograrla.
+
+## Intuición
+
+Piensa en las versiones de la estructura como nodos de un grafo, donde una
+arista va de una versión a la versión que se crea al modificarla. La
+pregunta que separa los niveles es siempre la misma: **¿qué forma tiene ese
+grafo de versiones, y qué operaciones se permiten sobre él?**
+
+- Si sólo puedo seguir escribiendo sobre la versión más nueva: las versiones
+  quedan en fila, una línea de tiempo.
+- Si puedo volver a cualquier versión vieja y ramificar desde ahí: las
+  versiones forman un árbol.
+- Si además puedo tomar dos versiones y fusionarlas en una nueva: el árbol
+  deja de alcanzar, hace falta un DAG.
+
+La persistencia funcional es una idea distinta, ortogonal a las tres
+anteriores: no es "cuánto puedo consultar/ramificar", sino "cómo lo logro por
+dentro" — nunca mutar un nodo existente, sólo crear nodos nuevos.
+
+## Estructura interna
+
+No aplica en el sentido de nodos y campos: `persistence-levels` es una
+taxonomía sobre el conjunto de versiones de una estructura, no una estructura
+en sí. Lo que sí tiene invariante propio es **la forma del grafo de
+versiones**, que es distinta en cada nivel.
+
+**Persistencia parcial**: "Solo se puede actualizar la versión más reciente;
+se puede consultar cualquier versión anterior. Las versiones quedan
+ordenadas linealmente, como una línea de tiempo." — el grafo de versiones es
+una línea.
+
+<Visualization viz={{
+  type: 'persistent',
+  mode: 'version-tree',
+  steps: [
+    {
+      note: 'v0 es la única versión que existe. No hay todavía nada que escoger: es la más reciente por definición.',
+      highlight: ['v0'],
+      nodes: [{ id: 'v0', value: 'v0', parent: null, state: 'active' }],
+    },
+    {
+      note: 'Se escribe sobre la más reciente (v0): nace v1. v0 sigue existiendo y sigue siendo consultable, pero ya no se puede volver a escribir sobre ella.',
+      highlight: ['v1'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'active' },
+      ],
+    },
+    {
+      note: 'Otra escritura: nace v2, siempre sobre la más nueva (v1). v0 y v1 quedan sólo para lectura — el grafo de versiones no puede ramificar, sólo alargarse: es una línea.',
+      highlight: ['v2'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'shared' },
+        { id: 'v2', value: 'v2', parent: 'v1', state: 'active' },
+      ],
+    },
+  ],
+}} />
+
+**Persistencia total (full)**: "Se puede actualizar cualquier versión, no
+solo la última — cada actualización crea una nueva versión hija de la que
+se modificó." — el grafo de versiones es un árbol.
+
+<Visualization viz={{
+  type: 'persistent',
+  mode: 'version-tree',
+  steps: [
+    {
+      note: 'Como en parcial: v0 es la única versión, y la primera escritura crea v1 sobre ella.',
+      highlight: ['v1'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'active' },
+      ],
+    },
+    {
+      note: 'A diferencia de parcial: se puede volver a v0 (no sólo a la más nueva) y escribir ahí. Nace v2, hermano de v1. El grafo deja de ser una línea: se ramifica.',
+      highlight: ['v2'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'shared' },
+        { id: 'v2', value: 'v2', parent: 'v0', state: 'active' },
+      ],
+    },
+    {
+      note: 'Se puede seguir ramificando desde cualquier punto: v3 nace de v1, no de la rama de v2. Cada versión puede tener varios hijos; ninguna combina dos ramas en una — sigue siendo un árbol.',
+      highlight: ['v3'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'shared' },
+        { id: 'v2', value: 'v2', parent: 'v0', state: 'shared' },
+        { id: 'v3', value: 'v3', parent: 'v1', state: 'active' },
+      ],
+    },
+  ],
+}} />
+
+**Persistencia confluente**: "Además de actualizar, se puede combinar
+(mezclar) dos versiones distintas en una nueva." — el grafo de versiones es
+un DAG, no un árbol (un nodo puede tener dos padres).
+
+<Visualization viz={{
+  type: 'persistent',
+  mode: 'version-tree',
+  steps: [
+    {
+      note: 'Dos ramas independientes, igual que en persistencia total: v1 y v2, ambas hijas de v0.',
+      highlight: ['v1', 'v2'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'shared' },
+        { id: 'v2', value: 'v2', parent: 'v0', state: 'shared' },
+      ],
+    },
+    {
+      note: 'Se marcan v1 y v2 como las dos versiones a combinar — la operación que ningún nivel anterior permite.',
+      highlight: ['v1', 'v2'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'marked' },
+        { id: 'v2', value: 'v2', parent: 'v0', state: 'marked' },
+      ],
+    },
+    {
+      note: 'Nace v3 con dos padres: v1 y v2. Ya no es un árbol (un hijo, un padre) — es un DAG. Esta operación es la que separa confluente de total.',
+      highlight: ['v3'],
+      nodes: [
+        { id: 'v0', value: 'v0', parent: null, state: 'shared' },
+        { id: 'v1', value: 'v1', parent: 'v0', state: 'shared' },
+        { id: 'v2', value: 'v2', parent: 'v0', state: 'shared' },
+        { id: 'v3', value: 'v3', parent: 'v1', state: 'active' },
+      ],
+      links: [
+        { from: 'v0', to: 'v1', kind: 'tree' },
+        { from: 'v0', to: 'v2', kind: 'tree' },
+        { from: 'v1', to: 'v3', kind: 'tree' },
+        { from: 'v2', to: 'v3', kind: 'shared' },
+      ],
+    },
+  ],
+}} />
+
+**Persistencia funcional**: no es un nivel más, es **una técnica de
+implementación**: "la estructura nunca modifica un nodo existente, solo crea
+nodos nuevos." Es la distinción conceptual más importante de la sección —
+cualquiera de los tres niveles anteriores se puede lograr con esta técnica,
+típicamente al costo de un poco más de espacio, porque modificar sin mutar
+implica crear nodos nuevos en vez de reusar los que ya existían. No tiene un
+grafo de versiones propio que dibujar — es ortogonal a los tres de arriba,
+así que no le corresponde un cuarto diagrama: reutiliza cualquiera de los
+tres anteriores.
+
+## Operaciones
+
+No aplica: `operations: []` en el knowledge map. Lo que hay en vez de
+operaciones es la tabla de la siguiente sección, que es la pieza central de
+este tema: dado un problema, determina qué nivel necesitas.
+
+## Análisis de complejidad
+
+El profesor no da complejidades aquí — llegan con las técnicas concretas. Lo
+que sí da, y es lo que hay que razonar en este tema, es la forma del grafo de
+versiones y qué operación queda habilitada u prohibida en cada nivel — ya
+trazado arriba con los tres diagramas; la tabla de la siguiente sección lo
+resume.
+
+El razonamiento para decidir qué nivel necesita un problema es: mira qué
+forma tiene el conjunto de versiones que el problema exige. Si sólo pides
+"deshacer y ver el pasado sin bifurcar", es parcial. Si necesitas ramificar
+(explorar varias líneas de cambios desde un mismo punto), es total. Si
+necesitas juntar dos ramas en una, ninguno de los dos alcanza: hace falta
+confluente. La técnica (funcional o no) es una decisión aparte, de cómo
+implementarlo, no de qué nivel necesitas.
+
+## Tabla de complejidad
+
+No aplica: `meta.yaml` deja `complexity: {}` a propósito — esta sección no
+tiene costos propios que tabular. La tabla que sí importa aquí es la
+comparación de los cuatro niveles:
+
+| nivel | qué se puede actualizar | qué se puede consultar | forma de las versiones |
+| --- | --- | --- | --- |
+| parcial | sólo la más reciente | cualquiera | línea (orden lineal) |
+| total (full) | cualquiera | cualquiera | árbol |
+| confluente | cualquiera, y además se combinan dos | cualquiera | DAG |
+| funcional | (técnica, no nivel) nunca se muta nada | cualquiera | cualquiera de las anteriores |
+
+El profesor cierra fijando el alcance de la clase: "Hoy nos enfocamos en
+parcial y total (las más usadas en la práctica), y usamos la idea funcional
+como base de la última sección." Confluente queda mencionado pero no
+desarrollado con una técnica propia en este curso.
+
+## Ejemplos
+
+Ver [examples.md](/structures/persistence-levels#ejemplos) — el mazo no trae
+ejemplos concretos en esta sección (las definiciones son abstractas), así que
+los ejemplos que siguen están derivados y marcados como tal.
+
+## Comparación con estructuras relacionadas
+
+Esta tabla es, en sí misma, la guía de decisión de técnica: dado un
+problema, en qué nivel cae y qué técnica de las que ofrece el curso lo
+resuelve.
+
+| nivel | qué técnica lo resuelve (en este curso) | dónde vive |
+| --- | --- | --- |
+| parcial | nodos gordos (fat nodes) | [fat-nodes](/structures/fat-nodes) |
+| total (full) | nodos gordos extendidos a bidireccional (apuntadores hacia atrás y adelante) | [fat-nodes](/structures/fat-nodes) |
+| confluente | no se desarrolla una técnica propia en este curso | — |
+| funcional (técnica) | path copying | [path-copying](/structures/path-copying) |
+
+Nota sobre `usedBy`: `fat-nodes` resuelve parcial (y se extiende para total);
+`path-copying` da persistencia funcional casi gratis para cualquiera de los
+niveles anteriores. Ninguno de los dos se desarrolla aquí — se referencian
+por id, no se reexplican.
+
+También vale la pena la relación con retroactividad (otro mazo de la
+semana 3, que depende de éste): son ideas "duales" — persistencia **ramifica
+el futuro**; retroactividad **reescribe el pasado** y propaga el efecto hacia
+el presente.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/persistence-levels#prueba-de-dominio).

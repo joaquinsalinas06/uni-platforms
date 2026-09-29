@@ -1,0 +1,366 @@
+{
+  "units": [
+    {
+      "id": "u1",
+      "title": "Unidad 1 — Fundamentos de Paralelismo",
+      "sourceFiles": [
+        "raw-materials/U1/U1.1-Fundamentos_de_Paralelismo-apuntes.pdf",
+        "raw-materials/U1/U1.1-Fundamentos_de_Paralelismo.pdf",
+        "raw-materials/U1/U1.2-Fundamentos-Foster_Flynn-apuntes.pdf",
+        "raw-materials/U1/U1.2-Fundamentos-Foster_Flynn.pdf",
+        "raw-materials/U1/U1.3-Fundamentos_DAG-apuntes.pdf",
+        "raw-materials/U1/U1.3-Fundamentos_DAG.pdf"
+      ],
+      "topics": [
+        "sequential-model-architectures",
+        "flynn-foster-pcam",
+        "dag-cost-model"
+      ]
+    },
+    {
+      "id": "u2",
+      "title": "Unidad 2 — Diseño en Paralelo",
+      "sourceFiles": [
+        "raw-materials/U2/U2.1-Diseño_en_paralelo-performance-1.pdf",
+        "raw-materials/U2/U2.1-Diseño_en_paralelo-performance-apuntes.pdf",
+        "raw-materials/U2/U2.2-Diseño_en_paralelo-PRAM_01-1.pdf",
+        "raw-materials/U2/U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf",
+        "raw-materials/U2/U2.3-Diseño_en_paralelo-PRAM_02-1.pdf",
+        "raw-materials/U2/U2.3-Diseño_en_paralelo-PRAM_02-apuntes.pdf",
+        "raw-materials/U2/U2.4-Diseño_en_paralelo-Particionamiento-Random.pdf",
+        "raw-materials/U2/U2.5-Diseño_en_paralelo-NBody-DivideYVenceras.pdf"
+      ],
+      "topics": [
+        "performance-metrics",
+        "pram-models",
+        "pram-algorithms",
+        "prefix-sum-recurrences",
+        "partitioning-randomized",
+        "nbody-divide-conquer"
+      ]
+    },
+    {
+      "id": "u3",
+      "title": "Unidad 3 — Paralelismo Distribuido (MPI)",
+      "sourceFiles": [
+        "raw-materials/U3/U3.1 Paralelismo Distribuido-MPI-1.pdf",
+        "raw-materials/U3/U3.1 Paralelismo Distribuido-MPI-apuntes.pdf",
+        "raw-materials/U3/U3.2 Paralelismo Distribuido-MPI.pdf",
+        "raw-materials/U3/U3.3 Paralelismo Distribuido- No bloqueado.pdf",
+        "raw-materials/U3/U3.4 Paralelismo Distribuido-tiposMPI-apuntes.pdf",
+        "raw-materials/U3/U3.4 Paralelismo Distribuido-tiposMPI.pdf"
+      ],
+      "topics": [
+        "mpi-intro",
+        "mpi-collectives",
+        "mpi-blocking-nonblocking",
+        "mpi-derived-datatypes"
+      ]
+    }
+  ],
+  "topics": {
+    "sequential-model-architectures": {
+      "type": "concept",
+      "title": "Modelo secuencial y arquitecturas paralelas",
+      "unit": "u1",
+      "prerequisites": [],
+      "buildsOn": [],
+      "usedBy": [
+        "flynn-foster-pcam"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U1.1-Fundamentos_de_Paralelismo-apuntes.pdf",
+        "U1.1-Fundamentos_de_Paralelismo.pdf"
+      ],
+      "hasVisualization": true,
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "visualizationType": "timeline"
+    },
+    "flynn-foster-pcam": {
+      "type": "algorithm",
+      "title": "Taxonomía de Flynn y método de Foster (PCAM)",
+      "unit": "u1",
+      "prerequisites": [
+        "sequential-model-architectures"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "dag-cost-model",
+        "mpi-intro"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U1.2-Fundamentos-Foster_Flynn-apuntes.pdf",
+        "U1.2-Fundamentos-Foster_Flynn.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "dag-cost-model": {
+      "type": "concept",
+      "title": "DAGs: trabajo, span y clasificación SPA/NSPA",
+      "unit": "u1",
+      "prerequisites": [
+        "flynn-foster-pcam"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "performance-metrics",
+        "pram-algorithms"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U1.3-Fundamentos_DAG-apuntes.pdf",
+        "U1.3-Fundamentos_DAG.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "performance-metrics": {
+      "type": "concept",
+      "title": "Speedup, eficiencia, Ley de Amdahl y Ley de Gustafson",
+      "unit": "u2",
+      "prerequisites": [
+        "dag-cost-model"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "pram-models",
+        "partitioning-randomized",
+        "nbody-divide-conquer"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U2.1-Diseño_en_paralelo-performance-1.pdf",
+        "U2.1-Diseño_en_paralelo-performance-apuntes.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "pram-models": {
+      "type": "model",
+      "title": "PRAM y sus extensiones (APRAM, Phase PRAM, LPRAM, BPRAM, BSP, LogP)",
+      "unit": "u2",
+      "prerequisites": [
+        "performance-metrics"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "pram-algorithms",
+        "mpi-blocking-nonblocking"
+      ],
+      "subtopics": [
+        "apram",
+        "phase-pram",
+        "lpram",
+        "bpram",
+        "bsp",
+        "logp"
+      ],
+      "sourceSlides": [
+        "U2.2-Diseño_en_paralelo-PRAM_01-1.pdf",
+        "U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "timeline",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "pram-algorithms": {
+      "type": "algorithm",
+      "title": "Algoritmos PRAM y teorema de Brent",
+      "unit": "u2",
+      "prerequisites": [
+        "pram-models"
+      ],
+      "buildsOn": [
+        "dag-cost-model"
+      ],
+      "usedBy": [
+        "prefix-sum-recurrences"
+      ],
+      "subtopics": [
+        "or-reduction",
+        "and-reduction",
+        "max-reduction",
+        "sum-reduction",
+        "brent-theorem"
+      ],
+      "sourceSlides": [
+        "U2.2-Diseño_en_paralelo-PRAM_01-1.pdf",
+        "U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "prefix-sum-recurrences": {
+      "type": "algorithm",
+      "title": "Prefix-sum (scan) y recurrencias",
+      "unit": "u2",
+      "prerequisites": [
+        "pram-algorithms"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "nbody-divide-conquer"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U2.3-Diseño_en_paralelo-PRAM_02-1.pdf",
+        "U2.3-Diseño_en_paralelo-PRAM_02-apuntes.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "partitioning-randomized": {
+      "type": "concept",
+      "title": "Particionamiento de datos/tareas y algoritmos aleatorizados",
+      "unit": "u2",
+      "prerequisites": [
+        "performance-metrics"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "mpi-collectives"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U2.4-Diseño_en_paralelo-Particionamiento-Random.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "network-topology",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "nbody-divide-conquer": {
+      "type": "algorithm",
+      "title": "N-Body y divide y vencerás",
+      "unit": "u2",
+      "prerequisites": [
+        "performance-metrics",
+        "prefix-sum-recurrences"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "U2.5-Diseño_en_paralelo-NBody-DivideYVenceras.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mpi-intro": {
+      "type": "concept",
+      "title": "Introducción a MPI: comunicadores, rank, size, modos de envío",
+      "unit": "u3",
+      "prerequisites": [
+        "flynn-foster-pcam"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "mpi-collectives",
+        "mpi-blocking-nonblocking"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "U3.1 Paralelismo Distribuido-MPI-1.pdf",
+        "U3.1 Paralelismo Distribuido-MPI-apuntes.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "network-topology",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mpi-collectives": {
+      "type": "algorithm",
+      "title": "Operaciones colectivas de MPI",
+      "unit": "u3",
+      "prerequisites": [
+        "mpi-intro",
+        "partitioning-randomized"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [
+        "bcast",
+        "scatter",
+        "gather",
+        "allgather",
+        "reduce",
+        "allreduce"
+      ],
+      "sourceSlides": [
+        "U3.2 Paralelismo Distribuido-MPI.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "network-topology",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mpi-blocking-nonblocking": {
+      "type": "concept",
+      "title": "Comunicación bloqueante vs no bloqueante",
+      "unit": "u3",
+      "prerequisites": [
+        "mpi-intro",
+        "pram-models"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "U3.3 Paralelismo Distribuido- No bloqueado.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "timeline",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mpi-derived-datatypes": {
+      "type": "concept",
+      "title": "Tipos de datos derivados en MPI",
+      "unit": "u3",
+      "prerequisites": [
+        "mpi-intro"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "U3.4 Paralelismo Distribuido-tiposMPI-apuntes.pdf",
+        "U3.4 Paralelismo Distribuido-tiposMPI.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "memory-layout",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    }
+  }
+}

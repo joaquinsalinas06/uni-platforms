@@ -1,0 +1,33 @@
+id: prefix-sum-recurrences
+title: "Prefix-sum (scan) y recurrencias"
+type: algorithm
+unit: u2
+
+prerequisites: ["pram-algorithms"]
+buildsOn: []
+usedBy: ["nbody-divide-conquer"]
+
+complexity:
+  prefix-sum-non-recursive:
+    worst: "W(n) = O(n),\\ T(n) = O(\\log n)"
+    reasoning: >-
+      El paso 1 hace n operaciones. El paso 2 (upsweep) suma una serie
+      geometrica sum(n/2^m) para m=1..k que converge a O(n). El paso 3
+      (downsweep) suma sum(2^m) para m=0..k que tambien converge a O(n), asi
+      W(n)=O(n) total. El tiempo son 2*O(log n) niveles (subida y bajada del
+      arbol) mas 1 paso constante, de donde T(n)=O(log n).
+    source: "U2.3-Diseño_en_paralelo-PRAM_02-apuntes.pdf#1"
+  prefix-sum-recursive:
+    worst: "T(n) = T(n/2) + a"
+    reasoning: >-
+      Cada llamada recursiva reduce el problema a la mitad (n/2) y agrega una
+      constante a de trabajo extra (combinar mitades pares/impares). La
+      recurrencia T(n)=T(n/2)+a se resuelve por sustitucion repetida (ver
+      recurrencia caso 2 en la tabla) y da T(n)=O(log n). El trabajo sigue la
+      recurrencia W(n)=W(n/2)+b*n, que da W(n)=O(n).
+    source: "U2.3-Diseño_en_paralelo-PRAM_02-apuntes.pdf#3"
+
+professorAnalysisStyle: recurrence-based
+hasVisualization: true
+visualizationType: dag
+placeholder: false

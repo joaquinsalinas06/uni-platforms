@@ -1,0 +1,95 @@
+---
+import { getCollection, render } from 'astro:content';
+import StructureLayout from '../../layouts/StructureLayout.astro';
+import PrerequisiteBanner from '../../components/PrerequisiteBanner.astro';
+import ComplexityTable from '../../components/ComplexityTable.astro';
+import MasteryChecklist from '../../components/MasteryChecklist.astro';
+import SectionRail from '../../components/SectionRail.astro';
+import CodeEditor from '../../components/CodeEditor';
+import ExerciseBlock from '../../components/ExerciseBlock';
+import Visualization from '../../components/Visualization.astro';
+import { loadMeta, readCppSteps } from '../../lib/structures';
+
+// Una sola ruta para todos los documentos de una estructura: la teoría vive en
+// /structures/<id> y el resto conserva su ruta ("operations/insert", "examples"…).
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+  const label = { examples: 'ejemplos', exercises: 'ejercicios', mastery: 'dominio' } as const;
+
+  return docs.map((doc) => {
+    const structure = doc.id.split('/')[0];
+    const siblings = docs.filter((d) => d.id.split('/')[0] === structure);
+    const tabs = [
+      ...siblings
+        .filter((d) => d.data.kind === 'theory')
+        .map(() => ({ href: `/structures/${structure}`, label: 'teoría' })),
+      ...siblings
+        .filter((d) => d.data.kind === 'operation')
+        .sort((a, b) => (a.data as any).order - (b.data as any).order)
+        .map((d) => ({ href: `/structures/${d.id}`, label: d.data.title })),
+      ...siblings
+        .filter((d) => d.data.kind in label)
+        .map((d) => ({ href: `/structures/${d.id}`, label: label[d.data.kind as keyof typeof label] })),
+    ];
+    return {
+      params: { path: doc.data.kind === 'theory' ? structure : doc.id },
+      props: { doc, structure, tabs },
+    };
+  });
+}
+
+const { doc, structure, tabs } = Astro.props;
+const meta = loadMeta(structure);
+const { Content, headings } = await render(doc);
+
+const data = doc.data;
+const label = { examples: 'ejemplos', exercises: 'ejercicios', mastery: 'dominio' } as const;
+const section =
+  data.kind === 'theory'
+    ? 'teoría'
+    : data.kind === 'operation'
+      ? data.title
+      : label[data.kind as keyof typeof label];
+
+const cppSteps = data.kind === 'operation' ? readCppSteps(structure, data.cppSteps) : [];
+const hasRail = headings.some((h) => h.depth === 2);
+---
+
+<StructureLayout meta={meta} section={section} tabs={tabs} rail={hasRail}>
+  {data.kind === 'theory' && <PrerequisiteBanner id={structure} />}
+  {data.kind === 'theory' && <ComplexityTable meta={meta} />}
+
+  {data.kind === 'theory' && data.visualization && <Visualization viz={data.visualization} />}
+  {data.kind === 'operation' && data.visualization && <Visualization viz={data.visualization} />}
+  {
+    /*
+      client:only (no client:visible): CodeMirror toca `document`/mide texto
+      en el DOM real y su salida servidor-renderizada nunca coincide con la
+      del cliente — eso es justo el "Minified React error #418" que se veía
+      en cada operación con editor. client:only nunca intenta SSR-earlo, así
+      que no hay nada que desajustar; el editor sigue siendo progresivo, sólo
+      que aparece tras hidratar en vez de tener un HTML previo.
+    */
+  }
+  {data.kind === 'operation' && cppSteps.length > 0 && <CodeEditor client:only="react" steps={cppSteps} />}
+
+  {data.kind === 'mastery' && <MasteryChecklist canExplain={data.canExplain} canDo={data.canDo} />}
+
+  <div class="prose">
+    <Content />
+  </div>
+
+  {
+    data.kind === 'exercises' && (
+      <div class="mt-12 space-y-6">
+        {data.items
+          .sort((a, b) => a.level - b.level)
+          .map((item) => (
+            <ExerciseBlock client:visible exercise={item} />
+          ))}
+      </div>
+    )
+  }
+
+  <SectionRail slot="rail" headings={headings} meta={meta} />
+</StructureLayout>

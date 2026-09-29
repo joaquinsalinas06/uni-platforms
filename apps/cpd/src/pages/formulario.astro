@@ -1,0 +1,32 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const entry = await getEntry('formulario', 'formulario');
+const rendered = entry ? await render(entry) : null;
+---
+
+<Base title="Formulario" crumb="formulario">
+  <header class="stagger mb-12">
+    <p class="tag">referencia rápida</p>
+    <h1 class="mt-2 max-w-[28ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      Formulario del curso
+    </h1>
+    <p class="mt-5 max-w-[62ch] text-[1.0625rem] leading-relaxed text-[var(--muted)]">
+      Todas las fórmulas del curso en un solo lugar, agrupadas por unidad — para repasar
+      rápido sin ir tema por tema. Cada fórmula enlaza a su tema si necesitás el
+      razonamiento completo.
+    </p>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  {
+    rendered ? (
+      <div class="prose max-w-none">
+        <rendered.Content />
+      </div>
+    ) : (
+      <p class="tag">todavía no hay contenido en content/formulario.md</p>
+    )
+  }
+</Base>

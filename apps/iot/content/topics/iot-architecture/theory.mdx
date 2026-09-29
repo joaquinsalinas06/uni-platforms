@@ -1,0 +1,249 @@
+---
+kind: theory
+title: Arquitectura IoT
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Diseñar TI tradicional es como diseñar una casa: pocos usuarios, ambiente controlado,
+fácil de asegurar. Diseñar IoT es como diseñar un estadio masivo: miles a millones de
+endpoints, dispositivos muy diversos, mucha más escala y exposición. IoT no es "más
+dispositivos de TI": cambia el problema arquitectónico completo. Por eso el curso usa
+modelos de referencia (oneM2M, IoTWF) para ordenar dónde vive cada pieza —sensor,
+gateway, protocolo, analítica— dentro de un sistema IoT.
+
+## Conceptos
+
+### TI tradicional vs. IoT: "todo es sobre los datos"
+
+| | TI tradicional | IoT |
+|---|---|---|
+| Analogía | Diseñar una casa | Diseñar un estadio masivo |
+| Usuarios/dispositivos | Limitados, ambiente controlado | Miles → millones de endpoints |
+| Soporta | Aplicaciones de negocio (correo, web, CRM, BD) | Datos generados por sensores |
+| Foco | Servicio confiable y continuo | Transportar → recolectar → analizar → actuar |
+
+> La idea central de IoT es mover datos del mundo físico hacia una acción con sentido.
+
+### Los cuatro impulsores (drivers) de la arquitectura IoT
+
+1. **Escala masiva**: de miles a millones de endpoints; se necesita direccionamiento
+   escalable (IPv6).
+2. **Seguridad**: dispositivos expuestos y físicamente accesibles → superficie de
+   ataque más grande y amenazas nuevas.
+3. **Restricciones (constraints)**: dispositivos limitados + redes no confiables → poca
+   energía, memoria, ancho de banda y procesamiento.
+4. **Legado y tiempo real**: sistemas antiguos conviven con decisiones inmediatas →
+   se necesitan gateways, edge computing y analítica en tiempo real.
+
+### Modelo de referencia de 3 capas
+
+La implementación de referencia más simple agrupa todo en tres capas:
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Modelo de 3 capas',
+  steps: [{
+    note: 'De abajo hacia arriba: la capa física genera los datos, la de conectividad los transporta, la de aplicación les da valor.',
+    nodes: [
+      { id: 'phys', value: '1. Física', parent: null },
+      { id: 'conn', value: '2. Conectividad', parent: 'phys' },
+      { id: 'app', value: '3. Aplicación', parent: 'conn' },
+    ],
+    links: [
+      { from: 'phys', to: 'conn', label: 'sube dato' },
+      { from: 'conn', to: 'app', label: 'sube dato' },
+    ],
+  }],
+}} />
+
+### Iniciativa oneM2M (ETSI)
+
+Definida por el **European Telecommunications Standards Institute (ETSI)**, que creó el
+comité técnico M2M en 2008 (perspectiva similar a la académica de 3 capas). oneM2M
+agrupa las 3 capas en dos bloques:
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'oneM2M: núcleo + interoperabilidad',
+  steps: [{
+    note: 'Las capas 1 y 2 forman el "núcleo" (sensado + transporte); la capa 3 es la interoperabilidad entre "cosas".',
+    nodes: [
+      { id: 'l1', value: '1. Física', parent: null },
+      { id: 'l2', value: '2. Conectividad', parent: 'l1' },
+      { id: 'l3', value: '3. Interoperabilidad', parent: 'l2' },
+    ],
+    links: [
+      { from: 'l1', to: 'l2', label: '1+2 = núcleo' },
+      { from: 'l2', to: 'l3', label: '3 = interop. de "cosas"' },
+    ],
+  }],
+}} />
+
+### Iniciativa IoTWF (Cisco, IBM, Rockwell Automation, 2014)
+
+El **IoT World Forum (IoTWF)** propone **7 capas**: las 3 primeras son la parte OT
+(*Operational Technology* — lo físico/tiempo real) y las 4 restantes son la parte IT
+(perspectiva comercial de los proveedores, interesante para interoperabilidad y
+despliegue).
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'IoTWF: 7 capas (OT + IT)',
+  steps: [{
+    note: 'Capas 1-3 = OT (things, comunicaciones, borde/fog). Capas 4-7 = IT (acumulación de datos, abstracción, aplicación, colaboración/procesos).',
+    nodes: [
+      { id: 'c1', value: '1. Dispositivos físicos y controladores', parent: null },
+      { id: 'c2', value: '2. Conectividad', parent: 'c1' },
+      { id: 'c3', value: '3. Borde (edge)/procesamiento de niebla', parent: 'c2' },
+      { id: 'c4', value: '4. Acumulación de datos', parent: 'c3' },
+      { id: 'c5', value: '5. Abstracción de datos', parent: 'c4' },
+      { id: 'c6', value: '6. Aplicación', parent: 'c5' },
+      { id: 'c7', value: '7. Colaboración y procesos (personas)', parent: 'c6' },
+    ],
+    links: [
+      { from: 'c1', to: 'c2' }, { from: 'c2', to: 'c3' },
+      { from: 'c3', to: 'c4', label: 'OT → IT' },
+      { from: 'c4', to: 'c5' }, { from: 'c5', to: 'c6' }, { from: 'c6', to: 'c7' },
+    ],
+  }],
+}} />
+
+> **Nota de apoyo** (no está en el material): las slides sólo detallan a fondo las
+> capas 1, 2 y 3 (las OT); las capas 4-7 se mencionan como "perspectiva comercial de
+> los proveedores" sin desarrollarlas una a una.
+
+### Capa 1 — Things: sensores y actuadores
+
+Antes de elegir una tecnología de red hay que entender las características del
+dispositivo ("thing"), porque **el "thing" determina los requisitos de red**:
+
+| Característica | Opción A | Opción B |
+|---|---|---|
+| Energía | A batería → limitado en energía | Conectado a la red eléctrica → menos restricciones |
+| Movilidad | Estático (ubicación fija) | Móvil (cambia de ubicación) |
+| Frecuencia de reporte | Baja: una vez al mes | Alta: cada pocos milisegundos |
+| Tipo de dato | Simple: binario / on-off | Rico: telemetría / multidimensional / video |
+
+### Capa 2 — La red de comunicaciones
+
+Conecta las "cosas" con las aplicaciones, en cuatro partes:
+
+1. **Red de acceso**: la "última milla" que conecta a las cosas. Topologías estrella,
+   malla o punto a punto. Ejemplos: Wi-SUN, LoRaWAN, IEEE 802.11ah.
+2. **Gateways y backhaul**: el gateway conecta los dispositivos locales con la red
+   central; el backhaul transporta esos datos a mayor distancia.
+3. **Transporte de red**: IP da conectividad de capa de red; UDP habilita un
+   transporte liviano.
+4. **Gestión de red**: protocolos pensados para comunicación IoT eficiente — **CoAP**
+   (basado en UDP) frente a **MQTT** (basado en TCP).
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Capa 2: sus 4 partes',
+  steps: [{
+    note: 'Las 4 partes de la capa de comunicaciones, de la "última milla" al protocolo de aplicación.',
+    nodes: [
+      { id: 'acc', value: '1. Red de acceso', parent: null },
+      { id: 'gw', value: '2. Gateway + backhaul', parent: 'acc' },
+      { id: 'tr', value: '3. Transporte: IP / UDP', parent: 'gw' },
+      { id: 'mg', value: '4. Gestión: CoAP (UDP) / MQTT (TCP)', parent: 'tr' },
+    ],
+    links: [{ from: 'acc', to: 'gw' }, { from: 'gw', to: 'tr' }, { from: 'tr', to: 'mg' }],
+  }],
+}} />
+
+### Capa 3 — Aplicaciones y analítica
+
+Convierte datos en valor, con tres tipos de aplicación:
+
+- **Analíticas**: combinan datos de varias cosas, visualizan estados/tendencias,
+  generan reportes históricos, identifican patrones y anomalías.
+- **De control**: convierten información en acciones automatizadas, modificando el
+  comportamiento de dispositivos físicos.
+- **Analítica de red**: monitorea la salud y desempeño de la red IoT, detecta fallas
+  y comportamiento anormal, ayuda a prevenir accidentes operativos.
+
+## Método paso a paso
+
+Para ubicar un componente dado dentro del modelo IoTWF:
+
+1. Pregunta si el componente **genera o consume** el dato físico (sensor/actuador) →
+   capa 1.
+2. Si sólo **transporta** el dato (radio, gateway, protocolo de red) → capa 2; dentro
+   de ella, distingue si es la "última milla" (acceso), el puente (gateway/backhaul),
+   el transporte (IP/UDP) o la gestión (CoAP/MQTT).
+3. Si **procesa, visualiza o decide** con el dato ya recolectado → capa 3.
+4. Verifica con los 4 impulsores (escala, seguridad, restricciones, legado/tiempo
+   real): ¿por qué esa capa es la que mejor atiende ese impulsor para este caso?
+
+## Ejemplo resuelto
+
+*(derivado)* Un sensor de humedad de suelo a batería que reporta una vez al día por
+LoRaWAN a un gateway, que reenvía por MQTT a un dashboard en la nube que genera
+alertas de riego.
+
+- Sensor de humedad → **capa 1** (a batería, estático, baja frecuencia de reporte,
+  dato simple).
+- LoRaWAN (red de acceso) + gateway → **capa 2**, parte "red de acceso" y "gateway y
+  backhaul".
+- MQTT (TCP) → **capa 2**, parte "gestión de red".
+- Dashboard que genera alertas → **capa 3**, aplicación de control (decide accionar
+  el riego) y analítica (visualiza tendencias de humedad).
+
+## Errores típicos
+
+- Confundir "capa de conectividad" con "el protocolo de aplicación": la capa 2 cubre
+  desde la radio hasta CoAP/MQTT, no sólo el cable o el radio.
+- Pensar que las 7 capas del IoTWF son todas igual de "físicas": sólo las 3 primeras
+  son OT; las 4 últimas son la perspectiva IT/comercial.
+- Olvidar que "más es más" no es el objetivo: se busca alto desempeño con bajo
+  consumo de energía (relevante también para el tema de smart objects en
+  [Edge, Fog y Cloud computing](/topics/edge-fog-cloud)).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Una empresa agrícola instala sensores de humedad y temperatura a batería que reportan cada 10 minutos por LoRaWAN a un gateway, el cual publica por MQTT hacia un servidor que genera reportes históricos y activa el riego automáticamente si la humedad baja de un umbral. Ubique cada elemento (sensor, LoRaWAN, gateway, MQTT, servidor) dentro de las 3 capas del IoTWF y justifique.",
+  hints: [
+    "Empieza por lo que genera el dato físico: eso siempre es capa 1.",
+    "LoRaWAN es la 'última milla' (red de acceso); el gateway y MQTT son las otras partes de la capa 2.",
+    "El servidor hace dos cosas a la vez: analítica (reportes históricos) y control (activar el riego). Ambas son capa 3.",
+  ],
+}}>
+
+| Elemento | Capa IoTWF | Justificación |
+|---|---|---|
+| Sensor de humedad/temperatura | **1. Física** | A batería, estático, reporta cada 10 min: dato simple/telemetría que genera el mundo físico. |
+| LoRaWAN | **2. Conectividad** (red de acceso) | Es la "última milla" que conecta el sensor con el resto de la red. |
+| Gateway | **2. Conectividad** (gateway/backhaul) | Conecta los dispositivos locales con la red central y reenvía a mayor distancia. |
+| MQTT | **2. Conectividad** (gestión de red) | Protocolo de aplicación sobre TCP para publicar los datos ya transportados. |
+| Servidor: reportes históricos | **3. Aplicación** (analítica) | Combina datos de varios sensores y visualiza tendencias históricas. |
+| Servidor: activar riego automático | **3. Aplicación** (control) | Convierte información en una acción física automatizada. |
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Riego automático ubicado en las 3 capas del IoTWF',
+  steps: [{
+    note: 'El dato sube de capa en capa: se genera, se transporta y finalmente se convierte en analítica y en una acción de control.',
+    nodes: [
+      { id: 'sensor', value: '1. Sensor humedad/temp (batería)', parent: null },
+      { id: 'lora', value: '2. LoRaWAN (acceso)', parent: 'sensor' },
+      { id: 'gw', value: '2. Gateway (backhaul)', parent: 'lora' },
+      { id: 'mqtt', value: '2. MQTT (gestión de red)', parent: 'gw' },
+      { id: 'analitica', value: '3. Reportes históricos (analítica)', parent: 'mqtt' },
+      { id: 'control', value: '3. Riego automático (control)', parent: 'mqtt' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

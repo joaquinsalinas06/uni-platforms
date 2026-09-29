@@ -1,0 +1,11 @@
+id: breadboard-simulation
+title: Protoboard y simulación de circuitos
+type: lab
+unit: s2
+prerequisites: [basic-circuits]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas: []

@@ -1,0 +1,11 @@
+id: edge-fog-cloud
+title: Edge, Fog y Cloud computing
+type: concept
+unit: s2
+prerequisites: [iot-architecture]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: dag
+placeholder: false
+formulas: []

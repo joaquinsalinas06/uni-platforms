@@ -1,0 +1,18 @@
+id: potential-method
+title: "El método del potencial"
+type: concept
+week: week-02
+
+prerequisites: []
+buildsOn: []
+usedBy: ["fibonacci-heap", "fat-nodes", "access-lemma"]
+
+# Es un concepto (una técnica de análisis), no una estructura con operaciones
+# que costar. El profesor da la definición y la condición de validez, no una
+# tabla de costos de "sus" operaciones — esas viven en fibonacci-heap y
+# fat-nodes, que son quienes la aplican. Se deja vacío a propósito.
+complexity: {}
+
+professorAnalysisStyle: "potential-method"
+hasVisualization: true
+placeholder: false

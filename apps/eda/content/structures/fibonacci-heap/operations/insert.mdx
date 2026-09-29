@@ -1,0 +1,321 @@
+---
+kind: operation
+title: Insert
+order: 1
+cppSteps:
+  - step-1-node.cpp
+  - step-2-structure.cpp
+  - step-3-insert-union.cpp
+  - full-implementation.cpp
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Estado inicial *(derivado del pseudocódigo; no aparece así en las
+        diapositivas)*: la lista de raíces ya tiene dos árboles sueltos —
+        `g(7)`, el actual `min(H)`, y `n(4)` con su hijo `h(9)`. Se va a
+        llamar `Insert(H, 3)`.
+      highlight: ["g"]
+      nodes:
+        - { id: g, value: 7, tag: g, parent: null, state: active }
+        - { id: n, value: 4, tag: n, parent: null }
+        - { id: h, value: 9, tag: h, parent: n }
+    - note: >-
+        Paso 1: se inicializa `x` con `grado(x) ← 0`, `padre(x) ← nulo`,
+        `marca(x) ← falso`. Todavía no es parte de la lista de raíces —
+        `copied` marca que es un nodo nuevo de esta versión, no tocado.
+      highlight: ["x"]
+      nodes:
+        - { id: g, value: 7, tag: g, parent: null }
+        - { id: n, value: 4, tag: n, parent: null }
+        - { id: h, value: 9, tag: h, parent: n }
+        - { id: x, value: 3, tag: x, parent: null, state: copied }
+    - note: >-
+        Paso 2: se agrega `x` como árbol de un solo nodo a la lista de
+        raíces de `H` — empalme de punteros en O(1), sin recorrer ni
+        comparar con nada todavía. **El detalle línea por línea de este
+        empalme (`spliceInto`) está más abajo, en Algoritmo — con los
+        punteros `left`/`right` dibujados uno por uno.**
+      highlight: ["x"]
+      nodes:
+        - { id: g, value: 7, tag: g, parent: null }
+        - { id: n, value: 4, tag: n, parent: null }
+        - { id: h, value: 9, tag: h, parent: n }
+        - { id: x, value: 3, tag: x, parent: null, state: active }
+    - note: >-
+        Paso 3: se compara `llave(x)=3` contra `llave(min(H))=7`. Como
+        `3 < 7`, se cumple la condición y toca actualizar `min(H)`.
+      highlight: ["x", "g"]
+      nodes:
+        - { id: g, value: 7, tag: g, parent: null, state: active }
+        - { id: n, value: 4, tag: n, parent: null }
+        - { id: h, value: 9, tag: h, parent: n }
+        - { id: x, value: 3, tag: x, parent: null, state: active }
+    - note: >-
+        `min(H) ← x`. `g` deja de ser el mínimo pero sigue como raíz
+        suelta, sin marca de haber perdido ese rol.
+      highlight: ["x"]
+      nodes:
+        - { id: g, value: 7, tag: g, parent: null }
+        - { id: n, value: 4, tag: n, parent: null }
+        - { id: h, value: 9, tag: h, parent: n }
+        - { id: x, value: 3, tag: x, parent: null, state: active }
+    - note: >-
+        Estado final: tres árboles sueltos en la lista de raíces —
+        `x(3)` como nuevo `min(H)`, `g(7)`, `n(4)` con hijo `h(9)` — nada
+        se reordenó ni se enlazó. Ese reordenamiento sólo ocurre cuando un
+        futuro [Extract-Min](/structures/fibonacci-heap/operations/extract-min)
+        llame a [Consolidate](/structures/fibonacci-heap/operations/consolidate).
+      highlight: []
+      nodes:
+        - { id: x, value: 3, tag: x, parent: null }
+        - { id: g, value: 7, tag: g, parent: null }
+        - { id: n, value: 4, tag: n, parent: null }
+        - { id: h, value: 9, tag: h, parent: n }
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Agrega un elemento nuevo al montículo como un árbol de un solo nodo,
+preservando el invariante de montículo mínimo.
+
+## Intuición
+
+No hay nada que reorganizar: el nodo nuevo se vuelve, por sí solo, un árbol
+más en la lista circular de raíces. Es exactamente la pereza que describe
+el mazo: "sólo agregan el nuevo nodo a la lista de raíces en O(1)". Si su
+llave es menor que la del mínimo actual, se convierte en el nuevo mínimo;
+si no, simplemente queda ahí hasta que algún `Extract-Min` lo toque.
+
+## Algoritmo
+
+1. Inicializar `grado(x) ← 0`, `padre(x) ← nulo`, `marca(x) ← falso`.
+2. Agregar `x` como árbol de un solo nodo a la lista de raíces de `H`.
+3. Si `min(H)` es nulo o `llave(x) < llave(min(H))`, actualizar
+   `min(H) ← x`.
+
+### El empalme de punteros, línea por línea
+
+El paso 2 no es una operación atómica del pseudocódigo del profesor — es
+`spliceInto(head, x)`, la función auxiliar de C++ que hace el trabajo real.
+Son sólo 6 líneas, pero cada una mueve un puntero `left`/`right` concreto, y
+sin verlas una por una es fácil perder de vista cuál nodo termina apuntando
+a cuál. Antes de entrar: la lista de raíces sólo tiene dos nodos, `g` y `n`
+— con sólo 2 raíces, el `right` y el `left` de cada una **coinciden** (el
+único vecino es el mismo yendo en cualquier dirección). Eso cambia en
+cuanto entra un tercer nodo (`x`), que es justo lo que va a pasar acá.
+
+```cpp
+static void spliceInto(Node* head, Node* x) {
+    Node* headLeft = head->left;
+    headLeft->right = x;
+    Node* xLeft = x->left;
+    x->left = headLeft;
+    xLeft->right = head;
+    head->left = xLeft;
+}
+```
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes de spliceInto(head=g, x): la lista de raíces sólo tiene g(7) y n(4) — un ciclo de tamaño 2, así que g.right=n Y g.left=n a la vez (mismo vecino: una sola arista con punta de flecha en los dos extremos, 'R,L'). x(3) ya existe — new Node(3) corrió su constructor, que hace left = right = this: x nace apuntándose a sí mismo, nunca queda en null. (Contraste: parent y child sí nacen en null — left/right nunca.)",
+      highlight: [],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "copied" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 1 — Node* headLeft = head->left;  headLeft es una variable local (no se dibuja como nodo): toma el valor de g.left, que hoy es n. Ningún puntero del struct cambia todavía — sólo se guarda una referencia a n para usarla en la línea 2.",
+      highlight: ["n"],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "copied" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 2 — headLeft->right = x;  headLeft es n, así que esto reescribe n.right: dejaba de apuntar a g y ahora apunta a x. Es la primera mutación real. n.left sigue intacto (todavía g) — right e left de n ya no coinciden, la simetría del ciclo de 2 se rompió.",
+      highlight: ["n", "x"],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "copied" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L" },
+        { from: "n", to: "g", kind: "pointer", label: "L" },
+        { from: "n", to: "x", kind: "pointer", label: "R" },
+      ],
+    },
+    {
+      note: "Línea 3 — Node* xLeft = x->left;  otra variable local, no otro puntero mutado. x todavía está auto-referenciado (nadie tocó sus punteros en las líneas 1-2), así que xLeft termina siendo el propio x. Esto es exactamente lo que hace posible reutilizar spliceInto para insertar UNA lista circular completa (Union) y no sólo un nodo suelto: xLeft es 'el nodo que hoy está a la izquierda de x' — con un solo nodo, ese nodo es él mismo.",
+      highlight: ["x"],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "copied" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L" },
+        { from: "n", to: "g", kind: "pointer", label: "L" },
+        { from: "n", to: "x", kind: "pointer", label: "R" },
+      ],
+    },
+    {
+      note: "Línea 4 — x->left = headLeft;  headLeft es n, así que x.left deja de apuntar a sí mismo y ahora apunta a n. Primera vez que un puntero de x cambia: ya no está aislado.",
+      highlight: ["x", "n"],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "active" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L" },
+        { from: "n", to: "g", kind: "pointer", label: "L" },
+        { from: "n", to: "x", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 5 — xLeft->right = head;  xLeft es x (línea 3), así que esto reescribe x.right: dejaba de apuntar a sí mismo y ahora apunta a head, o sea g. x ya no tiene ningún puntero apuntándose a sí mismo — quedó completamente insertado en el ciclo de g y n.",
+      highlight: ["x", "g"],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "active" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L" },
+        { from: "n", to: "g", kind: "pointer", label: "L" },
+        { from: "n", to: "x", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "x", to: "g", kind: "pointer", label: "R" },
+      ],
+    },
+    {
+      note: "Línea 6 — head->left = xLeft;  xLeft es x, así que esto reescribe g.left: dejaba de apuntar a n y ahora apunta a x. Es el último puntero pendiente — con este, los 4 nodos-lado (g.right, g.left, n.right, n.left, x.right, x.left) quedan todos consistentes con un ciclo de 3.",
+      highlight: ["g", "x"],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null, state: "active" },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "n", to: "x", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "x", to: "g", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Después: ciclo de 3 consistente. Siguiendo sólo las flechas 'R' (right): g → n → x → g. Siguiendo sólo las 'L' (left): g → x → n → g — exactamente el mismo ciclo, al revés. x quedó insertado inmediatamente a la izquierda de head (g.left = x): por eso spliceInto es O(1) sin importar cuántos nodos tenga la lista — sólo tocó estos 3, nunca recorrió el resto.",
+      highlight: [],
+      nodes: [
+        { id: "g", value: 7, tag: "g", parent: null },
+        { id: "n", value: 4, tag: "n", parent: null },
+        { id: "x", value: 3, tag: "x", parent: null },
+      ],
+      links: [
+        { from: "g", to: "n", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "n", to: "x", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "x", to: "g", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+  ],
+}} />
+
+`removeFromList` (la operación inversa — saca un nodo del ciclo) recibe el
+mismo tratamiento línea por línea en
+[Cut](/structures/fibonacci-heap/operations/cut).
+
+## Pseudocódigo
+
+```
+Algoritmo 5: Insert(H, x)
+grado(x) ← 0; padre(x) ← nulo; marca(x) ← falso ;
+Agregar x como un árbol de un solo nodo a la lista de raíces de H ;
+si min(H) = nulo o llave(x) < llave(min(H)) entonces
+    min(H) ← x ;
+```
+
+## C++
+
+Ver `step-3-insert-union.cpp` y `full-implementation.cpp` en el editor de
+arriba.
+
+## Complejidad temporal
+
+Costo real $O(1)$: agregar un nodo a una lista circular doblemente
+enlazada es empalmar cuatro punteros, sin recorrer nada. Con el potencial
+$\Phi(H) = t(H) + 2 \cdot m(H)$ (ver [Análisis de complejidad](/structures/fibonacci-heap#análisis-de-complejidad)
+en la teoría), $t(H)$ sube en 1 y $m(H)$ no cambia, así que $\Delta\Phi = 1$ y el
+costo amortizado $\hat{c} = O(1) + 1 = O(1)$.
+
+## Complejidad espacial
+
+$O(1)$ adicional por nodo insertado (el nodo mismo).
+
+## Ejemplo
+
+### Insertar una secuencia, sin consolidar
+
+Partimos de un heap vacío e insertamos `2, 9, 7, 3, 1`. Cada operación crea
+una raíz de grado 0; ninguna une árboles durante Insert. Al final la lista de
+raíces contiene:
+
+```text
+2    9    7    3    1
+                    ↑
+                  min(H)
+```
+
+El `1` es el mínimo porque fue el último valor menor que el `min(H)` que
+había antes. Los cinco nodos siguen siendo raíces de grado 0. La unión entre
+raíces de igual grado se reserva para Consolidate, dentro de Extract-Min.
+
+> **Para recordar.** Insert sólo agrega una raíz y, si corresponde, cambia
+> `min(H)`. Su costo real es `O(1)` y su costo amortizado también es `O(1)`.
+
+*(Derivado del pseudocódigo; no aparece en las diapositivas.)* Sobre un
+montículo con `min(H)` de llave `7`: `Insert(H, 3)` crea un nodo con
+`grado = 0`, `marca = falso`, lo agrega a la lista de raíces, y como
+`3 < 7`, actualiza `min(H)` al nuevo nodo.
+
+## Casos límite
+
+- **Heap vacío**. Antes, `minNode = nullptr`. `Insert(5)` crea una lista
+  circular de un nodo: `5.left → 5` y `5.right → 5`. Como no hay otra
+  raíz, `5` es raíz, mínimo, de grado 0 y sin marca; luego `minNode → 5`.
+- **Ya hay raíces**. Si la lista es `5 ⇄ 8 ⇄ 10` y `minNode → 5`, al
+  insertar `3` se empalma junto a `minNode`:
+
+  ```text
+  x->right = minNode->right     5 ⇄ 3 ⇄ 8 ⇄ 10
+  x->left  = minNode
+  minNode->right->left = x
+  minNode->right = x
+  ```
+
+  Son cuatro cambios de puntero; no se recorre la lista.
+- **`left`/`right` nunca son `null`**: a diferencia de `parent` y `child`
+  (que sí nacen en `nullptr` y pueden volver a estarlo), un nodo recién
+  creado por `new Node(k)` ya sale de su constructor con
+  `left = right = this` — su propia lista circular de tamaño 1. `left` y
+  `right` de cualquier nodo vivo siempre apuntan a algo real; nunca hay que
+  chequearlos contra `null` en `spliceInto` ni en `removeFromList`.
+- **La nueva llave es menor que el mínimo**. En el ejemplo anterior,
+  `3 < 5`, así que el nodo recién insertado pasa a ser el mínimo:
+  `5 ⇄ 3 ⇄ 8 ⇄ 10`, con `minNode → 3`. No cambia ningún padre ni hijo.
+- **La nueva llave no es menor**. Si `minNode → 3` e `Insert(7)`, queda
+  `3 ⇄ 7 ⇄ …`, pero `minNode` sigue apuntando a `3`.
+- **Regla que evita una confusión frecuente**. Insert nunca hace hijo al
+  nodo nuevo. Lo correcto es `3    5` (dos raíces), no `3` con `5` debajo.
+  Sólo Consolidate podría convertirlo en hijo más adelante.

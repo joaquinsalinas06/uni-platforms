@@ -1,0 +1,55 @@
+id: splay-tree-adt
+title: "TDA del splay tree"
+type: structure
+week: week-06
+
+prerequisites: ["splay-tree", "bst-computational-model"]
+buildsOn: ["splay-tree"]
+usedBy: []
+
+complexity:
+  split:
+    worst: O(1) adicional
+    reasoning: >-
+      "Ninguna: solo hay que mirar el valor de r y cortar un puntero. Todo el
+      trabajo de 'recorrer' ya lo pagó Buscar — Separar es O(1) puro encima de
+      él" (#16). Su precondición es que ya se ejecutó Buscar(k), que dejó en la
+      raíz a k o a su predecesor/sucesor; por eso uno de los dos subárboles de
+      r ya es todo menor o igual que k y el otro todo mayor. Una comparación y
+      una asignación a NULO — y ninguna llamada propia a Splay (#20). La cota
+      es sobre el trabajo ADICIONAL: el costo total de "buscar y separar" es el
+      de Buscar.
+    source: Sem6_Dynamic_Optimality_II.pdf#15-16
+  join:
+    worst: O(log n) amortizado
+    reasoning: >-
+      Una sola llamada a Splay, la del máximo m de A (#20). El descenso por la
+      espina derecha de A hasta m cuesta, en real, la profundidad de m — hasta
+      O(n) en un caso aislado, igual que el descenso de Buscar. El profesor no
+      contabiliza ese descenso aparte: lo agrupa en "cada operación cuesta,
+      amortizado, a lo más el doble de lo que cuesta un Splay" (#20), y el
+      enganche final (v.der va a B) es O(1).
+    source: Sem6_Dynamic_Optimality_II.pdf#17,20
+  insert:
+    worst: O(log n) amortizado
+    reasoning: >-
+      Una sola llamada a Splay, la de su propio Buscar(k) (#20). Después de esa
+      llamada no queda ningún recorrido del árbol: Separar es O(1) adicional
+      (#16) y colgar x sobre I y D son tres asignaciones de puntero. "Ningún
+      recorrido adicional del árbol" (#18) — por eso Insertar cuesta lo mismo
+      que un Buscar, y el #20 lo acota en a lo más el doble de un Splay.
+    source: Sem6_Dynamic_Optimality_II.pdf#18,20
+  delete:
+    worst: O(log n) amortizado
+    reasoning: >-
+      Dos llamadas a Splay, "Eliminar = Buscar + Unir" (#20) — la única de las
+      cinco con dos. Buscar(k) deja a k en la raíz; sus dos hijos ya cumplen la
+      precondición de Unir, así que Unir aporta su única llamada y nada más. El
+      #20 lo cierra: cada operación cuesta, amortizado, a lo más el DOBLE de lo
+      que cuesta un Splay, y Eliminar es literalmente ese doble.
+    source: Sem6_Dynamic_Optimality_II.pdf#19-20
+
+professorAnalysisStyle: amortized
+hasVisualization: true
+visualizationType: tree
+placeholder: false

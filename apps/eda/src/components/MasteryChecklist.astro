@@ -1,0 +1,37 @@
+---
+interface Props {
+  canExplain: string[];
+  canDo: string[];
+}
+const { canExplain, canDo } = Astro.props;
+
+const groups = [
+  { label: 'Debo poder explicar', items: canExplain },
+  { label: 'Debo poder hacer', items: canDo },
+].filter((g) => g.items.length > 0);
+---
+
+<div class="my-10 grid gap-6 lg:grid-cols-2">
+  {
+    groups.map((group) => (
+      <section class="reveal overflow-hidden rounded-lg border border-[var(--rule)]">
+        <h2 class="tag border-b border-[var(--rule)] bg-[var(--fill)] px-5 py-2.5">{group.label}</h2>
+        <ul class="divide-y divide-[var(--rule)]">
+          {group.items.map((item) => (
+            <li>
+              <label class="flex cursor-pointer items-start gap-3 px-5 py-3 text-[0.9375rem] leading-snug transition-colors hover:bg-[var(--fill)]">
+                <input
+                  type="checkbox"
+                  class="mt-1 h-4 w-4 flex-none accent-[var(--accent)]"
+                />
+                <span>{item}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
+</div>
+
+<p class="tag">las marcas no se guardan — esto es una lista de repaso, no un sistema de progreso</p>

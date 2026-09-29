@@ -1,0 +1,95 @@
+---
+kind: theory
+title: MQTT
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+MQTT (Message Queuing Telemetry Transport) es el protocolo pub/sub que ya vimos en
+[Modelos de transmisión](/topics/transmission-models) y en
+[Protocolos de aplicación](/topics/app-protocols), aterrizado en un formato de paquete
+concreto: un *broker* intermedia entre *publishers* y *subscribers* que nunca se conocen
+entre sí (desacople en tiempo y en espacio). Corre sobre TCP, es "data agnostic" (no le
+importa qué bytes lleva el payload) y está pensado para dispositivos con poca CPU, poca
+batería y redes inestables — exactamente el perfil de un sensor IoT.
+
+## Conceptos
+Esta semana se organiza en cinco subtemas:
+
+1. **[Arquitectura y paquete](/topics/mqtt/subtopics/arquitectura-y-paquete)** — broker/cliente,
+   fixed header (tipo, DUP, QoS, RETAIN), remaining length, variable header y payload.
+2. **[QoS](/topics/mqtt/subtopics/qos)** — los tres niveles de calidad de servicio, sus
+   handshakes, el flag DUP y por qué hace falta QoS si ya hay TCP.
+3. **[Retained, sesión persistente y Last Will](/topics/mqtt/subtopics/retained-sesion-lwt)** —
+   el "último valor conocido" de un tópico, el buffer offline por cliente y el mensaje que
+   el broker publica cuando un cliente se cae sin avisar.
+4. **[Tópicos y seguridad](/topics/mqtt/subtopics/topicos-y-seguridad)** — jerarquía con `/`,
+   comodines `+` y `#`, TLS, autenticación y autorización.
+5. **[ESP32 y UART](/topics/mqtt/subtopics/esp32-y-uart)** — Mosquitto, límites eléctricos del
+   ESP32 (3.3 V, 12 mA) y cómo conectarlo por UART a un Arduino sin freírlo.
+
+## Método paso a paso
+Frente a un caso de uso IoT con MQTT, el orden de análisis del profesor es:
+
+1. Identificar publisher(s), broker y subscriber(s): ¿quién produce el dato, quién lo consume?
+2. Elegir el tópico (jerarquía con `/`) y si conviene un comodín en la suscripción.
+3. Elegir el QoS por mensaje según qué tan grave es perderlo o duplicarlo.
+4. Decidir si el mensaje debe quedar `retained` (estado actual) y si el cliente necesita
+   Last Will (para notificar caídas) o sesión persistente (para no perder mensajes offline).
+5. Decidir seguridad: puerto 1883 vs 8883, credenciales, ACL.
+
+## Ejemplo resuelto
+Ver el ejemplo completo de cadena de frío (parcial EP-2026I, P4) en la sección de
+[QoS](/topics/mqtt/subtopics/qos) y de [retained/LWT](/topics/mqtt/subtopics/retained-sesion-lwt):
+un mismo sistema de sensores de vacunas usa los tres niveles de QoS, un mensaje retenido y
+un Last Will, cada uno resolviendo un requisito distinto del enunciado.
+
+## Errores típicos
+- Confundir un tópico con una cola: MQTT no encola por tópico, sólo enruta por coincidencia
+  de nombre/patrón; si nadie está suscrito cuando se publica, el mensaje (no retenido) se pierde.
+- Pensar que TCP hace innecesario el QoS de MQTT: TCP garantiza entrega dentro de *una*
+  conexión, pero no sobrevive una reconexión ni resuelve el ack a nivel de aplicación.
+- Creer que retained y persistent session son lo mismo: retained es *un* mensaje por tópico
+  guardado en el broker; persistent session es una cola privada por cliente para cuando
+  está desconectado. Ver la comparación completa en el subtema correspondiente.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "En una palabra, ¿qué desacopla MQTT entre publisher y subscriber, y qué componente hace posible ese desacople?",
+  hints: [
+    "Piensa en si el publisher necesita saber la IP del subscriber.",
+    "¿Qué pasa si el subscriber está apagado cuando se publica?",
+  ],
+}}>
+
+- **Desacopla en espacio:** el publisher nunca conoce la dirección/identidad del subscriber
+  (ni viceversa); ambos sólo conocen al **broker**.
+- **Desacopla en tiempo:** no hace falta que ambos estén conectados a la vez — con un
+  mensaje `retained` o con sesión persistente, un cliente puede recibir un dato publicado
+  antes de que él estuviera conectado.
+- **Componente que lo permite:** el **broker**, que intermedia entre ambos y, opcionalmente,
+  guarda el estado.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Desacople en espacio y en tiempo',
+  steps: [{
+    note: 'El publisher ya se desconectó cuando el subscriber llega; el broker entrega el último valor guardado sin que ninguno conozca al otro.',
+    actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+    msgs: [
+      { from: 'p', to: 'b', label: 'PUBLISH', flags: 'RETAIN=1', store: 'guarda último valor' },
+      { from: 'p', to: 'b', label: 'DISCONNECT' },
+      { from: 's', to: 'b', label: 'SUBSCRIBE' },
+      { from: 'b', to: 's', label: 'PUBLISH', flags: 'mensaje retenido' },
+    ],
+  }],
+}} />
+
+**Comprobación:** ni `p` ni `s` están conectados al mismo tiempo, y no hay ninguna flecha
+directa entre ellos — todo pasa por `b`.
+
+</ExerciseBlock>

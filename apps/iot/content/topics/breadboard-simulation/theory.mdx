@@ -1,0 +1,248 @@
+---
+kind: theory
+title: Protoboard y simulación de circuitos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Antes de construir un circuito físico conviene **simularlo**: se ahorra tiempo y
+dinero, se puede evaluar sin riesgo de dañar componentes y se prueban varios
+escenarios de diseño. Pero simular no sirve de nada si no se sabe **cómo conecta**
+realmente un protoboard (breadboard) — un error clásico de laboratorio es armar un
+circuito que en el papel está bien pero en el protoboard queda en corto o abierto por
+no entender sus filas y columnas internas.
+
+## Conceptos
+
+### Conexiones internas del protoboard
+
+Un protoboard tiene una matriz de agujeros conectados internamente por tiras
+metálicas, en dos zonas distintas:
+
+- **Rieles laterales** (los de los bordes, usualmente marcados + y −): todos los
+  agujeros de un mismo riel están conectados a lo largo de **toda** su fila — se usan
+  para repartir alimentación (V+ y GND) a todo el circuito.
+- **Columnas centrales**: los agujeros de una misma columna corta (típicamente 5)
+  están conectados entre sí; pero **una columna no está conectada con la columna
+  vecina** — cada columna es un nodo eléctrico aparte, salvo que un componente o cable
+  las una a propósito.
+
+Esta es la razón por la que un componente insertado con sus dos patas en la **misma**
+columna queda en corto (no atraviesa el separador central), y por la que dos
+componentes en **columnas distintas sin cable entre ellas** no están conectados
+aunque estén físicamente cerca.
+
+### Instrumentos de medición
+
+- **Voltímetro**: se conecta **en paralelo** al elemento que se quiere medir (mismos
+  dos nodos que el elemento).
+- **Amperímetro**: se conecta **en serie** en la rama cuya corriente se quiere medir
+  (se "corta" el cable y el amperímetro ocupa ese lugar).
+
+### Simuladores de circuitos
+
+Software que representa y analiza el comportamiento eléctrico de un circuito.
+**SPICE** (*Simulation Program with Integrated Circuit Emphasis*) es la base de la
+mayoría de simuladores actuales; usa un **netlist** (lista de nodos y componentes) y
+permite análisis DC, AC y transitorio, con modelado preciso de componentes.
+
+| Simulador | Notas |
+|---|---|
+| Falstad | Online, gratuito, muestra el flujo de corriente en tiempo real, interfaz simple desde el navegador |
+| Tinkercad | Plataforma online de Autodesk, pensada para principiantes; simula Arduino, sensores y actuadores; también sirve para diseño CAD |
+| LTspice | De Analog Devices, gratuito y profesional, alta precisión, análisis avanzados (DC, AC, transitorio, Fourier); es software local que hay que instalar |
+| Multisim, Proteus, PSPICE | Otros simuladores SPICE mencionados en el curso |
+
+### Métodos de solución que usan los simuladores
+
+Los simuladores de circuitos, basados en las leyes de Kirchhoff, usan sobre todo:
+
+- **Método de nodos (KCL)**: analiza corrientes en cada nodo.
+- **Método de mallas (KVL)**: analiza voltajes en cada lazo.
+- **Newton-Raphson**: resuelve las ecuaciones no lineales que meten componentes como
+  diodos y transistores (el modelo de caída constante que usa este curso es, de
+  hecho, una simplificación lineal por tramos de lo que Newton-Raphson resuelve de
+  forma más general).
+
+## Método paso a paso
+
+Para decidir si dos componentes de un protoboard están realmente conectados:
+
+1. ¿Están en el mismo riel lateral? → conectados (mismo nodo) a lo largo de toda la
+   fila.
+2. ¿Están en la misma columna central (mismo lado del separador)? → conectados (mismo
+   nodo), sin importar en qué fila exacta de esa columna estén.
+3. ¿Están en columnas distintas sin cable ni componente entre ellas? → **no**
+   conectados.
+4. ¿Un componente cruza el separador central? → sus dos patas quedan en columnas
+   distintas (nodos distintos), como si fuera un puente entre dos nodos del circuito.
+
+## Ejemplo resuelto
+
+Esquema del LAB 0 (Sem02_LAB_SimulacionTinkercad, p. 5, actividad 3): una batería de
+9 V alimenta tres líneas en paralelo. LÍNEA 1: LED1 en directa + R1. LÍNEA 2: LED2
+**invertido** (ánodo hacia el − de la batería) + R2. LÍNEA 3: LED3 en directa y LED4
+invertido, **en serie**, + R3. El esquema no indica el valor de las resistencias: aquí
+se toma $R=220\,\Omega$ *(derivado)*, el mismo de la actividad 2; el resultado de
+qué LED enciende no depende de ese valor.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: '¿Qué LEDs encienden? (LAB 0, actividad 3)',
+  steps: [{
+    note: 'Hipótesis: LED1 ON, LED2 OFF, LED4 OFF. Validación: I(LED1) = (9 − 2)/220 ≈ 31.8 mA > 0 ✓ → LED1 enciende. LED2 queda en inversa (V_AK = −9 V) ✓ → no enciende. En la línea 3, LED4 está en inversa y bloquea la rama: sin corriente, LED3 tampoco enciende aunque esté bien orientado.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 },
+        { id: 't1', x: 4, y: 0, label: 'LÍNEA 1' }, { id: 'm1', x: 4, y: 6 }, { id: 'b1', x: 4, y: 12 },
+        { id: 't2', x: 8, y: 0, label: 'LÍNEA 2' }, { id: 'm2', x: 8, y: 6 }, { id: 'b2', x: 8, y: 12 },
+        { id: 't3', x: 12, y: 0, label: 'LÍNEA 3' }, { id: 'm3', x: 12, y: 4 }, { id: 'p3', x: 12, y: 8 }, { id: 'b3', x: 12, y: 12 },
+      ],
+      parts: [
+        { id: 'G1', kind: 'vsource', from: 'g', to: 't', value: 9, label: '9 V' },
+        { id: 'w0', kind: 'wire', from: 't', to: 't1' }, { id: 'w1', kind: 'wire', from: 't1', to: 't2' }, { id: 'w2', kind: 'wire', from: 't2', to: 't3' },
+        { id: 'LED1', kind: 'led', from: 't1', to: 'm1', label: 'LED1' },
+        { id: 'R1', kind: 'resistor', from: 'm1', to: 'b1', value: 220, label: 'R1' },
+        { id: 'LED2', kind: 'led', from: 'm2', to: 't2', label: 'LED2' },
+        { id: 'R2', kind: 'resistor', from: 'm2', to: 'b2', value: 220, label: 'R2' },
+        { id: 'LED3', kind: 'led', from: 't3', to: 'm3', label: 'LED3' },
+        { id: 'LED4', kind: 'led', from: 'p3', to: 'm3', label: 'LED4' },
+        { id: 'R3', kind: 'resistor', from: 'p3', to: 'b3', value: 220, label: 'R3' },
+        { id: 'w3', kind: 'wire', from: 'b3', to: 'b2' }, { id: 'w4', kind: 'wire', from: 'b2', to: 'b1' }, { id: 'w5', kind: 'wire', from: 'b1', to: 'g' },
+      ],
+      diodes: [{ part: 'LED1', assume: 'on' }, { part: 'LED2', assume: 'off' }, { part: 'LED4', assume: 'off' }],
+      hypothesis: 'LED1 ON · LED2 OFF · LED4 OFF → LED3 sin corriente',
+      currents: [{ part: 'R1', label: 'I1', showValue: true }, { part: 'R3', label: 'I3', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.031818, 'I(R2)': 0, 'I(R3)': 0 },
+  }],
+}} />
+
+La EP-2025II (pregunta 9) pregunta lo mismo, pero con los LEDs dibujados sobre un
+protoboard: primero se traduce cada columna a un nodo (método de arriba) y después se
+razona exactamente como en este esquema.
+
+## Errores típicos
+
+- Insertar las dos patas de un componente en la **misma** columna: en vez de
+  atravesar el circuito, queda en corto consigo mismo.
+- Olvidar que el separador central del protoboard divide las columnas en dos mitades
+  no conectadas entre sí (importante para circuitos integrados, que se colocan
+  justamente a caballo de ese separador).
+- Conectar el voltímetro en serie o el amperímetro en paralelo: es al revés de lo que
+  parece intuitivo, y en un multímetro real puede dañar el instrumento o el circuito.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Lo que se quiso armar: cuatro ramas LED + R entre el riel de +5 V y GND.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0, label: '+5V' }, { id: 'g', x: 0, y: 10, ground: true },
+        { id: 't1', x: 4, y: 0 }, { id: 'm1', x: 4, y: 5 }, { id: 'b1', x: 4, y: 10 },
+        { id: 't2', x: 8, y: 0 }, { id: 'm2', x: 8, y: 5 }, { id: 'b2', x: 8, y: 10 },
+        { id: 't3', x: 12, y: 0 }, { id: 'm3', x: 12, y: 5 }, { id: 'b3', x: 12, y: 10 },
+        { id: 't4', x: 16, y: 0 }, { id: 'm4', x: 16, y: 5 }, { id: 'b4', x: 16, y: 10 },
+      ],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 5, label: '5 V' },
+        { id: 'wt1', kind: 'wire', from: 't', to: 't1' }, { id: 'wt2', kind: 'wire', from: 't1', to: 't2' },
+        { id: 'wt3', kind: 'wire', from: 't2', to: 't3' }, { id: 'wt4', kind: 'wire', from: 't3', to: 't4' },
+        { id: 'wb1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'wb2', kind: 'wire', from: 'b1', to: 'b2' },
+        { id: 'wb3', kind: 'wire', from: 'b2', to: 'b3' }, { id: 'wb4', kind: 'wire', from: 'b3', to: 'b4' },
+        { id: 'L1', kind: 'led', from: 't1', to: 'm1', vf: 2, label: 'LED1' },
+        { id: 'L2', kind: 'led', from: 't2', to: 'm2', vf: 2, label: 'LED2' },
+        { id: 'L3', kind: 'led', from: 't3', to: 'm3', vf: 2, label: 'LED3' },
+        { id: 'L4', kind: 'led', from: 't4', to: 'm4', vf: 2, label: 'LED4' },
+        { id: 'R1', kind: 'resistor', from: 'm1', to: 'b1', value: 220, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'm2', to: 'b2', value: 220, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'm3', to: 'b3', value: 220, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'm4', to: 'b4', value: 220, label: 'R4' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "En un protoboard se arma una fila de 4 LEDs, cada uno con su propia resistencia, todos conectados entre los mismos dos rieles de alimentación ($+5$ V y GND), como en la figura. Al iniciar la simulación, sólo 3 de los 4 LEDs encienden. Explica qué revisarías primero para diagnosticar el LED que no enciende, sin asumir que el componente está dañado.",
+  hints: [
+    "Antes de sospechar del componente, revisa la polaridad: un LED es un diodo y sólo conduce en un sentido.",
+    "Verifica también que las dos patas de la resistencia y del LED de esa rama no hayan quedado en la misma columna (lo que los pondría en corto).",
+    "Confirma que esa columna sí esté conectada a ambos rieles ($+$ y $-$) y no a uno solo.",
+  ],
+}}>
+
+Respuesta modelo: se revisa de lo más probable y barato a lo menos probable, y sólo al final se culpa al componente.
+
+**1. Polaridad del LED** (lo primero). Si el ánodo quedó hacia el riel negativo, el LED
+está en inversa y no enciende aunque todo lo demás esté bien:
+
+$$
+V_{AK} = 0 - 5 = -5\,\text{V} < V_f \approx 2\,\text{V} \;\Rightarrow\; \text{OFF}, \quad I = 0
+$$
+
+**2. Patas en la misma columna.** Si las dos patas del LED (o de la resistencia) están en
+la misma columna, quedan en el mismo nodo: el componente está en corto consigo mismo y no
+forma parte de la rama.
+
+**3. Continuidad con los dos rieles.** La rama debe empezar en el riel $+$ y terminar en
+GND. Si falta un cable, o una pata cae en la mitad equivocada del separador central, la
+rama queda abierta: $I = 0$.
+
+**4. Recién entonces, el componente.** Si las tres cosas están bien, se cambia el LED (o se
+mide con el multímetro).
+
+| Revisión | Síntoma eléctrico | Arreglo |
+|---|---|---|
+| Polaridad | $V_{AK} < 0$, inversa | girar el LED |
+| Misma columna | patas al mismo nodo, $V = 0$ | mover una pata a otra columna |
+| Riel / cable | rama abierta, $I = 0$ | agregar o recolocar el cable |
+| Componente | todo lo anterior bien | reemplazar / medir |
+
+**El caso más común, resuelto** (LED4 montado al revés):
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'LED4 invertido: V_AK = −5 V, queda OFF e I4 = 0. Las otras tres ramas llevan (5 − 2)/220 = 13.6 mA cada una.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0, label: '+5V' }, { id: 'g', x: 0, y: 10, ground: true },
+        { id: 't1', x: 4, y: 0 }, { id: 'm1', x: 4, y: 5 }, { id: 'b1', x: 4, y: 10 },
+        { id: 't2', x: 8, y: 0 }, { id: 'm2', x: 8, y: 5 }, { id: 'b2', x: 8, y: 10 },
+        { id: 't3', x: 12, y: 0 }, { id: 'm3', x: 12, y: 5 }, { id: 'b3', x: 12, y: 10 },
+        { id: 't4', x: 16, y: 0 }, { id: 'm4', x: 16, y: 5 }, { id: 'b4', x: 16, y: 10 },
+      ],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 5, label: '5 V' },
+        { id: 'wt1', kind: 'wire', from: 't', to: 't1' }, { id: 'wt2', kind: 'wire', from: 't1', to: 't2' },
+        { id: 'wt3', kind: 'wire', from: 't2', to: 't3' }, { id: 'wt4', kind: 'wire', from: 't3', to: 't4' },
+        { id: 'wb1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'wb2', kind: 'wire', from: 'b1', to: 'b2' },
+        { id: 'wb3', kind: 'wire', from: 'b2', to: 'b3' }, { id: 'wb4', kind: 'wire', from: 'b3', to: 'b4' },
+        { id: 'L1', kind: 'led', from: 't1', to: 'm1', vf: 2, label: 'LED1' },
+        { id: 'L2', kind: 'led', from: 't2', to: 'm2', vf: 2, label: 'LED2' },
+        { id: 'L3', kind: 'led', from: 't3', to: 'm3', vf: 2, label: 'LED3' },
+        { id: 'L4', kind: 'led', from: 'm4', to: 't4', vf: 2, label: 'LED4', state: 'answer' },
+        { id: 'R1', kind: 'resistor', from: 'm1', to: 'b1', value: 220, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'm2', to: 'b2', value: 220, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'm3', to: 'b3', value: 220, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'm4', to: 'b4', value: 220, label: 'R4' },
+      ],
+      diodes: [{ part: 'L1', assume: 'on' }, { part: 'L2', assume: 'on' }, { part: 'L3', assume: 'on' }, { part: 'L4', assume: 'off' }],
+      hypothesis: 'LED4 OFF · resto ON (válida)',
+      currents: [{ part: 'R1', label: 'I_1', showValue: true }, { part: 'R4', label: 'I_4', showValue: true }],
+      voltages: [{ part: 'L4', label: 'V_{AK}', plus: 'from', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.013636, 'I(R3)': 0.013636, 'I(R4)': 0, 'V(m4,t4)': -5 },
+  }],
+}} />
+
+</ExerciseBlock>

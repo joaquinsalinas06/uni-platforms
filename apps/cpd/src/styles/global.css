@@ -1,0 +1,405 @@
+@import "tailwindcss";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/600.css";
+@import "katex/dist/katex.min.css";
+
+/* ── Manual técnico ─────────────────────────────────────────────────────────
+   Sans para leer, mono para datos (código, complejidad, ids, contadores).
+   Un solo azul, y sólo para lo que está ACTIVO: el paso actual, el nodo que
+   se está visitando, la sección donde vas. Nunca decorativo.
+   La jerarquía la hacen el tamaño y el peso del fondo, no los bordes.
+   ────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  --paper: #ffffff;
+  --ink: #0c0d0e;
+  --muted: #5c6166;
+  --faint: #8b9197;
+  --rule: #e4e6e8;
+  --fill: #f5f6f8;
+  --sunken: #edeff2;
+  --accent: #0f766e;
+  --accent-ink: #ffffff;
+  --accent-wash: #e6f5f3;
+  /* `marked` (delimitador, el amarillo del profesor) y `answer` (raíz de
+     subárbol canónico, su rojo) — los dos únicos estados además de `active`
+     que llevan color. Contraste AA verificado contra su propio `-ink`. */
+  --marked: #d97706;
+  --marked-ink: #1f1300;
+  --answer: #b91c1c;
+  --answer-ink: #ffffff;
+  /* El código es siempre una losa oscura, en los dos temas. */
+  --slab: #14171c;
+  --slab-ink: #dfe3e8;
+  color-scheme: light dark;
+}
+
+:root:not([data-theme="light"]) {
+  @media (prefers-color-scheme: dark) {
+    --paper: #0a0b0d;
+    --ink: #e9eaec;
+    --muted: #969ba1;
+    --faint: #6a6f75;
+    --rule: #212529;
+    --fill: #111318;
+    --sunken: #171a20;
+    --accent: #2dd4bf;
+    --accent-ink: #062421;
+    --accent-wash: #0f2926;
+    --marked: #f0a939;
+    --marked-ink: #1f1300;
+    --answer: #ef8a80;
+    --answer-ink: #2a0a0a;
+    --slab: #0f1115;
+    --slab-ink: #dfe3e8;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper: #0a0b0d;
+  --ink: #e9eaec;
+  --muted: #969ba1;
+  --faint: #6a6f75;
+  --rule: #212529;
+  --fill: #111318;
+  --sunken: #171a20;
+  --accent: #2dd4bf;
+  --accent-ink: #062421;
+  --accent-wash: #0f2926;
+  --marked: #f0a939;
+  --marked-ink: #1f1300;
+  --answer: #ef8a80;
+  --answer-ink: #2a0a0a;
+  --slab: #0f1115;
+  --slab-ink: #dfe3e8;
+}
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  margin: 0;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+a {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-underline-offset: 3px;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+a:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+/* ── Etiquetas de metadatos: el mono en su papel de dato ─────────────────── */
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+/* ── Movimiento ──────────────────────────────────────────────────────────── */
+
+@view-transition {
+  navigation: auto;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes draw {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-accent {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+}
+
+/* Entrada al aparecer en pantalla. Rango largo para que se vea de verdad. */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 22%;
+  }
+  .draw {
+    transform-origin: left;
+    animation: draw linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 18%;
+  }
+}
+
+/* Entrada en carga, escalonada: el contenido "se arma" en vez de aparecer. */
+.stagger > * {
+  animation: slide-in 0.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+}
+.stagger > *:nth-child(1) { animation-delay: 0.02s; }
+.stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.stagger > *:nth-child(3) { animation-delay: 0.1s; }
+.stagger > *:nth-child(4) { animation-delay: 0.14s; }
+.stagger > *:nth-child(5) { animation-delay: 0.18s; }
+.stagger > *:nth-child(6) { animation-delay: 0.22s; }
+.stagger > *:nth-child(n + 7) { animation-delay: 0.26s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  @view-transition {
+    navigation: none;
+  }
+}
+
+/* ── Prosa ───────────────────────────────────────────────────────────────── */
+
+/* El texto se mantiene legible (~72 caracteres) aunque la columna sea ancha;
+   el código, las tablas y los diagramas sí usan todo el ancho. */
+.prose > p,
+.prose > ul,
+.prose > ol,
+.prose > blockquote,
+.prose > h2,
+.prose > h3 {
+  max-width: 72ch;
+}
+
+.prose {
+  counter-reset: section;
+}
+
+.prose h2 {
+  counter-increment: section;
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  margin: 4.5rem 0 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  scroll-margin-top: 5rem;
+}
+
+/* El número de sección: mono, en azul, del tamaño de un dato. */
+.prose h2::before {
+  content: counter(section, decimal-leading-zero);
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--accent);
+  padding-top: 0.35rem;
+}
+
+.prose h2 + * {
+  margin-top: 0;
+}
+
+.prose h3 {
+  margin: 2.5rem 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.prose p,
+.prose ul,
+.prose ol {
+  margin: 1.15rem 0;
+  color: color-mix(in srgb, var(--ink) 88%, var(--muted));
+}
+
+/* Tailwind resetea list-style; aquí sí lo queremos. */
+.prose ul {
+  list-style: disc;
+  padding-left: 1.35rem;
+}
+.prose ol {
+  list-style: decimal;
+  padding-left: 1.6rem;
+}
+.prose li {
+  margin: 0.4rem 0;
+}
+.prose li::marker {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.prose strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.prose code {
+  font-family: var(--font-mono);
+  font-size: 0.8235em;
+  background: var(--fill);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  padding: 0.1em 0.4em;
+  white-space: nowrap;
+}
+
+/* Los bloques de código son losas oscuras en los dos temas: se distinguen
+   del texto de un vistazo. */
+.prose pre {
+  background: var(--slab);
+  color: var(--slab-ink);
+  border-radius: 6px;
+  padding: 1.35rem 1.5rem;
+  margin: 2rem 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+.prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: inherit;
+  white-space: pre;
+  color: inherit;
+}
+
+/* ── Matemáticas (KaTeX) ─────────────────────────────────────────────────
+   Se conserva la fuente matemática de KaTeX (Plex no tiene glifos como Σ,
+   ⌊⌋, Φ̂; se verían peor con una sustitución forzada). Sólo se hereda el
+   color de la prosa — KaTeX ya usa currentColor, esto es la confirmación
+   explícita para que nunca salga texto negro fijo sobre fondo oscuro — y
+   se ajusta el tamaño para que no desentone junto al cuerpo de 17px.
+   Una fórmula en línea vive dentro de las 72ch de la prosa; una fórmula en
+   bloque (`$$...$$`) usa el mismo tratamiento de ancho completo + scroll
+   horizontal que el código y las tablas, para que una sumatoria larga no
+   rompa el layout en móvil. */
+.katex {
+  color: var(--ink);
+  font-size: 1.02em;
+}
+.katex-display {
+  margin: 2rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.prose blockquote {
+  margin: 2rem 0;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--accent);
+  background: var(--accent-wash);
+  border-radius: 0 4px 4px 0;
+  font-size: 1.0625rem;
+}
+.prose blockquote p {
+  margin: 0;
+  color: var(--ink);
+}
+
+/* `display: block` + `overflow-x: auto` en la tabla misma (no en un div
+   envolvente aparte, que el markdown no genera): si una tabla de la prosa
+   es más ancha que la columna, esto la vuelve su propio contenedor de
+   scroll horizontal. Sin esto, la tabla desborda toda la página — el
+   scroll se lleva con ella la nav y el riel en vez de quedarse quietos. */
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  font-size: 0.9375rem;
+}
+.prose thead th {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  text-align: left;
+  padding: 0 1rem 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.prose tbody td {
+  padding: 0.7rem 1rem 0.7rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.prose tbody tr:hover {
+  background: var(--fill);
+}
+.prose tbody td:not(:first-child) {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+
+.prose hr {
+  margin: 3rem 0;
+  border: 0;
+  border-top: 1px solid var(--rule);
+}

@@ -1,0 +1,35 @@
+id: delta-wye-wheatstone
+title: Delta-estrella y puente de Wheatstone
+type: method
+unit: s2
+prerequisites: [basic-circuits]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas:
+  - name: Delta a estrella (Ra)
+    tex: "R_a = \\dfrac{R_1 \\cdot R_2}{R_1 + R_2 + R_3}"
+    reasoning: "Convierte la conexión triángulo (R1,R2,R3) a estrella cuando los tres elementos no están ni en serie ni en paralelo entre sí."
+    source: "Sem02_WheatstoneYDiodos#5"
+  - name: Delta a estrella (Rb)
+    tex: "R_b = \\dfrac{R_2 \\cdot R_3}{R_1 + R_2 + R_3}"
+    reasoning: "Segunda resistencia de estrella equivalente al mismo triángulo R1,R2,R3."
+    source: "Sem02_WheatstoneYDiodos#5"
+  - name: Delta a estrella (Rc)
+    tex: "R_c = \\dfrac{R_1 \\cdot R_3}{R_1 + R_2 + R_3}"
+    reasoning: "Tercera resistencia de estrella equivalente al mismo triángulo R1,R2,R3."
+    source: "Sem02_WheatstoneYDiodos#5"
+  - name: Estrella a delta (R1)
+    tex: "R_1 = R_a + R_c + \\dfrac{R_a \\cdot R_c}{R_b}"
+    reasoning: "Convierte de vuelta la estrella (Ra,Rb,Rc) al triángulo original cuando conviene ver el circuito en delta."
+    source: "Sem02_WheatstoneYDiodos#5"
+  - name: Condición de equilibrio del puente de Wheatstone
+    tex: "\\dfrac{R_1}{R_2} = \\dfrac{R_3}{R_x}"
+    reasoning: "Cuando se cumple, el voltaje entre los nodos del detector es cero: no hay corriente en la rama central y se puede usar para hallar Rx desconocida."
+    source: "Sem02_WheatstoneYDiodos#9"
+  - name: Regla de productos cruzados del puente
+    tex: "R_1 \\cdot R_x = R_2 \\cdot R_3"
+    reasoning: "Forma equivalente de la condición de equilibrio: el producto de resistencias en lados opuestos del rombo es igual, lo que permite eliminar la rama central en una reducción."
+    source: "Sem02_WheatstoneYDiodos#10"

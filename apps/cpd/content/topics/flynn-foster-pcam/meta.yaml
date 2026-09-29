@@ -1,0 +1,34 @@
+id: flynn-foster-pcam
+title: "Taxonomía de Flynn y método de Foster (PCAM)"
+type: algorithm
+unit: u1
+
+prerequisites: ["sequential-model-architectures"]
+buildsOn: []
+usedBy: ["dag-cost-model", "mpi-intro"]
+
+complexity:
+  suma-n-lineal-p12:
+    worst: "T_p \\approx 1.00008\\text{ s}"
+    reasoning: >-
+      Propuesta 1 (Foster, topología lineal) de la Participación 2 para
+      n=10^12: T_p = 10^9*10^-9 (10^9 sumas por proceso) + 10^3*10^-9 (10^3
+      sumas de vecinos tras aglomerar a 10^3 canales) + 10^3*8*10^-8 (10^3
+      envíos entre procesos), con T_comp a 10^-9 s/suma y T_comm a 10^-8
+      s/byte. T_s = 10^12*10^-9 = 1000 s, así que T_p << T_s.
+    source: "U1.2-Fundamentos-Foster_Flynn-apuntes.pdf#8"
+  suma-n-arbol-p12:
+    worst: "T_p \\approx 1.0000008\\text{ s}"
+    reasoning: >-
+      Propuesta 2 (Foster, topología de árbol binario) de la Participación 2
+      para n=10^12: T_p = 10^9*10^-9 (10^9 sumas por proceso) + 10*10^-9 (10
+      sumas de vecinos tras aglomerar) + 10*8*10^-8 (10 envíos entre
+      procesos). El profesor señala que la diferencia frente a la Propuesta
+      1 es mínima porque el ejercicio es compute-bound (el término dominante
+      es el cómputo, no la comunicación).
+    source: "U1.2-Fundamentos-Foster_Flynn-apuntes.pdf#8"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: dag
+placeholder: false

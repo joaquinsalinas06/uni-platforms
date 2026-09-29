@@ -1,0 +1,319 @@
+---
+kind: operation
+title: Union
+order: 2
+cppSteps:
+  - step-1-node.cpp
+  - step-2-structure.cpp
+  - step-3-insert-union.cpp
+  - full-implementation.cpp
+visualization:
+  type: tree
+  steps:
+    - note: >-
+        Los dos montículos de entrada, uno al lado del otro — todavía
+        completamente separados. `H1` = {`a(5)` como `min(H1)`, `b(9)`
+        con hijo `c(14)`}. `H2` = {`d(12)` como `min(H2)`, `e(20)`}. Con
+        sólo 2 raíces por lista, `right` y `left` de cada nodo coinciden
+        (mismo patrón que en [Insert](/structures/fibonacci-heap/operations/insert)).
+        A diferencia de [Union en montículo binomial](/structures/binomial-heap/operations/union),
+        aquí no hay grados que alinear ni enlazar: sólo empalmar listas —
+        **el detalle línea por línea está más abajo, en Algoritmo.**
+      highlight: []
+      panels:
+        - { id: h1, label: "H1" }
+        - { id: h2, label: "H2" }
+      links:
+        - { from: a, to: b, kind: pointer, label: "R,L", bidirectional: true }
+        - { from: d, to: e, kind: pointer, label: "R,L", bidirectional: true }
+      nodes:
+        - { id: a, value: 5, tag: a, parent: null, panel: h1, state: active }
+        - { id: b, value: 9, tag: b, parent: null, panel: h1 }
+        - { id: c, value: 14, tag: c, parent: b, panel: h1 }
+        - { id: d, value: 12, tag: d, parent: null, panel: h2, state: active }
+        - { id: e, value: 20, tag: e, parent: null, panel: h2 }
+    - note: >-
+        Paso 2 (comparación): se comparan `min(H1)=5` y `min(H2)=12` para
+        decidir cuál sobrevive como `min(H)` del montículo unido.
+      highlight: ["a", "d"]
+      nodes:
+        - { id: a, value: 5, tag: a, parent: null, state: active }
+        - { id: b, value: 9, tag: b, parent: null }
+        - { id: c, value: 14, tag: c, parent: b }
+        - { id: d, value: 12, tag: d, parent: null, state: active }
+        - { id: e, value: 20, tag: e, parent: null }
+    - note: >-
+        `min(H) ← mín(5, 12) = 5`. `a` queda como el mínimo global; `d`
+        sigue siendo una raíz suelta más, sin ningún rol especial.
+      highlight: ["a"]
+      nodes:
+        - { id: a, value: 5, tag: a, parent: null, state: active }
+        - { id: b, value: 9, tag: b, parent: null }
+        - { id: c, value: 14, tag: c, parent: b }
+        - { id: d, value: 12, tag: d, parent: null }
+        - { id: e, value: 20, tag: e, parent: null }
+    - note: >-
+        Estado final: una sola lista de raíces con los cuatro árboles de
+        `H1` y `H2` sin fusionar entre sí — `b(9)` y `d(12)` mismo grado
+        (0 y 0 en realidad, pero incluso si compartieran grado, Fibonacci
+        no los enlazaría aquí). El "desorden" de grados repetidos se paga
+        recién en un futuro
+        [Extract-Min](/structures/fibonacci-heap/operations/extract-min).
+      highlight: []
+      nodes:
+        - { id: a, value: 5, tag: a, parent: null }
+        - { id: b, value: 9, tag: b, parent: null }
+        - { id: c, value: 14, tag: c, parent: b }
+        - { id: d, value: 12, tag: d, parent: null }
+        - { id: e, value: 20, tag: e, parent: null }
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Combina dos montículos de Fibonacci en uno solo.
+
+## Intuición
+
+Igual de perezoso que Insert: como cada montículo es una lista circular de
+raíces, unir dos montículos es sólo empalmar las dos listas en una — sin
+comparar ni mover ningún nodo interno. Sólo hace falta comparar los dos
+punteros `min` para decidir cuál sobrevive como el mínimo global.
+
+## Algoritmo
+
+1. Concatenar las listas de raíces de `H1` y `H2` en una sola lista
+   circular.
+2. `min(H) ← mín(min(H1), min(H2))`.
+3. Devolver `H`.
+
+### El mismo `spliceInto` de Insert, ahora con `x` = una lista entera
+
+`unionWith` no reimplementa nada nuevo — llama a
+`spliceInto(minNode, other.minNode)`, exactamente la misma función que
+[Insert](/structures/fibonacci-heap/operations/insert#el-empalme-de-punteros-línea-por-línea)
+usa para un nodo suelto. La diferencia es sólo qué es `x`: ahí era un nodo
+recién creado y auto-referenciado; acá es `other.minNode`, la cabeza de
+toda una lista circular de `H2` ya armada. La función ni se entera de la
+diferencia — sólo toca los punteros de `head` y de `x`, nunca los de
+ningún otro nodo, así que "empalmar un nodo" y "empalmar una lista entera"
+cuestan exactamente lo mismo: cuatro reasignaciones de puntero.
+
+```cpp
+static void spliceInto(Node* head, Node* x) {
+    Node* headLeft = head->left;
+    headLeft->right = x;
+    Node* xLeft = x->left;
+    x->left = headLeft;
+    xLeft->right = head;
+    head->left = xLeft;
+}
+```
+
+Llamada acá como `spliceInto(head=a, x=d)` — `a` es `min(H1)`, `d` es
+`min(H2)`.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes: H1 = {a(5), b(9)} y H2 = {d(12), e(20)}, cada una su propio ciclo de 2 (right y left coinciden dentro de cada lista, igual que en Insert). Van a quedar UNA sola lista de 4. spliceInto(head=a, x=d) — head es min(H1), x es min(H2).",
+      highlight: [],
+      panels: [
+        { id: "h1", label: "H1" },
+        { id: "h2", label: "H2" },
+      ],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null, panel: "h1" },
+        { id: "b", value: 9, tag: "b", parent: null, panel: "h1" },
+        { id: "d", value: 12, tag: "d", parent: null, panel: "h2" },
+        { id: "e", value: 20, tag: "e", parent: null, panel: "h2" },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 1 — headLeft = head->left;  head es a, así que headLeft toma el valor de a.left, que hoy es b. Sólo una lectura — nada muta todavía. Los paneles ya desaparecen: a partir de acá es un solo bosque, porque la fusión ocurre entre nodos concretos, no entre 'contenedores' H1/H2 (que ni existen en el struct).",
+      highlight: ["a", "b"],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 2 — headLeft->right = x;  headLeft es b, x es d: b.right deja de apuntar a a y ahora apunta a d. Primera mutación — y ya es el puente entre las dos listas. a.right sigue intacto (todavía b): esa mitad de H1 no se toca.",
+      highlight: ["b", "d"],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L" },
+        { from: "b", to: "a", kind: "pointer", label: "L" },
+        { from: "b", to: "d", kind: "pointer", label: "R" },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 3 — xLeft = x->left;  x es d, así que xLeft toma el valor de d.left, que hoy es e (nadie tocó los punteros de H2 todavía). Otra lectura, ninguna mutación.",
+      highlight: ["d", "e"],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L" },
+        { from: "b", to: "a", kind: "pointer", label: "L" },
+        { from: "b", to: "d", kind: "pointer", label: "R" },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Línea 4 — x->left = headLeft;  x es d, headLeft es b: d.left deja de apuntar a e y ahora apunta a b. d.right sigue intacto (todavía e) — esa mitad de H2 tampoco se toca.",
+      highlight: ["d", "b"],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L" },
+        { from: "b", to: "a", kind: "pointer", label: "L" },
+        { from: "b", to: "d", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "d", to: "e", kind: "pointer", label: "R" },
+        { from: "e", to: "d", kind: "pointer", label: "R,L" },
+      ],
+    },
+    {
+      note: "Línea 5 — xLeft->right = head;  xLeft es e (línea 3), head es a: e.right deja de apuntar a d y ahora apunta a a. Con esto las dos listas ya quedaron conectadas en las DOS direcciones — falta un solo puntero.",
+      highlight: ["e", "a"],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L" },
+        { from: "b", to: "a", kind: "pointer", label: "L" },
+        { from: "b", to: "d", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "e", to: "a", kind: "pointer", label: "R" },
+      ],
+    },
+    {
+      note: "Línea 6 — head->left = xLeft;  head es a, xLeft es e: a.left deja de apuntar a b y ahora apunta a e. Último puntero pendiente. a.right nunca cambió en las 6 líneas — sigue siendo b, igual que al principio. d.right tampoco — sigue siendo e. Sólo se tocaron 4 punteros (b.right, d.left, e.right, a.left), sin importar cuántas raíces tuviera cada lista.",
+      highlight: ["a", "e"],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "b", to: "d", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "e", to: "a", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+    {
+      note: "Después: un solo ciclo de 4. Siguiendo 'R' (right): a → b → d → e → a. Siguiendo 'L' (left): a → e → d → b → a — el mismo ciclo, al revés. Nótese que el orden final intercala H1 y H2 (a,b de H1; d,e de H2) — no importa, la lista de raíces no tiene ningún orden con significado algorítmico.",
+      highlight: [],
+      nodes: [
+        { id: "a", value: 5, tag: "a", parent: null },
+        { id: "b", value: 9, tag: "b", parent: null },
+        { id: "d", value: 12, tag: "d", parent: null },
+        { id: "e", value: 20, tag: "e", parent: null },
+      ],
+      links: [
+        { from: "a", to: "b", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "b", to: "d", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "d", to: "e", kind: "pointer", label: "R,L", bidirectional: true },
+        { from: "e", to: "a", kind: "pointer", label: "R,L", bidirectional: true },
+      ],
+    },
+  ],
+}} />
+
+## Pseudocódigo
+
+```
+Algoritmo 6: Union(H1, H2)
+Concatenar las listas de raíces de H1 y H2 en una sola lista circular ;
+min(H) ← mín(min(H1), min(H2)) ;
+devolver H ;
+```
+
+## C++
+
+Ver `step-3-insert-union.cpp` y `full-implementation.cpp` en el editor de
+arriba. `unionWith` reutiliza el mismo `spliceInto` de Insert: empalmar una
+lista circular completa dentro de otra es la misma operación de punteros
+que empalmar un solo nodo.
+
+## Complejidad temporal
+
+Costo real $O(1)$: concatenar dos listas circulares reconecta una cantidad
+constante de punteros, sin importar cuántas raíces tenga cada heap. El costo
+amortizado también es $O(1)$ porque Union no crea ni elimina raíces o marcas.
+
+La demostración con $c_i$, $\hat c_i$ y $\Delta\Phi$ está centralizada en
+[El método del potencial](/structures/potential-method#análisis-de-complejidad);
+así esta página se concentra en el funcionamiento de Union.
+
+## Complejidad espacial
+
+$O(1)$ adicional.
+
+## Ejemplo
+
+### Concatenar, no reconstruir
+
+```text
+H1:  2   8
+H2:  1   7   9
+
+H :  2   8   1   7   9
+             ↑
+           min(H)
+```
+
+Union conserva todos los árboles que ya existían. Sólo empalma ambas listas
+circulares y compara los dos punteros mínimos; como `1 < 2`, el mínimo del
+resultado apunta a 1. No hay enlaces por grado ni Consolidate en esta
+operación.
+
+> **Para recordar.** Union es `O(1)` real: no cuenta raíces ni recorre los
+> árboles. El trabajo de ordenarlos sigue pospuesto.
+
+*(Derivado del pseudocódigo; no aparece en las diapositivas.)* `H1` con
+`min(H1)` de llave `5` y `H2` con `min(H2)` de llave `12`: tras
+`Union(H1, H2)`, la lista de raíces resultante contiene las raíces de
+ambos, y `min(H) = 5` porque `5 < 12`.
+
+## Casos límite
+
+- **Ambos tienen elementos**. `2 ⇄ 8` unido a `1 ⇄ 7 ⇄ 9` queda como una
+  lista circular `2 ⇄ 8 ⇄ 1 ⇄ 7 ⇄ 9`; se compara `2` con `1` y el nuevo
+  `minNode` apunta a `1`. Union sólo junta listas: no hace Consolidate.
+- **El primer heap está vacío**. `H1` adopta la lista de raíces de `H2` y
+  su `minNode`; vacío unido a `1 ⇄ 7 ⇄ 9` termina con `minNode → 1`.
+- **El segundo heap está vacío**. `H1` queda igual; no hay nada que
+  concatenar.
+- **Ambos vacíos**: el resultado es un montículo vacío, `min(H) = nulo`.
+- **Los dos mínimos empatan**: cualquiera de los dos puede quedar como
+  `min(H)`; el pseudocódigo no distingue el caso de igualdad.

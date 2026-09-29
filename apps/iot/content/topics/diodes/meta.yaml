@@ -1,0 +1,27 @@
+id: diodes
+title: Diodos
+type: method
+unit: s2
+prerequisites: [basic-circuits]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas:
+  - name: Caída de un diodo de silicio en conducción
+    tex: "V_{D,\\text{Si}} = 0.7\\,\\text{V}"
+    reasoning: "Modelo de caída constante: mientras conduce, un diodo de silicio se reemplaza por una fuente de 0.7 V entre ánodo y cátodo."
+    source: "Sem2_IoTL-ArchIoT#30"
+  - name: Caída de un diodo de germanio en conducción
+    tex: "V_{D,\\text{Ge}} = 0.3\\,\\text{V}"
+    reasoning: "Mismo modelo de caída constante pero con umbral menor: el germanio conduce con menos voltaje que el silicio, por eso enciende primero si compiten en paralelo."
+    source: "Sem02_WheatstoneYDiodos#25"
+  - name: Validación de un diodo asumido ON
+    tex: "I_D > 0"
+    reasoning: "Si al resolver con el diodo en ON (modelo de fuente Vγ) la corriente que circula por él sale negativa, la hipótesis es falsa y hay que probar OFF."
+    source: "Sem02_WheatstoneYDiodos#25"
+  - name: Validación de un diodo asumido OFF
+    tex: "V_{AK} < V_{\\gamma}"
+    reasoning: "Si al resolver con el diodo en OFF (circuito abierto) el voltaje ánodo-cátodo resultante supera el umbral Vγ del material, la hipótesis es falsa y hay que probar ON."
+    source: "Sem02_WheatstoneYDiodos#25"

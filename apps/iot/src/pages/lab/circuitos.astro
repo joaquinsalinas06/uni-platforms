@@ -1,0 +1,35 @@
+---
+// Galería de casos borde del renderer de circuitos. No es contenido del curso:
+// es el banco de pruebas visual (y geométrico, ver layout.test.ts).
+import Base from '../../layouts/Base.astro';
+import Visualization from '../../components/Visualization.astro';
+import { GALLERY } from '../../visualizations/circuit/gallery';
+---
+
+<Base title="Laboratorio · circuitos" crumb="lab / circuitos">
+  <header class="mb-10">
+    <p class="tag">banco de pruebas</p>
+    <h1 class="mt-2 text-[clamp(2rem,4vw,2.75rem)] leading-[1.05] font-semibold tracking-[-0.03em]">Galería de circuitos</h1>
+    <p class="mt-4 max-w-[62ch] text-[var(--muted)]">
+      {GALLERY.length} casos diseñados para romper el renderer: mallas compartidas, puentes anidados, diodos Si/Ge,
+      rótulos largos, circuitos densos. Cada uno se verifica también por geometría en <code>layout.test.ts</code>.
+    </p>
+    <p class="mt-2 max-w-[62ch] text-[var(--muted)]">
+      Sliders (umbrales de diodos, mallas en vivo) y práctica de reducción serie/paralelo: <a href="/lab/interactivo">lab / interactivo</a>.
+    </p>
+  </header>
+  <ol class="flex flex-col gap-4">
+    {
+      GALLERY.map((g, i) => (
+        <li id={g.id} class="scroll-mt-20">
+          <h2 class="flex items-baseline gap-3 text-lg font-semibold">
+            <span class="font-mono text-sm text-[var(--accent)]">{String(i + 1).padStart(2, '0')}</span>
+            {g.title}
+          </h2>
+          <p class="mt-1 max-w-[70ch] text-[0.9375rem] text-[var(--muted)]">{g.blurb}</p>
+          <Visualization viz={g.viz} />
+        </li>
+      ))
+    }
+  </ol>
+</Base>

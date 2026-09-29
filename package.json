@@ -1,0 +1,12 @@
+{
+  "name": "uni-platforms",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:eda": "pnpm --filter eda-platform dev",
+    "dev:cpd": "pnpm --filter cpd-platform dev",
+    "dev:iot": "pnpm --filter iot-platform dev",
+    "build": "pnpm -r run build"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

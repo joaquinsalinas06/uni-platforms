@@ -1,0 +1,349 @@
+---
+kind: theory
+title: "Protocolos de aplicación: HTTP, WebSocket, CoAP, AMQP"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un dispositivo IoT necesita conversar con un servidor, una nube o con otros
+dispositivos. No existe un protocolo de aplicación único para hacerlo: la
+elección depende de cuánta memoria y cómputo tiene el dispositivo, si la red
+es confiable, si se necesita una respuesta inmediata o si basta con avisar y
+seguir. Esta página compara los protocolos de aplicación que no son MQTT
+(que se estudia aparte, en [MQTT](/topics/mqtt)) y da un criterio para elegir
+uno según el escenario.
+
+## Conceptos
+
+### No hay un protocolo universal
+
+Las slides lo dicen de forma literal: *"There is no such protocol!"* Ningún
+protocolo de datos es estándar para todas las aplicaciones IoT; la elección
+cambia según los parámetros de diseño. Los protocolos de aplicación en IoT se
+agrupan en dos categorías, según el modelo de comunicación (visto la semana
+anterior):
+
+- **Cliente/servidor**: el dispositivo envía una petición y espera una
+  respuesta directa de un servidor. Ejemplos: **HTTP**, **CoAP**.
+- **Publicador/suscriptor**: existe una entidad central, el **broker**, que
+  recibe mensajes de publicadores y los reenvía a los suscriptores
+  interesados, sin que unos conozcan a otros. Ejemplos: **WebSocket** (cuando
+  se usa así), **AMQP**, **MQTT**.
+
+### HTTP
+
+HTTP (HyperText Transfer Protocol) es un protocolo de **petición/respuesta**
+sobre el paradigma cliente-servidor: el cliente envía una petición HTTP y el
+servidor responde con datos (HTML, JSON, etc.). Es el protocolo base de la
+web y trabaja siempre por parejas: una petición, una respuesta, conexión que
+después se cierra (o se reutiliza, pero no queda "abierta" para que el
+servidor hable espontáneamente).
+
+Los métodos HTTP representan la acción sobre un recurso:
+
+| Método | Efecto | Ejemplo |
+|---|---|---|
+| `GET` | Solicita un recurso, no modifica nada | Leer el estado de un sensor |
+| `POST` | Envía datos para crear un recurso | Registrar una nueva lectura |
+| `PUT` | Reemplaza completamente un recurso | Fijar la velocidad de un motor |
+| `DELETE` | Elimina un recurso | Borrar una regla de automatización |
+
+**REST para controlar dispositivos**: REST (Representational State Transfer)
+se apoya en HTTP y sus métodos. Cada dispositivo o recurso (un foco, un
+motor, un sensor de temperatura) se representa como una **URL (endpoint)**,
+y las operaciones de control o consulta se hacen con el método HTTP
+correspondiente:
+
+- `GET /devices/led1/status` → lee si el foco `led1` está encendido.
+- `POST /devices/led1/on` → enciende el foco `led1`.
+- `PUT /devices/motor2/speed` (cuerpo `{"speed": 120}`) → fija la velocidad
+  del motor `motor2`.
+- `DELETE /devices/rule7` → elimina la regla de automatización `rule7`.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'HTTP: petición/respuesta',
+  static: true,
+  steps: [{
+    note: 'El cliente pide un recurso; el servidor responde una sola vez y la conexión no queda abierta para que el servidor hable espontáneamente.',
+    actors: [{ id: 'c', label: 'Cliente (app)' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /devices/led1/status', flags: 'petición HTTP' },
+      { from: 's', to: 'c', label: '200 OK', flags: 'body: {"estado":"ON"}' },
+    ],
+  }],
+}} />
+
+### WebSocket
+
+WebSocket permite crear un **canal de comunicación bidireccional**
+cliente-servidor. A diferencia de HTTP (unidireccional: el cliente pide, el
+servidor responde), una conexión WebSocket, tras un *handshake* inicial entre
+cliente y servidor, **permanece abierta** hasta que alguno de los dos la
+cierra.
+
+Beneficios frente a HTTP: **baja latencia**, **conexión persistente** y
+**full-duplex** (los dos lados transmiten a la vez, no por turnos). Se usa
+cuando se necesita una conexión abierta por mucho tiempo para intercambiar
+datos constantemente: feeds de redes sociales, chats, edición colaborativa,
+juegos multijugador — y, en IoT, paneles de control que reciben datos de
+sensores en tiempo real.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'WebSocket: handshake y luego full-duplex',
+  static: true,
+  steps: [{
+    note: 'El handshake (una petición HTTP con Upgrade) abre el canal; después cualquiera de los dos lados puede enviar datos en cualquier momento, sin pedir permiso.',
+    actors: [{ id: 'c', label: 'Cliente (panel)' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /ws', flags: 'Upgrade: websocket' },
+      { from: 's', to: 'c', label: '101 Switching Protocols' },
+      { from: 'c', to: 's', label: 'dato de sensor', flags: 'canal ya abierto' },
+      { from: 's', to: 'c', label: 'comando a actuador' },
+      { from: 'c', to: 's', label: 'dato de sensor' },
+    ],
+  }],
+}} />
+
+### CoAP
+
+CoAP (Constrained Application Protocol) se diseñó para dispositivos con
+**restricciones importantes**: poca capacidad de cómputo, poca memoria, o que
+no pueden usar los protocolos habituales de redes de computadoras. Se basa en
+una arquitectura **REST**, igual que HTTP, pero se diferencia en dos puntos
+clave:
+
+- Usa **UDP** como transporte (no TCP), con mensajes pequeños y poco
+  *overhead* — ideal para dispositivos de poca memoria y poco cómputo.
+- El dispositivo puede ser **cliente o servidor a la vez**: no hay una
+  jerarquía fija como en HTTP clásico.
+
+Se usa en aplicaciones industriales, automatización residencial, gestión
+M2M (máquina a máquina) y comunicación satelital (poco ancho de banda).
+
+La diapositiva original dibuja esto como cuatro bloques apilados, de abajo
+hacia arriba: `UDP` → `Messages` → `Request/Responses` → `Application`, con
+el nombre `CoAP` señalando las dos capas intermedias (Messages y Request/
+Responses son las que CoAP agrega sobre UDP para ofrecer una interfaz REST).
+
+Un intercambio típico: cualquiera de los dos extremos puede iniciar la
+petición, porque ambos pueden actuar como servidor.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'CoAP: cualquiera de los dos puede ser cliente',
+  static: true,
+  steps: [{
+    note: 'Mensajes pequeños sobre UDP. En la segunda mitad, el dispositivo B es quien pregunta: ambos extremos pueden ser cliente o servidor.',
+    actors: [{ id: 'a', label: 'Dispositivo A' }, { id: 'b', label: 'Dispositivo B' }],
+    msgs: [
+      { from: 'a', to: 'b', label: 'GET /temp', flags: 'CON · UDP · header chico' },
+      { from: 'b', to: 'a', label: '2.05 Content', flags: 'ACK · payload chico' },
+      { from: 'b', to: 'a', label: 'GET /actuador', flags: 'CON · UDP' },
+      { from: 'a', to: 'b', label: '2.04 Changed', flags: 'ACK' },
+    ],
+  }],
+}} />
+
+### AMQP
+
+AMQP (Advanced Message Queuing Protocol) usa **TCP** como transporte y
+permite envío y recepción **asíncrona** de mensajes: puede entenderse como el
+equivalente asíncrono de HTTP, donde un cliente contacta a un **broker** "a
+mitad de camino" en vez de hablar directo con el destino final.
+
+AMQP nació en la comunidad financiera, con el objetivo de permitir
+interoperabilidad entre dispositivos y soporte multi-SO. **RabbitMQ** es la
+aplicación tipo broker más conocida para AMQP.
+
+El broker organiza el enrutamiento con tres piezas:
+
+- **Exchange**: recibe lo que publica el *publisher*.
+- **Bindings**: reglas que dicen a qué colas debe ir cada mensaje según el
+  exchange.
+- **Queue**: donde el mensaje espera hasta que un *consumer* lo consume.
+
+<Visualization viz={{
+  type: 'flow',
+  title: 'AMQP: del publisher al consumer, pasando por el broker',
+  static: true,
+  steps: [{
+    note: 'El publisher no conoce al consumer: publica al exchange, que enruta según las bindings hacia una o varias queues, de donde el consumer las consume.',
+    shapes: [
+      { id: 'p', kind: 'io', label: 'Publisher' },
+      { id: 'ex', kind: 'block', label: 'Exchange' },
+      { id: 'q', kind: 'block', label: 'Queue' },
+      { id: 'co', kind: 'io', label: 'Consumer' },
+    ],
+    arrows: [
+      { from: 'p', to: 'ex', label: 'publishes', kind: 'data' },
+      { from: 'ex', to: 'q', label: 'routes (bindings)', kind: 'data' },
+      { from: 'q', to: 'co', label: 'consumes', kind: 'data' },
+    ],
+  }],
+}} />
+
+### MQTT (adelanto)
+
+MQTT también es publicador/suscriptor y también usa TCP, pero está pensado
+específicamente para dispositivos de poca memoria y poco ancho de banda. Su
+encabezado, sus niveles de QoS y su ciclo de vida se estudian en detalle en
+[MQTT](/topics/mqtt) — no se repiten aquí.
+
+### Comparación
+
+| Protocolo | Transporte | Modelo | Encabezado | Confiabilidad | Uso típico |
+|---|---|---|---|---|---|
+| HTTP | TCP | Cliente/servidor | Grande (texto, variable) | Alta (TCP + reintento en la app) | APIs REST, paneles web, control puntual de dispositivos |
+| WebSocket | TCP | Bidireccional (pub/sub o punto a punto) | Chico tras el handshake | Alta (TCP) | Datos en tiempo real, paneles con refresco continuo |
+| CoAP | UDP | Cliente/servidor (ambos roles) | Muy chico | Media (UDP; CoAP puede pedir confirmación, CON/ACK) | Dispositivos muy restringidos, M2M, satelital |
+| AMQP | TCP | Publicador/suscriptor (broker) | Medio | Alta (TCP + colas persistentes) | Mensajería empresarial, integración de sistemas heterogéneos |
+| MQTT | TCP | Publicador/suscriptor (broker) | Muy chico (2–5 bytes) | Configurable por QoS (0/1/2) | Telemetría IoT, sensores de bajo consumo |
+
+## Método paso a paso
+
+Para elegir un protocolo de aplicación ante un escenario dado:
+
+1. **¿Qué tan restringido es el dispositivo?** Poca RAM/CPU y quieres el
+   encabezado más chico posible → CoAP o MQTT (nunca HTTP "pesado").
+2. **¿Necesitas que el servidor hable primero, sin que el cliente pregunte?**
+   Si sí, HTTP puro no alcanza (es petición/respuesta) → WebSocket (canal
+   abierto) o un modelo pub/sub (AMQP, MQTT).
+3. **¿El transporte puede ser no confiable (UDP)?** Si el escenario tolera
+   perder algún paquete y prioriza velocidad/bajo consumo → CoAP. Si necesitas
+   la garantía de entrega de TCP → HTTP, WebSocket, AMQP o MQTT.
+4. **¿Hay un broker desacoplando emisores de receptores?** Si el publicador
+   no debe conocer a sus consumidores (y pueden ser varios, o ninguno) →
+   pub/sub (AMQP o MQTT). Si es una consulta directa a un recurso conocido →
+   cliente/servidor (HTTP o CoAP).
+5. **¿El origen es una integración empresarial con colas y enrutamiento
+   complejo (varias colas, varias reglas)?** → AMQP. **¿Es telemetría de
+   sensores con encabezado mínimo?** → MQTT.
+
+## Ejemplo resuelto
+
+**Escenario**: una red de 200 sensores de humedad de suelo, alimentados por
+batería, que reportan una lectura cada 10 minutos a un servidor en la nube.
+El enlace es una red celular con cobertura intermitente.
+
+1. *¿Qué tan restringido es el dispositivo?* Mucho: batería y poco cómputo →
+   se descarta HTTP por su encabezado grande y su modelo de conexión por
+   petición.
+2. *¿Necesita el servidor hablar primero?* No: solo reporta lecturas.
+3. *¿Hay un broker que desacople a los 200 sensores de quien consume los
+   datos (dashboard, base de datos, alertas)?* Sí, conviene: así el sensor no
+   necesita saber quién procesa sus datos.
+4. *¿UDP es aceptable?* La cobertura es intermitente: conviene la garantía de
+   entrega de TCP con reconexión, más que UDP puro.
+
+**Conclusión**: MQTT (pub/sub, TCP, encabezado mínimo, QoS configurable para
+tolerar la cobertura intermitente) es la elección natural — ver
+[MQTT](/topics/mqtt) para el detalle de QoS y del ciclo CONNECT/PUBLISH/
+DISCONNECT.
+
+## Errores típicos
+
+- Pensar que WebSocket es "pub/sub": es un **canal bidireccional**; el
+  patrón pub/sub (broker) se construye encima si se quiere, pero no viene
+  incluido.
+- Confundir CoAP con "HTTP sobre UDP sin más": CoAP sí es REST sobre UDP,
+  pero su encabezado y su manejo de confirmaciones (CON/ACK) son distintos,
+  precisamente para tolerar redes no confiables.
+- Olvidar que en CoAP **ambos** extremos pueden ser cliente o servidor: no
+  hay un servidor central fijo como en HTTP clásico.
+- Creer que AMQP y MQTT son lo mismo por ser ambos pub/sub sobre TCP: AMQP
+  tiene un modelo de enrutamiento más rico (exchange + bindings + colas
+  múltiples) pensado para integración empresarial; MQTT prioriza el
+  encabezado mínimo para el dispositivo final.
+- Elegir un protocolo por "el más conocido" en vez de por las restricciones
+  reales del dispositivo y de la red.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un dron agrícola envía continuamente (varias veces por segundo) su posición GPS a una estación en tierra, que a su vez le envía correcciones de ruta en el mismo canal. La conexión debe permanecer abierta mientras dura el vuelo. ¿Qué protocolo de los vistos usarías y por qué?",
+  hints: [
+    "¿El servidor necesita poder hablar sin que el dron pregunte primero?",
+    "¿Es un intercambio puntual (petición/respuesta) o un flujo continuo en ambos sentidos?",
+  ],
+}}>
+
+**1. Comparación contra los requisitos del escenario:**
+
+| Requisito | HTTP | CoAP | WebSocket |
+|---|---|---|---|
+| Canal permanece abierto | ❌ (petición/respuesta, se cierra) | ❌ | ✅ persistente |
+| Servidor habla sin que el dron pregunte | ❌ | parcial | ✅ full-duplex |
+| Flujo continuo (varias veces/s) | ❌ overhead por petición | ok pero no persistente | ✅ diseñado para esto |
+
+$$\boxed{\text{WebSocket}}$$
+
+**2. Intercambio esperado:**
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Dron ↔ estación en tierra por WebSocket',
+  steps: [{
+    note: 'Un único handshake abre el canal; después ambos lados envían datos en cualquier momento, sin pedir permiso — exactamente el flujo bidireccional continuo que pide el enunciado.',
+    actors: [{ id: 'd', label: 'Dron' }, { id: 'e', label: 'Estación en tierra' }],
+    msgs: [
+      { from: 'd', to: 'e', label: 'GET /ws', flags: 'Upgrade: websocket' },
+      { from: 'e', to: 'd', label: '101 Switching Protocols' },
+      { from: 'd', to: 'e', label: 'posición GPS' },
+      { from: 'e', to: 'd', label: 'corrección de ruta' },
+      { from: 'd', to: 'e', label: 'posición GPS' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Una fábrica tiene $6$ sistemas distintos (ERP, control de inventario, línea de ensamblaje, etc.) que deben intercambiar mensajes entre sí, cada uno con sus propias reglas de qué mensaje le interesa a quién. Los nodos son servidores con recursos abundantes. ¿HTTP, CoAP, AMQP o MQTT? Justifique descartando las otras tres opciones.",
+  hints: [
+    "¿Hay restricción de memoria/cómputo en los nodos? Eso descarta o no a CoAP/MQTT.",
+    "¿El enrutamiento necesario es simple (un tema → un tipo de suscriptor) o requiere reglas más ricas (bindings) entre varios exchanges y colas?",
+  ],
+}}>
+
+**1. Descartando opciones:**
+
+| Protocolo | ¿Sirve aquí? | Por qué |
+|---|---|---|
+| HTTP | ❌ | Petición/respuesta: no desacopla los $6$ sistemas entre sí |
+| CoAP | ❌ | Pensado para dispositivos restringidos; aquí sobran recursos |
+| MQTT | ❌ | Su fortaleza es el encabezado mínimo para el dispositivo final; no aporta aquí |
+| AMQP | ✅ | Enrutamiento rico (exchange + bindings + colas), pensado para integración empresarial |
+
+$$\boxed{\text{AMQP}}$$
+
+**2. Enrutamiento entre los $6$ sistemas vía broker:**
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'AMQP: publisher → exchange → queue → consumer',
+  steps: [{
+    note: 'Cada sistema publica al exchange sin conocer a los demás; el broker enruta según las bindings hacia la(s) cola(s) de los sistemas interesados.',
+    actors: [
+      { id: 'erp', label: 'ERP (publisher)' },
+      { id: 'br', label: 'Broker (exchange)' },
+      { id: 'inv', label: 'Inventario (consumer)' },
+      { id: 'lin', label: 'Línea de ensamblaje (consumer)' },
+    ],
+    msgs: [
+      { from: 'erp', to: 'br', label: 'publish', flags: 'exchange' },
+      { from: 'br', to: 'inv', label: 'routes (binding)', flags: 'queue inventario' },
+      { from: 'br', to: 'lin', label: 'routes (binding)', flags: 'queue ensamblaje' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

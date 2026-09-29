@@ -1,0 +1,19 @@
+id: mqtt
+title: MQTT
+type: method
+unit: s7
+prerequisites: [app-protocols, transmission-models]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: sequence
+placeholder: false
+formulas:
+  - name: QoS efectivo entre publicador y suscriptor
+    tex: "QoS_{efectivo} = \\min(QoS_{pub}, QoS_{sub})"
+    reasoning: "El broker nunca entrega con más garantía de la que el publicador prometió ni de la que el suscriptor pidió: toma el mínimo de los dos."
+    source: "Sem7_MQTT#33"
+  - name: Divisor resistivo 5 V → 3.3 V (Arduino TX → ESP32 RX)
+    tex: "V_{RX} = 5\\,\\text{V} \\cdot \\dfrac{R_2}{R_1 + R_2}"
+    reasoning: "El ESP32 tolera máx. 3.6 V en sus pines; el divisor atenúa el HIGH de 5 V del Arduino a un nivel seguro antes de entrar a RX."
+    source: "Sem7_MQTT#43"

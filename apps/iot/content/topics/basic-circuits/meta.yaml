@@ -1,0 +1,47 @@
+id: basic-circuits
+title: "Circuitos eléctricos básicos"
+type: method
+unit: s1
+prerequisites: []
+buildsOn: []
+usedBy:
+  - delta-wye-wheatstone
+  - diodes
+  - breadboard-simulation
+  - rc-lowpass
+hasVisualization: true
+visualizationType: circuit
+placeholder: false
+formulas:
+  - name: "Ley de Ohm"
+    tex: "V = I \\cdot R"
+    reasoning: "Relación lineal entre la caída de tensión en una resistencia y la corriente que la atraviesa; base de todo el análisis de circuitos resistivos."
+    source: "Sem01_EjerciciosConCircuitos#41"
+  - name: "Potencia disipada"
+    tex: "P = V \\cdot I = I^{2} R = \\dfrac{V^{2}}{R}"
+    reasoning: "Tres formas equivalentes de calcular la potencia consumida por una resistencia, útiles según qué variables ya se conocen (V, I o R)."
+    source: "Sem01_EjerciciosConCircuitos#11"
+  - name: "Resistencias en serie"
+    tex: "R_T = \\sum_{i=1}^{n} R_i"
+    reasoning: "Cuando dos elementos comparten un nodo por el que no sale ninguna otra rama, la misma corriente los atraviesa a ambos y sus caídas de tensión se suman."
+    source: "Sem01_EjerciciosConCircuitos#41"
+  - name: "Resistencias en paralelo"
+    tex: "R_T = \\dfrac{1}{\\sum_{i=1}^{n} \\frac{1}{R_i}}"
+    reasoning: "Cuando dos elementos comparten AMBOS nodos, la misma tensión cae sobre los dos y sus corrientes se suman; para dos resistencias se reduce a R1·R2/(R1+R2)."
+    source: "Sem01_EjerciciosConCircuitos#41"
+  - name: "Divisor de tensión"
+    tex: "V_{R2} = V \\cdot \\dfrac{R_2}{R_1 + R_2}"
+    reasoning: "En dos resistencias en serie alimentadas por una fuente V, la tensión se reparte proporcionalmente al valor de cada resistencia."
+    source: "Sem01_EjerciciosConCircuitos#28"
+  - name: "Divisor de corriente"
+    tex: "i_2 = I \\cdot \\dfrac{R_1}{R_1 + R_2}"
+    reasoning: "En dos resistencias en paralelo alimentadas por una fuente de corriente I, la corriente se reparte de forma INVERSA al valor de cada resistencia (la rama de R1 lleva la fracción asociada a R1)."
+    source: "Sem01_EjerciciosConCircuitos#29"
+  - name: "Ley de corrientes de Kirchhoff (LCK / KCL)"
+    tex: "\\sum I_{entran} = \\sum I_{salen}"
+    reasoning: "En todo nodo, la suma de corrientes que entran es igual a la suma de las que salen; expresa la conservación de la carga."
+    source: "Sem01_EjerciciosConCircuitos#15"
+  - name: "Ley de tensiones de Kirchhoff (LTK / KVL)"
+    tex: "\\sum_{malla} V = 0"
+    reasoning: "Al recorrer una malla cerrada y volver al punto de partida, la suma algebraica de las subidas y caídas de tensión es cero; expresa la conservación de la energía."
+    source: "Sem01_EjerciciosConCircuitos#15"

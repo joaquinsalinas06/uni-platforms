@@ -1,0 +1,27 @@
+id: retroactivity
+title: "Retroactividad"
+type: concept
+week: week-03
+
+prerequisites: ["persistence-levels"]
+buildsOn: []
+usedBy:
+  [
+    "commutative-invertible-retroactivity",
+    "decomposable-search-problem",
+    "rollback-method",
+    "retroactive-priority-queue",
+  ]
+
+# El profesor no da ninguna cota en esta sección: las cotas llegan con cada
+# técnica que implementa el modelo (commutative-invertible-retroactivity,
+# decomposable-search-problem, rollback-method, retroactive-priority-queue).
+# Aquí sólo hay una interfaz (Insert/Delete/Query sobre una línea de tiempo),
+# dos niveles (parcial/completa) y el punto de referencia O(m) de la
+# solución ingenua. Se deja vacío a propósito, no por omisión.
+complexity: {}
+
+professorAnalysisStyle: "definición de modelo y taxonomía"
+hasVisualization: true
+visualizationType: persistent
+placeholder: false

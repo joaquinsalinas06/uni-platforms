@@ -1,0 +1,186 @@
+---
+import { knowledgeMap } from '../lib/knowledge-map';
+
+// La navegación sale entera del knowledge map: no hay rutas escritas a mano.
+const current = Astro.url.pathname;
+
+// La unidad que contiene el tema activo se abre siempre, sin importar lo que
+// diga localStorage — no tiene sentido navegar a un tema y que su propia
+// unidad aparezca colapsada.
+const activeUnit = knowledgeMap.units.find((unit) =>
+  unit.topics.some((id) => current === `/topics/${id}` || current.startsWith(`/topics/${id}/`)),
+)?.id;
+---
+
+<!--
+  transition:persist: esta nav es la MISMA en todas las páginas — sólo cambia
+  qué enlace está activo. Sin persistir, cada navegación remonta el nodo
+  entero (Astro reemplaza <body> completo salvo lo persistido) y el `.stagger`
+  de abajo reproduce su entrada de nuevo, dando la sensación de "recarga".
+  Persistida, el nodo sobrevive intacto entre páginas: ni se reanima ni
+  pierde su scroll o el estado abierto/cerrado de cada unidad. El precio es
+  que el resaltado de "activo" ya no lo recalcula el servidor en cada
+  navegación — lo hace el script de abajo, en cada `astro:after-swap`.
+-->
+<nav
+  transition:persist="knowledge-nav"
+  class="min-w-0 lg:sticky lg:top-20 lg:h-fit lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto"
+  aria-label="Mapa del curso"
+>
+  <a href="/compare" data-nav-link class="nav-link mb-6 block rounded px-1 py-1 text-[0.8125rem] no-underline">
+    comparar complejidades
+  </a>
+  <a href="/practica" data-nav-link class="nav-link mb-6 block rounded px-1 py-1 text-[0.8125rem] no-underline">
+    ejemplos y ejercicios
+  </a>
+  <a href="/formulario" data-nav-link class="nav-link mb-6 block rounded px-1 py-1 text-[0.8125rem] no-underline">
+    formulario
+  </a>
+  <a href="/evaluaciones" data-nav-link class="nav-link mb-6 block rounded px-1 py-1 text-[0.8125rem] no-underline">
+    evaluaciones
+  </a>
+  <div class="stagger">
+    {
+      knowledgeMap.units.map((unit) => (
+        <details class="group mb-7 [&_summary::-webkit-details-marker]:hidden" data-unit={unit.id} open={unit.id === activeUnit || undefined}>
+          <summary class="mb-2 flex cursor-pointer list-none items-center gap-1.5 no-underline hover:text-[var(--accent)]">
+            <svg
+              viewBox="0 0 10 10"
+              class="h-2.5 w-2.5 shrink-0 fill-[var(--faint)] transition-transform duration-200 group-open:rotate-90"
+              aria-hidden="true"
+            >
+              <path d="M2 1 L8 5 L2 9 Z" />
+            </svg>
+            <span class="tag">{unit.id}</span>
+          </summary>
+
+          <ul class="space-y-px pl-4">
+            {unit.topics.map((id) => {
+              const t = knowledgeMap.topics[id];
+              const href = `/topics/${id}`;
+              const active = current === href || current.startsWith(`${href}/`);
+              const ready = t?.status === 'generated';
+              return (
+                <li>
+                  {ready ? (
+                    <a href={href} data-nav-link class:list={['nav-link relative block rounded-r py-1.5 pl-3.5 pr-2 text-[0.8125rem] leading-snug no-underline', active && 'is-active']}>
+                      <span data-nav-bar class="absolute inset-y-0 left-0 w-[2px] rounded" />
+                      {t?.title ?? id}
+                    </a>
+                  ) : (
+                    <span class="relative block py-1.5 pl-3.5 pr-2 text-[0.8125rem] leading-snug text-[var(--faint)]">
+                      <span class="absolute inset-y-0 left-0 w-[2px] rounded bg-[var(--rule)]" />
+                      {t?.title ?? id}
+                      <span class="tag ml-1.5">pendiente</span>
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </details>
+      ))
+    }
+  </div>
+</nav>
+
+<style>
+  /* Un solo atributo maneja el estado activo — el mismo en el primer render
+     del servidor y en cada recálculo del cliente tras una navegación. */
+  .nav-link {
+    color: var(--muted);
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+  }
+  .nav-link:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+  .nav-link.is-active {
+    background: var(--accent-wash);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .nav-link.is-active:hover {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+  [data-nav-bar] {
+    background: var(--rule);
+    transition: background-color 0.3s;
+  }
+  .nav-link.is-active [data-nav-bar] {
+    background: var(--accent);
+  }
+</style>
+
+<script>
+  // Recuerda qué unidads dejó abiertas o cerradas cada quien, por unidad, y
+  // recalcula qué enlace está activo. La nav está `transition:persist`ida:
+  // este script corre UNA vez (el nodo nunca se remonta), así que registra
+  // sus listeners en `document`, que sí sobrevive a cada navegación.
+  const KEY = (id: string) => `nav:unit:${id}`;
+
+  function syncActive() {
+    const path = location.pathname;
+    let activeUnit: HTMLDetailsElement | null = null;
+
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-nav-link]')) {
+      const href = a.getAttribute('href')!;
+      const active = href === '/compare' || href === '/practica' || href === '/formulario' ? path === href : path === href || path.startsWith(`${href}/`);
+      // evaluaciones y sus sub-rutas (/evaluaciones/pd1/2026-i) usan el mismo prefijo que ya cubre el `path.startsWith` de arriba.
+      a.classList.toggle('is-active', active);
+      if (active) activeUnit = a.closest('details[data-unit]');
+    }
+
+    // La unidad del tema activo manda: se abre pase lo que diga localStorage.
+    if (activeUnit) activeUnit.open = true;
+  }
+
+  function restoreCollapsedUnits() {
+    for (const el of document.querySelectorAll<HTMLDetailsElement>('details[data-unit]')) {
+      if (el.open) continue; // ya la forzó syncActive() por ser la unidad activa
+      try {
+        const saved = localStorage.getItem(KEY(el.dataset.unit!));
+        if (saved !== null) el.open = saved === '1';
+      } catch {
+        // localStorage puede fallar (ventana privada, cuota); se queda
+        // abierta — el estado por defecto.
+      }
+    }
+  }
+
+  // Corre una vez, al cargar esta nav (persistida: no se repite en cada
+  // navegación posterior)...
+  syncActive();
+  restoreCollapsedUnits();
+
+  for (const el of document.querySelectorAll<HTMLDetailsElement>('details[data-unit]')) {
+    el.addEventListener('toggle', () => {
+      try {
+        localStorage.setItem(KEY(el.dataset.unit!), el.open ? '1' : '0');
+      } catch {
+        // per-viewer, no crítico si no persiste
+      }
+    });
+  }
+
+  // ...y de nuevo tras cada navegación con el router de Astro, porque la nav
+  // persistida no se re-renderiza: sin esto, "activo" se quedaría congelado
+  // en la página donde se montó por primera vez.
+  document.addEventListener('astro:after-swap', syncActive);
+
+  // Igual que la barra de pestañas: aunque el nodo esté persistido, el swap
+  // de Astro puede resetear su scroll vertical al desmontarlo/remontarlo.
+  // Se guarda antes del swap y se restaura después.
+  let savedNavScroll = 0;
+  document.addEventListener('astro:before-swap', () => {
+    const nav = document.querySelector<HTMLElement>('[aria-label="Mapa del curso"]');
+    if (nav) savedNavScroll = nav.scrollTop;
+  });
+  document.addEventListener('astro:after-swap', () => {
+    const nav = document.querySelector<HTMLElement>('[aria-label="Mapa del curso"]');
+    if (nav) nav.scrollTop = savedNavScroll;
+  });
+</script>

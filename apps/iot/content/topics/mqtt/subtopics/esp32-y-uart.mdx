@@ -1,0 +1,182 @@
+---
+kind: subtopic
+order: 5
+title: ESP32, Mosquitto y UART
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+Todo lo anterior es el protocolo; esta parte es cómo se implementa en la práctica: qué
+broker se usa, en qué microcontrolador corre el cliente MQTT, y cómo se conecta ese
+microcontrolador con otros dispositivos por un puerto serial sin freír ningún pin.
+
+## Conceptos
+
+### Mosquitto
+MQTT (Message Queuing Telemetry Transport) es el protocolo; **Mosquitto** es una
+implementación concreta: un broker MQTT de código abierto desarrollado por la Eclipse
+Foundation. Actúa como intermediario entre los dispositivos que publican mensajes y los
+que se suscriben a recibirlos.
+
+> **Nota de apoyo** (no está en el material): otros brokers y clientes mencionados en la
+> slide de software disponible — HiveMQ, RabbitMQ (con plugin MQTT), Apache ActiveMQ,
+> Mosca — y del lado cliente, Eclipse Paho.
+
+### Variantes de ESP32
+Todas comparten el mismo chip (o variantes del ESP32), pero difieren en aspectos como el
+número de pines, el tipo de conversor USB, los puertos disponibles, características
+adicionales y el tamaño físico de la placa (ESP32 DevKit, ESP32-CAM, NodeMCU-32, etc.).
+
+### Límites eléctricos (¡cuidado!)
+> Cualquier microcontrolador de la familia ESP32 (ESP8266, CAM, NodeMCU) opera a **3.3 V**,
+> lo que significa que sus pines de I/O también trabajan a 3.3 V. Los pines **no toleran
+> 5 V**: aplicar una tensión mayor a **3.6 V** daña permanentemente el chip. Además, la
+> corriente máxima que puede entregar **cualquier GPIO es 12 mA**.
+
+Esto importa apenas se conecta el ESP32 a algo que trabaje a otro nivel lógico, como un
+Arduino Uno (5 V).
+
+### UART (comunicación serial)
+UART (Universal Asynchronous Receiver/Transmitter) es un circuito de comunicación serial
+entre dos dispositivos: conectar dos UART es simple y directo (TX de uno al RX del otro,
+cruzados), sin necesidad de un reloj compartido (de ahí "asíncrono"). Cada paquete
+serial tiene: 1 bit de start, 5 a 9 bits de datos, 0 a 1 bits de paridad y 1 a 2 bits de
+stop.
+
+Los niveles lógicos de UART **difieren entre fabricantes**: un Arduino Uno usa lógica de
+**5 V**, mientras que el puerto RS232 de una PC usa **±12 V**. Conectar un Arduino
+directamente a un puerto RS232 lo dañaría. Si dos dispositivos UART no comparten el
+mismo nivel lógico, hace falta un circuito adaptador de nivel (level shifter) para
+conectarlos con seguridad.
+
+### Arduino ↔ ESP32
+El Arduino (5 V) envía señales de 5 V por su TX, pero el ESP32 sólo tolera 3.3 V en su
+RX: conectados directamente, el ESP32 se dañaría. Por eso la señal debe reducirse con un
+**divisor resistivo** o un level shifter antes de entrar al RX del ESP32. En el sentido
+contrario no hace falta nada: el ESP32 puede enviarle datos al Arduino sin problema,
+porque el Arduino interpreta 3.3 V como HIGH.
+
+Pines involucrados en el ESP32 para este segundo puerto serial: **Pin 18 → TX1**
+(transmisión), **Pin 19 → RX1** (recepción).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Divisor resistivo: TX de Arduino (5 V) → RX de ESP32 (3.3 V)',
+  steps: [{
+    note: 'R1 y R2 forman un divisor entre la salida de 5 V del Arduino y GND; el ESP32 lee la tensión en el nodo intermedio, que queda por debajo de los 3.6 V que tolera.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true, label: 'GND' },
+        { id: 't', x: 0, y: 0, label: 'TX Arduino (5 V)' },
+        { id: 'mid', x: 4, y: 3, label: 'a RX ESP32', showPotential: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'mid', value: 1800, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'mid', to: 'g', value: 3300, label: 'R2' },
+      ],
+    },
+    expect: { 'V(mid)': 3.235 },
+  }],
+}} />
+
+## Método paso a paso
+Para dimensionar el divisor Arduino → ESP32:
+
+1. Escribir la fórmula del divisor: $V_{RX} = V_{IN} \cdot \dfrac{R_2}{R_1+R_2}$, donde
+   $R_2$ es la resistencia hacia GND (la que "queda" del lado del ESP32).
+2. Fijar $V_{IN} = 5\,\text{V}$ y exigir $V_{RX} \le 3.6\,\text{V}$ (idealmente cerca de
+   3.3 V, el HIGH nativo del ESP32).
+3. Elegir una relación $R_2/(R_1+R_2)$ que cumpla eso: con $R_1=1.8\,\text{k}\Omega$ y
+   $R_2=3.3\,\text{k}\Omega$, $V_{RX}=5\cdot\frac{3300}{5100}\approx 3.24\,\text{V}$ — dentro del rango seguro.
+4. Verificar que la corriente resultante no exceda lo que el TX del Arduino puede
+   entregar (aquí, $I = 5\,\text{V}/5100\,\Omega \approx 0.98\,\text{mA}$, sin problema).
+
+## Ejemplo resuelto
+Con $R_1=1.8\,\text{k}\Omega$ y $R_2=3.3\,\text{k}\Omega$ *(valores de la slide)*:
+
+$$V_{RX} = 5\,\text{V}\cdot\frac{3300}{1800+3300} = 5\,\text{V}\cdot\frac{3300}{5100} \approx 3.24\,\text{V}$$
+
+Ese valor está por debajo del límite de 3.6 V del ESP32 y lo suficientemente cerca de
+3.3 V para que el pin RX lo interprete correctamente como HIGH.
+
+## Errores típicos
+- Conectar el TX de 5 V del Arduino directo al RX del ESP32 sin ningún divisor: daña el
+  chip de forma permanente.
+- Poner el divisor también en el sentido ESP32→Arduino: no hace falta, el Arduino ya
+  interpreta 3.3 V como HIGH.
+- Olvidar el límite de corriente por GPIO (12 mA) al diseñar cualquier interfaz, no sólo
+  el divisor UART.
+- Confundir UART (dos dispositivos, sin reloj compartido) con otros buses seriales que sí
+  llevan reloj (I2C, SPI) — no es tema de esta semana, pero es un error común.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Se quiere conectar el TX (5 V) de un Arduino al RX de un ESP32 usando un divisor resistivo con R1 = 1 kΩ (hacia el TX) y R2 = 2 kΩ (hacia GND). ¿Qué tensión llega al RX del ESP32? ¿Es segura para el chip?",
+  hints: [
+    "Usa V_RX = V_IN · R2/(R1+R2).",
+    "Compara el resultado con el límite de 3.6 V del ESP32.",
+  ],
+}}>
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Circuito del enunciado: R1 hacia el TX (5 V), R2 hacia GND, el ESP32 lee el nodo intermedio.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true, label: 'GND' },
+        { id: 't', x: 0, y: 0, label: 'TX Arduino (5 V)' },
+        { id: 'mid', x: 4, y: 3, label: 'a RX ESP32' },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'mid', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'mid', to: 'g', value: 2000, label: 'R2' },
+      ],
+    },
+  }],
+}} />
+
+**1. Fórmula del divisor** ($R_2$ es la resistencia hacia GND):
+
+$$V_{RX} = V_{IN} \cdot \frac{R_2}{R_1+R_2}$$
+
+**2. Sustituir valores** ($V_{IN}=5\,\text{V}$, $R_1=1\,\text{k}\Omega$, $R_2=2\,\text{k}\Omega$):
+
+$$V_{RX} = 5\,\text{V} \cdot \frac{2000}{1000+2000} = 5\,\text{V} \cdot \frac{2}{3} = \boxed{3.33\,\text{V}}$$
+
+**3. Comparar con el límite del ESP32:**
+
+$$3.33\,\text{V} < 3.6\,\text{V} \quad\Rightarrow\quad \boxed{\text{sí es segura}}$$
+
+Además queda muy cerca del nivel HIGH nativo de 3.3 V, así que el pin RX la interpreta
+correctamente.
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Circuito resuelto: V(mid) ≈ 3.33 V, por debajo del límite de 3.6 V del ESP32.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true, label: 'GND' },
+        { id: 't', x: 0, y: 0, label: 'TX Arduino (5 V)' },
+        { id: 'mid', x: 4, y: 3, label: 'a RX ESP32', showPotential: true, state: 'answer' },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'mid', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'mid', to: 'g', value: 2000, label: 'R2' },
+      ],
+      voltages: [{ part: 'R2', label: 'V_{RX}', plus: 'from', showValue: true }],
+    },
+    expect: { 'V(mid)': 3.333 },
+  }],
+}} />
+
+</ExerciseBlock>

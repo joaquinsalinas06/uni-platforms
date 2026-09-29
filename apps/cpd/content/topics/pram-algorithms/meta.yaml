@@ -1,0 +1,26 @@
+id: pram-algorithms
+title: "Algoritmos PRAM y teorema de Brent"
+type: algorithm
+unit: u2
+
+prerequisites: ["pram-models"]
+buildsOn: ["dag-cost-model"]
+usedBy: ["prefix-sum-recurrences"]
+
+complexity:
+  brent-theorem:
+    worst: "T_p(n,p) \\le \\left\\lceil \\tfrac{W(n)}{p} \\right\\rceil + T_\\infty(n)"
+    reasoning: >-
+      Durante los T∞ pasos del camino critico se hace al menos una unidad de
+      trabajo por paso; quedan W - T∞ unidades adicionales, repartidas entre
+      p procesadores: Tp <= T∞ + (W - T∞)/p = W/p + (1 - 1/p)*T∞, que
+      asintoticamente es O(W/p + T∞). Este es el limite superior de Brent:
+      combina el reparto ideal del trabajo (W/p) con el limite impuesto por
+      las dependencias del algoritmo (T∞), que ni infinitos procesadores
+      pueden acortar.
+    source: "U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf#8"
+
+professorAnalysisStyle: brent-theorem
+hasVisualization: true
+visualizationType: dag
+placeholder: false

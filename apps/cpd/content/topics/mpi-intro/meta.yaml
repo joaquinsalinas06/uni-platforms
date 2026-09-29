@@ -1,0 +1,15 @@
+id: mpi-intro
+title: "Introducción a MPI: comunicadores, rank, size, modos de envío"
+type: concept
+unit: u3
+
+prerequisites: [flynn-foster-pcam]
+buildsOn: []
+usedBy: [mpi-collectives, mpi-blocking-nonblocking]
+
+complexity: {}
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: network-topology
+placeholder: false

@@ -1,0 +1,367 @@
+---
+kind: theory
+title: "El método del potencial"
+---
+
+## ¿Qué problema resuelve?
+
+En un montículo de Fibonacci una operación puede dejar trabajo pendiente para
+otra. Union sólo une listas; Decrease-Key puede crear raíces; Extract-Min las
+reorganiza con Consolidate. El método del potencial explica cómo se paga ese
+trabajo diferido, sin confundirlo con un promedio aleatorio.
+
+Esta página reúne las demostraciones amortizadas de
+[Montículo de Fibonacci](/structures/fibonacci-heap) para no repetirlas en
+cada operación.
+
+## Intuición
+
+### ¿Qué significa costo real y costo amortizado?
+
+El **costo real** $c_i$ es el trabajo que hace la operación número $i$
+ahora mismo: empalmar punteros, cortar nodos o recorrer raíces. El **costo
+amortizado** $\hat c_i$ es una cuenta para analizar una secuencia: cobra el
+trabajo actual y también lo que el estado deja preparado para el futuro.
+
+Si la estructura estaba en $D_{i-1}$ antes de una operación y queda en
+$D_i$ después, el cambio de potencial es
+$\Delta\Phi=\Phi(D_i)-\Phi(D_{i-1})$. Sólo con esos significados se usa:
+
+$$
+\hat c_i=c_i+\Delta\Phi.
+$$
+
+Si $\Delta\Phi$ es positivo, se guarda crédito; si es negativo, se
+consume crédito que operaciones anteriores ya habían dejado. Esto no dice que
+la operación se ejecute más rápido: separa el costo real de cómo se reparte
+en el análisis.
+
+> **Para recordar.** Costo real = trabajo de hoy. Costo amortizado = trabajo
+> de hoy más o menos el crédito almacenado para una operación futura.
+
+## Estructura interna
+
+Para un heap $H$, el profesor usa el potencial:
+
+$$
+\Phi(H)=t(H)+2m(H).
+$$
+
+Aquí $t(H)$ es el número de árboles o raíces de la lista de raíces y
+$m(H)$ es el número de nodos marcados. Cada raíz aporta una unidad al
+potencial; cada marca aporta dos. Muchas raíces anuncian trabajo pendiente
+para Consolidate y una marca anuncia un posible corte futuro.
+
+Al restar el potencial final menos el inicial se obtiene:
+
+$$
+\Delta\Phi=\Delta t+2\Delta m.
+$$
+
+$\Delta t$ es el cambio en el número de raíces y $\Delta m$ el cambio
+en el número de nodos marcados.
+
+## Operaciones
+
+- [Union](/structures/fibonacci-heap/operations/union) concatena listas de raíces.
+- [Decrease-Key](/structures/fibonacci-heap/operations/decrease-key) puede activar
+  [Cut](/structures/fibonacci-heap/operations/cut) y
+  [Cascading-Cut](/structures/fibonacci-heap/operations/cascading-cut).
+- [Extract-Min](/structures/fibonacci-heap/operations/extract-min) elimina el mínimo
+  y llama a [Consolidate](/structures/fibonacci-heap/operations/consolidate).
+
+Sus diagramas mecánicos viven en esas páginas. Aquí demostramos sus costos.
+
+## Análisis de complejidad
+
+### Union = $O(1)$ amortizado
+
+#### Qué queremos demostrar
+
+Que Union tiene costo constante real y amortizado.
+
+#### Qué significa cada variable
+
+Usaremos $c_i$ para costo real, $\hat c_i$ para costo amortizado y
+$\Delta\Phi$ para el cambio del potencial $t(H)+2m(H)$. Union no crea,
+elimina ni marca nodos: sólo junta dos listas de raíces.
+
+#### Ejemplo visual
+
+~~~text
+H1:  2    8
+H2:  1    7    9
+
+H :  2    8    1    7    9
+              ↑
+            min(H)
+~~~
+
+Se concatenan las listas circulares y se actualiza el puntero mínimo
+comparando los mínimos que ya existían. No hay Consolidate ni reorganización.
+
+#### Costo real
+
+Sólo se cambian algunos punteros de lista y el puntero mínimo. Por eso:
+
+$$c_i=O(1).$$
+
+#### Cambio del potencial
+
+Los mismos árboles y las mismas marcas siguen existiendo tras unirlos, sólo
+en una lista común. Por ello:
+
+$$\Delta\Phi=0.$$
+
+#### Sustitución en $\hat c_i=c_i+\Delta\Phi$
+
+$$
+\hat c_i=O(1)+0=O(1).
+$$
+
+**Union es $O(1)$ amortizado.**
+
+> **Para recordar.** Union → unir listas → actualizar mínimo → no consolidar
+> → $O(1)$ amortizado.
+
+### Decrease-Key = $O(1)$ amortizado
+
+#### Qué queremos demostrar
+
+Que incluso si una llamada provoca muchos cortes en cascada, su costo
+amortizado permanece constante.
+
+#### Qué significa cada variable
+
+Se mantiene $\hat c_i=c_i+\Delta\Phi$ y
+$\Phi(H)=t(H)+2m(H)$. En esta prueba, $c$ es el **número total de
+cortes** de la llamada. Incluye el corte del nodo cuya llave baja y los cortes
+de Cascading-Cut. No confundir $c$, que cuenta cortes, con $c_i$, que
+mide trabajo real.
+
+#### Ejemplo visual
+
+~~~text
+        2
+       /
+      5*
+     / \
+    8  10
+~~~
+
+El asterisco indica que 5 ya perdió un hijo y está marcado. Si bajar una
+llave no rompe la relación con su padre, no se corta nada. Si la nueva llave
+es menor que la del padre, se hace Cut. Si el padre ya estaba marcado,
+Cascading-Cut puede continuar la cadena.
+
+#### Paso 1: costo real
+
+Cada Cut cuesta $O(1)$: separa un nodo de su padre y lo agrega a las raíces.
+Por tanto, un corte cuesta $O(1)$, dos cortes $O(2)$, y $c$ cortes:
+
+$$c_i=O(c).$$
+
+#### Paso 2: cambio en las raíces
+
+Cada nodo cortado deja de ser hijo y se vuelve raíz. Si hubo $c$ cortes:
+
+$$\Delta t=+c.$$
+
+Tres cortes, por ejemplo, dan $\Delta t=+3$. Ése será el término positivo
+$+c$ dentro del potencial.
+
+#### Paso 3: cambio en las marcas
+
+Cada marca vale dos unidades porque el potencial contiene $2m(H)$. Los
+primeros $c-1$ nodos cortados en una cascada ya estaban marcados. Al volverse
+raíces se desmarcan, por lo que eliminan $-2(c-1)$ unidades de potencial.
+
+El último nodo puede detener la cascada al perder su primer hijo y quedar
+recién marcado. En el peor caso eso agrega una marca, o $+2$. Cada término
+de la siguiente desigualdad ya tiene un origen:
+
+$$
+\Delta\Phi\le
+\underbrace{c}_{\text{raíces nuevas}}
+-\underbrace{2(c-1)}_{\text{marcas que desaparecen}}
++\underbrace{2}_{\text{última marca posible}}.
+$$
+
+Ahora desarrollamos el paréntesis:
+
+$$
+\Delta\Phi\le c-2(c-1)+2
+=c-2c+2+2
+=4-c.
+$$
+
+#### Paso 4: sustitución en $\hat c_i=c_i+\Delta\Phi$
+
+El costo real es $O(c)$ y el cambio de potencial está acotado por $4-c$:
+
+$$
+\hat c_i=O(c)+(4-c)=O(1).
+$$
+
+Más cortes aumentan el costo real, pero también eliminan más marcas y reducen
+el potencial. El crédito de esas marcas paga los cortes actuales.
+
+#### Ejemplo numérico: $c=3$
+
+Tres cortes dan $\Delta t=+3$. Los primeros $c-1=2$ nodos eliminan
+$-2(2)=-4$ unidades de potencial. El último nodo puede agregar $+2$:
+
+$$\Delta\Phi\le3-4+2=1.$$
+
+Aunque hubo tres cortes reales, el potencial compensa gran parte del trabajo.
+
+> **Para recordar.** Muchos cortes → mayor costo real; muchos cortes → más
+> marcas eliminadas → menor potencial. Decrease-Key es $O(1)$ amortizado.
+
+### Extract-Min = $O(\lg n)$ amortizado
+
+#### Qué queremos demostrar
+
+Que la reducción de raíces producida por Consolidate compensa el costo de
+procesar muchas raíces.
+
+#### Qué significa cada variable
+
+Ya se demostró en el [montículo de Fibonacci](/structures/fibonacci-heap)
+que $D(n)=O(\lg n)$. $D(n)$ es el grado máximo de un nodo de un heap con
+$n$ nodos. Aquí $t(H)$ es el número de raíces que se procesan antes de
+consolidar; $c_i$, $\hat c_i$ y $\Delta\Phi$ mantienen sus significados.
+
+#### Ejemplo visual
+
+Extract-Min elimina la raíz mínima, mueve sus hijos a la lista de raíces,
+ejecuta Consolidate y une pares de raíces del mismo grado. Cuatro raíces de
+grado 0 se unen por pares hasta que no queda ningún grado repetido.
+
+#### Paso 1: costo real
+
+Procesar raíces cuesta en función de $t(H)$. Consolidate también maneja
+grados desde 0 hasta $D(n)$. El material da:
+
+$$c_i=O(D(n)+t(H)).$$
+
+El término $t(H)$ representa recorrer raíces; $D(n)$ representa los
+grados posibles y el arreglo que los maneja.
+
+#### Paso 2: cuántas raíces quedan
+
+Después de Consolidate no puede haber dos raíces con el mismo grado:
+
+~~~text
+0, 1, 2, ..., D(n)
+~~~
+
+Hay $D(n)+1$ valores, porque también se cuenta el grado 0. Por tanto quedan
+como máximo $D(n)+1$ raíces. Si antes había $t(H)$:
+
+$$\Delta t\le D(n)+1-t(H).$$
+
+Mover hijos a la lista de raíces no aumenta las marcas; una raíz nunca se
+marca. Por ello:
+
+$$\Delta\Phi\le D(n)+1-t(H).$$
+
+#### Paso 3: sustitución en $\hat c_i=c_i+\Delta\Phi$
+
+$$
+\hat c_i=O(D(n)+t(H))+D(n)+1-t(H).
+$$
+
+El $+t(H)$ del costo real se cancela con el $-t(H)$ del potencial. Quedan
+términos dominados por $D(n)$:
+
+$$\hat c_i=O(D(n)).$$
+
+Como $D(n)=O(\lg n)$:
+
+$$\text{Extract-Min}=O(\lg n)\text{ amortizado}.$$
+
+> **Para recordar.** Antes de Consolidate puede haber muchas raíces. Después
+> queda a lo sumo una por grado, es decir $D(n)+1$; esa caída de potencial
+> compensa recorrerlas.
+
+## Tabla de complejidad
+
+| Operación | Costo amortizado |
+| --- | --- |
+| Insert | $O(1)$ |
+| Union | $O(1)$ |
+| Decrease-Key | $O(1)$ |
+| Extract-Min | $O(\lg n)$ |
+
+Fórmula general: $\hat c_i=c_i+\Delta\Phi$. Potencial:
+$\Phi(H)=t(H)+2m(H)$.
+
+## Ejemplos
+
+### Dudas frecuentes
+
+<details>
+<summary>¿Por qué Union no hace Consolidate?</summary>
+
+Porque el montículo de Fibonacci retrasa la reorganización. Union sólo
+concatena las listas de raíces.
+</details>
+
+<details>
+<summary>¿Qué significa c en Decrease-Key?</summary>
+
+Es la cantidad de nodos cortados durante Cut y Cascading-Cut. Por eso el
+costo real se expresa como $c_i=O(c)$.
+</details>
+
+<details>
+<summary>¿Por qué cada corte aumenta t(H)?</summary>
+
+Porque el nodo cortado deja de ser hijo y pasa a ser una nueva raíz.
+</details>
+
+<details>
+<summary>¿Por qué aparece -2(c-1)?</summary>
+
+Los primeros $c-1$ nodos de una cascada ya estaban marcados. Cada marca
+vale 2 en $\Phi=t+2m$ y al cortar esos nodos sus marcas desaparecen.
+</details>
+
+<details>
+<summary>¿De dónde sale el +2?</summary>
+
+El último nodo de la cascada puede perder su primer hijo y quedar marcado.
+Una marca nueva aporta 2 al potencial.
+</details>
+
+<details>
+<summary>¿Por qué después de Consolidate quedan D(n)+1 raíces?</summary>
+
+No puede haber dos raíces del mismo grado. Los grados 0, 1, 2, ..., $D(n)$
+son $D(n)+1$ posibilidades.
+</details>
+
+<details>
+<summary>¿Por qué Extract-Min no queda O(t(H))?</summary>
+
+Recorrer muchas raíces cuesta, pero Consolidate las reduce fuertemente. Esa
+reducción baja el potencial y cancela el término $t(H)$.
+</details>
+
+<details>
+<summary>¿Por qué al final aparece lg n?</summary>
+
+Porque se demostró que $D(n)=O(\lg n)$ usando el tamaño mínimo de un árbol
+de grado $k$ y los números de Fibonacci.
+</details>
+
+## Comparación con estructuras relacionadas
+
+El [montículo binomial](/structures/binomial-heap) usa análisis amortizado
+agregado para Insert. El método del potencial, introducido en semana 2,
+explica operación por operación qué crédito queda guardado en raíces y marcas.
+
+## Prueba de dominio
+
+Ver [Prueba de dominio](/structures/potential-method/mastery-check).

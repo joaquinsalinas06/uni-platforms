@@ -1,0 +1,327 @@
+import Base from '../../layouts/Base.astro';
+import Visualization from '../../components/Visualization.astro';
+
+<Base title="Circuitos interactivos" crumb="lab · interactivo">
+<div class="prose max-w-none">
+
+# Circuitos interactivos
+
+Cada número de esta página lo calcula el solver (`src/visualizations/circuit/solve.ts`). Con el
+slider, el motor vuelve a resolver el circuito **sin hipótesis**: prueba las combinaciones ON/OFF
+de los diodos y se queda con la consistente. Los umbrales salen por bisección.
+
+## 1. ¿Desde qué E conduce un diodo de silicio?
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Umbral de un diodo Si',
+  interactive: { part: 'E', min: 0, max: 3, step: 0.05, label: 'E' },
+  steps: [{
+    note: 'Mueve E: mientras E < 0.7 V el diodo está OFF (circuito abierto) y no circula corriente.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0, label: 'a', showPotential: true }, { id: 'a2', x: 4, y: 4 }],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 2, label: 'E' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1', tone: 'si' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+        { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.0013 },
+  }],
+}} />
+
+## 2. Si frente a Ge
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Si y Ge en ramas paralelas',
+  interactive: { part: 'E', min: 0, max: 2, step: 0.02, label: 'E' },
+  steps: [{
+    note: 'Misma fuente, dos ramas: el Ge (0.3 V) empieza a conducir antes que el Si (0.7 V).',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true }, { id: 't', x: 0, y: 0 }, { id: 's', x: 4, y: 0 }, { id: 's2', x: 8, y: 0 },
+        { id: 'k1', x: 4, y: 3 }, { id: 'k2', x: 8, y: 3 }, { id: 'b1', x: 4, y: 6 }, { id: 'b2', x: 8, y: 6 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 1, label: 'E' },
+        { id: 'w1', kind: 'wire', from: 't', to: 's' },
+        { id: 'w2', kind: 'wire', from: 's', to: 's2' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 's', to: 'k1', label: 'D1', tone: 'si' },
+        { id: 'R1', kind: 'resistor', from: 'k1', to: 'b1', value: 1000, label: 'R1' },
+        { id: 'D2', kind: 'diode', model: 'ge', from: 's2', to: 'k2', label: 'D2', tone: 'ge' },
+        { id: 'R2', kind: 'resistor', from: 'k2', to: 'b2', value: 1000, label: 'R2' },
+        { id: 'w3', kind: 'wire', from: 'b2', to: 'b1' },
+        { id: 'w4', kind: 'wire', from: 'b1', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'I_{Si}', showValue: true }, { part: 'R2', label: 'I_{Ge}', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.0003, 'I(R2)': 0.0007 },
+  }],
+}} />
+
+## 3. EP-2026I, pregunta 6: E mínimo para que conduzca D1
+
+Con E = 12 V el solver da: $I_X = 0$ (D6 y D7 están enfrentados), $i_2 = 1.871$ mA, $V_b = 2.186$ V
+y la fuente entrega 134.2 mW. Baja E hasta ver cuándo se apaga D1 (pregunta e) y mira $i_3$ en ese punto (pregunta f).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'EP-2026I · P6',
+  interactive: { part: 'V1', min: 0, max: 15, step: 0.1, label: 'E' },
+  steps: [{
+    note: 'La rama de D1 está directamente sobre la fuente: D1 y D2 conducen cuando E supera 0.7 + 0.3 + 2 = 3 V.',
+    circuit: {
+      nodes: [
+        { id: 'g0', x: 0, y: 12 }, { id: 'tl', x: 0, y: 0 }, { id: 'T1', x: 4, y: 0 }, { id: 'g', x: 4, y: 12, ground: true },
+        { id: 'n1', x: 4, y: 3 }, { id: 'n2', x: 4, y: 6 }, { id: 'n3', x: 4, y: 9 },
+        { id: 'T2', x: 10, y: 0 }, { id: 'n4', x: 10, y: 3 }, { id: 'n5', x: 10, y: 6 }, { id: 'n6', x: 10, y: 9 }, { id: 'B2', x: 10, y: 12 },
+        { id: 'T3', x: 16, y: 0 }, { id: 'n7', x: 16, y: 4 }, { id: 'n8', x: 16, y: 8 }, { id: 'B3', x: 16, y: 12 },
+        { id: 'n9', x: 22, y: 0 }, { id: 'n10', x: 22, y: 4 }, { id: 'n11', x: 22, y: 8 }, { id: 'B4', x: 22, y: 12 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g0', to: 'tl', value: 12, label: 'E' },
+        { id: 'w0', kind: 'wire', from: 'tl', to: 'T1' },
+        { id: 'wg', kind: 'wire', from: 'g0', to: 'g' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 'T1', to: 'n1', label: 'D1', tone: 'si' },
+        { id: 'D2', kind: 'diode', model: 'ge', from: 'n1', to: 'n2', label: 'D2', tone: 'ge' },
+        { id: 'R8', kind: 'resistor', from: 'n2', to: 'n3', value: 1000, label: 'R8' },
+        { id: 'V2', kind: 'vsource', from: 'g', to: 'n3', value: 2, label: 'V2' },
+        { id: 'R2', kind: 'resistor', from: 'T1', to: 'T2', value: 1000, label: 'R2' },
+        { id: 'D3', kind: 'diode', model: 'si', from: 'T2', to: 'n4', label: 'D3', tone: 'si' },
+        { id: 'D4', kind: 'diode', model: 'si', from: 'n4', to: 'n5', label: 'D4', tone: 'si' },
+        { id: 'D5', kind: 'diode', model: 'ge', from: 'n5', to: 'n6', label: 'D5', tone: 'ge' },
+        { id: 'R9', kind: 'resistor', from: 'n6', to: 'B2', value: 2000, label: 'R9' },
+        { id: 'R3', kind: 'resistor', from: 'B2', to: 'g', value: 2000, label: 'R3' },
+        { id: 'R5', kind: 'resistor', from: 'T2', to: 'T3', value: 3000, label: 'R5' },
+        { id: 'R4', kind: 'resistor', from: 'T3', to: 'n7', value: 5000, label: 'R4' },
+        { id: 'D8', kind: 'diode', model: 'ge', from: 'n7', to: 'n8', label: 'D8', tone: 'ge' },
+        { id: 'V4', kind: 'vsource', from: 'B3', to: 'n8', value: 2, label: 'V4' },
+        { id: 'R1', kind: 'resistor', from: 'B3', to: 'B2', value: 2000, label: 'R1' },
+        { id: 'R6', kind: 'resistor', from: 'T3', to: 'n9', value: 2000, label: 'R6' },
+        { id: 'D6', kind: 'diode', model: 'si', from: 'n9', to: 'n10', label: 'D6', tone: 'si' },
+        { id: 'V3', kind: 'vsource', from: 'n11', to: 'n10', value: 3.7, label: 'V3' },
+        { id: 'D7', kind: 'diode', model: 'si', from: 'B4', to: 'n11', label: 'D7', tone: 'si' },
+        { id: 'R7', kind: 'resistor', from: 'B4', to: 'B3', value: 3000, label: 'R7' },
+      ],
+      currents: [
+        { part: 'D1', label: 'i1', showValue: true }, { part: 'D3', label: 'i2', showValue: true },
+        { part: 'R4', label: 'i3', showValue: true }, { part: 'D6', label: 'Ix', showValue: true },
+      ],
+      voltages: [{ part: 'R2', label: 'Vb', showValue: true }, { part: 'R8', label: 'Va', showValue: true }],
+    },
+    expect: { 'I(D6)': 0, 'I(D1)': 0.009, 'I(D3)': 0.0018714, 'V(T1,T2)': 2.18571, 'P(V1)': 0.134229, 'I(R4)': 0.00031429 },
+  }],
+}} />
+
+## 4. EP-2025II, pregunta 6: E mínimo para la rama D1–D2
+
+Con E = 15 V: $I_X = 0$ (D4 y D5 enfrentados), $I = 3.585$ mA, $V_a = 7.170$ V, $V_b = 81.5$ mV y R2 consume 12.56 mW.
+La rama D1–D2 queda casi en el límite: baja E y mira desde qué valor deja de conducir (pregunta f).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'EP-2025II · P6',
+  interactive: { part: 'V1', min: 0, max: 20, step: 0.1, label: 'E' },
+  steps: [{
+    note: 'D1–D2 conducen mientras V_B − V_C ≥ 0.3 + 0.7 + 3 = 4 V; eso exige E ≥ 13.9 V.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 10, ground: true }, { id: 'TL', x: 0, y: 0 }, { id: 'A', x: 5, y: 0, label: 'A' }, { id: 'n1', x: 5, y: 4 },
+        { id: 'Va', x: 5, y: 10, label: 'Va', showPotential: true }, { id: 'B', x: 10, y: 0, label: 'B' }, { id: 'n2', x: 10, y: 3 }, { id: 'n3', x: 10, y: 6 },
+        { id: 'C', x: 10, y: 10 }, { id: 'RT', x: 15, y: 0 }, { id: 'n4', x: 15, y: 3 }, { id: 'n5', x: 15, y: 6.5 }, { id: 'BR', x: 15, y: 10 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 'TL', value: 15, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 'TL', to: 'A', value: 1000, label: 'R1' },
+        { id: 'D8', kind: 'diode', model: 'si', from: 'A', to: 'n1', label: 'D8', tone: 'si' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'Va', value: 1000, label: 'R2' },
+        { id: 'R6', kind: 'resistor', from: 'Va', to: 'g', value: 2000, label: 'R6' },
+        { id: 'R4', kind: 'resistor', from: 'A', to: 'B', value: 2000, label: 'R4' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'B', to: 'n2', label: 'D1', tone: 'ge' },
+        { id: 'D2', kind: 'diode', model: 'si', from: 'n2', to: 'n3', label: 'D2', tone: 'si' },
+        { id: 'V2', kind: 'vsource', from: 'C', to: 'n3', value: 3, label: 'V2' },
+        { id: 'R5', kind: 'resistor', from: 'C', to: 'Va', value: 4000, label: 'R5' },
+        { id: 'D6', kind: 'diode', model: 'si', from: 'B', to: 'RT', label: 'D6', tone: 'si' },
+        { id: 'D4', kind: 'diode', model: 'ge', from: 'RT', to: 'n4', label: 'D4', tone: 'ge' },
+        { id: 'R3', kind: 'resistor', from: 'n4', to: 'n5', value: 3000, label: 'R3' },
+        { id: 'D5', kind: 'diode', model: 'ge', from: 'BR', to: 'n5', label: 'D5', tone: 'ge' },
+        { id: 'D7', kind: 'diode', model: 'si', from: 'BR', to: 'C', label: 'D7', tone: 'si' },
+      ],
+      currents: [
+        { part: 'R1', label: 'I', showValue: true }, { part: 'R2', label: 'i1', showValue: true },
+        { part: 'D1', label: 'i2', showValue: true }, { part: 'D6', label: 'Ix', showValue: true },
+      ],
+      voltages: [{ part: 'R4', label: 'Vb', showValue: true }],
+    },
+    expect: { 'I(D6)': 0, 'I(R1)': 0.0035852, 'V(Va)': 7.17037, 'V(A,B)': 0.081481, 'P(R2)': 0.012563 },
+  }],
+}} />
+
+## 5. Reduce tú: EP-2025II, pregunta 5
+
+Toca dos resistencias. Si están en serie o en paralelo, el motor las funde; si una rama no lleva
+corriente (puente equilibrado) selecciónala sola y quítala. Objetivo: la Req vista desde la fuente (8 V).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'EP-2025II · P5 — Req desde la fuente',
+  practice: { kind: 'reduce', between: ['T0', 'G0'] },
+  steps: [{
+    note: 'Req entre a y b.',
+    circuit: {
+      nodes: [
+        { id: 'T0', x: 0, y: 0, label: 'a' }, { id: 'G0', x: 0, y: 12, label: 'b' },
+        { id: 'Ta', x: 4, y: 0 }, { id: 'Tc', x: 12, y: 0 }, { id: 'L1', x: 4, y: 6 }, { id: 'L2', x: 12, y: 6 },
+        { id: 'x1', x: 8, y: 4 }, { id: 'x2', x: 8, y: 8 }, { id: 'Gb', x: 4, y: 12 }, { id: 'Gd', x: 12, y: 12 },
+        { id: 'U', x: 18, y: 0 }, { id: 'W', x: 18, y: 6 }, { id: 'Gm', x: 18, y: 12 }, { id: 'Uk', x: 22, y: 0 }, { id: 'y1', x: 22, y: 6 },
+        { id: 'Un', x: 26, y: 0 }, { id: 'P1', x: 26, y: 3 }, { id: 'P1b', x: 26, y: 7 }, { id: 'P3', x: 30, y: 3 }, { id: 'P2', x: 30, y: 7 }, { id: 'Gs', x: 30, y: 12 },
+        { id: 'Ud', x: 34, y: 0 }, { id: 'e1', x: 38, y: -3 }, { id: 'e2', x: 38, y: 3 }, { id: 'V', x: 42, y: 0 },
+        { id: 'Vt', x: 46, y: 0 }, { id: 'Y', x: 46, y: 6 }, { id: 'Gu', x: 46, y: 12 }, { id: 'Yr', x: 51, y: 6 }, { id: 'Gv', x: 51, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'G0', to: 'T0', value: 8, label: 'E' },
+        { id: 'wt1', kind: 'wire', from: 'T0', to: 'Ta' }, { id: 'wt2', kind: 'wire', from: 'Ta', to: 'Tc' },
+        { id: 'Ra', kind: 'resistor', from: 'Ta', to: 'L1', value: 3000, label: 'R1' },
+        { id: 'Rb', kind: 'resistor', from: 'L1', to: 'Gb', value: 7500, label: 'R2' },
+        { id: 'Rc', kind: 'resistor', from: 'Tc', to: 'L2', value: 4800, label: 'R3' },
+        { id: 'Rd', kind: 'resistor', from: 'L2', to: 'Gd', value: 12000, label: 'R4' },
+        { id: 'Re', kind: 'resistor', from: 'L1', to: 'x1', value: 5000, label: 'R5' },
+        { id: 'Rf', kind: 'resistor', from: 'x1', to: 'L2', value: 1000, label: 'R6' },
+        { id: 'Rg', kind: 'resistor', from: 'L1', to: 'L2', value: 3300, label: 'R7' },
+        { id: 'Rh', kind: 'resistor', from: 'L1', to: 'x2', value: 10000, label: 'R8' },
+        { id: 'Ri', kind: 'resistor', from: 'x2', to: 'L2', value: 2100, label: 'R9' },
+        { id: 'Rk1', kind: 'resistor', from: 'Tc', to: 'U', value: 1000, label: 'R10' },
+        { id: 'Rj', kind: 'resistor', from: 'U', to: 'W', value: 3000, label: 'R11' },
+        { id: 'wu', kind: 'wire', from: 'U', to: 'Uk' },
+        { id: 'Rk', kind: 'resistor', from: 'Uk', to: 'y1', value: 2000, label: 'R12' },
+        { id: 'Rl', kind: 'resistor', from: 'y1', to: 'W', value: 4000, label: 'R13' },
+        { id: 'Rm', kind: 'resistor', from: 'W', to: 'Gm', value: 1000, label: 'R14' },
+        { id: 'wu2', kind: 'wire', from: 'Uk', to: 'Un' },
+        { id: 'Rn', kind: 'resistor', from: 'Un', to: 'P1', value: 300, label: 'R15' },
+        { id: 'Ro', kind: 'resistor', from: 'P1', to: 'P1b', value: 15000, label: 'R16' },
+        { id: 'Rp', kind: 'resistor', from: 'P1b', to: 'P2', value: 3000, label: 'R17' },
+        { id: 'Rq', kind: 'resistor', from: 'P1', to: 'P3', value: 2000, label: 'R18' },
+        { id: 'Rr', kind: 'resistor', from: 'P3', to: 'P2', value: 16000, label: 'R19' },
+        { id: 'Rs', kind: 'resistor', from: 'P2', to: 'Gs', value: 700, label: 'R20' },
+        { id: 'wu3', kind: 'wire', from: 'Un', to: 'Ud' },
+        { id: 'Rd1', kind: 'resistor', from: 'Ud', to: 'e1', value: 3000, label: 'R21' },
+        { id: 'Rd2', kind: 'resistor', from: 'e1', to: 'V', value: 3000, label: 'R22' },
+        { id: 'Rd3', kind: 'resistor', from: 'Ud', to: 'V', value: 3000, label: 'R23' },
+        { id: 'Rd4', kind: 'resistor', from: 'Ud', to: 'e2', value: 3000, label: 'R24' },
+        { id: 'Rd5', kind: 'resistor', from: 'e2', to: 'V', value: 3000, label: 'R25' },
+        { id: 'wv', kind: 'wire', from: 'V', to: 'Vt' },
+        { id: 'Rt', kind: 'resistor', from: 'Vt', to: 'Y', value: 1500, label: 'R26' },
+        { id: 'Ru', kind: 'resistor', from: 'Y', to: 'Gu', value: 9000, label: 'R27' },
+        { id: 'Rv', kind: 'resistor', from: 'Y', to: 'Yr', value: 9000, label: 'R28' },
+        { id: 'wyr', kind: 'wire', from: 'Yr', to: 'Gv' },
+        { id: 'Rw', kind: 'resistor', from: 'Y', to: 'Gv', value: 9000, label: 'R29' },
+        { id: 'wg1', kind: 'wire', from: 'G0', to: 'Gb' }, { id: 'wg2', kind: 'wire', from: 'Gb', to: 'Gd' }, { id: 'wg3', kind: 'wire', from: 'Gd', to: 'Gm' },
+        { id: 'wg4', kind: 'wire', from: 'Gm', to: 'Gs' }, { id: 'wg5', kind: 'wire', from: 'Gs', to: 'Gu' }, { id: 'wg6', kind: 'wire', from: 'Gu', to: 'Gv' },
+      ],
+    },
+    expect: { 'Req(T0,G0)': 1887.64, 'P(E)': 0.033905 },
+  }],
+}} />
+
+## 6. Reduce tú: EP-2026I, pregunta 5 (circuito derecho)
+
+R es el potenciómetro de la parte (a): por el puente equilibrado de las lecturas, R = 3k · 12k / 4k = 9 kΩ.
+Con 20 V entre los terminales, el circuito consume $20^2 / R_{eq}$.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'EP-2026I · P5b — Req entre terminales',
+  practice: { kind: 'reduce', between: ['P0', 'G0'] },
+  steps: [{
+    note: 'Req entre a y b.',
+    circuit: {
+      nodes: [
+        { id: 'P0', x: 0, y: 0, label: 'a' }, { id: 'G0', x: 0, y: 12, label: 'b' },
+        { id: 'Pa', x: 3, y: 0 }, { id: 'M1', x: 3, y: 5 }, { id: 'Ga', x: 3, y: 12 }, { id: 'c1', x: 8, y: 2 }, { id: 'M2', x: 8, y: 7 }, { id: 'Ga6', x: 8, y: 12 },
+        { id: 'Pb1', x: 13, y: 0 }, { id: 'N1', x: 11, y: 6 }, { id: 'Gb2', x: 11, y: 12 }, { id: 'Pb4', x: 15, y: 0 }, { id: 'N2', x: 17, y: 5 },
+        { id: 'Gb5', x: 17, y: 12 }, { id: 'c2', x: 21, y: 8 },
+        { id: 'Pd', x: 17, y: 0 }, { id: 'e1', x: 21, y: -3 }, { id: 'e2', x: 21, y: 3 }, { id: 'Q', x: 25, y: 0 },
+        { id: 'Qk', x: 27, y: 0 }, { id: 'K1', x: 27, y: 4 }, { id: 'k2n', x: 31, y: 4 }, { id: 'k3n', x: 27, y: 8 }, { id: 'K2', x: 31, y: 8 }, { id: 'BR', x: 31, y: 12 },
+        { id: 'Qr', x: 35, y: 0 }, { id: 'r1n', x: 35, y: 5 }, { id: 'BRr', x: 35, y: 12 }, { id: 'Gr', x: 23, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'G0', to: 'P0', value: 20, label: 'E' },
+        { id: 'wp1', kind: 'wire', from: 'P0', to: 'Pa' }, { id: 'wp2', kind: 'wire', from: 'Pa', to: 'Pb1' },
+        { id: 'wp3', kind: 'wire', from: 'Pb1', to: 'Pb4' }, { id: 'wp4', kind: 'wire', from: 'Pb4', to: 'Pd' },
+        { id: 'a1', kind: 'resistor', from: 'Pa', to: 'M1', value: 1000, label: 'R1' },
+        { id: 'a2', kind: 'resistor', from: 'M1', to: 'Ga', value: 8000, label: 'R2' },
+        { id: 'a3', kind: 'resistor', from: 'M1', to: 'c1', value: 5000, label: 'R3' },
+        { id: 'a4', kind: 'resistor', from: 'c1', to: 'M2', value: 7000, label: 'R4' },
+        { id: 'a5', kind: 'resistor', from: 'M1', to: 'M2', value: 6000, label: 'R5' },
+        { id: 'a6', kind: 'resistor', from: 'M2', to: 'Ga6', value: 4000, label: 'R6' },
+        { id: 'b1', kind: 'resistor', from: 'Pb1', to: 'N1', value: 4000, label: 'R7' },
+        { id: 'b2', kind: 'resistor', from: 'N1', to: 'Gb2', value: 6000, label: 'R8' },
+        { id: 'b3', kind: 'resistor', from: 'N1', to: 'N2', value: 3000, label: 'R9' },
+        { id: 'b4', kind: 'resistor', from: 'Pb4', to: 'N2', value: 5000, label: 'R10' },
+        { id: 'b5', kind: 'resistor', from: 'N2', to: 'Gb5', value: 10000, label: 'R11' },
+        { id: 'b6', kind: 'resistor', from: 'N2', to: 'c2', value: 12000, label: 'R12' },
+        { id: 'b7', kind: 'resistor', from: 'c2', to: 'Gb5', value: 18000, label: 'R13' },
+        { id: 'd1', kind: 'resistor', from: 'Pd', to: 'e1', value: 9000, label: 'R14' },
+        { id: 'd2', kind: 'resistor', from: 'e1', to: 'Q', value: 9000, label: 'R15' },
+        { id: 'd3', kind: 'resistor', from: 'Pd', to: 'Q', value: 9000, label: 'R16' },
+        { id: 'd4', kind: 'resistor', from: 'Pd', to: 'e2', value: 9000, label: 'R17' },
+        { id: 'd5', kind: 'resistor', from: 'e2', to: 'Q', value: 9000, label: 'R18' },
+        { id: 'wq', kind: 'wire', from: 'Q', to: 'Qk' },
+        { id: 'k1', kind: 'resistor', from: 'Qk', to: 'K1', value: 2500, label: 'R19' },
+        { id: 'k2', kind: 'resistor', from: 'K1', to: 'k2n', value: 2500, label: 'R20' },
+        { id: 'k3', kind: 'resistor', from: 'k2n', to: 'K2', value: 2500, label: 'R21' },
+        { id: 'k4', kind: 'resistor', from: 'K1', to: 'k3n', value: 2500, label: 'R22' },
+        { id: 'k5', kind: 'resistor', from: 'k3n', to: 'K2', value: 2500, label: 'R23' },
+        { id: 'k6', kind: 'resistor', from: 'K2', to: 'BR', value: 5000, label: 'R24' },
+        { id: 'wq2', kind: 'wire', from: 'Qk', to: 'Qr' },
+        { id: 'r1', kind: 'resistor', from: 'Qr', to: 'r1n', value: 1000, label: 'R25' },
+        { id: 'R', kind: 'pot', from: 'r1n', to: 'BRr', value: 9000, label: 'R' },
+        { id: 'wbr', kind: 'wire', from: 'BRr', to: 'BR' },
+        { id: 'r2', kind: 'resistor', from: 'BR', to: 'Gr', value: 40500, label: 'R26' },
+        { id: 'wg1', kind: 'wire', from: 'G0', to: 'Ga' }, { id: 'wg2', kind: 'wire', from: 'Ga', to: 'Ga6' }, { id: 'wg3', kind: 'wire', from: 'Ga6', to: 'Gb2' },
+        { id: 'wg4', kind: 'wire', from: 'Gb2', to: 'Gb5' }, { id: 'wg5', kind: 'wire', from: 'Gb5', to: 'Gr' },
+      ],
+    },
+    expect: { 'Req(P0,G0)': 2500, 'P(E)': 0.16 },
+  }],
+}} />
+
+## 7. Tres mallas con una fuente variable
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Mallas: E2 variable',
+  interactive: { part: 'E2', min: 0, max: 12, step: 0.5, label: 'E2' },
+  steps: [{
+    note: 'Las tres corrientes de malla se recalculan con cada valor de E2. R2 y R4 son compartidas.',
+    circuit: {
+      nodes: [
+        { id: 'g0', x: 0, y: 4, ground: true }, { id: 'g1', x: 6, y: 4 }, { id: 'g2', x: 12, y: 4 }, { id: 'g3', x: 18, y: 4 },
+        { id: 't0', x: 0, y: 0 }, { id: 't1', x: 6, y: 0, label: 'a', showPotential: true }, { id: 't2', x: 12, y: 0, label: 'b', showPotential: true }, { id: 't3', x: 18, y: 0 },
+      ],
+      parts: [
+        { id: 'E1', kind: 'vsource', from: 'g0', to: 't0', value: 12, label: 'E1' },
+        { id: 'R1', kind: 'resistor', from: 't0', to: 't1', value: 2000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 't1', to: 'g1', value: 4000, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 't1', to: 't2', value: 1000, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 't2', to: 'g2', value: 2000, label: 'R4' },
+        { id: 'R5', kind: 'resistor', from: 't2', to: 't3', value: 1000, label: 'R5' },
+        { id: 'E2', kind: 'vsource', from: 'g3', to: 't3', value: 6, label: 'E2' },
+        { id: 'w1', kind: 'wire', from: 'g0', to: 'g1' }, { id: 'w2', kind: 'wire', from: 'g1', to: 'g2' }, { id: 'w3', kind: 'wire', from: 'g2', to: 'g3' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g0', 't0', 't1', 'g1'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['g1', 't1', 't2', 'g2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+        { id: 'm3', path: ['g2', 't2', 't3', 'g3'], dir: 'cw', label: 'I₃', tone: 'mesh3' },
+      ],
+      showSystem: true,
+    },
+    expect: { 'I(R1)': 0.0028889, 'I(R3)': 0.0013333, 'I(R5)': -0.0011111 },
+  }],
+}} />
+
+</div>
+</Base>

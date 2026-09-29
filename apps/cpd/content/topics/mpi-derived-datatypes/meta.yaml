@@ -1,0 +1,24 @@
+id: mpi-derived-datatypes
+title: "Tipos de datos derivados en MPI"
+type: concept
+unit: u3
+
+prerequisites: [mpi-intro]
+buildsOn: []
+usedBy: []
+
+complexity:
+  comunicacion-elemento-a-elemento:
+    worst: "T_{comm} = \\alpha + x \\beta"
+    reasoning: >-
+      El tiempo de comunicación está dominado por la latencia de inicio
+      (alpha) más el tiempo de transmisión por palabra (beta). Enviar x
+      elementos con x llamadas MPI_Send separadas paga alpha x veces en
+      vez de una sola, de ahí la ventaja de agrupar en un tipo derivado
+      y una sola llamada.
+    source: "U3.4 Paralelismo Distribuido-tiposMPI-apuntes.pdf#4"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: memory-layout
+placeholder: false

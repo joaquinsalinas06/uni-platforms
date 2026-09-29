@@ -1,0 +1,62 @@
+---
+import {
+  VISUALIZATIONS,
+  visualizationSchema,
+  XyChartVisualization,
+  DagVisualization,
+  NetworkTopologyVisualization,
+  TimelineVisualization,
+  MemoryLayoutVisualization,
+  CircuitVisualization,
+  CircuitInteractive,
+  CircuitPractice,
+  SequenceVisualization,
+  FlowVisualization,
+  TreeVisualization,
+  PersistentVisualization,
+  RangeTreeVisualization,
+} from '@uni/visualizations';
+
+interface Props {
+  viz: any;
+}
+
+const raw = Astro.props.viz;
+
+const parsed = visualizationSchema.safeParse(raw);
+if (!parsed.success) {
+  throw new Error(
+    `Bloque visualization inválido en ${Astro.url.pathname}:\n` +
+      JSON.stringify(parsed.error.issues, null, 2),
+  );
+}
+const viz = parsed.data;
+
+const steps = viz.mode ? viz.steps.map((s: any) => ({ mode: viz.mode, ...s })) : viz.steps;
+const notImplemented = !VISUALIZATIONS[viz.type as keyof typeof VISUALIZATIONS];
+---
+
+{viz.type === 'tree' && <TreeVisualization client:visible steps={steps} />}
+{viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
+{viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
+
+{viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
+{viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
+{viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
+{viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
+
+{viz.type === 'circuit' && !viz.interactive && !viz.practice && <CircuitVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'circuit' && viz.interactive && <CircuitInteractive client:visible steps={steps} interactive={viz.interactive} title={viz.title} />}
+{viz.type === 'circuit' && !viz.interactive && viz.practice && <CircuitPractice client:visible steps={steps} practice={viz.practice} title={viz.title} />}
+
+{viz.type === 'sequence' && <SequenceVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'flow' && <FlowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+
+{
+  notImplemented && (
+    <p class="tag rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
+      visualización "{viz.type}" pendiente de implementar
+    </p>
+  )
+}

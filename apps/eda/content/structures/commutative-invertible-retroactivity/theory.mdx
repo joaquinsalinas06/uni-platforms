@@ -1,0 +1,222 @@
+---
+kind: theory
+title: "Retroactividad conmutativa e invertible"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+El modelo de [retroactividad](/structures/retroactivity) plantea `Insert(t,
+op)` y `Delete(t)` sobre una línea de tiempo, y advierte que la solución
+ingenua —rehacer todo desde `t` hasta el presente— cuesta $O(m)$ si han
+pasado `m` operaciones desde entonces. Esta técnica es la respuesta al "¿se
+puede hacer mejor?" en el caso más favorable: cuando las operaciones que se
+insertan o borran conmutan entre sí y son invertibles, la retroactividad
+parcial es "casi trivial" — no hace falta rehacer nada.
+
+## Intuición
+
+Rehacer la secuencia sólo es necesario cuando **el orden importa**: si
+insertar una operación en el tiempo `t` puede cambiar el resultado de todo
+lo que vino después, no queda otra que reproducir esa cadena. Pero si el
+orden *no* importa —si `op` conmuta con cualquier otra operación de la
+secuencia— entonces da exactamente lo mismo aplicar `op` en el tiempo `t`
+que aplicarla ahora mismo, al final: el resultado sobre la estructura
+presente es idéntico. Eso convierte un `Insert` en el pasado en un `Insert`
+en el presente, que cuesta lo que cuesta la operación en sí, sin overhead.
+
+<Visualization viz={{
+  type: 'persistent',
+  steps: [
+    {
+      note: "Línea de tiempo real: op_a se aplicó en t1, op_b en t2. El presente es el resultado de aplicar ambas en orden — ninguna de las dos se mueve todavía.",
+      caption: "presente = op_b(op_a(base))",
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+      ],
+    },
+    {
+      note: "Se pide Insert(t=0, op_x): insertar op_x ANTES de op_a. En el modelo genérico de retroactividad esto marcaría a op_x como el delimitador de una reproducción completa — habría que rehacer op_a y op_b después de ella.",
+      caption: "posición pedida: t = 0, antes de op_a",
+      highlight: ['tx'],
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: null, state: 'marked' },
+      ],
+    },
+    {
+      note: "Primer paso real: op_x conmuta con op_a, así que el par contiguo (op_x, op_a) se puede intercambiar por (op_a, op_x) sin cambiar el efecto. op_x 'cruza' a op_a — ahora queda entre op_a y op_b.",
+      caption: "op_x; op_a  ≡  op_a; op_x   — por conmutatividad",
+      highlight: ['tx'],
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 'tx', value: 'op_x', parent: 't1', state: 'active' },
+        { id: 't2', value: 'op_b', parent: 'tx' },
+      ],
+    },
+    {
+      note: "op_x también conmuta con op_b: el par contiguo (op_x, op_b) se intercambia igual. op_x cruza a op_b y queda al final de la cadena, después de las dos operaciones reales.",
+      caption: "op_x; op_b  ≡  op_b; op_x   — por conmutatividad",
+      highlight: ['tx'],
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: 't2', state: 'active' },
+      ],
+    },
+    {
+      note: "op_x terminó exactamente donde estaría si se hubiera aplicado directamente ahora: Insert(t=0, op_x) quedó reducido a Insert(ahora, op_x), operación por operación, sin tocar ni recalcular op_a ni op_b en ningún cruce.",
+      caption: "Insert(t=0, op_x) ≡ Insert(ahora, op_x) — O(1), sin overhead retroactivo",
+      highlight: ['tx'],
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: 't2', state: 'active' },
+      ],
+    },
+  ],
+}} />
+
+Falta borrar. Para eso entra la segunda propiedad: si toda operación tiene
+una inversa que deshace exactamente su efecto, borrar `op` de la línea de
+tiempo es lo mismo que aplicar $op^{-1}$ ahora — su efecto se cancela sin tener
+que localizar ni deshacer nada en la posición original.
+
+<Visualization viz={{
+  type: 'persistent',
+  steps: [
+    {
+      note: "Presente: op_a, op_b y op_x ya aplicadas en orden (op_x quedó al final, por el argumento de conmutatividad de arriba). Las tres están en reposo.",
+      caption: "presente = op_x(op_b(op_a(base)))",
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: 't2' },
+      ],
+    },
+    {
+      note: "Se decide deshacer op_x: se marca como el delimitador de lo que hay que cancelar. Todavía no se toca op_a ni op_b — invertibilidad no necesita localizar el t=0 original de op_x en ninguna representación de la línea de tiempo.",
+      caption: "Delete(t=0) sobre lo que había ahí: op_x",
+      highlight: ['tx'],
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: 't2', state: 'marked' },
+      ],
+    },
+    {
+      note: "op_x es invertible: existe op_x⁻¹ tal que aplicarla después de op_x deja la estructura como si op_x nunca hubiera pasado. Se aplica op_x⁻¹ directamente ahora, sobre la estructura presente.",
+      caption: "Delete(t=0) ≡ Insert(ahora, op_x⁻¹) — por invertibilidad",
+      highlight: ['tinv'],
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: 't2', state: 'marked' },
+        { id: 'tinv', value: 'op_x⁻¹', parent: 'tx', state: 'active' },
+      ],
+    },
+    {
+      note: "El efecto de op_x queda exactamente cancelado por op_x⁻¹: ambas se apagan (muted), y op_a y op_b siguen intactas — nunca se recalcularon ni se tocaron para deshacer op_x.",
+      caption: "op_x seguida de op_x⁻¹ = identidad",
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+        { id: 'tx', value: 'op_x', parent: 't2', state: 'muted' },
+        { id: 'tinv', value: 'op_x⁻¹', parent: 'tx', state: 'muted' },
+      ],
+    },
+    {
+      note: "Resultado: la estructura vuelve exactamente al estado de antes de insertar op_x, con el mismo costo que aplicar una operación una vez — sin reproducir op_a ni op_b, sin localizar t=0.",
+      caption: "presente = op_b(op_a(base)) — igual que antes de insertar op_x",
+      nodes: [
+        { id: 't1', value: 'op_a', parent: null },
+        { id: 't2', value: 'op_b', parent: 't1' },
+      ],
+    },
+  ],
+}} />
+
+Ninguna de las dos propiedades sola alcanza: conmutatividad mueve `op` en el
+tiempo sin cambiar el resultado, pero no dice cómo deshacerla; invertibilidad
+da una forma de deshacer `op`, pero si el orden importara, deshacerla "ahora"
+no cancelaría el efecto que tuvo sobre todo lo que pasó *entre* `t` y el
+presente. Juntas, las dos cierran el argumento completo.
+
+## Estructura interna
+
+No aplica una estructura de datos nueva: esta técnica no agrega un invariante
+propio sobre nodos ni celdas. Es una condición sobre **las operaciones** de
+la estructura subyacente —definida en la sección anterior del mazo
+(páginas 22-24, diapositiva 9)—:
+
+- **Conmutativas**: $op_x$ seguida de $op_y$ tiene el mismo efecto que $op_y$
+  seguida de $op_x$ — el orden no importa.
+- **Invertibles**: existe $op_x^{-1}$ tal que aplicar $op_x$ y luego $op_x^{-1}$ deja
+  la estructura exactamente como estaba.
+
+Cuando *ambas* se cumplen para toda operación de la estructura, se puede
+mantener retroactividad parcial (actualizaciones en cualquier tiempo,
+consultas sólo en el presente — ver la taxonomía en
+[retroactivity](/structures/retroactivity)) usando únicamente la estructura
+presente, sin guardar la línea de tiempo completa.
+
+## Operaciones
+
+- [insert-retroactive](/structures/commutative-invertible-retroactivity/operations/insert-retroactive) — inserta `op` en el tiempo `t`, reducido a aplicar `op` ahora.
+- [delete-retroactive](/structures/commutative-invertible-retroactivity/operations/delete-retroactive) — elimina la operación que estaba en `t`, reducido a aplicar su inversa ahora.
+
+## Análisis de complejidad
+
+Argumento algebraico (reducción por propiedades), no un conteo ni una
+recurrencia. Las dos equivalencias son el análisis completo:
+
+```
+Insert(t, op)  ≡  Insert(ahora, op)          // por conmutatividad
+Delete(t)      ≡  Insert(ahora, op⁻¹)        // por invertibilidad, si en t estaba op
+```
+
+Por conmutatividad, `op` puede "moverse" desde el tiempo `t` hasta el
+presente sin cambiar el efecto sobre la estructura actual, así que
+`Insert(t, op)` se reduce literalmente a aplicar `op` sobre la estructura
+presente. Por invertibilidad, `Delete(t)` no necesita localizar ni deshacer
+nada en la posición `t`: basta aplicar la inversa de la operación que estaba
+ahí, ahora mismo, y el efecto se cancela.
+
+La consecuencia es que **el costo se hereda íntegro de la operación
+original**, sin ningún análisis adicional: no hay overhead retroactivo que
+cobrar. El profesor lo ilustra con dos ejemplos (páginas 27-28,
+diapositiva 11), ambos con retroactividad parcial:
+
+| ejemplo | operación retroactiva | costo |
+| --- | --- | --- |
+| Tabla hash con inserciones | Insert / Delete retroactivos | $O(1)$ amortizado — igual que la operación original |
+| Arreglo con `A[i] += Δ` | Insert / Delete retroactivos | $O(1)$ — igual que la operación original |
+
+## Tabla de complejidad
+
+Ver `meta.yaml`. Ambas operaciones heredan el costo de la operación de base
+que reducen ($O(1)$ amortizado en los dos ejemplos del profesor); no hay una
+cota genérica más allá de "el costo de la operación original", porque el
+argumento es válido para cualquier operación que cumpla las dos propiedades.
+
+## Ejemplos
+
+Ver [examples.md](/structures/commutative-invertible-retroactivity#ejemplos)
+— la tabla hash con inserciones y el arreglo con `A[i] += Δ`, más el
+contraejemplo de una operación que no conmuta.
+
+## Comparación con estructuras relacionadas
+
+| | conmutativa e invertible (este tema) | [retroactividad general](/structures/retroactivity) |
+| --- | --- | --- |
+| condición sobre las operaciones | deben conmutar **y** ser invertibles | ninguna |
+| qué se guarda | sólo la estructura presente | depende de la técnica (Segment Tree, rollback…) |
+| overhead retroactivo | ninguno — cuesta lo mismo que la operación original | $O(lg m)$ (problemas descomponibles) o el costo del rollback, según la técnica |
+| alcance | el "caso fácil": el profesor lo marca como el piso de la semana — la mayoría de estructuras interesantes (pilas, colas, BSTs, priority queues) tienen operaciones que sí dependen del orden y necesitan una técnica más general | cubre esas estructuras cuyas operaciones dependen del orden |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/commutative-invertible-retroactivity#prueba-de-dominio).

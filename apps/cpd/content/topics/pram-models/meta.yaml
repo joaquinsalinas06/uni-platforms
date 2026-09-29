@@ -1,0 +1,41 @@
+id: pram-models
+title: "PRAM y sus extensiones (APRAM, Phase PRAM, LPRAM, BPRAM, BSP, LogP)"
+type: model
+unit: u2
+
+prerequisites: ["performance-metrics"]
+buildsOn: []
+usedBy: ["pram-algorithms", "mpi-blocking-nonblocking"]
+
+complexity:
+  cost-optimal:
+    worst: "C_p(n) = T_p(n) \\cdot P(n) = \\Theta(T_s(n))"
+    reasoning: >-
+      Un algoritmo PRAM es de costo optimo si el costo total (pasos en
+      paralelo por numero de procesadores) coincide en orden con el mejor
+      tiempo secuencial conocido Ts(n): no desperdicia trabajo extra sólo por
+      paralelizar.
+    source: "U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf#5"
+  bsp-superstep:
+    worst: "T_{superstep} = w + gh + L"
+    reasoning: >-
+      w es el maximo trabajo local de algun procesador en el superstep, h el
+      maximo de palabras enviadas/recibidas por algun procesador, g el costo
+      por palabra comunicada y L el costo fijo de la barrera de
+      sincronizacion global al final del superstep. Sumando sobre S
+      supersteps: T_BSP = sum(ws) + g*sum(hs) + S*L.
+    source: "U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf#18"
+  logp-message:
+    worst: "T_{mensaje} = L + o + g"
+    reasoning: >-
+      L es la latencia de transito de un mensaje pequeño, o el tiempo que el
+      procesador queda ocupado gestionando el envio/recepcion, y g el
+      intervalo minimo entre transmisiones consecutivas (limite de ancho de
+      banda). Para una reduccion de log p pasos, cada uno con un envio y una
+      recepcion: T_logP = O(n/p + log p * (L + o + g)).
+    source: "U2.2-Diseno_en_paralelo-PRAM_01-apuntes.pdf#20"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: timeline
+placeholder: false

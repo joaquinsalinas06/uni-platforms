@@ -1,0 +1,256 @@
+---
+kind: subtopic
+order: 3
+title: LED y diodo de protección
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un LED es, eléctricamente, un diodo: conduce en un sentido con una caída de voltaje
+característica y bloquea en el otro. Dos aplicaciones prácticas de laboratorio usan
+exactamente el modelo de la
+[Fundamentos del diodo](/topics/diodes/subtopics/fundamentos): dimensionar la
+resistencia limitadora de un LED, y usar un diodo para **proteger** un circuito de
+una conexión con la polaridad invertida.
+
+## Conceptos
+
+### El LED como diodo
+
+Un LED (*Light Emitting Diode*) tiene el mismo comportamiento ON/OFF que cualquier
+diodo, con dos diferencias prácticas:
+
+- Su caída directa $V_f$ suele ser más alta que la de Si/Ge (típicamente 1.8-2.2 V
+  para un LED rojo, y varía según el color).
+- Al conducir, la energía se disipa en parte como luz, no sólo como calor.
+
+Por eso siempre se pone una **resistencia limitadora** en serie: sin ella, el LED
+tomaría toda la corriente que la fuente pueda entregar y se destruiría.
+
+### Diodo de protección contra polaridad invertida
+
+Si un circuito (por ejemplo un microcontrolador alimentado por una batería externa)
+puede conectarse con la polaridad equivocada, un diodo en serie con la alimentación
+lo protege: en la polaridad correcta el diodo conduce (con su caída de 0.7 V) y deja
+pasar la corriente; si la polaridad se invierte, el diodo queda en **inversa** y
+**bloquea** toda la corriente hacia el circuito protegido.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Diodo de protección contra polaridad invertida (derivado)',
+  steps: [
+    {
+      note: 'Polaridad correcta: el diodo está en directa, conduce con su caída de 0.7 V y la corriente llega al circuito protegido (R).',
+      circuit: {
+        nodes: [{ id: 'sp', x: 0, y: 0 }, { id: 'sn', x: 0, y: 8 }, { id: 'a', x: 4, y: 0 }, { id: 'b', x: 8, y: 0 }, { id: 'b2', x: 8, y: 8 }],
+        parts: [
+          { id: 'SRC', kind: 'vsource', from: 'sn', to: 'sp', value: 9, label: 'SRC' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'sp', to: 'a', label: 'D', tone: 'si' },
+          { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+          { id: 'Rload', kind: 'resistor', from: 'b', to: 'b2', value: 1000, label: 'R (carga)' },
+          { id: 'w2', kind: 'wire', from: 'b2', to: 'sn' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'D ON (polaridad correcta)',
+        currents: [{ part: 'Rload', label: 'I', showValue: true }],
+      },
+      expect: { 'I(Rload)': 0.0083 },
+    },
+    {
+      note: 'Polaridad invertida (misma fuente, terminales cambiados): el diodo queda en inversa y bloquea — sin corriente, el circuito protegido queda a salvo.',
+      circuit: {
+        nodes: [{ id: 'sp', x: 0, y: 0 }, { id: 'sn', x: 0, y: 8 }, { id: 'a', x: 4, y: 0 }, { id: 'b', x: 8, y: 0 }, { id: 'b2', x: 8, y: 8 }],
+        parts: [
+          { id: 'SRC', kind: 'vsource', from: 'sp', to: 'sn', value: 9, label: 'SRC' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'sp', to: 'a', label: 'D', tone: 'si' },
+          { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+          { id: 'Rload', kind: 'resistor', from: 'b', to: 'b2', value: 1000, label: 'R (carga)' },
+          { id: 'w2', kind: 'wire', from: 'b2', to: 'sn' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'D OFF (polaridad invertida)',
+        currents: [{ part: 'Rload', label: 'I', showValue: true }],
+      },
+      expect: { 'I(Rload)': 0 },
+    },
+  ],
+}} />
+
+### Dimensionar la resistencia limitadora de un LED
+
+$$R = \frac{V_{\text{alim}} - V_f}{I_{\text{deseada}}}$$
+
+Se despeja de la LKV de la rama (fuente, resistencia y LED en serie): la resistencia
+debe absorber todo el voltaje que no cae en el LED, para la corriente que se quiera
+hacer circular.
+
+## Método paso a paso
+
+1. Verifica que el LED esté polarizado en directa (ánodo hacia el lado de mayor
+   potencial).
+2. Ubica su $V_f$ (dato del fabricante o, en el laboratorio, medido con el
+   voltímetro).
+3. Calcula la resistencia limitadora con la fórmula de arriba para la corriente
+   nominal del LED (normalmente unos 10-20 mA para un LED indicador).
+4. Verifica: la corriente resultante ($I=(V_{\text{alim}}-V_f)/R$) debe ser positiva
+   y razonable para el LED (ni cero ni excesiva).
+5. La potencia que disipa el LED es $P = V_f \cdot I$.
+
+## Ejemplo resuelto
+
+Circuito del LAB 0 de Tinkercad (Sem02_LAB_SimulacionTinkercad, p. 3): una pila de
+botón CR2032 de 3 V, un LED rojo y una resistencia de $100\,\Omega$ en serie, con un
+voltímetro en paralelo al LED y un amperímetro en serie tras la resistencia (como en
+el LAB 0 de Tinkercad).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'LED + R = 100 Ω, pila 3 V (Tinkercad LAB 0)',
+  steps: [{
+    note: 'Hipótesis: LED ON (modelo Vf ≈ 2 V). I = (3 − 2)/100 = 10 mA. Validación: I > 0 ✓. El amperímetro mide la corriente de la rama, el voltímetro la caída en el LED.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'm', x: 4, y: 4 }, { id: 'a2', x: 4, y: 8 }],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 3, label: '3 V' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'a' },
+        { id: 'LED1', kind: 'led', from: 'a', to: 'm', vf: 2, label: 'LED' },
+        { id: 'R1', kind: 'resistor', from: 'm', to: 'a2', value: 100, label: 'R1' },
+        { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      diodes: [{ part: 'LED1', assume: 'on' }],
+      voltages: [{ part: 'LED1', label: 'V_LED', plus: 'from', showValue: true }],
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.01, 'V(a,m)': 2, 'P(LED1)': 0.02 },
+  }],
+}} />
+
+*(derivado, con el modelo del curso)* Con $V_f\approx2\,\text{V}$: $I=(3-2)/100=10\,\text{mA}$ y
+$P_{LED}=2\,\text{V}\times10\,\text{mA}=20\,\text{mW}$. El valor real de $V_f$ y de la
+corriente depende del LED específico — por eso el laboratorio pide **medirlo**, no
+calcularlo de memoria.
+
+## Errores típicos
+
+- Conectar un LED sin resistencia limitadora: sin ella, cualquier variación pequeña
+  de $V_f$ dispara la corriente sin control.
+- Olvidar el sentido del LED: si el ánodo y el cátodo quedan al revés, el LED
+  simplemente no enciende (queda en inversa).
+- En un diodo de protección, olvidar que también **cae 0.7 V** en operación normal:
+  reduce el voltaje disponible para el resto del circuito.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Cuatro ramas LED + R en paralelo sobre la batería de 5 V. LED3 está montado al revés: su ánodo mira hacia el terminal negativo.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 10, ground: true },
+        { id: 't1', x: 4, y: 0 }, { id: 'm1', x: 4, y: 5 }, { id: 'b1', x: 4, y: 10 },
+        { id: 't2', x: 8, y: 0 }, { id: 'm2', x: 8, y: 5 }, { id: 'b2', x: 8, y: 10 },
+        { id: 't3', x: 12, y: 0 }, { id: 'm3', x: 12, y: 5 }, { id: 'b3', x: 12, y: 10 },
+        { id: 't4', x: 16, y: 0 }, { id: 'm4', x: 16, y: 5 }, { id: 'b4', x: 16, y: 10 },
+      ],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 5, label: '5 V' },
+        { id: 'wt1', kind: 'wire', from: 't', to: 't1' }, { id: 'wt2', kind: 'wire', from: 't1', to: 't2' },
+        { id: 'wt3', kind: 'wire', from: 't2', to: 't3' }, { id: 'wt4', kind: 'wire', from: 't3', to: 't4' },
+        { id: 'wb1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'wb2', kind: 'wire', from: 'b1', to: 'b2' },
+        { id: 'wb3', kind: 'wire', from: 'b2', to: 'b3' }, { id: 'wb4', kind: 'wire', from: 'b3', to: 'b4' },
+        { id: 'L1', kind: 'led', from: 't1', to: 'm1', vf: 2, label: 'LED1' },
+        { id: 'L2', kind: 'led', from: 't2', to: 'm2', vf: 2, label: 'LED2' },
+        { id: 'L3', kind: 'led', from: 'm3', to: 't3', vf: 2, label: 'LED3' },
+        { id: 'L4', kind: 'led', from: 't4', to: 'm4', vf: 2, label: 'LED4' },
+        { id: 'R1', kind: 'resistor', from: 'm1', to: 'b1', value: 220, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'm2', to: 'b2', value: 220, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'm3', to: 'b3', value: 220, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'm4', to: 'b4', value: 220, label: 'R4' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Se arma en protoboard una fila de 4 LEDs en distintas ramas, cada una con su propia resistencia ($220\\,\\Omega$, LED con $V_f \\approx 2$ V), alimentadas por una batería de $5$ V (figura). En una de las ramas (LED3) el LED está conectado con el ánodo hacia el terminal negativo de la batería. ¿Ese LED enciende? Explica en términos de polarización.",
+  hints: [
+    "El LED es un diodo: sólo conduce (y por lo tanto sólo emite luz) en polarización directa.",
+    "Polarización directa significa ánodo a mayor potencial que cátodo: $V_{AK} \\ge V_f$.",
+    "Si el ánodo está conectado hacia el terminal negativo, compara eso con la definición de polarización directa.",
+  ],
+}}>
+
+Cada rama cuelga directamente de los $5$ V, así que se analizan por separado.
+
+**1. Hipótesis.** LED1, LED2 y LED4 **ON** (ánodo hacia el $+$); LED3 **OFF** (ánodo hacia el $-$).
+
+**2. Resolver las ramas bien montadas** (KVL: fuente, LED y $R$ en serie):
+
+$$
+I = \frac{5 - V_f}{R} = \frac{5 - 2}{220\,\Omega} = 13.6\,\text{mA} \ge 0 \;\checkmark
+$$
+
+**3. Validar LED3.** Con LED3 abierto no hay corriente, $R_3$ no cae y su ánodo queda al
+potencial del terminal negativo ($0$ V), mientras su cátodo está en el $+$ ($5$ V):
+
+$$
+V_{AK} = 0 - 5 = -5\,\text{V} < V_f = 2\,\text{V} \;\checkmark \quad (\text{inversa})
+$$
+
+(Suponerlo ON daría $I_3 = (-5 - 2)/220 = -31.8$ mA $< 0$ ✗.)
+
+**4. Conclusión.** LED3 **no enciende**: está en polarización inversa (cátodo a mayor
+potencial que ánodo), sólo pasa una corriente de fuga despreciable,
+$I_3 = \boxed{0\,\text{A}}$. Los otros tres encienden con $13.6$ mA cada uno.
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Resuelto: LED1, LED2 y LED4 ON con 13.6 mA; LED3 en inversa (V_AK = −5 V) no conduce.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 10, ground: true },
+        { id: 't1', x: 4, y: 0 }, { id: 'm1', x: 4, y: 5 }, { id: 'b1', x: 4, y: 10 },
+        { id: 't2', x: 8, y: 0 }, { id: 'm2', x: 8, y: 5 }, { id: 'b2', x: 8, y: 10 },
+        { id: 't3', x: 12, y: 0 }, { id: 'm3', x: 12, y: 5 }, { id: 'b3', x: 12, y: 10 },
+        { id: 't4', x: 16, y: 0 }, { id: 'm4', x: 16, y: 5 }, { id: 'b4', x: 16, y: 10 },
+      ],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 5, label: '5 V' },
+        { id: 'wt1', kind: 'wire', from: 't', to: 't1' }, { id: 'wt2', kind: 'wire', from: 't1', to: 't2' },
+        { id: 'wt3', kind: 'wire', from: 't2', to: 't3' }, { id: 'wt4', kind: 'wire', from: 't3', to: 't4' },
+        { id: 'wb1', kind: 'wire', from: 'g', to: 'b1' }, { id: 'wb2', kind: 'wire', from: 'b1', to: 'b2' },
+        { id: 'wb3', kind: 'wire', from: 'b2', to: 'b3' }, { id: 'wb4', kind: 'wire', from: 'b3', to: 'b4' },
+        { id: 'L1', kind: 'led', from: 't1', to: 'm1', vf: 2, label: 'LED1' },
+        { id: 'L2', kind: 'led', from: 't2', to: 'm2', vf: 2, label: 'LED2' },
+        { id: 'L3', kind: 'led', from: 'm3', to: 't3', vf: 2, label: 'LED3', state: 'answer' },
+        { id: 'L4', kind: 'led', from: 't4', to: 'm4', vf: 2, label: 'LED4' },
+        { id: 'R1', kind: 'resistor', from: 'm1', to: 'b1', value: 220, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'm2', to: 'b2', value: 220, label: 'R2' },
+        { id: 'R3', kind: 'resistor', from: 'm3', to: 'b3', value: 220, label: 'R3' },
+        { id: 'R4', kind: 'resistor', from: 'm4', to: 'b4', value: 220, label: 'R4' },
+      ],
+      diodes: [{ part: 'L1', assume: 'on' }, { part: 'L2', assume: 'on' }, { part: 'L3', assume: 'off' }, { part: 'L4', assume: 'on' }],
+      hypothesis: 'LED3 OFF · resto ON (válida)',
+      currents: [{ part: 'R1', label: 'I_1', showValue: true }, { part: 'R3', label: 'I_3', showValue: true }],
+      voltages: [{ part: 'L3', label: 'V_{AK}', plus: 'from', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.013636, 'I(R2)': 0.013636, 'I(R4)': 0.013636, 'I(R3)': 0, 'V(m3,t3)': -5 },
+  }],
+}} />
+
+**Comprobación:**
+
+| Rama | Montaje | Condición | Estado |
+|---|---|---|---|
+| LED1, LED2, LED4 | ánodo al $+$ | $I = 13.6\,\text{mA} \ge 0$ ✓ | encienden |
+| LED3 | ánodo al $-$ | $V_{AK} = -5\,\text{V} < 2\,\text{V}$ ✓ | apagado |
+
+</ExerciseBlock>

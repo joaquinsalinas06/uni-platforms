@@ -1,0 +1,20 @@
+id: d4-bound-z
+title: "D₄ — acotar z"
+type: structure
+week: week-05
+
+prerequisites: ["d3-separation-node"]
+buildsOn: ["d3-separation-node"]
+usedBy: ["generalized-fractional-cascading"]
+
+# El profesor no da una cota numérica propia para la construcción de D_4 (igual
+# que ya no la daba para D_2 ni D_3: "exactamente la misma construcción que
+# D_3" no trae un análisis nuevo, #46). Lo único cuantitativo que da en esta
+# sección es el costo de *usar* D_4 antes y después del cascading completo
+# (#47, #54, #57, #62) — eso no es el costo de "build", así que se deja vacío
+# aquí y se explica en prosa en theory.md (Análisis de complejidad).
+complexity: {}
+
+professorAnalysisStyle: "composición estructural"
+hasVisualization: true
+placeholder: false

@@ -1,0 +1,402 @@
+---
+kind: theory
+title: Range tree
+visualization:
+  type: range-tree
+  steps:
+    - note: >-
+        Árbol de build-1d sobre las hojas {3, 4, 7, 9, 13, 15, 18, 27}
+        (diapositiva #29). Las dos ideas de esta página se apoyan en este
+        mismo árbol: primero la descomposición canónica, luego el
+        anidamiento.
+      highlight: []
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: l3, value: 3, parent: n3i }
+        - { id: l4, value: 4, parent: n3i }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: l7, value: 7, parent: n7i }
+        - { id: l9, value: 9, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: l13, value: 13, parent: n13i }
+        - { id: l15, value: 15, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: l18, value: 18, parent: n18i }
+        - { id: l27, value: 27, parent: n18i }
+    - note: >-
+        Primera idea — descomposición canónica: para un rango como [5,16],
+        Predecessor(5)=4 y Successor(16)=18 delimitan la búsqueda (ver
+        predecessor-successor). Ambos quedan fuera del rango.
+      highlight: [l4, l18]
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: l3, value: 3, parent: n3i }
+        - { id: l4, value: 4, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: l7, value: 7, parent: n7i }
+        - { id: l9, value: 9, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: l13, value: 13, parent: n13i }
+        - { id: l15, value: 15, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: l18, value: 18, parent: n18i, state: marked }
+        - { id: l27, value: 27, parent: n18i }
+    - note: >-
+        El camino se separa en la raíz (LCA de las dos hojas
+        delimitadoras): desde aquí se recorren dos caminos, uno hacia cada
+        delimitador (ver range-query-1d).
+      highlight: [r9]
+      nodes:
+        - { id: r9, value: 9, parent: null, state: active }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: l3, value: 3, parent: n3i }
+        - { id: l4, value: 4, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4 }
+        - { id: l7, value: 7, parent: n7i }
+        - { id: l9, value: 9, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15 }
+        - { id: l13, value: 13, parent: n13i }
+        - { id: l15, value: 15, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: l18, value: 18, parent: n18i, state: marked }
+        - { id: l27, value: 27, parent: n18i }
+    - note: >-
+        En O(log n) pasos aparecen los subárboles canónicos completos
+        {7, 13} (hojas 7, 9, 13, 15): la respuesta se arma sin visitar cada
+        hoja — la ventaja frente a recorrer el arreglo entero punto por
+        punto.
+      highlight: [n7i, n13i]
+      nodes:
+        - { id: r9, value: 9, parent: null }
+        - { id: n4, value: 4, parent: r9 }
+        - { id: n3i, value: 3, parent: n4 }
+        - { id: l3, value: 3, parent: n3i }
+        - { id: l4, value: 4, parent: n3i, state: marked }
+        - { id: n7i, value: 7, parent: n4, state: answer }
+        - { id: l7, value: 7, parent: n7i }
+        - { id: l9, value: 9, parent: n7i }
+        - { id: n15, value: 15, parent: r9 }
+        - { id: n13i, value: 13, parent: n15, state: answer }
+        - { id: l13, value: 13, parent: n13i }
+        - { id: l15, value: 15, parent: n13i }
+        - { id: n18i, value: 18, parent: n15 }
+        - { id: l18, value: 18, parent: n18i, state: marked }
+        - { id: l27, value: 27, parent: n18i }
+      caption: >-
+        Descomposición canónica en 1D — la primera de las dos ideas. La
+        segunda, el anidamiento, se ilustra más abajo, donde se introduce.
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Resuelve [búsqueda ortogonal por rangos](/structures/orthogonal-range-search)
+sobre puntos **estáticos**: existencia, conteo y enumeración de los puntos
+dentro de una caja. El profesor lo introduce como salida a un callejón sin
+salida: con un arreglo ordenado ya se resuelve el caso $d=1$ en
+$O(\log n + k)$, pero "si usamos arreglos, va a ser complicado aumentar
+dimensiones de manera anidada". El range tree reemplaza el arreglo por un
+[árbol binario de búsqueda balanceado](/structures/balanced-bst) precisamente
+porque un árbol **sí** se puede anidar: cada nodo puede colgar de sí mismo
+otro range tree para la siguiente dimensión.
+
+## Intuición
+
+La idea central: toda consulta de rango en un árbol ordenado se puede
+responder como la unión de **$O(\log n)$ subárboles canónicos** — subárboles
+completos, disjuntos entre sí, cuya unión de hojas es exactamente el
+conjunto de puntos dentro del rango. Encontrar esos $O(\log n)$ subárboles
+cuesta $O(\log n)$; una vez encontrados, contarlos, verificar si hay alguno
+no vacío, o enumerar sus hojas son operaciones que se construyen encima sin
+volver a tocar el resto del árbol. Subir de dimensión es entonces "colgar
+otro range tree de cada nodo": cada subárbol canónico en X trae consigo un
+subárbol canónico en Y ya armado.
+
+**Generalización a 2D**: el subárbol canónico 7 del árbol de arriba (hojas 7
+y 9) ya viene delimitado por la descomposición canónica en X. Como esas dos
+hojas son ahora puntos completos — (7,11) y (9,6) — nada impide reordenarlos
+por Y y construir, sobre ese mismo subconjunto, un segundo range tree
+completo: eso es "colgar otro range tree de cada nodo".
+
+<Visualization viz={{
+  type: 'range-tree',
+  steps: [
+    {
+      note: "El subárbol canónico 7 (hojas 7 y 9, valores X) ya está delimitado por la descomposición canónica de la página anterior. Sus dos puntos completos son (7,11) y (9,6) — la Y es la componente que todavía no se usó.",
+      highlight: ["n7i"],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "l3", value: 3, parent: "n3i" },
+        { id: "l4", value: 4, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "active" },
+        { id: "l7", value: 7, parent: "n7i" },
+        { id: "l9", value: 9, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "l13", value: 13, parent: "n13i" },
+        { id: "l15", value: 15, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "l18", value: 18, parent: "n18i" },
+        { id: "l27", value: 27, parent: "n18i" },
+      ],
+    },
+    {
+      note: "Los dos puntos se reordenan por Y: (9,6) con Y=6 a la izquierda, (7,11) con Y=11 a la derecha. El separador de este árbol secundario todavía no se calcula — las hojas están sueltas, sin raíz.",
+      highlight: ["n7i"],
+      panels: [{ id: "sec2", label: "Secundario de 7 (por Y)", anchor: "n7i" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "l3", value: 3, parent: "n3i" },
+        { id: "l4", value: 4, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "marked" },
+        { id: "l7", value: 7, parent: "n7i" },
+        { id: "l9", value: 9, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "l13", value: 13, parent: "n13i" },
+        { id: "l15", value: 15, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "l18", value: 18, parent: "n18i" },
+        { id: "l27", value: 27, parent: "n18i" },
+        { id: "sec2_root", value: "?", parent: null, panel: "sec2", state: "idle" },
+        { id: "sec2_l6", value: 6, parent: "sec2_root", panel: "sec2", state: "idle" },
+        { id: "sec2_l11", value: 11, parent: "sec2_root", panel: "sec2", state: "idle" },
+      ],
+    },
+    {
+      note: "El separador se computa igual que en build-1d: el máximo del subárbol izquierdo, 6. Ya hay un árbol, no sólo dos hojas sueltas.",
+      highlight: ["sec2_root"],
+      panels: [{ id: "sec2", label: "Secundario de 7 (por Y)", anchor: "n7i" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "l3", value: 3, parent: "n3i" },
+        { id: "l4", value: 4, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "marked" },
+        { id: "l7", value: 7, parent: "n7i" },
+        { id: "l9", value: 9, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "l13", value: 13, parent: "n13i" },
+        { id: "l15", value: 15, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "l18", value: 18, parent: "n18i" },
+        { id: "l27", value: 27, parent: "n18i" },
+        { id: "sec2_root", value: 6, parent: null, panel: "sec2", state: "marked" },
+        { id: "sec2_l6", value: 6, parent: "sec2_root", panel: "sec2", state: "idle" },
+        { id: "sec2_l11", value: 11, parent: "sec2_root", panel: "sec2", state: "idle" },
+      ],
+    },
+    {
+      note: "Con el separador armado, el árbol secundario de 7 queda completo — el puntero (línea curva) es la relación primario→secundario que build-2d formaliza. Y no es un privilegio del nodo 7: TODOS los nodos del primario (13, 15, la raíz completa) reciben su propio secundario de este modo, de abajo hacia arriba.",
+      highlight: ["sec2_root"],
+      panels: [{ id: "sec2", label: "Secundario de 7 (por Y)", anchor: "n7i" }],
+      nodes: [
+        { id: "r9", value: 9, parent: null },
+        { id: "n4", value: 4, parent: "r9" },
+        { id: "n3i", value: 3, parent: "n4" },
+        { id: "l3", value: 3, parent: "n3i" },
+        { id: "l4", value: 4, parent: "n3i" },
+        { id: "n7i", value: 7, parent: "n4", state: "answer" },
+        { id: "l7", value: 7, parent: "n7i" },
+        { id: "l9", value: 9, parent: "n7i" },
+        { id: "n15", value: 15, parent: "r9" },
+        { id: "n13i", value: 13, parent: "n15" },
+        { id: "l13", value: 13, parent: "n13i" },
+        { id: "l15", value: 15, parent: "n13i" },
+        { id: "n18i", value: 18, parent: "n15" },
+        { id: "l18", value: 18, parent: "n18i" },
+        { id: "l27", value: 27, parent: "n18i" },
+        { id: "sec2_root", value: 6, parent: null, panel: "sec2", state: "answer" },
+        { id: "sec2_l6", value: 6, parent: "sec2_root", panel: "sec2", state: "idle" },
+        { id: "sec2_l11", value: 11, parent: "sec2_root", panel: "sec2", state: "idle" },
+      ],
+      caption: "Cada nodo del primario en X cuelga su propio secundario en Y — el desarrollo completo está en build-2d.",
+    },
+  ],
+}} />
+
+## Estructura interna
+
+> **Diferencia con el [BST balanceado](/structures/balanced-bst) de libro**:
+> ahí las llaves viven en cualquier nodo y los internos son puntos reales.
+> Aquí el profesor guarda **las llaves sólo en las hojas**; los nodos
+> internos no son puntos del conjunto, son puramente delimitadores para
+> guiar la búsqueda. Esa es la diferencia que hace funcionar la
+> descomposición canónica: como todo punto vive en una hoja, cualquier
+> subárbol interno corresponde exactamente a un rango contiguo de puntos,
+> nunca a "un punto más un rango".
+
+Cada hoja guarda un punto (o su llave, en 1D). Cada nodo interno guarda
+**sólo el máximo del subárbol izquierdo**, para minimizar la memoria usada
+(Sem4_Orthogonal_Range_Search.pdf#26) — no la llave completa de ningún
+punto, sólo el valor que permite decidir hacia qué lado continuar una
+búsqueda: para buscar `x`, si `x ≤ valor(nodo)` se baja por la izquierda,
+si no por la derecha. Para [existencia y conteo](/structures/range-tree/operations/existence-count)
+cada nodo además guarda la cantidad de hojas de su subárbol.
+
+En el árbol de la diapositiva #29, con hojas
+`{3, 4, 7, 9, 13, 15, 18, 27}`: la raíz vale 9 porque el máximo del
+subárbol izquierdo (las hojas 3, 4, 7, 9) es 9; sus hijos 4 y 15 son, a su
+vez, el máximo del subárbol izquierdo de cada mitad.
+
+```
+                9
+        /               \
+       4                 15
+     /   \              /    \
+    3     7           13      18
+   / \   / \         /  \    /  \
+  3   4 7   9      13    15 18   27
+```
+
+## Operaciones
+
+- [Construcción 1D](/structures/range-tree/operations/build-1d) — ordena
+  los puntos y arma el árbol de abajo hacia arriba con las llaves en las
+  hojas.
+- [Predecessor / Successor](/structures/range-tree/operations/predecessor-successor) —
+  ubica las hojas frontera de un rango; adapta la idea de
+  [balanced-bst](/structures/balanced-bst) a un árbol con llaves sólo en
+  las hojas.
+- [Consulta de rango 1D](/structures/range-tree/operations/range-query-1d) —
+  la descomposición canónica: descender hasta P, luego bordear los dos
+  caminos a los delimitadores marcando subárboles.
+- [Existencia / Conteo](/structures/range-tree/operations/existence-count) —
+  combina los contadores de los subárboles canónicos.
+- [Enumeración](/structures/range-tree/operations/enumeration) — recorre las
+  hojas de cada subárbol canónico.
+- [Construcción 2D](/structures/range-tree/operations/build-2d) — cuelga un
+  range tree secundario (ordenado por Y) de cada nodo del árbol primario
+  (ordenado por X).
+- [Consulta de rango 2D](/structures/range-tree/operations/range-query-2d) —
+  una consulta 1D en X que dispara, por cada subárbol canónico, una
+  consulta 1D en su árbol secundario de Y.
+- [d dimensiones](/structures/range-tree/operations/d-dimensions) — el
+  mismo anidamiento, una dimensión más.
+
+## Análisis de complejidad
+
+Estilo del profesor: **conteo estructural / argumento de multiplicidad**
+(nunca recurrencias, nunca amortizado, nunca función potencial). Dos ideas
+concentran todo el análisis:
+
+- **Consulta 1D**: el camino de la raíz a cada delimitador tiene longitud
+  $O(\log n)$; en cada nodo de esos dos caminos se agrega a lo más un
+  subárbol canónico a la respuesta, así que hay $O(\log n)$ subárboles
+  ("tendremos $O(\log n)$ subárboles que contengan nuestra respuesta",
+  Sem4_Orthogonal_Range_Search.pdf#33-34). Sumar sus contadores o recorrer
+  sus hojas cuesta $O(\log n)$ o $O(\log n + k)$ respectivamente — nunca se
+  plantea una recurrencia $T(n)$.
+- **Multiplicidad al anidar dimensiones**: el espacio en 2D sale de contar
+  en cuántos árboles secundarios vive cada hoja — "cada hoja debería estar
+  incluida en $O(\log n)$ subárboles" (#49) — y la consulta 2D sale de
+  multiplicar "una consulta de $O(\log n)$ en $O(\log n)$ árboles" (#50). Repetir
+  el argumento por cada dimensión adicional da $O(\log^d n + k)$ en consulta y
+  $O(n \log^{d-1} n)$ en espacio (#56-57).
+
+**Generalización a d dimensiones**: la multiplicidad no se detiene en el
+secundario de Y — ese mismo árbol es, para la siguiente dimensión, un
+primario más, y CUALQUIERA de sus nodos puede colgar a su vez un tercer
+range tree (Z). Repetir esto una dimensión más es exactamente por qué el
+factor $O(\log n)$ se multiplica una vez por cada dimensión adicional.
+
+<Visualization viz={{
+  type: 'range-tree',
+  steps: [
+    {
+      note: "Este es el árbol secundario de 7 (por Y) de la sección anterior, ya completo — dos hojas, 6 y 11. Para esta idea, ÉL hace de primario: cada uno de sus nodos también puede colgar un árbol más, ahora por Z.",
+      highlight: [],
+      nodes: [
+        { id: "y_root", value: 6, parent: null },
+        { id: "y_l6", value: 6, parent: "y_root" },
+        { id: "y_l11", value: 11, parent: "y_root" },
+      ],
+    },
+    {
+      note: "Su raíz cubre los mismos 2 puntos, (9,6) y (7,11), sólo que ahora se los mira por su tercera componente, Z. Nada distingue a este nodo de un nodo cualquiera del árbol primario en X de la sección anterior — el mecanismo es el mismo, una dimensión más adentro.",
+      highlight: ["y_root"],
+      nodes: [
+        { id: "y_root", value: 6, parent: null, state: "active" },
+        { id: "y_l6", value: 6, parent: "y_root" },
+        { id: "y_l11", value: 11, parent: "y_root" },
+      ],
+    },
+    {
+      note: "Los mismos 2 puntos, reordenados ahora por Z: (9,6,2) a la izquierda, (7,11,5) a la derecha. El tercer árbol todavía no tiene separador — otra vez hojas sueltas, el mismo punto de partida que en Y.",
+      highlight: ["y_root"],
+      panels: [{ id: "sec3", label: "Tercera dimensión (Z)", anchor: "y_root" }],
+      nodes: [
+        { id: "y_root", value: 6, parent: null, state: "marked" },
+        { id: "y_l6", value: 6, parent: "y_root" },
+        { id: "y_l11", value: 11, parent: "y_root" },
+        { id: "sec3_root", value: "?", parent: null, panel: "sec3", state: "idle" },
+        { id: "sec3_l2", value: 2, parent: "sec3_root", panel: "sec3", state: "idle" },
+        { id: "sec3_l5", value: 5, parent: "sec3_root", panel: "sec3", state: "idle" },
+      ],
+    },
+    {
+      note: "Separador calculado (máximo del subárbol izquierdo, 2) y puntero trazado: el tercer nivel de anidamiento queda armado con el MISMO procedimiento que armó el segundo. Repetir esto d-1 veces — colgar una dimensión más de cada nodo — es de dónde salen $O(\\log^d n + k)$ en consulta y $O(n \\log^{d-1} n)$ en espacio: cada punto termina viviendo en $O(\\log n)$ árboles por cada dimensión más allá de la primera.",
+      highlight: ["sec3_root"],
+      panels: [{ id: "sec3", label: "Tercera dimensión (Z)", anchor: "y_root" }],
+      nodes: [
+        { id: "y_root", value: 6, parent: null, state: "answer" },
+        { id: "y_l6", value: 6, parent: "y_root" },
+        { id: "y_l11", value: 11, parent: "y_root" },
+        { id: "sec3_root", value: 2, parent: null, panel: "sec3", state: "answer" },
+        { id: "sec3_l2", value: 2, parent: "sec3_root", panel: "sec3", state: "idle" },
+        { id: "sec3_l5", value: 5, parent: "sec3_root", panel: "sec3", state: "idle" },
+      ],
+      caption: "X → Y → Z: mismo mecanismo, un nivel más — así se llega a d dimensiones.",
+    },
+  ],
+}} />
+
+El profesor cierra anunciando una mejora futura sin desarrollarla: "¿Es
+posible mejorarlo? Sí, se puede mejorar por un factor de $O(\log n)$ las
+consultas para $d \ge 2$" (#58-59) — la resuelve fractional cascading, en la
+semana 5.
+
+## Tabla de complejidad
+
+La tabla se genera desde `meta.yaml`. El profesor no distingue mejor caso,
+promedio ni menciona espacio salvo cuando lo hace explícito (tamaño del
+árbol 1D y espacio 2D/d-dimensional); esos campos se omiten donde no los
+dio.
+
+## Ejemplos
+
+Ver [Ejemplos](/structures/range-tree/examples).
+
+## Comparación con estructuras relacionadas
+
+| | Consulta | Espacio |
+| --- | --- | --- |
+| Arreglo ordenado ($d=1$) | $O(\log n + k)$ | $O(n)$ |
+| Range tree ($d=1$) | $O(\log n + k)$ | $O(n)$ |
+| Range tree ($d=2$) | $O(\log^2 n + k)$ | $O(n \log n)$ |
+| Range tree ($d$ dimensiones) | $O(\log^d n + k)$ | $O(n \log^{d-1} n)$ |
+
+En $d=1$ el range tree iguala al arreglo ordenado (#20); su ventaja no es la
+velocidad en 1D sino que, a diferencia del arreglo ("va a ser complicado
+aumentar dimensiones de manera anidada", #22), sí se anida — de ahí que
+recién en $d \ge 2$ el costo adicional en espacio y consulta aparezca, como
+precio de esa capacidad de anidamiento.
+
+## Prueba de dominio
+
+Ver [Prueba de dominio](/structures/range-tree/mastery-check).

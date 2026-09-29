@@ -1,0 +1,11 @@
+id: actuators
+title: Actuadores
+type: concept
+unit: s3
+prerequisites: [sensors]
+buildsOn: []
+usedBy: [lab-actuators]
+hasVisualization: true
+visualizationType: dag
+placeholder: false
+formulas: []

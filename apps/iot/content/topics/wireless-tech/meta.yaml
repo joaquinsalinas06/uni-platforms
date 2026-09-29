@@ -1,0 +1,15 @@
+id: wireless-tech
+title: Tecnologías de comunicación
+type: method
+unit: s5
+prerequisites: [iot-architecture]
+buildsOn: []
+usedBy: [transmission-models]
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: "Lado aproximado de un terreno cuadrado de área A"
+    tex: "L = \\sqrt{A}"
+    reasoning: "Para estimar el alcance mínimo que necesita una tecnología en un terreno de área A, se aproxima el terreno a un cuadrado y se calcula su lado; así 15 km² requieren cubrir del orden de 3.9 km."
+    source: "derivado (no está en las diapositivas)"

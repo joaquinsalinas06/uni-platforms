@@ -1,0 +1,33 @@
+---
+import { knowledgeMap, prerequisiteChain } from '../lib/knowledge-map';
+
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+
+// Regla de coordinación: una estructura referencia sus prerrequisitos,
+// nunca los reexplica.
+const chain = prerequisiteChain(id);
+---
+
+{
+  chain.length > 0 && (
+    <aside class="reveal mb-10 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-r border-l-2 border-[var(--accent)] bg-[var(--accent-wash)] py-3 pr-4 pl-4">
+      <span class="tag">antes de esto</span>
+      {chain.map((p) => {
+        const t = knowledgeMap.topics[p];
+        const label = t?.title ?? p;
+        return t?.status === 'generated' ? (
+          <a href={`/structures/${p}`} class="text-[0.9375rem] font-medium">
+            {label} ↗
+          </a>
+        ) : (
+          <span class="text-[0.9375rem] text-[var(--muted)]">
+            {label} <span class="tag">pendiente</span>
+          </span>
+        );
+      })}
+    </aside>
+  )
+}

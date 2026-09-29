@@ -1,0 +1,400 @@
+---
+kind: operation
+title: d dimensiones
+order: 8
+cppSteps:
+  - step-1-point.cpp
+  - step-2-build-1d.cpp
+  - step-7-build-2d.cpp
+  - step-9-d-dimensions.cpp
+  - full-implementation.cpp
+visualization:
+  type: range-tree
+  steps:
+    - note: >-
+        Esquemático (no son los puntos de build-2d, son claves abstractas
+        de la dimensión k, a...h): el range tree de la dimensión k, sin
+        anidar todavía. Vamos a construir, paso a paso, el range tree de
+        dimensión k+1 que cuelga de dos nodos hermanos, y a ver cómo sus
+        secundarios se REUTILIZAN al subir de nivel — el mismo mecanismo de
+        build-2d, una dimensión más.
+      highlight: []
+      nodes:
+        - { id: dk_r, value: "k:9", parent: null }
+        - { id: dk_n4, value: "k:4", parent: dk_r }
+        - { id: dk_n3, value: "k:3", parent: dk_n4 }
+        - { id: dk_l3, value: "k:3", parent: dk_n3 }
+        - { id: dk_l4, value: "k:4", parent: dk_n3 }
+        - { id: dk_n7, value: "k:7", parent: dk_n4 }
+        - { id: dk_l7, value: "k:7", parent: dk_n7 }
+        - { id: dk_l9, value: "k:9", parent: dk_n7 }
+        - { id: dk_n15, value: "k:15", parent: dk_r }
+        - { id: dk_n13, value: "k:13", parent: dk_n15 }
+        - { id: dk_l13, value: "k:13", parent: dk_n13 }
+        - { id: dk_l15, value: "k:15", parent: dk_n13 }
+        - { id: dk_n18, value: "k:18", parent: dk_n15 }
+        - { id: dk_l18, value: "k:18", parent: dk_n18 }
+        - { id: dk_l27, value: "k:27", parent: dk_n18 }
+    - note: >-
+        El nodo dk_n7 (cubre las hojas 7 y 9) construye su range tree de
+        dimensión k+1: toma sus 2 puntos, los reordena por la componente
+        k+1 (aquí etiquetada a, b) y arma un separador que guarda el
+        máximo de su subárbol izquierdo — igual que build-1d/build-2d, un
+        nivel de anidamiento más adentro.
+      highlight: [dk_n7]
+      panels:
+        - { id: nd7, label: "k+1 de dk_n7 (hojas 7, 9)", anchor: dk_n7 }
+      nodes:
+        - { id: dk_r, value: "k:9", parent: null }
+        - { id: dk_n4, value: "k:4", parent: dk_r }
+        - { id: dk_n3, value: "k:3", parent: dk_n4 }
+        - { id: dk_l3, value: "k:3", parent: dk_n3 }
+        - { id: dk_l4, value: "k:4", parent: dk_n3 }
+        - { id: dk_n7, value: "k:7", parent: dk_n4, state: active }
+        - { id: dk_l7, value: "k:7", parent: dk_n7 }
+        - { id: dk_l9, value: "k:9", parent: dk_n7 }
+        - { id: dk_n15, value: "k:15", parent: dk_r }
+        - { id: dk_n13, value: "k:13", parent: dk_n15 }
+        - { id: dk_l13, value: "k:13", parent: dk_n13 }
+        - { id: dk_l15, value: "k:15", parent: dk_n13 }
+        - { id: dk_n18, value: "k:18", parent: dk_n15 }
+        - { id: dk_l18, value: "k:18", parent: dk_n18 }
+        - { id: dk_l27, value: "k:27", parent: dk_n18 }
+        - { id: s7_root, value: a, parent: null, panel: nd7 }
+        - { id: s7_leafA, value: a, parent: s7_root, panel: nd7 }
+        - { id: s7_leafB, value: b, parent: s7_root, panel: nd7 }
+    - note: >-
+        Mismo procedimiento en el hermano dk_n3 (hojas 3 y 4): su propio
+        par c, d. Cada nodo del árbol de dimensión k construye su
+        secundario de forma independiente — todavía no se combinan entre
+        sí.
+      highlight: [dk_n3]
+      panels:
+        - { id: nd3, label: "k+1 de dk_n3 (hojas 3, 4)", anchor: dk_n3 }
+      nodes:
+        - { id: dk_r, value: "k:9", parent: null }
+        - { id: dk_n4, value: "k:4", parent: dk_r }
+        - { id: dk_n3, value: "k:3", parent: dk_n4, state: active }
+        - { id: dk_l3, value: "k:3", parent: dk_n3 }
+        - { id: dk_l4, value: "k:4", parent: dk_n3 }
+        - { id: dk_n7, value: "k:7", parent: dk_n4 }
+        - { id: dk_l7, value: "k:7", parent: dk_n7 }
+        - { id: dk_l9, value: "k:9", parent: dk_n7 }
+        - { id: dk_n15, value: "k:15", parent: dk_r }
+        - { id: dk_n13, value: "k:13", parent: dk_n15 }
+        - { id: dk_l13, value: "k:13", parent: dk_n13 }
+        - { id: dk_l15, value: "k:15", parent: dk_n13 }
+        - { id: dk_n18, value: "k:18", parent: dk_n15 }
+        - { id: dk_l18, value: "k:18", parent: dk_n18 }
+        - { id: dk_l27, value: "k:27", parent: dk_n18 }
+        - { id: s3_root, value: c, parent: null, panel: nd3 }
+        - { id: s3_leafC, value: c, parent: s3_root, panel: nd3 }
+        - { id: s3_leafD, value: d, parent: s3_root, panel: nd3 }
+    - note: >-
+        El secundario de dk_n4 (cubre 3, 4, 7, 9) NO se reconstruye desde
+        cero: se MEZCLA (por la componente k+1, como en mergesort) el
+        secundario ya armado de dk_n7 ({a,b}) con el de dk_n3 ({c,d}) —
+        exactamente "MezclarPorY" de build-2d, aplicado a la dimensión
+        k+1. La nueva raíz, b, es el máximo del subárbol izquierdo {a,b}.
+      highlight: [dk_n4]
+      panels:
+        - { id: nd4, label: "k+1 de dk_n4 (hojas 3, 4, 7, 9)", anchor: dk_n4 }
+      nodes:
+        - { id: dk_r, value: "k:9", parent: null }
+        - { id: dk_n4, value: "k:4", parent: dk_r, state: active }
+        - { id: dk_n3, value: "k:3", parent: dk_n4 }
+        - { id: dk_l3, value: "k:3", parent: dk_n3 }
+        - { id: dk_l4, value: "k:4", parent: dk_n3 }
+        - { id: dk_n7, value: "k:7", parent: dk_n4 }
+        - { id: dk_l7, value: "k:7", parent: dk_n7 }
+        - { id: dk_l9, value: "k:9", parent: dk_n7 }
+        - { id: dk_n15, value: "k:15", parent: dk_r }
+        - { id: dk_n13, value: "k:13", parent: dk_n15 }
+        - { id: dk_l13, value: "k:13", parent: dk_n13 }
+        - { id: dk_l15, value: "k:15", parent: dk_n13 }
+        - { id: dk_n18, value: "k:18", parent: dk_n15 }
+        - { id: dk_l18, value: "k:18", parent: dk_n18 }
+        - { id: dk_l27, value: "k:27", parent: dk_n18 }
+        - { id: s4_root, value: b, parent: null, panel: nd4 }
+        - { id: s4_ab, value: a, parent: s4_root, panel: nd4 }
+        - { id: s4_leafA, value: a, parent: s4_ab, panel: nd4 }
+        - { id: s4_leafB, value: b, parent: s4_ab, panel: nd4 }
+        - { id: s4_cd, value: c, parent: s4_root, panel: nd4 }
+        - { id: s4_leafC, value: c, parent: s4_cd, panel: nd4 }
+        - { id: s4_leafD, value: d, parent: s4_cd, panel: nd4 }
+    - note: >-
+        En la raíz dk_r, la mezcla continúa un nivel más: el lado
+        izquierdo {a,b,c,d} es exactamente el secundario de dk_n4 ya armado
+        en el paso anterior; el lado derecho {e,f,g,h} sale del mismo
+        proceso de mezcla aplicado del otro lado del árbol (dk_n13, dk_n18
+        → dk_n15, no dibujado en detalle porque es idéntico mecanismo).
+        Con los 8 puntos mezclados, el secundario de dimensión k+1 de la
+        raíz queda completo — misma forma recursiva que el primario, un
+        nivel de dimensión más.
+      highlight: [dk_r]
+      panels:
+        - { id: ndr, label: "k+1 de la raíz (los 8 puntos)", anchor: dk_r }
+      nodes:
+        - { id: dk_r, value: "k:9", parent: null, state: active }
+        - { id: dk_n4, value: "k:4", parent: dk_r }
+        - { id: dk_n3, value: "k:3", parent: dk_n4 }
+        - { id: dk_l3, value: "k:3", parent: dk_n3 }
+        - { id: dk_l4, value: "k:4", parent: dk_n3 }
+        - { id: dk_n7, value: "k:7", parent: dk_n4 }
+        - { id: dk_l7, value: "k:7", parent: dk_n7 }
+        - { id: dk_l9, value: "k:9", parent: dk_n7 }
+        - { id: dk_n15, value: "k:15", parent: dk_r }
+        - { id: dk_n13, value: "k:13", parent: dk_n15 }
+        - { id: dk_l13, value: "k:13", parent: dk_n13 }
+        - { id: dk_l15, value: "k:15", parent: dk_n13 }
+        - { id: dk_n18, value: "k:18", parent: dk_n15 }
+        - { id: dk_l18, value: "k:18", parent: dk_n18 }
+        - { id: dk_l27, value: "k:27", parent: dk_n18 }
+        - { id: sr_root, value: d, parent: null, panel: ndr }
+        - { id: sr_left, value: b, parent: sr_root, panel: ndr }
+        - { id: sr_left_ab, value: a, parent: sr_left, panel: ndr }
+        - { id: sr_leafA, value: a, parent: sr_left_ab, panel: ndr }
+        - { id: sr_leafB, value: b, parent: sr_left_ab, panel: ndr }
+        - { id: sr_left_cd, value: c, parent: sr_left, panel: ndr }
+        - { id: sr_leafC, value: c, parent: sr_left_cd, panel: ndr }
+        - { id: sr_leafD, value: d, parent: sr_left_cd, panel: ndr }
+        - { id: sr_right, value: f, parent: sr_root, panel: ndr }
+      caption: >-
+        Secundario de k+1 completo — misma forma recursiva que build-2d,
+        un nivel de dimensión más.
+    - note: >-
+        El anidamiento no se detiene en k+1: CUALQUIER nodo de ese árbol
+        —aquí tomamos su raíz, valor b, que cubre el par {a,b}— cuelga a su
+        vez un range tree de dimensión k+2 sobre los puntos de su propio
+        subárbol. Repetir esto una vez por cada dimensión hasta llegar a d
+        es el mecanismo que describe RangeQueryD en el pseudocódigo: cada
+        nivel de recursión baja una dimensión.
+      highlight: [p6_root]
+      panels:
+        - { id: nd2, label: "k+2 del nodo b (dimensión k+1)", anchor: p6_root }
+      nodes:
+        - { id: p6_root, value: b, parent: null, state: active }
+        - { id: p6_ab, value: a, parent: p6_root }
+        - { id: p6_leafA, value: a, parent: p6_ab }
+        - { id: p6_leafB, value: b, parent: p6_ab }
+        - { id: p6_cd, value: c, parent: p6_root }
+        - { id: p6_leafC, value: c, parent: p6_cd }
+        - { id: p6_leafD, value: d, parent: p6_cd }
+        - { id: p7_root, value: "b.1", parent: null, panel: nd2 }
+        - { id: p7_leafA, value: "b.1", parent: p7_root, panel: nd2 }
+        - { id: p7_leafB, value: "b.2", parent: p7_root, panel: nd2 }
+      caption: "dimensión k+1 (primario de este paso) → dimensión k+2 (panel) → ... → d"
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Extiende la construcción 2D a `d` dimensiones: "en cada uno de los árboles
+de una componente en la dimensión k podemos agregar punteros hacia range
+trees ordenados por la dimensión (k+1)" (Sem4_Orthogonal_Range_Search.pdf#52).
+
+## Intuición
+
+El mismo anidamiento de [build-2d](/structures/range-tree/operations/build-2d)
+y [range-query-2d](/structures/range-tree/operations/range-query-2d), una
+dimensión más: cada nodo del range tree de la dimensión `k` cuelga un range
+tree de la dimensión `k+1` sobre los puntos de su subárbol, y así hasta
+llegar a un range tree 1D final en la última dimensión. Es exactamente el
+mismo argumento de multiplicidad que 2D, repetido `d-1` veces.
+
+## Algoritmo
+
+*(Derivado; el mecanismo concreto de anidar una dimensión más nunca se
+detalla en el mazo — sólo la idea general en #52.)*
+
+1. Construir el range tree de la dimensión 1 (build-1d, ordenado por la
+   primera componente).
+2. Para cada nodo, de las hojas hacia la raíz, construir un range tree de
+   la dimensión 2 sobre los puntos de su subárbol (ordenado por la segunda
+   componente) — igual que
+   [build-2d](/structures/range-tree/operations/build-2d).
+3. Repetir para las dimensiones `3, 4, ..., d`: el range tree de la
+   dimensión `k` de cada nodo cuelga, a su vez, un range tree de la
+   dimensión `k+1` sobre los mismos puntos.
+4. Consultar una caja `d`-dimensional es resolver una consulta 1D en la
+   dimensión 1 que, por cada subárbol canónico, dispara una consulta en la
+   dimensión 2 sobre su range tree colgado, que a su vez dispara una en la
+   dimensión 3, y así hasta la dimensión `d`.
+
+La visualización de arriba muestra cómo se CONSTRUYE el anidamiento
+(mezclar hacia arriba, colgar hacia adentro); el paso 4 describe algo
+distinto — la CASCADA de una consulta bajando por esas mismas dimensiones
+ya construidas:
+
+<Visualization viz={{
+  type: 'range-tree',
+  steps: [
+    {
+      note: "Consulta cascada en 3 niveles: en la dimensión k, la descomposición canónica de range-query-1d encuentra dk_n7 (hojas k=7, k=9) como subárbol canónico — el primer nivel de la cascada.",
+      highlight: ["dk_n7"],
+      nodes: [
+        { id: "dk_r", value: "k:9", parent: null },
+        { id: "dk_n4", value: "k:4", parent: "dk_r" },
+        { id: "dk_n3", value: "k:3", parent: "dk_n4" },
+        { id: "dk_l3", value: "k:3", parent: "dk_n3" },
+        { id: "dk_l4", value: "k:4", parent: "dk_n3" },
+        { id: "dk_n7", value: "k:7", parent: "dk_n4", state: "active" },
+        { id: "dk_l7", value: "k:7", parent: "dk_n7" },
+        { id: "dk_l9", value: "k:9", parent: "dk_n7" },
+        { id: "dk_n15", value: "k:15", parent: "dk_r" },
+        { id: "dk_n13", value: "k:13", parent: "dk_n15" },
+        { id: "dk_l13", value: "k:13", parent: "dk_n13" },
+        { id: "dk_l15", value: "k:15", parent: "dk_n13" },
+        { id: "dk_n18", value: "k:18", parent: "dk_n15" },
+        { id: "dk_l18", value: "k:18", parent: "dk_n18" },
+        { id: "dk_l27", value: "k:27", parent: "dk_n18" },
+      ],
+    },
+    {
+      note: "Ese subárbol canónico dispara, dentro de su secundario en k+1 ({a,b}), otra consulta 1D — la misma rutina de range-query-1d, ahora resuelta en la dimensión k+1.",
+      highlight: ["dk_n7"],
+      panels: [{ id: "casc1", label: "RangeQuery1D en k+1 (secundario de dk_n7)", anchor: "dk_n7" }],
+      nodes: [
+        { id: "dk_r", value: "k:9", parent: null },
+        { id: "dk_n4", value: "k:4", parent: "dk_r" },
+        { id: "dk_n3", value: "k:3", parent: "dk_n4" },
+        { id: "dk_l3", value: "k:3", parent: "dk_n3" },
+        { id: "dk_l4", value: "k:4", parent: "dk_n3" },
+        { id: "dk_n7", value: "k:7", parent: "dk_n4", state: "marked" },
+        { id: "dk_l7", value: "k:7", parent: "dk_n7" },
+        { id: "dk_l9", value: "k:9", parent: "dk_n7" },
+        { id: "dk_n15", value: "k:15", parent: "dk_r" },
+        { id: "dk_n13", value: "k:13", parent: "dk_n15" },
+        { id: "dk_l13", value: "k:13", parent: "dk_n13" },
+        { id: "dk_l15", value: "k:15", parent: "dk_n13" },
+        { id: "dk_n18", value: "k:18", parent: "dk_n15" },
+        { id: "dk_l18", value: "k:18", parent: "dk_n18" },
+        { id: "dk_l27", value: "k:27", parent: "dk_n18" },
+        { id: "s7_root", value: "a", parent: null, panel: "casc1", state: "idle" },
+        { id: "s7_leafA", value: "a", parent: "s7_root", panel: "casc1", state: "idle" },
+        { id: "s7_leafB", value: "b", parent: "s7_root", panel: "casc1", state: "idle" },
+      ],
+    },
+    {
+      note: "La descomposición canónica dentro de esa dimensión k+1 encuentra la hoja b como subárbol canónico — segundo nivel resuelto.",
+      highlight: ["s7_leafB"],
+      panels: [{ id: "casc1", label: "RangeQuery1D en k+1 (secundario de dk_n7)", anchor: "dk_n7" }],
+      nodes: [
+        { id: "dk_r", value: "k:9", parent: null },
+        { id: "dk_n4", value: "k:4", parent: "dk_r" },
+        { id: "dk_n3", value: "k:3", parent: "dk_n4" },
+        { id: "dk_l3", value: "k:3", parent: "dk_n3" },
+        { id: "dk_l4", value: "k:4", parent: "dk_n3" },
+        { id: "dk_n7", value: "k:7", parent: "dk_n4", state: "answer" },
+        { id: "dk_l7", value: "k:7", parent: "dk_n7" },
+        { id: "dk_l9", value: "k:9", parent: "dk_n7" },
+        { id: "dk_n15", value: "k:15", parent: "dk_r" },
+        { id: "dk_n13", value: "k:13", parent: "dk_n15" },
+        { id: "dk_l13", value: "k:13", parent: "dk_n13" },
+        { id: "dk_l15", value: "k:15", parent: "dk_n13" },
+        { id: "dk_n18", value: "k:18", parent: "dk_n15" },
+        { id: "dk_l18", value: "k:18", parent: "dk_n18" },
+        { id: "dk_l27", value: "k:27", parent: "dk_n18" },
+        { id: "s7_root", value: "a", parent: null, panel: "casc1", state: "marked" },
+        { id: "s7_leafA", value: "a", parent: "s7_root", panel: "casc1", state: "muted" },
+        { id: "s7_leafB", value: "b", parent: "s7_root", panel: "casc1", state: "answer" },
+      ],
+    },
+    {
+      note: "Cambio de escala: ahora la hoja b (recién encontrada) hace de raíz — es la que dispara, a su vez, la consulta en la dimensión k+2 sobre SU propio secundario ({b.1,b.2}). Tercer nivel de la cascada, mismo mecanismo que los dos anteriores.",
+      highlight: ["s7_leafB"],
+      panels: [{ id: "casc2", label: "RangeQuery1D en k+2 (secundario de b)", anchor: "s7_leafB" }],
+      nodes: [
+        { id: "s7_root", value: "a", parent: null },
+        { id: "s7_leafA", value: "a", parent: "s7_root" },
+        { id: "s7_leafB", value: "b", parent: "s7_root", state: "answer" },
+        { id: "p7_root", value: "b.1", parent: null, panel: "casc2", state: "idle" },
+        { id: "p7_leafA", value: "b.1", parent: "p7_root", panel: "casc2", state: "idle" },
+        { id: "p7_leafB", value: "b.2", parent: "p7_root", panel: "casc2", state: "idle" },
+      ],
+    },
+    {
+      note: "La descomposición canónica en k+2 resuelve al último nivel: la hoja b.1 queda dentro del rango, b.2 fuera. Tres consultas 1D encadenadas — k → k+1 → k+2 — cada una disparada por el subárbol canónico que encontró la anterior: exactamente la multiplicidad que explica O(log^d n + k) en la consulta.",
+      highlight: ["p7_leafA"],
+      panels: [{ id: "casc2", label: "RangeQuery1D en k+2 (secundario de b)", anchor: "s7_leafB" }],
+      nodes: [
+        { id: "s7_root", value: "a", parent: null },
+        { id: "s7_leafA", value: "a", parent: "s7_root" },
+        { id: "s7_leafB", value: "b", parent: "s7_root", state: "answer" },
+        { id: "p7_root", value: "b.1", parent: null, panel: "casc2", state: "marked" },
+        { id: "p7_leafA", value: "b.1", parent: "p7_root", panel: "casc2", state: "answer" },
+        { id: "p7_leafB", value: "b.2", parent: "p7_root", panel: "casc2", state: "muted" },
+      ],
+      caption: "Cascada k → k+1 → k+2 → ... → d: cada dimensión dispara la siguiente sobre su subárbol canónico.",
+    },
+  ],
+}} />
+
+## Pseudocódigo
+
+```
+RangeQueryD(raiz, [l_1,r_1], ..., [l_d,r_d])      // derivado
+si d = 1
+    devolver RangeQuery1D(raiz, l_1, r_1)
+si no
+    subarboles ← RangeQuery1D(raiz, l_1, r_1)     // dimensión 1 de este nivel
+    respuesta ← []
+    para cada s en subarboles
+        respuesta.agregar(
+            RangeQueryD(s.siguiente_dimension, [l_2,r_2], ..., [l_d,r_d])
+        )
+    devolver respuesta
+```
+
+## C++
+
+Ver `step-9-d-dimensions.cpp` y `full-implementation.cpp` en el editor de
+arriba.
+
+## Complejidad temporal
+
+$O(\log^d n + k)$: multiplicidad — cada dimensión adicional multiplica el
+costo de consulta por un factor $O(\log n)$
+(Sem4_Orthogonal_Range_Search.pdf#57). El profesor cierra notando que este
+factor se puede mejorar en $O(\log n)$ para $d \ge 2$ sin decir cómo — "¿Es
+posible mejorarlo? Sí..." (#58-59); lo resuelve fractional cascading, en
+la semana 5.
+
+## Complejidad espacial
+
+$O(n \log^{d-1} n)$: cada punto vive en $O(\log n)$ range trees por cada
+dimensión más allá de la primera (Sem4_Orthogonal_Range_Search.pdf#56) —
+el mismo argumento de "cada hoja en $O(\log n)$ subárboles" de
+[build-2d](/structures/range-tree/operations/build-2d), aplicado $d-1$
+veces.
+
+## Ejemplo
+
+*(Derivado.)* Para d=3, cada nodo del range tree en X cuelga un range tree
+en Y, y cada nodo de ese secundario en Y cuelga, a su vez, un range tree en
+Z — tres niveles de anidamiento, tres consultas 1D encadenadas. La
+visualización de arriba muestra ese mecanismo con claves abstractas a...h:
+primero construye el secundario de dimensión k+1 de dos nodos hermanos
+(dk_n7 con `{a,b}`, dk_n3 con `{c,d}`) y luego los **mezcla**, sin
+reconstruirlos, en el secundario de su padre dk_n4 (`{a,b,c,d}`) — el mismo
+"MezclarPorY" de build-2d, hasta completar el secundario de la raíz con los
+8 puntos. El último paso toma un nodo cualquiera de ese secundario de k+1 y
+le cuelga, a su vez, un range tree de dimensión k+2: la familia de
+visualización `range-tree` sólo pinta un panel secundario por paso, así que
+un anidamiento de profundidad d no cabe de una sola vez en el diagrama —
+pero el patrón mostrado (mezclar hacia arriba, colgar hacia adentro) es
+exactamente el que se repite hasta la dimensión d.
+
+## Casos límite
+
+- **$d=1$**: no hay anidamiento; es exactamente
+  [build-1d](/structures/range-tree/operations/build-1d) /
+  [range-query-1d](/structures/range-tree/operations/range-query-1d), con
+  espacio $O(n)$ — el profesor separa $d=1$ de $d \ge 2$ justamente porque la
+  fórmula general $O(n \log^{d-1} n)$ no aplica ahí (#55).
+- **$d$ muy grande**: el factor $\log^d n$ crece rápido; el material no discute
+  a partir de qué `d` deja de ser práctico.
+- **$d=2$**: caso base del anidamiento, cubierto por
+  [build-2d](/structures/range-tree/operations/build-2d) y
+  [range-query-2d](/structures/range-tree/operations/range-query-2d).

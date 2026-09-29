@@ -1,0 +1,188 @@
+{/*
+  Cómo se escribe un circuito. Copiar el patrón, no reinventarlo.
+
+  REGLAS DEL CONTRATO (src/lib/schemas.ts → circuitSchema):
+  · Coordenadas en celdas de rejilla; origen arriba-izquierda; y crece hacia abajo.
+    Usar separación de 4 celdas entre nodos para que quepa el símbolo.
+  · Las piezas conectan nodos y van en línea recta horizontal o vertical. Si los nodos
+    no están alineados, poner `via: [[x,y], …]` (puntos de quiebre del cable).
+  · Los cables son piezas `kind: 'wire'`. Todo tramo de cable sin componente es un `wire`.
+  · vsource: from = −, to = +.  diode/led: from = ánodo, to = cátodo.
+    isource: flecha from→to. Corriente positiva de una pieza = from→to.
+  · value en SI sin prefijos: 2200 (Ω), 12 (V), 0.002 (A).
+  · label = nombre corto ("R1", "E", "D1"). El valor lo formatea el motor (2.2 kΩ).
+  · Mismos ids entre pasos = la misma pieza (así se anima). Una pieza fundida es un id
+    nuevo con mergedFrom.
+  · Nunca escribir ecuaciones ni resultados: van `kvl`, `showSystem`, `req` y `expect`.
+*/}
+
+{/* ── 1. Reducción serie → paralelo ─────────────────────────────────────────
+     R1 y R2 en serie (el nodo m sólo toca a R1 y R2); luego R12 ‖ R3 entre A y C. */}
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Req entre A y C',
+  steps: [
+    {
+      note: 'El nodo m sólo conecta a R1 y R2 y por él no sale ninguna otra rama: R1 y R2 están en serie.',
+      circuit: {
+        nodes: [
+          { id: 'A', x: 0, y: 0, label: 'A' }, { id: 'm', x: 4, y: 0 }, { id: 'C', x: 8, y: 0, label: 'C' },
+          { id: 'a2', x: 0, y: 4 }, { id: 'c2', x: 8, y: 4 },
+        ],
+        parts: [
+          { id: 'R1', kind: 'resistor', from: 'A', to: 'm', value: 1000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'm', to: 'C', value: 2000, label: 'R2' },
+          { id: 'w1', kind: 'wire', from: 'A', to: 'a2' },
+          { id: 'w2', kind: 'wire', from: 'C', to: 'c2' },
+          { id: 'R3', kind: 'resistor', from: 'a2', to: 'c2', value: 3000, label: 'R3' },
+        ],
+        groups: [{ parts: ['R1', 'R2'], tone: 'series', label: 'serie' }],
+      },
+    },
+    {
+      note: 'R12 = R1 + R2. Ahora R12 y R3 comparten los MISMOS dos nodos (A y C): están en paralelo.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 0, label: 'A' }, { id: 'C', x: 8, y: 0, label: 'C' }, { id: 'a2', x: 0, y: 4 }, { id: 'c2', x: 8, y: 4 }],
+        parts: [
+          { id: 'R12', kind: 'resistor', from: 'A', to: 'C', label: 'R12', mergedFrom: ['R1', 'R2'], mergeKind: 'series' },
+          { id: 'w1', kind: 'wire', from: 'A', to: 'a2' },
+          { id: 'w2', kind: 'wire', from: 'C', to: 'c2' },
+          { id: 'R3', kind: 'resistor', from: 'a2', to: 'c2', value: 3000, label: 'R3' },
+        ],
+        groups: [{ parts: ['R12', 'R3'], tone: 'parallel', label: 'paralelo' }],
+      },
+    },
+    {
+      note: 'Req = R12 ‖ R3.',
+      circuit: {
+        nodes: [{ id: 'A', x: 0, y: 0, label: 'A' }, { id: 'C', x: 8, y: 0, label: 'C' }],
+        parts: [{ id: 'Req', kind: 'resistor', from: 'A', to: 'C', label: 'Req', mergedFrom: ['R12', 'R3'], mergeKind: 'parallel', state: 'answer' }],
+        req: { between: ['A', 'C'] },
+      },
+      expect: { 'Req(A,C)': 1500 },
+    },
+  ],
+}} />
+
+{/* ── 2. Mallas (Kirchhoff): 2 mallas, R2 compartida ─────────────────────────
+     El mismo circuito en todos los pasos; sólo cambia `kvl`. `path` = nodos en orden. */}
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Método de mallas',
+  steps: [1, 2, 3, 4].map((k) => ({
+    note: k < 4 ? `Recorro la malla I₁ en sentido horario, elemento ${k}.` : 'Malla I₁ cerrada: la suma de caídas es cero.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0, label: 'a' },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 10, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'a', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'a', to: 'a2', value: 2000, label: 'R2' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'R3', kind: 'resistor', from: 'b', to: 'b2', value: 2000, label: 'R3' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      kvl: k < 4 ? { loop: 'm1', upto: k } : { loop: 'm1' },
+    },
+  })).concat([{
+    note: 'Con las dos mallas planteadas se resuelve el sistema. R2 es compartida: su corriente es I₁ − I₂.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0, label: 'a' },
+        { id: 'b', x: 8, y: 0 }, { id: 'a2', x: 4, y: 4 }, { id: 'b2', x: 8, y: 4 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 10, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'a', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'a', to: 'a2', value: 2000, label: 'R2', state: 'answer' },
+        { id: 'w1', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'R3', kind: 'resistor', from: 'b', to: 'b2', value: 2000, label: 'R3' },
+        { id: 'w2', kind: 'wire', from: 'b2', to: 'a2' },
+        { id: 'w3', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      loops: [
+        { id: 'm1', path: ['g', 't', 'a', 'a2'], dir: 'cw', label: 'I₁', tone: 'mesh1' },
+        { id: 'm2', path: ['a', 'b', 'b2', 'a2'], dir: 'cw', label: 'I₂', tone: 'mesh2' },
+      ],
+      showSystem: true,
+      currents: [{ part: 'R2', label: 'I_{R2}', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.005, 'I(R2)': 0.0025, 'I(R3)': 0.0025 },
+  }]),
+}} />
+
+{/* ── 3. Diodos Si y Ge en paralelo: hipótesis que falla y se reajusta ───────
+     D1 (Si) va recto t→a; D2 (Ge) va por arriba con `via`. */}
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Si ‖ Ge',
+  steps: [
+    {
+      note: 'Hipótesis 1: los dos conducen. Entonces V_ta tendría que valer 0.7 V y 0.3 V a la vez: imposible.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+          { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1', tone: 'si' },
+          { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2', tone: 'ge' },
+          { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+          { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 ON · D2 ON',
+      },
+    },
+    {
+      note: 'Hipótesis 2: sólo el Ge conduce (se enciende primero, 0.3 V < 0.7 V). Se valida: V_D1 = 0.3 V < 0.7 V, así que D1 queda OFF. ✓',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'E' },
+          { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1', tone: 'si' },
+          { id: 'D2', kind: 'diode', model: 'ge', from: 't', to: 'a', via: [[0, -2], [4, -2]], label: 'D2', tone: 'ge' },
+          { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+          { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'off' }, { part: 'D2', assume: 'on' }],
+        hypothesis: 'D1 OFF · D2 ON',
+        currents: [{ part: 'R1', label: 'I', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.0047 },
+    },
+  ],
+}} />
+
+{/* ── 4. Slider: ¿desde qué E conduce el diodo? ───────────────────────────── */}
+<Visualization viz={{
+  type: 'circuit',
+  interactive: { part: 'E', min: 0, max: 3, step: 0.05, label: 'E' },
+  steps: [{
+    note: 'Mueve E: el diodo pasa a ON exactamente cuando E supera 0.7 V.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 2, label: 'E' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1', tone: 'si' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+        { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+    },
+  }],
+}} />
+
+{/* ── Otras familias, en una línea ────────────────────────────────────────────
+  xy-chart:  { series: [{ id:'f', label:'f(t)', fn:'sin(2*x)+4*sin(5*x)', domain:[0,12.6] }], x:{label:'t (s)'}, y:{label:'f'} }
+             espectro: { series: [{ id:'F', label:'|F(ω)|', kind:'stem', points:[[2,1],[5,4]] }], x:{label:'ω (rad/s)', min:0, max:7} }
+             ADC: kind 'samples' / 'step';  PWM: kind 'step' + hlines:[{at:5, label:'V_prom'}]
+             alcance: { series:[{ id:'r', label:'alcance', kind:'bars', bars:[{label:'BLE',from:1,to:50},{label:'LoRaWAN',from:1000,to:15000}] }], x:{label:'m', log:true} }
+  sequence:  { actors:[{id:'p',label:'Publisher'},{id:'b',label:'Broker'}], msgs:[{from:'p',to:'b',label:'PUBLISH',flags:'QoS 2'},{from:'b',to:'p',label:'PUBREC'}] }
+  flow:      { shapes:[{id:'s',kind:'start',label:'Inicio'},{id:'d',kind:'decision',label:'¿Temp > 27 °C?'}], arrows:[{from:'s',to:'d'},{from:'d',to:'on',label:'V'}] }
+*/}

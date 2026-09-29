@@ -1,0 +1,24 @@
+id: mpi-collectives
+title: "Operaciones colectivas de MPI"
+type: algorithm
+unit: u3
+
+prerequisites: [mpi-intro, partitioning-randomized]
+buildsOn: []
+usedBy: []
+
+complexity:
+  bcast-arbol:
+    worst: "O(\\log_2 p)"
+    reasoning: >-
+      Un broadcast implementado en árbol binario reparte el mensaje en
+      log2(p) niveles de envío, contra O(p) del algoritmo secuencial
+      (root envía uno a uno a los p-1 procesos restantes). La librería
+      MPI decide internamente qué algoritmo usar según tamaño de mensaje
+      y de comunicador.
+    source: "U3.2 Paralelismo Distribuido-MPI.pdf#3"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: network-topology
+placeholder: false

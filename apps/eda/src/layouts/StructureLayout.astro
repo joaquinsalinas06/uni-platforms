@@ -1,0 +1,145 @@
+---
+import Base from './Base.astro';
+import type { Meta } from '../lib/schemas';
+import { TYPE_LABEL } from '../lib/knowledge-map';
+
+interface Props {
+  meta: Meta;
+  section: string;
+  tabs: { href: string; label: string }[];
+  rail?: boolean;
+}
+const { meta, section, tabs, rail = false } = Astro.props;
+---
+
+<Base title={meta.title} crumb={`${meta.week}/${meta.id}`} rail={rail}>
+  <!--
+    El título, el crumb y la barra de pestañas son IDÉNTICOS entre las
+    pestañas de una misma estructura (teoría/ejemplos/ejercicios/dominio/cada
+    operación comparten meta.title, meta.id, la misma lista de tabs). Sin
+    persistir, cada click entre ellas remontaba el bloque entero y reproducía
+    su entrada otra vez — visualmente "vuelve a aparecer todo" aunque no haya
+    cambiado nada. La clave incluye meta.id a propósito: al navegar a OTRA
+    estructura la clave deja de coincidir con la del documento nuevo y Astro
+    simplemente no persiste — esa sí es información nueva y debe animarse.
+  -->
+  <header class="stagger mb-10" transition:persist={`structure-header-${meta.id}`}>
+    {
+      meta.placeholder && (
+        <p class="mb-6 inline-flex items-center gap-2 rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
+          <span class="tag">contenido de ejemplo</span>
+          <span class="text-[0.8125rem] text-[var(--muted)]">
+            no es material del curso — se reemplaza cuando entre la semana real
+          </span>
+        </p>
+      )
+    }
+
+    <p class="tag">
+      {meta.week} · {TYPE_LABEL[meta.type]}
+    </p>
+
+    <h1 class="mt-2 text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      {meta.title}
+    </h1>
+
+    <p class="mt-3 font-mono text-[0.8125rem] text-[var(--faint)]">{meta.id}</p>
+
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  <!--
+    Misma razón que el header: la lista de pestañas no cambia entre las
+    pestañas de una estructura, sólo cuál está activa — y eso se recalcula
+    en el cliente (abajo) porque una vez persistida, el servidor ya no la
+    vuelve a renderizar en cada navegación.
+
+    flex-nowrap + overflow-x-auto: con 11 pestañas (binary-heap: teoría + 8
+    operaciones + ejemplos/ejercicios/dominio) flex-wrap alternaba entre 1 y 2
+    filas según el ancho de viewport y el largo de cada label. Siempre una
+    sola fila, scrolleable.
+  -->
+  <nav
+    class="mb-12 flex flex-nowrap gap-1 overflow-x-auto border-b border-[var(--rule)]"
+    aria-label="Secciones"
+    transition:persist={`structure-tabs-${meta.id}`}
+  >
+    {
+      tabs.map((tab) => {
+        const active = tab.label === section;
+        return (
+          <a
+            href={tab.href}
+            data-tab-link
+            aria-current={active}
+            class:list={['tab-link -mb-px shrink-0 px-3 py-2.5 text-[0.875rem] whitespace-nowrap no-underline', active && 'is-active']}
+          >
+            {tab.label}
+          </a>
+        );
+      })
+    }
+  </nav>
+
+  <slot />
+
+  <slot name="rail" slot="rail" />
+</Base>
+
+<style>
+  .tab-link {
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab-link:hover {
+    border-color: var(--rule);
+    color: var(--ink);
+  }
+  .tab-link.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .tab-link.is-active:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+</style>
+
+<script>
+  // La barra de pestañas queda persistida por estructura (ver arriba): tras
+  // la primera vez, el servidor no la vuelve a renderizar en cada
+  // navegación, así que cuál pestaña está "activa" se recalcula acá. Corre
+  // en cada `astro:page-load` (primera carga incluida) — no basta con
+  // ejecutarlo una vez, porque un usuario puede llegar por primera vez a
+  // CUALQUIER estructura, no sólo a la primera que persiste este bloque.
+  function syncActiveTab() {
+    const path = location.pathname;
+    // Exacto, no por prefijo: todas las pestañas son hermanas bajo la misma
+    // ruta base (teoría vive en /structures/<id>, las demás cuelgan de ahí),
+    // así que un prefijo marcaría "teoría" activa en cualquier otra pestaña.
+    for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-tab-link]')) {
+      const active = path === a.getAttribute('href');
+      a.classList.toggle('is-active', active);
+      a.setAttribute('aria-current', String(active));
+    }
+  }
+  document.addEventListener('astro:page-load', syncActiveTab);
+
+  // `transition:persist` reutiliza el mismo nodo de la barra de pestañas
+  // entre operaciones de una estructura, pero el swap de Astro lo desmonta y
+  // remonta en el documento nuevo — y ese desmontaje resetea `scrollLeft` en
+  // algunos navegadores aunque sea el mismo elemento. Se guarda antes del
+  // swap y se restaura después, para que la pestaña activa (que puede haber
+  // scrolleado la barra) no salte al principio.
+  let savedTabsScroll = 0;
+  document.addEventListener('astro:before-swap', () => {
+    const tabs = document.querySelector<HTMLElement>('[aria-label="Secciones"]');
+    if (tabs) savedTabsScroll = tabs.scrollLeft;
+  });
+  document.addEventListener('astro:after-swap', () => {
+    const tabs = document.querySelector<HTMLElement>('[aria-label="Secciones"]');
+    if (tabs) tabs.scrollLeft = savedTabsScroll;
+  });
+</script>

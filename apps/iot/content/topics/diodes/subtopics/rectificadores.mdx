@@ -1,0 +1,324 @@
+---
+kind: subtopic
+order: 4
+title: Rectificadores
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Rectificar es usar el comportamiento ON/OFF del diodo para convertir una señal
+alterna (que cruza por cero) en una señal que sólo tiene un signo, o para "recortar"
+(*clip*) una señal contra un nivel de referencia. Es la misma hipótesis ON/OFF de
+siempre, aplicada instante a instante mientras la fuente cambia con el tiempo.
+
+## Conceptos
+
+### Rectificador de media onda
+
+Un diodo en serie con la carga sólo deja pasar la parte de la señal que lo polariza
+en directa: si $V_{in}(t) > V_\gamma$, la salida es $V_{in}(t)-V_\gamma$; si no, la
+salida es 0 (diodo OFF, no hay corriente y por lo tanto no hay caída en la carga).
+
+### Rectificador de onda completa (puente)
+
+Con **4 diodos en configuración de puente**, en cada semiciclo un par distinto de
+diodos conduce, así que la carga siempre recibe corriente en el mismo sentido — se
+aprovechan ambos semiciclos de la fuente en vez de sólo uno.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Puente rectificador de onda completa (Sem02_WheatstoneYDiodos#41)',
+  steps: [
+    {
+      note: 'Pico positivo, vi = +100 V (terminal + arriba). Hipótesis: Da y Dd ON (diodos ideales, 0 V), Db y Dc OFF. Entonces T = 0 V (unido a tierra por Da) y R = B = −100 V. Validación: I(Da) = I(Dd) ≈ 45.5 mA > 0 ✓; Db y Dc quedan en inversa ✓. vo = −100 V.',
+    circuit: {
+      nodes: [
+        { id: 'L', x: 0, y: 4, ground: true }, { id: 'T', x: 4, y: 0, label: '+' }, { id: 'B', x: 4, y: 8, label: '−' },
+        { id: 'R', x: 8, y: 4 }, { id: 'vo', x: 12, y: 4, label: 'vo', showPotential: true }, { id: 'g2', x: 12, y: 8 },
+      ],
+      parts: [
+        { id: 'VI', kind: 'ac-source', from: 'B', to: 'T', value: 100, label: 'vi' },
+        { id: 'Da', kind: 'diode', from: 'T', to: 'L', vf: 0, label: 'Da', via: [[0, 0]] },
+        { id: 'Db', kind: 'diode', from: 'R', to: 'T', vf: 0, label: 'Db', via: [[8, 0]] },
+        { id: 'Dc', kind: 'diode', from: 'B', to: 'L', vf: 0, label: 'Dc', via: [[0, 8]] },
+        { id: 'Dd', kind: 'diode', from: 'R', to: 'B', vf: 0, label: 'Dd', via: [[8, 8]] },
+        { id: 'w1', kind: 'wire', from: 'R', to: 'vo' },
+        { id: 'RL', kind: 'resistor', from: 'vo', to: 'g2', value: 2200, label: 'R' },
+        { id: 'w2', kind: 'wire', from: 'g2', to: 'L', via: [[12, 12], [-2, 12], [-2, 4]] },
+      ],
+      diodes: [{ part: 'Da', assume: 'on' }, { part: 'Db', assume: 'off' }, { part: 'Dc', assume: 'off' }, { part: 'Dd', assume: 'on' }],
+      hypothesis: 'vi > 0 · Da, Dd ON · Db, Dc OFF',
+      currents: [{ part: 'RL', label: 'i_R', showValue: true }],
+    },
+      expect: { 'V(vo)': -100, 'I(RL)': -0.045455, 'I(Da)': 0.045455 },
+    },
+    {
+      note: 'Pico negativo, vi = −100 V. Ahora conducen Dc y Db: B = 0 V y R = T = −100 V. Validación: I(Dc) = I(Db) > 0 ✓. La corriente por R vuelve a ir en el MISMO sentido: vo = −|vi|, onda completa (negativa, porque el nodo de los cátodos es el que va a tierra).',
+    circuit: {
+      nodes: [
+        { id: 'L', x: 0, y: 4, ground: true }, { id: 'T', x: 4, y: 0, label: '+' }, { id: 'B', x: 4, y: 8, label: '−' },
+        { id: 'R', x: 8, y: 4 }, { id: 'vo', x: 12, y: 4, label: 'vo', showPotential: true }, { id: 'g2', x: 12, y: 8 },
+      ],
+      parts: [
+        { id: 'VI', kind: 'ac-source', from: 'B', to: 'T', value: -100, label: 'vi' },
+        { id: 'Da', kind: 'diode', from: 'T', to: 'L', vf: 0, label: 'Da', via: [[0, 0]] },
+        { id: 'Db', kind: 'diode', from: 'R', to: 'T', vf: 0, label: 'Db', via: [[8, 0]] },
+        { id: 'Dc', kind: 'diode', from: 'B', to: 'L', vf: 0, label: 'Dc', via: [[0, 8]] },
+        { id: 'Dd', kind: 'diode', from: 'R', to: 'B', vf: 0, label: 'Dd', via: [[8, 8]] },
+        { id: 'w1', kind: 'wire', from: 'R', to: 'vo' },
+        { id: 'RL', kind: 'resistor', from: 'vo', to: 'g2', value: 2200, label: 'R' },
+        { id: 'w2', kind: 'wire', from: 'g2', to: 'L', via: [[12, 12], [-2, 12], [-2, 4]] },
+      ],
+      diodes: [{ part: 'Da', assume: 'off' }, { part: 'Db', assume: 'on' }, { part: 'Dc', assume: 'on' }, { part: 'Dd', assume: 'off' }],
+      hypothesis: 'vi < 0 · Db, Dc ON · Da, Dd OFF',
+      currents: [{ part: 'RL', label: 'i_R', showValue: true }],
+    },
+      expect: { 'V(vo)': -100, 'I(RL)': -0.045455, 'I(Dc)': 0.045455 },
+    },
+  ],
+}} />
+
+Con diodos ideales, $v_o(t) = -|v_i(t)|$: pico de $-100\,\text{V}$ en ambos semiciclos.
+
+> **Nota de apoyo** (no está en el material del examen, sólo contexto): a la salida
+> de un puente rectificador suele agregarse un **capacitor de suavizado** en paralelo
+> con la carga, que se carga en los picos y se descarga lentamente entre ellos,
+> reduciendo el "rizado" (*ripple*) de la señal rectificada.
+
+### Clipper con fuente DC en serie
+
+Si además de la fuente alterna hay una **fuente DC en oposición** en la misma rama
+del diodo, la salida sólo sigue a la entrada cuando ésta supera el umbral del diodo
+**más** esa fuente DC — el resto del tiempo la salida queda "clavada" en el valor de
+la fuente DC (el diodo se abre y dejar de haber corriente en la resistencia de carga,
+así que su salida —tomada tras el diodo— iguala a la fuente DC).
+
+## Método paso a paso
+
+1. Escribe la expresión de la fuente en el tiempo, $V_{in}(t)$.
+2. Plantea la hipótesis "diodo ON" y resuelve la salida como si fuera un circuito DC
+   en ese instante (KVL con el modelo de caída constante).
+3. Encuentra el instante en que la hipótesis deja de cumplirse (usualmente cuando
+   $V_{in}(t)$ cruza el umbral necesario) — eso divide el periodo en tramos ON/OFF.
+4. En los tramos OFF, la salida vale lo que imponga el resto del circuito con el
+   diodo abierto (0, o el valor de una fuente DC en esa rama).
+5. Combina ambos tramos en una sola expresión, típicamente con un $\max(\cdot,\cdot)$
+   o $\min(\cdot,\cdot)$ contra el nivel de recorte.
+
+## Ejemplo resuelto
+
+### Clipper con bias DC (Sem02_WheatstoneYDiodos#38)
+
+Fuente $V(t)=5\sin(2\pi t)\,\text{V}$, diodo de germanio, $R_L=220\,\Omega$, y una
+fuente DC de $2\,\text{V}$ en serie después de $R_L$ (oponiéndose). La salida $V_1$
+se toma justo después del diodo (antes de $R_L$).
+
+- Diodo ON cuando $V(t) - 0.3 > 2$, es decir $V(t) > 2.3\,\text{V}$: ahí
+  $V_1(t) = V(t) - 0.3$.
+- Si no, el diodo está OFF (sin corriente en $R_L$) y $V_1(t)$ queda "clavado" en los
+  $2\,\text{V}$ de la fuente DC.
+
+$$V_1(t) = \max\big(5\sin(2\pi t) - 0.3,\ 2\big)$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'V1(t) — clipper con bias de 2 V',
+  steps: [{
+    note: 'La salida sigue a la entrada (menos 0.3 V del Ge) sólo mientras supera los 2 V del bias; el resto del tiempo queda clavada en 2 V.',
+    series: [
+      { id: 'vin', label: 'V(t) = 5 sin(2πt)', fn: '5*sin(2*PI*x)', domain: [0, 2], tone: 'si' },
+      { id: 'v1', label: 'V1(t) = max(5sin(2πt) − 0.3, 2)', fn: 'max(5*sin(2*PI*x) - 0.3, 2)', domain: [0, 2], tone: 'ge' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'V' },
+    hlines: [{ at: 2, label: 'bias 2 V' }],
+  }],
+}} />
+
+$$V_1^{\max} = 5 - 0.3 = 4.7\,\text{V} \qquad i_{R_L}(t) = \frac{V_1(t)-2}{220} = \max\!\left(\frac{5\sin(2\pi t)-2.3}{220},\ 0\right)$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'i_RL(t)',
+  steps: [{
+    note: 'La corriente sólo existe mientras el diodo conduce (V(t) > 2.3 V); el resto del tiempo es cero.',
+    series: [{ id: 'irl', label: 'i_RL(t)', fn: 'max((5*sin(2*PI*x) - 2.3)/220, 0)', domain: [0, 2], tone: 'current' }],
+    x: { label: 't (s)' }, y: { label: 'A' },
+  }],
+}} />
+
+### Dos rectificadores de media onda, Si vs. Ge (Sem02_WheatstoneYDiodos#39)
+
+Fuente $V(t)=10\sin(20\pi t)\,\text{V}$, con dos ramas de rectificación de media onda
+desde el mismo nodo (el + de la fuente): una con diodo de **germanio** D1 (ánodo en el
+nodo, cátodo hacia $R_1=100\,\Omega$, salida $V_1$) y otra con diodo de **silicio** D2
+montado al revés (cátodo en el nodo, ánodo hacia $R_2=1\,\text{k}\Omega$, salida
+$V_2$). D1 conduce en el semiciclo **positivo**; D2 sólo cuando la fuente baja de
+$-0.7\,\text{V}$, es decir en el semiciclo **negativo** (la corriente sube desde tierra
+por $R_2$, así que $V_2$ es negativa):
+
+$$V_1(t) = \max\big(10\sin(20\pi t) - 0.3,\ 0\big) \qquad V_2(t) = \min\big(10\sin(20\pi t) + 0.7,\ 0\big)$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'V1 (Ge) y V2 (Si)',
+  steps: [{
+    note: 'V1 (Ge) toma los semiciclos positivos menos 0.3 V; V2 (Si, invertido) toma los negativos, recortados 0.7 V hacia cero.',
+    series: [
+      { id: 'v1', label: 'V1(t), Ge', fn: 'max(10*sin(20*PI*x) - 0.3, 0)', domain: [0, 0.1], tone: 'ge' },
+      { id: 'v2', label: 'V2(t), Si', fn: 'min(10*sin(20*PI*x) + 0.7, 0)', domain: [0, 0.1], tone: 'si' },
+    ],
+    x: { label: 't (s)' }, y: { label: 'V' },
+  }],
+}} />
+
+$$V_1^{\max} = 10-0.3 = 9.7\,\text{V} \qquad V_2^{\min} = -(10-0.7) = -9.3\,\text{V} \qquad i_{R_1}(t) = \frac{V_1(t)}{100}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'i_R1(t)',
+  steps: [{
+    note: 'Misma forma que V1(t), escalada por 1/R1: la corriente por R1 sólo existe en el semiciclo positivo, por encima de 0.3 V.',
+    series: [{ id: 'ir1', label: 'i_R1(t)', fn: 'max(10*sin(20*PI*x) - 0.3, 0)/100', domain: [0, 0.1], tone: 'current' }],
+    x: { label: 't (s)' }, y: { label: 'A' },
+  }],
+}} />
+
+## Errores típicos
+
+- Olvidar que el diodo también resta su propio $V_\gamma$ a la salida: la salida
+  **no** es idéntica a la entrada durante la conducción, es la entrada menos la caída.
+- En un clipper con bias DC, confundir "clavado en la fuente DC" con "clavado en
+  cero": sin corriente por la carga, la salida iguala el valor de esa fuente DC, no
+  necesariamente 0 V.
+- Al dibujar $i_R(t)$, olvidar que tiene la misma forma que $V_o(t)$ (son
+  proporcionales vía $R$), sólo cambia la escala vertical.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Rectificador de media onda del enunciado: V(t) = 8 sin(2πt) V, diodo de Si y R = 500 Ω; Vo se toma sobre R.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 6, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'vo', x: 6, y: 0, label: 'Vo' }, { id: 'b', x: 6, y: 6 }],
+      parts: [
+        { id: 'V', kind: 'ac-source', from: 'g', to: 't', value: 8, label: 'V(t)' },
+        { id: 'D', kind: 'diode', model: 'si', from: 't', to: 'vo', label: 'D', tone: 'si' },
+        { id: 'R', kind: 'resistor', from: 'vo', to: 'b', value: 500, label: 'R' },
+        { id: 'w1', kind: 'wire', from: 'b', to: 'g' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un rectificador de media onda (figura) tiene una fuente $V(t) = 8\\sin(2\\pi t)$ V, un diodo de silicio y una resistencia de carga $R = 500\\,\\Omega$. (a) Escribe la expresión de $V_o(t)$ a la salida (tomada después del diodo). (b) Halla el valor máximo de $V_o$. (c) Escribe la expresión de la corriente por $R$.",
+  hints: [
+    "El diodo conduce sólo cuando $V(t) > 0.7$ V; en ese tramo $V_o(t) = V(t) - 0.7$.",
+    "Cuando el diodo está OFF no hay corriente por $R$, así que $V_o(t) = 0$ en ese tramo.",
+    "La corriente es simplemente $i_R(t) = V_o(t)/R$.",
+  ],
+}}>
+
+Se analiza el circuito como si $V(t)$ fuera una fuente DC "congelada" en cada instante, con el método de hipótesis.
+
+**1. Hipótesis D ON** (fuente de $0.7$ V). KVL en la única malla:
+
+$$
+V_o(t) = V(t) - 0.7 \qquad \text{válida si } \; i_R = \frac{V(t) - 0.7}{R} \ge 0 \;\Leftrightarrow\; V(t) \ge 0.7\,\text{V}
+$$
+
+**2. Hipótesis D OFF.** Sin corriente, $R$ no cae:
+
+$$
+V_o(t) = 0 \qquad \text{válida si } \; V_{AK} = V(t) < 0.7\,\text{V}
+$$
+
+**3. (a) Juntar los dos tramos:**
+
+$$
+\boxed{V_o(t) = \max\big(8\sin(2\pi t) - 0.7,\ 0\big)\ \text{V}}
+$$
+
+El diodo conduce mientras $\sin(2\pi t) > 0.7/8 = 0.0875$, es decir entre $t \approx 0.014$ s y $t \approx 0.486$ s de cada período de $1$ s.
+
+**4. (b) Máximo.** Ocurre en el pico de la fuente, $\sin(2\pi t) = 1$:
+
+$$
+V_o^{\max} = 8 - 0.7 = \boxed{7.3\,\text{V}}
+$$
+
+**5. (c) Corriente por $R$.** Misma forma que $V_o$, escalada por $1/R$:
+
+$$
+\boxed{i_R(t) = \frac{\max\big(8\sin(2\pi t) - 0.7,\ 0\big)}{500}\ \text{A}} \qquad i_R^{\max} = \frac{7.3}{500} = 14.6\,\text{mA}
+$$
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Resuelto: dos instantes de V(t)',
+  steps: [
+    {
+      note: 'Pico positivo (V = 8 V): D ON, i = 7.3/500 = 14.6 mA ≥ 0 ✓ y Vo = 7.3 V.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 6, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'vo', x: 6, y: 0, label: 'Vo', showPotential: true }, { id: 'b', x: 6, y: 6 }],
+        parts: [
+          { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 8, label: 'V(t)' },
+          { id: 'D', kind: 'diode', model: 'si', from: 't', to: 'vo', label: 'D', tone: 'si' },
+          { id: 'R', kind: 'resistor', from: 'vo', to: 'b', value: 500, label: 'R', state: 'answer' },
+          { id: 'w1', kind: 'wire', from: 'b', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'V = +8 V · D ON (válida)',
+        currents: [{ part: 'R', label: 'i_R', showValue: true }],
+      },
+      expect: { 'V(vo)': 7.3, 'I(R)': 0.0146 },
+    },
+    {
+      note: 'Pico negativo (V = −8 V): D OFF, V_AK = −8 V < 0.7 V ✓; no hay corriente y Vo = 0.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 6, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'vo', x: 6, y: 0, label: 'Vo', showPotential: true }, { id: 'b', x: 6, y: 6 }],
+        parts: [
+          { id: 'V', kind: 'vsource', from: 'g', to: 't', value: -8, label: 'V(t)' },
+          { id: 'D', kind: 'diode', model: 'si', from: 't', to: 'vo', label: 'D', tone: 'si' },
+          { id: 'R', kind: 'resistor', from: 'vo', to: 'b', value: 500, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'b', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'V = −8 V · D OFF (válida)',
+        currents: [{ part: 'R', label: 'i_R', showValue: true }],
+        voltages: [{ part: 'D', label: 'V_{AK}', plus: 'from', showValue: true }],
+      },
+      expect: { 'I(R)': 0, 'V(t,vo)': -8 },
+    },
+  ],
+}} />
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'V(t) y Vo(t)',
+  steps: [{
+    note: 'Vo sigue a V(t) menos 0.7 V mientras el diodo conduce y se queda en 0 el resto del período.',
+    series: [
+      { id: 'vin', label: 'V(t)', fn: '8*sin(2*PI*x)', domain: [0, 2], state: 'muted' },
+      { id: 'vo', label: 'Vo(t)', fn: 'max(8*sin(2*PI*x) - 0.7, 0)', domain: [0, 2], tone: 'si' },
+    ],
+    hlines: [{ at: 7.3, label: '7.3 V' }],
+    x: { label: 't (s)' }, y: { label: 'V' },
+  }],
+}} />
+
+**Comprobación:**
+
+| Tramo | Hipótesis | Condición | $V_o$ |
+|---|---|---|---|
+| $V(t) \ge 0.7$ V | ON | $i_R \ge 0$ ✓ | $V(t) - 0.7$ |
+| $V(t) < 0.7$ V | OFF | $V_{AK} < 0.7$ V ✓ | $0$ |
+
+</ExerciseBlock>

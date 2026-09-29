@@ -1,0 +1,33 @@
+id: sequential-model-architectures
+title: "Modelo secuencial y arquitecturas paralelas"
+type: concept
+unit: u1
+
+prerequisites: []
+buildsOn: []
+usedBy: ["flynn-foster-pcam"]
+
+complexity:
+  suma-vector-ram:
+    worst: O(n)
+    reasoning: >-
+      En el modelo RAM cada acceso/operación elemental cuesta O(1), y el
+      recorrido de un arreglo de n elementos hace n accesos de este tipo, por
+      lo que T(n) = Θ(n). El profesor aclara que esta cota es correcta como
+      complejidad algorítmica pero no predice el tiempo real, porque
+      T_acceso no es constante en una máquina real (memory wall).
+    source: "U1.1-Fundamentos_de_Paralelismo-apuntes.pdf#1"
+  suma-arbol-binario:
+    worst: "O(\\log p)"
+    reasoning: >-
+      Acumular las sumas parciales por pares (árbol binario) en vez de en
+      forma secuencial reduce la cantidad de rondas de sincronización de
+      O(p) a O(log p), porque en cada ronda el número de sumas parciales
+      activas se reduce a la mitad. Es la respuesta que da el profesor a la
+      Participación 1.
+    source: "U1.1-Fundamentos_de_Paralelismo-apuntes.pdf#5"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: timeline
+placeholder: false

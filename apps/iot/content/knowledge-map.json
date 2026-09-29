@@ -1,0 +1,590 @@
+{
+  "units": [
+    {
+      "id": "s1",
+      "title": "Semana 1 — Introducción a IoT y circuitos básicos",
+      "sourceFiles": [
+        "raw-materials/text/Sem1_IoTT-Introduction.txt",
+        "raw-materials/text/Sem01_IoTIntroduccion.txt",
+        "raw-materials/text/Sem01_EjerciciosConCircuitos.txt"
+      ],
+      "topics": [
+        "iot-intro",
+        "basic-circuits"
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "Semana 2 — Arquitectura IoT, Wheatstone y diodos",
+      "sourceFiles": [
+        "raw-materials/text/Sem2_IoTL-ArchIoT.txt",
+        "raw-materials/text/Sem02_WheatstoneYDiodos.txt",
+        "raw-materials/text/Sem02_LAB_SlidesSimulacionSPICE.txt",
+        "raw-materials/text/Sem02_LAB_SimulacionTinkercad.txt"
+      ],
+      "topics": [
+        "iot-architecture",
+        "edge-fog-cloud",
+        "delta-wye-wheatstone",
+        "diodes",
+        "breadboard-simulation"
+      ]
+    },
+    {
+      "id": "s3",
+      "title": "Semana 3 — Capa de sensores y actuadores",
+      "sourceFiles": [
+        "raw-materials/text/Sem3_IoTT-SensorActuators.txt"
+      ],
+      "topics": [
+        "sensors",
+        "actuators"
+      ]
+    },
+    {
+      "id": "s4",
+      "title": "Semana 4 — Representación de señales · Arduino y sensores",
+      "sourceFiles": [
+        "raw-materials/text/Sem4_IoTT-SignalRepr.txt",
+        "raw-materials/text/Sem04_LAB_Sensores.txt",
+        "raw-materials/text/Sem04_LAB1_ArduinoIntro.txt",
+        "raw-materials/text/Sem04_LAB1_EjemplosTinkercadArduino.txt"
+      ],
+      "topics": [
+        "signals-domains",
+        "digitization-adc",
+        "fourier-dft",
+        "rc-lowpass",
+        "arduino-sensors"
+      ]
+    },
+    {
+      "id": "s5",
+      "title": "Semana 5 — Comunicación en IoT · diagramas",
+      "sourceFiles": [
+        "raw-materials/text/Sem5_IoTT-CommunicationinIoT.txt",
+        "raw-materials/text/Sem05_LAB_GuiaDiagramas.txt"
+      ],
+      "topics": [
+        "mcu-mpu",
+        "wireless-tech",
+        "transmission-models",
+        "flow-block-diagrams"
+      ]
+    },
+    {
+      "id": "s6",
+      "title": "Semana 6 — Protocolos de comunicación · actuadores",
+      "sourceFiles": [
+        "raw-materials/text/Sem6_IoTT-ProtocolComminIoT.txt",
+        "raw-materials/text/Sem06_LAB_Slides_Actuadores.txt"
+      ],
+      "topics": [
+        "app-protocols",
+        "lab-actuators"
+      ]
+    },
+    {
+      "id": "s7",
+      "title": "Semana 7 — MQTT",
+      "sourceFiles": [
+        "raw-materials/text/Sem7_MQTT.txt",
+        "raw-materials/text/Sem6_IoTT-ProtocolComminIoT.txt"
+      ],
+      "topics": [
+        "mqtt"
+      ]
+    }
+  ],
+  "topics": {
+    "iot-intro": {
+      "type": "concept",
+      "title": "¿Qué es IoT?",
+      "unit": "s1",
+      "prerequisites": [],
+      "buildsOn": [],
+      "usedBy": [
+        "iot-architecture"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem1_IoTT-Introduction",
+        "Sem01_IoTIntroduccion",
+        "Sem01_EjerciciosConCircuitos"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "basic-circuits": {
+      "type": "method",
+      "title": "Circuitos eléctricos básicos",
+      "unit": "s1",
+      "prerequisites": [],
+      "buildsOn": [],
+      "usedBy": [
+        "delta-wye-wheatstone",
+        "diodes",
+        "breadboard-simulation",
+        "rc-lowpass"
+      ],
+      "subtopics": [
+        "ley-ohm-potencia",
+        "reduccion-serie-paralelo",
+        "divisores",
+        "kirchhoff"
+      ],
+      "sourceSlides": [
+        "Sem1_IoTT-Introduction",
+        "Sem01_IoTIntroduccion",
+        "Sem01_EjerciciosConCircuitos"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "circuit",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "iot-architecture": {
+      "type": "concept",
+      "title": "Arquitectura IoT",
+      "unit": "s2",
+      "prerequisites": [
+        "iot-intro"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "edge-fog-cloud",
+        "sensors",
+        "mcu-mpu",
+        "wireless-tech"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem2_IoTL-ArchIoT",
+        "Sem02_WheatstoneYDiodos",
+        "Sem02_LAB_SlidesSimulacionSPICE",
+        "Sem02_LAB_SimulacionTinkercad"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "edge-fog-cloud": {
+      "type": "concept",
+      "title": "Edge, Fog y Cloud computing",
+      "unit": "s2",
+      "prerequisites": [
+        "iot-architecture"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem2_IoTL-ArchIoT",
+        "Sem02_WheatstoneYDiodos",
+        "Sem02_LAB_SlidesSimulacionSPICE",
+        "Sem02_LAB_SimulacionTinkercad"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "delta-wye-wheatstone": {
+      "type": "method",
+      "title": "Delta-estrella y puente de Wheatstone",
+      "unit": "s2",
+      "prerequisites": [
+        "basic-circuits"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [
+        "delta-estrella",
+        "puente-wheatstone"
+      ],
+      "sourceSlides": [
+        "Sem2_IoTL-ArchIoT",
+        "Sem02_WheatstoneYDiodos",
+        "Sem02_LAB_SlidesSimulacionSPICE",
+        "Sem02_LAB_SimulacionTinkercad"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "circuit",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "diodes": {
+      "type": "method",
+      "title": "Diodos",
+      "unit": "s2",
+      "prerequisites": [
+        "basic-circuits"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [
+        "fundamentos",
+        "metodo-hipotesis",
+        "led-y-proteccion",
+        "rectificadores"
+      ],
+      "sourceSlides": [
+        "Sem2_IoTL-ArchIoT",
+        "Sem02_WheatstoneYDiodos",
+        "Sem02_LAB_SlidesSimulacionSPICE",
+        "Sem02_LAB_SimulacionTinkercad"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "circuit",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "breadboard-simulation": {
+      "type": "lab",
+      "title": "Protoboard y simulación de circuitos",
+      "unit": "s2",
+      "prerequisites": [
+        "basic-circuits"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem2_IoTL-ArchIoT",
+        "Sem02_WheatstoneYDiodos",
+        "Sem02_LAB_SlidesSimulacionSPICE",
+        "Sem02_LAB_SimulacionTinkercad"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "circuit",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "sensors": {
+      "type": "concept",
+      "title": "Sensores",
+      "unit": "s3",
+      "prerequisites": [
+        "iot-architecture"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "actuators",
+        "signals-domains"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem3_IoTT-SensorActuators"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "actuators": {
+      "type": "concept",
+      "title": "Actuadores",
+      "unit": "s3",
+      "prerequisites": [
+        "sensors"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "lab-actuators"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem3_IoTT-SensorActuators"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "signals-domains": {
+      "type": "concept",
+      "title": "Señales y dominios",
+      "unit": "s4",
+      "prerequisites": [
+        "sensors"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "digitization-adc",
+        "fourier-dft"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem4_IoTT-SignalRepr",
+        "Sem04_LAB_Sensores",
+        "Sem04_LAB1_ArduinoIntro",
+        "Sem04_LAB1_EjemplosTinkercadArduino"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "digitization-adc": {
+      "type": "method",
+      "title": "Digitalización y ADC",
+      "unit": "s4",
+      "prerequisites": [
+        "signals-domains"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "arduino-sensors"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem4_IoTT-SignalRepr",
+        "Sem04_LAB_Sensores",
+        "Sem04_LAB1_ArduinoIntro",
+        "Sem04_LAB1_EjemplosTinkercadArduino"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "fourier-dft": {
+      "type": "method",
+      "title": "Transformada de Fourier y DFT",
+      "unit": "s4",
+      "prerequisites": [
+        "signals-domains"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem4_IoTT-SignalRepr",
+        "Sem04_LAB_Sensores",
+        "Sem04_LAB1_ArduinoIntro",
+        "Sem04_LAB1_EjemplosTinkercadArduino"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "rc-lowpass": {
+      "type": "method",
+      "title": "Capacitores y filtro pasa bajo",
+      "unit": "s4",
+      "prerequisites": [
+        "basic-circuits"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem4_IoTT-SignalRepr",
+        "Sem04_LAB_Sensores",
+        "Sem04_LAB1_ArduinoIntro",
+        "Sem04_LAB1_EjemplosTinkercadArduino"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "arduino-sensors": {
+      "type": "lab",
+      "title": "Arduino y sensores comerciales",
+      "unit": "s4",
+      "prerequisites": [
+        "digitization-adc"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "lab-actuators"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem4_IoTT-SignalRepr",
+        "Sem04_LAB_Sensores",
+        "Sem04_LAB1_ArduinoIntro",
+        "Sem04_LAB1_EjemplosTinkercadArduino"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "circuit",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mcu-mpu": {
+      "type": "concept",
+      "title": "Microcontroladores y microprocesadores",
+      "unit": "s5",
+      "prerequisites": [
+        "iot-architecture"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem5_IoTT-CommunicationinIoT",
+        "Sem05_LAB_GuiaDiagramas"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "wireless-tech": {
+      "type": "method",
+      "title": "Tecnologías de comunicación",
+      "unit": "s5",
+      "prerequisites": [
+        "iot-architecture"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "transmission-models"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem5_IoTT-CommunicationinIoT",
+        "Sem05_LAB_GuiaDiagramas"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "transmission-models": {
+      "type": "concept",
+      "title": "Modelos de transmisión: cliente-servidor y pub/sub",
+      "unit": "s5",
+      "prerequisites": [
+        "wireless-tech"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "app-protocols",
+        "mqtt"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem5_IoTT-CommunicationinIoT",
+        "Sem05_LAB_GuiaDiagramas"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "flow-block-diagrams": {
+      "type": "lab",
+      "title": "Diagramas de flujo y de bloques",
+      "unit": "s5",
+      "prerequisites": [],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem5_IoTT-CommunicationinIoT",
+        "Sem05_LAB_GuiaDiagramas"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "flow",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "app-protocols": {
+      "type": "concept",
+      "title": "Protocolos de aplicación: HTTP, WebSocket, CoAP, AMQP",
+      "unit": "s6",
+      "prerequisites": [
+        "transmission-models"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "mqtt"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem6_IoTT-ProtocolComminIoT",
+        "Sem06_LAB_Slides_Actuadores"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "lab-actuators": {
+      "type": "lab",
+      "title": "Actuadores en el laboratorio: PWM, motor y relé",
+      "unit": "s6",
+      "prerequisites": [
+        "actuators",
+        "arduino-sensors"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [
+        "pwm",
+        "motor-rele-driver"
+      ],
+      "sourceSlides": [
+        "Sem6_IoTT-ProtocolComminIoT",
+        "Sem06_LAB_Slides_Actuadores"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "circuit",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mqtt": {
+      "type": "method",
+      "title": "MQTT",
+      "unit": "s7",
+      "prerequisites": [
+        "app-protocols",
+        "transmission-models"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [
+        "arquitectura-y-paquete",
+        "qos",
+        "retained-sesion-lwt",
+        "topicos-y-seguridad",
+        "esp32-y-uart"
+      ],
+      "sourceSlides": [
+        "Sem7_MQTT",
+        "Sem6_IoTT-ProtocolComminIoT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    }
+  }
+}

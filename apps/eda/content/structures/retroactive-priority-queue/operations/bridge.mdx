@@ -1,0 +1,319 @@
+---
+kind: operation
+title: Bridge (puente)
+order: 1
+cppSteps:
+  - step-1-timeline.cpp
+  - step-2-bridge.cpp
+  - full-implementation.cpp
+visualization:
+  type: persistent
+  steps:
+    - note: >-
+        (Ejemplo derivado, no de las diapositivas: el ejemplo del profesor
+        no tiene un puente interior no trivial). Línea de tiempo vacía:
+        Q_ahora = {} antes de cualquier operación. Este instante inicial es
+        siempre un puente trivial — el conjunto vacío es subconjunto de
+        cualquier cosa — y sirve de caso base mientras se van acumulando
+        operaciones.
+      caption: "Q_ahora = {}"
+      highlight: []
+      nodes: []
+    - note: >-
+        ins(10) en t=1: el estado acumulado pasa de {} a {10}. Cada paso de
+        aquí en adelante muestra Q_t, el estado justo después de esa
+        operación — es lo que hay que comparar contra Q_ahora para decidir
+        si un instante es puente.
+      caption: "Q_1 = {10}"
+      highlight: ["t1"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+    - note: >-
+        del-min en t=2 elimina el 10 (único elemento). Un conjunto vacío
+        es subconjunto de cualquier cosa, así que t=2 es candidato natural
+        a puente: nada de lo que había en t=2 puede "sobrevivir" y
+        contradecir la definición, porque en t=2 no había nada.
+      caption: "Q_2 = {}"
+      highlight: ["t2"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+    - note: >-
+        ins(1) en t=3: el estado acumulado crece a {1}. Todavía no se sabe
+        si el 1 va a sobrevivir hasta el presente — eso sólo se decide
+        cuando se fija Q_ahora, al final de la línea de tiempo.
+      caption: "Q_3 = {1}"
+      highlight: ["t3"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2 }
+    - note: >-
+        ins(2) en t=4: el estado acumulado crece a {1, 2}. La línea de
+        tiempo real termina aquí con un del-min más — este paso todavía
+        no lo aplica, para poder comparar el "antes" y el "después" de esa
+        última operación en los pasos siguientes.
+      caption: "Q_4 = {1, 2}"
+      highlight: ["t4"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2 }
+        - { id: t4, value: "ins(2)", parent: t3 }
+    - note: >-
+        del-min en t=5 elimina el mínimo, 1. Con esto la línea de tiempo
+        queda completa y Q_ahora queda fijo en {2} — recién ahora se puede
+        evaluar, retroactivamente, cuáles de los instantes anteriores son
+        puentes.
+      caption: "Q_ahora = {2}"
+      highlight: ["t5"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2 }
+        - { id: t4, value: "ins(2)", parent: t3 }
+        - { id: t5, value: "del-min -> quita 1", parent: t4, state: active }
+    - note: >-
+        Se revisa t=4 (Q_4 = {1,2}) contra Q_ahora = {2}: 1 ∈ Q_4 pero
+        1 ∉ Q_ahora (lo quitó el del-min de t=5). t=4 NO es puente — algo
+        que estaba ahí ya no está ahora.
+      caption: "Q_4 = {1,2} ⊄ {2} -> no es puente"
+      highlight: ["t4"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2 }
+        - { id: t4, value: "ins(2)", parent: t3, state: muted }
+        - { id: t5, value: "del-min -> quita 1", parent: t4 }
+    - note: >-
+        Se revisa t=3 (Q_3 = {1}) contra Q_ahora = {2}: 1 ∉ Q_ahora
+        tampoco. t=3 no es puente por la misma razón que t=4 — el 1 sigue
+        vivo en ese instante pero se elimina más adelante.
+      caption: "Q_3 = {1} ⊄ {2} -> no es puente"
+      highlight: ["t3"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2, state: muted }
+        - { id: t4, value: "ins(2)", parent: t3, state: muted }
+        - { id: t5, value: "del-min -> quita 1", parent: t4 }
+    - note: >-
+        Se revisa t=2 (Q_2 = {}) contra Q_ahora = {2}: el conjunto vacío es
+        subconjunto de cualquier cosa, así que t=2 SÍ es puente — es la
+        marca de "aquí la cola se cortó limpio". Nada insertado antes de
+        t=2 (el 10) puede seguir vivo después de t=2, así que ningún
+        cambio anterior a t=2 puede alterar Q_ahora.
+      caption: "Q_2 = {} ⊆ {2} -> puente"
+      highlight: ["t2"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null, state: muted }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2, state: muted }
+        - { id: t4, value: "ins(2)", parent: t3, state: muted }
+        - { id: t5, value: "del-min -> quita 1", parent: t4 }
+    - note: >-
+        Consecuencia práctica para Insert-retroactive: si se inserta una
+        operación en t=1.5 (después del puente t=2... no, ANTES: entre t1
+        y t2), el estado Q_2 sí puede cambiar (ahora entra en juego para el
+        del-min de t2) — pero el trabajo de recomputar se detiene EN t=2,
+        no sigue hasta t=5. El puente actúa como punto de parada: nunca
+        hace falta rehacer más allá del primer puente que se encuentra
+        avanzando desde el punto de inserción.
+      caption: "insertar en t=1.5 sólo obliga a recomputar hasta el puente t=2"
+      highlight: ["t15", "t2"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null, state: muted }
+        - { id: t15, value: "ins(7)", parent: t1, state: active }
+        - { id: t2, value: "del-min -> quita 7 (recomputado)", parent: t15, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2, state: shared }
+        - { id: t4, value: "ins(2)", parent: t3, state: shared }
+        - { id: t5, value: "del-min -> quita 1", parent: t4, state: shared }
+    - note: >-
+        En cambio, si la operación se inserta DESPUÉS del puente más
+        cercano por delante de t=2 — por ejemplo en t=4.5, entre ins(2) y
+        el del-min final — sí cambia directamente lo que Q_ahora devuelve:
+        no hay ningún puente entre t=4.5 y el presente que "corte" el
+        efecto, así que el cambio se propaga hasta el final sin
+        posibilidad de detenerse antes.
+      caption: "insertar después del último puente sí cambia Q_ahora"
+      highlight: ["t45", "t5"]
+      nodes:
+        - { id: t1, value: "ins(10)", parent: null, state: muted }
+        - { id: t2, value: "del-min -> quita 10", parent: t1, state: marked }
+        - { id: t3, value: "ins(1)", parent: t2, state: muted }
+        - { id: t4, value: "ins(2)", parent: t3, state: muted }
+        - { id: t45, value: "ins(0)", parent: t4, state: active }
+        - { id: t5, value: "del-min -> quita 0 (antes quitaba 1)", parent: t45, state: active }
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## Qué hace
+
+Decide si un instante `t'` de la línea de tiempo es un **puente**: un punto
+donde el estado de la cola de prioridad "se corta limpio" respecto al
+presente.
+
+## Intuición
+
+Un tiempo `t'` es un puente si todo lo que estaba presente en la cola en
+ese instante sigue presente ahora — nada de lo que había en `t'` fue
+eliminado después. Es el concepto central de todo el tema: si se encuentra
+un puente cerca de un tiempo `t` cualquiera, se sabe que **nada anterior al
+puente** puede haber sido eliminado en o después de `t` sin que ese
+elemento haya pasado, primero, por sobrevivir al puente. Eso acota
+exactamente cuánta línea de tiempo hay que mirar para responder cualquier
+pregunta sobre "qué se eliminó desde tal tiempo" — que es justo lo que
+necesita [Compute-M](/structures/retroactive-priority-queue/operations/compute-m).
+
+## Algoritmo
+
+Definición (páginas 56-57): un tiempo `t'` es un puente si
+
+$$Q_{t'} \subseteq Q_{ahora}$$
+
+es decir, todo elemento presente en la priority queue en el instante `t'`
+sigue presente en el presente (`Q_ahora`).
+
+Por qué ayuda: si `t'` es un puente, ningún elemento presente en `t'` puede
+aparecer en el conjunto "eliminado desde `t`" para ningún $t \ge t'$ — por
+definición, son sobrevivientes. Encontrar el puente más cercano antes de un
+tiempo `t` da, entonces, una cota exacta de dónde puede empezar a buscarse
+lo que se eliminó desde `t`: nunca antes del puente.
+
+> **Nota de apoyo** (no está en las diapositivas): el instante "antes de
+> toda operación" ($Q = \emptyset$) es trivialmente un puente, porque el conjunto
+> vacío es subconjunto de cualquier cosa. Es útil como caso base: siempre
+> existe al menos un puente (el inicio de la línea de tiempo), aunque no
+> haya ninguno interior.
+
+## Pseudocódigo
+
+El profesor no da pseudocódigo para esta sección — el mazo entero de este
+tema no trae "Algoritmo N", sólo la definición y la fórmula (ver
+[Compute-M](/structures/retroactive-priority-queue/operations/compute-m)).
+Lo siguiente es la única forma directa de aplicar la definición:
+
+```
+EsPuente(t', Q_ahora, Q_t'):
+    devolver Q_t' ⊆ Q_ahora
+
+PuenteMasCercanoAntes(t):
+    para t' desde el tiempo inmediatamente antes de t, retrocediendo:
+        si EsPuente(t'): devolver t'
+    devolver "inicio de la línea de tiempo"   # siempre es puente
+```
+
+Todo lo anterior es sobre **construir/identificar** un puente. Una vez que
+un puente ya está confirmado, se usa como atajo para responder consultas
+sobre el pasado sin reconstruir nada desde el inicio de la línea de tiempo:
+basta partir del estado conocido en el puente y aplicar sólo las
+operaciones entre el puente y el instante consultado.
+
+<Visualization viz={{
+  type: 'persistent',
+  steps: [
+    {
+      note: 'Retomando el ejemplo derivado: ins(10) en t=1, del-min en t=2 (quita 10, Q_2 = ∅), ins(1) en t=3, ins(2) en t=4, del-min en t=5 (quita 1). t=2 ya quedó confirmado como puente en el análisis de arriba — no hay que volver a probarlo.',
+      caption: 'puente ya confirmado: t=2 (Q_2 = ∅)',
+      highlight: ['t2'],
+      nodes: [
+        { id: 't1', value: 'ins(10)', parent: null },
+        { id: 't2', value: 'del-min -> Q_2 = ∅ (puente)', parent: 't1', state: 'answer' },
+        { id: 't3', value: 'ins(1)', parent: 't2' },
+        { id: 't4', value: 'ins(2)', parent: 't3' },
+        { id: 't5', value: 'del-min -> quita 1', parent: 't4' },
+      ],
+    },
+    {
+      note: 'Llega una consulta: "¿qué había en la cola justo después de t=3?" (Q_3). No es una operación retroactiva nueva — es leer un instante intermedio ya fijado en la línea de tiempo.',
+      caption: 'consulta: Q_3 = ?',
+      highlight: ['t3'],
+      nodes: [
+        { id: 't1', value: 'ins(10)', parent: null },
+        { id: 't2', value: 'del-min -> Q_2 = ∅ (puente)', parent: 't1', state: 'answer' },
+        { id: 't3', value: 'ins(1) — consultado', parent: 't2', state: 'active' },
+        { id: 't4', value: 'ins(2)', parent: 't3' },
+        { id: 't5', value: 'del-min -> quita 1', parent: 't4' },
+      ],
+    },
+    {
+      note: 'Como t=2 ya es puente conocido, t=1 nunca se vuelve a mirar: Q_2 = ∅ se toma como punto de partida confiable, sin reproducir ins(10) ni volver a comprobar que t=2 es puente.',
+      caption: 't=1 se descarta: se parte directo de Q_2 = ∅',
+      highlight: ['t2'],
+      nodes: [
+        { id: 't1', value: 'ins(10)', parent: null, state: 'muted' },
+        { id: 't2', value: 'del-min -> Q_2 = ∅ (puente)', parent: 't1', state: 'answer' },
+        { id: 't3', value: 'ins(1) — consultado', parent: 't2', state: 'active' },
+        { id: 't4', value: 'ins(2)', parent: 't3' },
+        { id: 't5', value: 'del-min -> quita 1', parent: 't4' },
+      ],
+    },
+    {
+      note: 'Se aplica sólo lo que queda entre el puente y el instante pedido: una única operación, ins(1) en t=3. No hace falta tocar t=4 ni t=5 — están después del instante consultado y no participan en la respuesta.',
+      caption: 'Q_2 = ∅  ->  aplicar ins(1)  ->  Q_3 = {1}',
+      highlight: ['t3'],
+      nodes: [
+        { id: 't1', value: 'ins(10)', parent: null, state: 'muted' },
+        { id: 't2', value: 'del-min -> Q_2 = ∅ (puente)', parent: 't1', state: 'shared' },
+        { id: 't3', value: 'ins(1) -> Q_3 = {1}', parent: 't2', state: 'active' },
+        { id: 't4', value: 'ins(2)', parent: 't3', state: 'muted' },
+        { id: 't5', value: 'del-min -> quita 1', parent: 't4', state: 'muted' },
+      ],
+    },
+    {
+      note: 'Respuesta: Q_3 = {1}, obtenida con dos pasos (el puente ya conocido + un ins) en vez de reproducir t1, t2 y t3 desde cero. Es el mismo puente usado para construir la respuesta que antes se usó para acotar el trabajo — aquí como atajo de consulta, no de inserción retroactiva.',
+      caption: 'Q_3 = {1} — respondida desde el puente, sin reproducir t1',
+      highlight: ['t3'],
+      nodes: [
+        { id: 't1', value: 'ins(10)', parent: null, state: 'muted' },
+        { id: 't2', value: 'del-min -> Q_2 = ∅ (puente)', parent: 't1', state: 'answer' },
+        { id: 't3', value: 'ins(1) -> Q_3 = {1}', parent: 't2', state: 'answer' },
+        { id: 't4', value: 'ins(2)', parent: 't3', state: 'muted' },
+        { id: 't5', value: 'del-min -> quita 1', parent: 't4', state: 'muted' },
+      ],
+    },
+  ],
+}} />
+
+## C++
+
+Ver `step-2-bridge.cpp` y `full-implementation.cpp` en el editor de arriba.
+
+## Complejidad temporal
+
+El profesor no da una cota propia para esta operación (ver `meta.yaml`): se
+presenta como definición, no como algoritmo con costo propio. El costo real
+de mantenerla y consultarla queda delegado al BST balanceado con
+información agregada que sostiene a
+[Compute-M](/structures/retroactive-priority-queue/operations/compute-m).
+
+## Complejidad espacial
+
+No la da el profesor.
+
+## Ejemplo
+
+Con el [ejemplo trabajado del profesor](/structures/retroactive-priority-queue/examples)
+($Q_{ahora} = \{8\}$, tras `ins(5), ins(2), del-min, ins(8), del-min`), el único
+puente es el inicio de la línea de tiempo ($Q = \emptyset$ antes de `t=1`): ninguno
+de los estados intermedios ($\{5\}$, $\{5,2\}$, $\{5\}$, $\{5,8\}$) es subconjunto
+de $\{8\}$.
+
+*(Ejemplo derivado; no aparece en las diapositivas)*: sobre
+`ins(10), del-min, ins(1), ins(2), del-min` (`t=1..5`), con
+$Q_{ahora} = \{2\}$, el instante `t=2` (justo después del primer `del-min`, con
+$Q_{t=2} = \emptyset$) **sí** es un puente interior: nada de lo insertado antes de
+`t=2` (el 10) sigue vivo, y el vacío es subconjunto de cualquier cosa. Es
+el mismo ejemplo de la visualización de arriba.
+
+## Casos límite
+
+- **Ningún puente interior**: siempre queda el inicio de la línea de
+  tiempo como puente trivial ($Q = \emptyset$); nunca hay "cero puentes".
+- **El presente mismo**: el tiempo actual es siempre un puente
+  ($Q_{ahora} \subseteq Q_{ahora}$ es trivialmente cierto), pero no sirve para acotar
+  nada hacia atrás — se necesita el más cercano *antes* del tiempo de
+  interés.
+- **Cola vacía en todo momento**: si nunca se insertó nada, todo instante
+  es un puente.

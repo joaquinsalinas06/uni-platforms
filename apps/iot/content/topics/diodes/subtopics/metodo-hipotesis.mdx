@@ -1,0 +1,585 @@
+---
+kind: subtopic
+order: 2
+title: Método de hipótesis
+---
+
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+
+Un diodo no es lineal: no se puede meter directamente en un sistema de ecuaciones
+como una resistencia. El profesor resuelve esto con un método de **prueba y
+validación** — se supone un estado, se resuelve como si fuera lineal, y se comprueba
+si el resultado es físicamente posible. Si no lo es, se cambia la hipótesis y se
+repite. Es el método más preguntado del curso: hay que dominarlo con exhaustividad.
+
+## Conceptos
+
+### El método, en 5 pasos
+
+1. **Suponer** un estado para cada diodo (ON u OFF).
+2. **Redibujar** el circuito reemplazando cada diodo por su modelo: ON → fuente
+   $V_\gamma$ (0.7 V Si, 0.3 V Ge); OFF → circuito abierto.
+3. **Resolver** el circuito resultante (que ya es lineal) con las herramientas
+   normales (Ohm, Kirchhoff, reducción serie-paralelo).
+4. **Validar**:
+   - Si se supuso **ON**: la corriente que resulta por el diodo debe ser
+     $I_D > 0$ (en el sentido ánodo→cátodo). Si sale negativa, la hipótesis es falsa.
+   - Si se supuso **OFF**: el voltaje ánodo-cátodo resultante debe cumplir
+     $V_{AK} < V_\gamma$. Si el circuito "querría" poner más voltaje que eso en
+     directa, la hipótesis es falsa.
+5. **Ajustar y repetir**: si alguna validación falla, cambia esa hipótesis y vuelve al
+   paso 2. Con $n$ diodos hay $2^n$ combinaciones posibles, pero rara vez hace falta
+   probarlas todas — el sentido común del circuito (¿qué rama tiene más voltaje para
+   empujar corriente?) reduce mucho las opciones razonables.
+
+### El voltaje mínimo para conducir
+
+Un diodo con una fuente y una resistencia en serie sólo conduce cuando la fuente
+supera el umbral $V_\gamma$ (más cualquier otra caída fija en la rama, como otra
+fuente en oposición). Por debajo de ese mínimo, el diodo está en OFF sin importar
+cuánta resistencia haya.
+
+<Visualization viz={{
+  type: 'circuit',
+  interactive: { part: 'E', min: 0, max: 2, step: 0.05, label: 'E' },
+  steps: [{
+    note: 'Mueve E: el diodo de silicio pasa a ON exactamente cuando E supera 0.7 V.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 4, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'a', x: 4, y: 0 }, { id: 'a2', x: 4, y: 4 }],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 1, label: 'E' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 't', to: 'a', label: 'D1', tone: 'si' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'a2', value: 1000, label: 'R1' },
+        { id: 'w1', kind: 'wire', from: 'a2', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'I', showValue: true }],
+    },
+  }],
+}} />
+
+## Método paso a paso
+
+Ver la sección "El método, en 5 pasos" arriba — se aplica idéntico en todos los
+ejercicios de esta página, cambiando sólo el circuito.
+
+## Ejemplo resuelto
+
+Todos los ejercicios del material (1a a 5), resueltos completos con el método de
+hipótesis.
+
+### Ejercicio 1a
+
+$V_1=5\,\text{V}$, $R_1=10\,\text{k}\Omega$ en paralelo con ($R_2=1\,\text{k}\Omega$ +
+D1 de Ge en serie). Como $V_1$ está conectado directo al nodo superior (sin
+resistencia en serie), ese nodo queda fijo en 5 V pase lo que pase con D1.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 1a',
+  steps: [{
+    note: 'Hipótesis: D1 (Ge) en ON → fuente de 0.3 V. El nodo superior está fijo en 5 V, así que I(R1) = 5/10k e I(R2) = (5 − 0.3)/1k. Validación: I(D1) = I(R2) = 4.7 mA > 0 ✓, la hipótesis es correcta.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'n2', x: 8, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'b2', x: 8, y: 4 } ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'n1' }, { id: 'w1', kind: 'wire', from: 'n1', to: 'n2' },
+        { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 10000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n2', to: 'b2', value: 1000, label: 'R2' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'b2', to: 'g', label: 'D1', tone: 'ge', via: [[8, 8]] },
+        { id: 'w2', kind: 'wire', from: 'b1', to: 'g' },
+      ],
+      diodes: [{ part: 'D1', assume: 'on' }],
+      hypothesis: 'D1 ON',
+      currents: [{ part: 'R1', label: 'I(R1)', showValue: true }, { part: 'R2', label: 'I(R2)', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.0005, 'I(R2)': 0.0047 },
+  }],
+}} />
+
+### Ejercicio 1b
+
+Igual que 1a pero con $R_3=1\,\text{k}\Omega$ en serie entre $V_1$ y el nodo común:
+ahora ese nodo **no** queda fijo en 5 V.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 1b',
+  steps: [{
+    note: 'Hipótesis: D1 (Ge) en ON. Con R3 en serie, el nodo n ya no es 5 V fijo: se resuelve el nodo n con R1 y (R2 + 0.3 V). Validación: I(D1) = I(R2) ≈ 2.22 mA > 0 ✓.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 }, { id: 'n1', x: 8, y: 0 }, { id: 'n2', x: 12, y: 0 }, { id: 'b1', x: 8, y: 8 }, { id: 'b2', x: 12, y: 4 } ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+        { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: 'R3' },
+        { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' }, { id: 'w1', kind: 'wire', from: 'n1', to: 'n2' },
+        { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 10000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n2', to: 'b2', value: 1000, label: 'R2' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'b2', to: 'g', label: 'D1', tone: 'ge', via: [[12, 8]] },
+        { id: 'w2', kind: 'wire', from: 'b1', to: 'g' },
+      ],
+      diodes: [{ part: 'D1', assume: 'on' }],
+      hypothesis: 'D1 ON',
+      currents: [{ part: 'R1', label: 'I(R1)', showValue: true }, { part: 'R2', label: 'I(R2)', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.00025238, 'I(R2)': 0.0022238 },
+  }, {
+    note: 'Fuente invertida (V1 con el + abajo). Hipótesis: D1 OFF → circuito abierto. Queda R3 + R1 en serie: I = 5/11k ≈ 0.455 mA (en sentido contrario). Validación: V_AK(D1) = V(n) − 0 ≈ −4.55 V < 0.3 V ✓, D1 no conduce.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 }, { id: 'n1', x: 8, y: 0 }, { id: 'n2', x: 12, y: 0 }, { id: 'b1', x: 8, y: 8 }, { id: 'b2', x: 12, y: 4 } ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 't', to: 'g', value: 5, label: 'V1' },
+        { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: 'R3' },
+        { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' }, { id: 'w1', kind: 'wire', from: 'n1', to: 'n2' },
+        { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 10000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n2', to: 'b2', value: 1000, label: 'R2' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'b2', to: 'g', label: 'D1', tone: 'ge', via: [[12, 8]] },
+        { id: 'w2', kind: 'wire', from: 'b1', to: 'g' },
+      ],
+      diodes: [{ part: 'D1', assume: 'off' }],
+      hypothesis: 'Fuente invertida · D1 OFF',
+      currents: [{ part: 'R1', label: 'I(R1)', showValue: true }],
+    },
+    expect: { 'I(R1)': -0.00045455, 'I(R2)': 0, 'V(n1)': -4.5455 },
+  }],
+}} />
+
+Si **se invierte la fuente** ($V_1=-5\,\text{V}$), el nodo n queda negativo: D1 pasa a
+polarización inversa y se **apaga** (OFF). Toda la corriente de la fuente circula
+entonces sólo por R1 y R3 en serie; por R2 no pasa nada.
+
+### Ejercicio 1c
+
+Se añade, desde el mismo nodo n, una segunda rama con $R_5=3.3\,\text{k}\Omega$ y
+$R_4=4.7\,\text{k}\Omega$ en serie con un diodo D2 de **silicio** montado **al revés**:
+su ánodo va a tierra y su cátodo hacia R4 (en la figura el triángulo apunta hacia arriba).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 1c',
+  steps: [
+    {
+      note: 'Hipótesis 1: D1 (Ge) y D2 (Si) ON. Para D2 eso exige que la corriente entre por su ánodo (tierra) y suba por R4-R5 hacia n, pero n está a potencial positivo: I(D2) sale negativa → hipótesis falsa.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 },
+          { id: 'n1', x: 8, y: 0 }, { id: 'n2', x: 14, y: 0 }, { id: 'b1', x: 8, y: 12 },
+          { id: 'm', x: 14, y: 6 }, { id: 'n3', x: 20, y: 0 }, { id: 'q', x: 20, y: 6 }, { id: 'bq', x: 20, y: 12 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+          { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: 'R3' },
+          { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' }, { id: 'w1', kind: 'wire', from: 'n1', to: 'n2' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 10000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n2', to: 'm', value: 1000, label: 'R2' },
+          { id: 'D1', kind: 'diode', model: 'ge', from: 'm', to: 'g', label: 'D1', tone: 'ge', via: [[14, 12]] },
+          { id: 'R5', kind: 'resistor', from: 'n2', to: 'n3', value: 3300, label: 'R5' },
+          { id: 'R4', kind: 'resistor', from: 'n3', to: 'q', value: 4700, label: 'R4' },
+          { id: 'D2', kind: 'diode', model: 'si', from: 'bq', to: 'q', label: 'D2', tone: 'si' },
+          { id: 'w3', kind: 'wire', from: 'b1', to: 'g' }, { id: 'w4', kind: 'wire', from: 'bq', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }], hypothesis: 'D1 ON · D2 ON (falsa: I(D2) < 0)',
+      },
+    },
+    {
+      note: 'Hipótesis 2: D1 ON · D2 OFF. La rama R5-R4-D2 queda abierta y el circuito es el mismo del 1b. Validación: I(D1) ≈ 2.22 mA > 0 ✓ y V_AK(D2) = 0 − V(q) ≈ −2.52 V < 0.7 V ✓.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 },
+          { id: 'n1', x: 8, y: 0 }, { id: 'n2', x: 14, y: 0 }, { id: 'b1', x: 8, y: 12 },
+          { id: 'm', x: 14, y: 6 }, { id: 'n3', x: 20, y: 0 }, { id: 'q', x: 20, y: 6 }, { id: 'bq', x: 20, y: 12 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+          { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: 'R3' },
+          { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' }, { id: 'w1', kind: 'wire', from: 'n1', to: 'n2' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 10000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n2', to: 'm', value: 1000, label: 'R2' },
+          { id: 'D1', kind: 'diode', model: 'ge', from: 'm', to: 'g', label: 'D1', tone: 'ge', via: [[14, 12]] },
+          { id: 'R5', kind: 'resistor', from: 'n2', to: 'n3', value: 3300, label: 'R5' },
+          { id: 'R4', kind: 'resistor', from: 'n3', to: 'q', value: 4700, label: 'R4' },
+          { id: 'D2', kind: 'diode', model: 'si', from: 'bq', to: 'q', label: 'D2', tone: 'si' },
+          { id: 'w3', kind: 'wire', from: 'b1', to: 'g' }, { id: 'w4', kind: 'wire', from: 'bq', to: 'g' },
+        ],
+        diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'off' }],
+        hypothesis: 'D1 ON · D2 OFF (válida)',
+        currents: [{ part: 'R1', label: 'I(R1)', showValue: true }, { part: 'R2', label: 'I(R2)', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.00025238, 'I(R2)': 0.0022238, 'I(R4)': 0, 'V(q)': 2.5238 },
+    },
+  ],
+}} />
+
+Resultado: como D2 está en inversa, su rama no conduce y $I_{R1}\approx0.252\,\text{mA}$,
+$I_{R2}\approx2.22\,\text{mA}$, igual que en el 1b.
+
+### Ejercicio 2 — Ge y Si en paralelo, resistencias de bajo valor
+
+$V=10\,\text{V}$ conectado directo (sin serie) a tres ramas en paralelo: R=5 Ω + D
+(Ge), R=5 Ω + D (Si), y R=10 Ω sola.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 2',
+  steps: [{
+    note: 'Hipótesis: Ge ON y Si ON. El nodo superior está fijo en 10 V (fuente sin serie), así que cada rama se resuelve sola: I(Ge) = (10 − 0.3)/5, I(Si) = (10 − 0.7)/5. Validación: 1.94 A > 0 y 1.86 A > 0 ✓. P(10 Ω) = 10²/10 = 10 W.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'n2', x: 8, y: 0 }, { id: 'n3', x: 12, y: 0 }, { id: 'm1', x: 4, y: 4 }, { id: 'm2', x: 8, y: 4 }, { id: 'b3', x: 12, y: 8 } ],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 't', value: 10, label: 'V' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'n1' }, { id: 'w1', kind: 'wire', from: 'n1', to: 'n2' }, { id: 'w2', kind: 'wire', from: 'n2', to: 'n3' },
+        { id: 'R1', kind: 'resistor', from: 'n1', to: 'm1', value: 5, label: '5' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'm1', to: 'g', label: 'Ge', tone: 'ge', via: [[4, 8]] },
+        { id: 'R2', kind: 'resistor', from: 'n2', to: 'm2', value: 5, label: '5' },
+        { id: 'D2', kind: 'diode', model: 'si', from: 'm2', to: 'g', label: 'Si', tone: 'si', via: [[8, 8]] },
+        { id: 'R3', kind: 'resistor', from: 'n3', to: 'b3', value: 10, label: '10' },
+        { id: 'w3', kind: 'wire', from: 'b3', to: 'g' },
+      ],
+      diodes: [{ part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }],
+      hypothesis: 'Ge ON · Si ON',
+      currents: [{ part: 'R1', label: 'I(Ge)', showValue: true }, { part: 'R2', label: 'I(Si)', showValue: true }],
+    },
+    expect: { 'I(R1)': 1.94, 'I(R2)': 1.86, 'P(R3)': 10 },
+  }],
+}} />
+
+### Ejercicio 3 — hipótesis que falla al cambiar la fuente
+
+$R_1=1\,\text{k}\Omega$ en paralelo con ($R_2=2.2\,\text{k}\Omega$ + D de silicio + una
+fuente de oposición de 5 V). El diodo sólo conduce si $E$ es lo bastante grande para
+vencer **tanto** el umbral del diodo **como** la fuente de 5 V en su contra.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 3 — E = 3 V y E = 10 V',
+  steps: [
+    {
+      note: 'Hipótesis: D en ON. Resolviendo, la corriente por el diodo sale NEGATIVA (E=3V no alcanza para vencer 0.7V + 5V) — hipótesis inválida.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'm', x: 8, y: 4 }, { id: 'p', x: 8, y: 8 } ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 3, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n1' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n1', to: 'm', value: 2200, label: 'R2' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'm', to: 'p', label: 'D', tone: 'si' },
+          { id: 'Vd', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '5V' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'D ON (falsa: I(D) < 0)',
+      },
+      expect: { 'I(R1)': 0.003 },
+    },
+    {
+      note: 'Corrección: D en OFF. Se valida V_AK del diodo: con D abierto, el nodo m queda a 3V y el cátodo (tras el diodo) a 5V → V_AK = 3−5 = −2V < 0.7V. ✓ La rama de R2 no conduce.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'm', x: 8, y: 4 }, { id: 'p', x: 8, y: 8 } ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 3, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n1' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n1', to: 'm', value: 2200, label: 'R2' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'm', to: 'p', label: 'D', tone: 'si' },
+          { id: 'Vd', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '5V' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'D OFF (válida)',
+        currents: [{ part: 'R1', label: 'i1', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.003, 'I(R2)': 0 },
+    },
+    {
+      note: 'E = 10 V. Hipótesis: D en ON. i1 = 10/1k = 10 mA; i2 = (10 − 0.7 − 5)/2.2k ≈ 1.95 mA. Validación: i2 > 0 ✓, la hipótesis ON es correcta.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'm', x: 8, y: 4 }, { id: 'p', x: 8, y: 8 } ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 10, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n1' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n1', to: 'm', value: 2200, label: 'R2' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'm', to: 'p', label: 'D', tone: 'si' },
+          { id: 'Vd', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '5V' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'E = 10 V · D ON (válida)',
+        currents: [{ part: 'R1', label: 'i1', showValue: true }, { part: 'R2', label: 'i2', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.01, 'I(R2)': 0.0019545 },
+    },
+  ],
+}} />
+
+Con $E=10\,\text{V}$, en cambio, sí alcanza: $i_1 = 10/1\text{k} = 10\,\text{mA}$, y con
+D en ON, $i_2 = (10-0.7-5)/2.2\text{k} \approx 1.95\,\text{mA} > 0$ — hipótesis ON
+válida.
+
+### Ejercicio 4 — mínimo voltaje que hace conducir al diodo
+
+$V_1$ alimenta, a través de una resistencia de $1\,\text{k}\Omega$, un nodo n del que
+salen dos ramas a tierra: $1\,\text{k}\Omega$ + diodo D de germanio + una fuente de 4 V
+en oposición (su + hacia el cátodo), y la resistencia $R=1\,\text{k}\Omega$ sola.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 4 — V1 = 5 V y V1 = 2 V',
+  steps: [
+    {
+      note: 'Hipótesis: D (Ge) en ON. Resolviendo el nodo n, la corriente por D sale negativa: con V1=5V no alcanza para vencer 4.3V (0.3V del diodo + 4V de la fuente).',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 },
+          { id: 'n1', x: 8, y: 0 }, { id: 'b1', x: 8, y: 12 }, { id: 'm', x: 4, y: 4 }, { id: 'p', x: 4, y: 8 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+          { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: '1k' },
+          { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' },
+          { id: 'R2', kind: 'resistor', from: 'n0', to: 'm', value: 1000, label: '1k' },
+          { id: 'D', kind: 'diode', model: 'ge', from: 'm', to: 'p', label: 'D', tone: 'ge' },
+          { id: 'V4', kind: 'vsource', from: 'g', to: 'p', value: 4, label: '4V' },
+          { id: 'R', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'D ON (falsa: I(D) < 0)',
+      },
+    },
+    {
+      note: 'Corrección: D en OFF. El nodo n queda en V1/2 = 2.5 V (divisor 1k-R) y toda la corriente pasa por R. Validación: V_AK = 2.5 − 4 = −1.5 V < 0.3 V ✓.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 },
+          { id: 'n1', x: 8, y: 0 }, { id: 'b1', x: 8, y: 12 }, { id: 'm', x: 4, y: 4 }, { id: 'p', x: 4, y: 8 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+          { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: '1k' },
+          { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' },
+          { id: 'R2', kind: 'resistor', from: 'n0', to: 'm', value: 1000, label: '1k' },
+          { id: 'D', kind: 'diode', model: 'ge', from: 'm', to: 'p', label: 'D', tone: 'ge' },
+          { id: 'V4', kind: 'vsource', from: 'g', to: 'p', value: 4, label: '4V' },
+          { id: 'R', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'D OFF (válida para V1=5V)',
+        currents: [{ part: 'R', label: 'I(R)', showValue: true }],
+      },
+      expect: { 'I(R)': 0.0025, 'I(R2)': 0, 'V(n0)': 2.5 },
+    },
+    {
+      note: 'V1 = 2 V. Hipótesis: D en OFF. V(n) = 1 V; validación: V_AK = 1 − 4 = −3 V < 0.3 V ✓. I(R) = 2/2k = 1 mA.',
+      circuit: {
+        nodes: [
+          { id: 'g', x: 0, y: 12, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n0', x: 4, y: 0 },
+          { id: 'n1', x: 8, y: 0 }, { id: 'b1', x: 8, y: 12 }, { id: 'm', x: 4, y: 4 }, { id: 'p', x: 4, y: 8 },
+        ],
+        parts: [
+          { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 2, label: 'V1' },
+          { id: 'R3', kind: 'resistor', from: 't', to: 'n0', value: 1000, label: '1k' },
+          { id: 'w0', kind: 'wire', from: 'n0', to: 'n1' },
+          { id: 'R2', kind: 'resistor', from: 'n0', to: 'm', value: 1000, label: '1k' },
+          { id: 'D', kind: 'diode', model: 'ge', from: 'm', to: 'p', label: 'D', tone: 'ge' },
+          { id: 'V4', kind: 'vsource', from: 'g', to: 'p', value: 4, label: '4V' },
+          { id: 'R', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'V1 = 2 V · D OFF (válida)',
+        currents: [{ part: 'R', label: 'I(R)', showValue: true }],
+      },
+      expect: { 'I(R)': 0.001, 'I(R2)': 0 },
+    },
+  ],
+}} />
+
+Con $V_1=2\,\text{V}$ (último paso): D queda OFF y $I(R)=V_1/2\text{k}=1\,\text{mA}$.
+Igualando la condición de encendido ($V_n = 4.3\,\text{V}$ con $V_n=V_1/2$) se obtiene
+el **mínimo** voltaje que hace conducir al diodo: $V_1 = 8.6\,\text{V}$ (usa el slider
+de la sección de conceptos para explorar este umbral con otro ejemplo más simple).
+
+### Ejercicio 5 — todas las ramas en ON
+
+$E=24\,\text{V}$ alimenta, a través de dos resistencias de $3\,\text{k}\Omega$ en
+cascada, tres ramas con diodos de silicio y germanio combinados.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Ejercicio 5 — E = 24 V',
+  steps: [{
+    note: 'Hipótesis: los 5 diodos en ON (Si = 0.7 V, Ge = 0.3 V). Se resuelven los nodos n1 y n2. Validación: I1, I2 e I3 salen positivas ✓, la hipótesis es correcta. V1 = 6k·I1 y V2 = 6k·I2.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 16, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 6, y: 0 }, { id: 'n2', x: 12, y: 0 },
+        { id: 'c1', x: 6, y: 4 }, { id: 'c2', x: 12, y: 4 }, { id: 'c3', x: 18, y: 4 },
+        { id: 'd2', x: 12, y: 8 }, { id: 'd3', x: 18, y: 8 },
+        { id: 'r1', x: 6, y: 12 }, { id: 'r2', x: 12, y: 12 }, { id: 'r3', x: 18, y: 12 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 24, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'n1', value: 3000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'n2', value: 3000, label: 'R2' },
+        { id: 'D1', kind: 'diode', model: 'si', from: 'n1', to: 'c1', label: 'D1', tone: 'si' },
+        { id: 'R3', kind: 'resistor', from: 'c1', to: 'r1', value: 6000, label: 'R3' },
+        { id: 'w1', kind: 'wire', from: 'r1', to: 'g', via: [[6, 16]] },
+        { id: 'D2', kind: 'diode', model: 'si', from: 'n2', to: 'c2', label: 'D2', tone: 'si' },
+        { id: 'D3', kind: 'diode', model: 'si', from: 'c2', to: 'd2', label: 'D3', tone: 'si' },
+        { id: 'R4', kind: 'resistor', from: 'd2', to: 'r2', value: 6000, label: 'R4' },
+        { id: 'w2', kind: 'wire', from: 'r2', to: 'g', via: [[12, 16]] },
+        { id: 'D4', kind: 'diode', model: 'si', from: 'n2', to: 'c3', label: 'D4', tone: 'si', via: [[18, 0]] },
+        { id: 'D5', kind: 'diode', model: 'ge', from: 'c3', to: 'd3', label: 'D5', tone: 'ge' },
+        { id: 'R5', kind: 'resistor', from: 'd3', to: 'r3', value: 6000, label: 'R5' },
+        { id: 'w3', kind: 'wire', from: 'r3', to: 'g', via: [[18, 16]] },
+      ],
+      diodes: [
+        { part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }, { part: 'D3', assume: 'on' },
+        { part: 'D4', assume: 'on' }, { part: 'D5', assume: 'on' },
+      ],
+      hypothesis: 'Todos los diodos ON',
+      currents: [
+        { part: 'R3', label: 'I1', showValue: true }, { part: 'R4', label: 'I2', showValue: true }, { part: 'R5', label: 'I3', showValue: true },
+      ],
+    },
+    expect: { 'I(R3)': 0.0019625, 'I(R4)': 0.00090625, 'I(R5)': 0.000972917, 'V(n1)': 12.475, 'V(n2)': 6.8375, 'V(c1)': 11.775, 'V(d2)': 5.4375 },
+  }],
+}} />
+
+## Errores típicos
+
+- Probar sólo una hipótesis y no validarla: sin el paso 4, "resolver" no basta.
+- Cuando hay dos diodos en la misma rama en serie (como en el ejercicio 5),
+  olvidar que **ambas** caídas ($V_{\gamma,1}+V_{\gamma,2}$) se restan del voltaje
+  disponible.
+- Al invertir una fuente (ejercicio 1b), asumir que el diodo sigue en el mismo estado:
+  hay que rehacer la validación con el nuevo sentido de voltaje.
+
+## Pregunta tipo examen
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  steps: [{
+    note: 'Circuito del enunciado: R1 en paralelo con la rama R2 + D (Si) + 5 V en oposición. E toma 4 V y luego 8 V.',
+    circuit: {
+      nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'm', x: 8, y: 4 }, { id: 'p', x: 8, y: 8 } ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', label: 'E' },
+        { id: 'w0', kind: 'wire', from: 't', to: 'n1' },
+        { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'm', value: 2200, label: 'R2' },
+        { id: 'D', kind: 'diode', model: 'si', from: 'm', to: 'p', label: 'D', tone: 'si' },
+        { id: 'Vd', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '5V' },
+        { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+      ],
+      currents: [{ part: 'R1', label: 'i_1' }, { part: 'R2', label: 'i_2' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 4,
+  statement: "En el circuito de la figura, $R_1 = 1\\,\\text{k}\\Omega$ está en paralelo con la serie de $R_2 = 2.2\\,\\text{k}\\Omega$, un diodo de silicio $D$ y una fuente de $5$ V que se opone a la conducción (su $+$ apunta hacia el cátodo de $D$). Todo se alimenta con una fuente $E$. Determina si el diodo conduce para $E = 4$ V y para $E = 8$ V, y calcula las corrientes $i_1$ e $i_2$ en cada caso.",
+  hints: [
+    "El diodo necesita vencer su propio umbral ($0.7$ V) **más** la fuente de $5$ V en su contra: la rama sólo conduce si $E > 5.7$ V (toda $E$ cae sobre esa rama, porque está en paralelo con la fuente).",
+    "Para $E = 4$ V, plantea $D$ OFF y valida que $V_{AK} < 0.7$ V.",
+    "Para $E = 8$ V, plantea $D$ ON y valida que $i_2 = (E - 0.7 - 5)/2.2\\,\\text{k}\\Omega$ salga positiva.",
+  ],
+}}>
+
+Ambas ramas cuelgan directamente de $E$, así que $i_1 = E/R_1$ siempre; lo que decide el diodo es la rama de $R_2$.
+
+**Caso $E = 4$ V**
+
+**1. Hipótesis.** $D$ **OFF** (4 V no parece alcanzar para $0.7 + 5 = 5.7$ V).
+
+**2. Resolver.** Con $D$ abierto, $i_2 = 0$ y
+
+$$
+i_1 = \frac{E}{R_1} = \frac{4\,\text{V}}{1\,\text{k}\Omega} = \boxed{4\,\text{mA}} \qquad i_2 = \boxed{0}
+$$
+
+**3. Validar.** Sin corriente, $R_2$ no cae: el ánodo queda a $4$ V y el cátodo a $5$ V:
+
+$$
+V_{AK} = 4 - 5 = -1\,\text{V} < 0.7\,\text{V} \;\checkmark
+$$
+
+(Si se hubiera supuesto ON: $i_2 = (4 - 5.7)/2.2\text{k} = -0.77$ mA $< 0$ ✗.)
+
+**4. Conclusión.** Con $E = 4$ V el diodo **no conduce**.
+
+**Caso $E = 8$ V**
+
+**1. Hipótesis.** $D$ **ON** (fuente de $0.7$ V).
+
+**2. Resolver** (KVL en la rama de $R_2$):
+
+$$
+i_1 = \frac{8}{1\,\text{k}\Omega} = \boxed{8\,\text{mA}}
+\qquad
+i_2 = \frac{E - 0.7 - 5}{R_2} = \frac{8 - 5.7}{2.2\,\text{k}\Omega} = \boxed{1.045\,\text{mA}}
+$$
+
+**3. Validar.** $i_2 = 1.045\,\text{mA} \ge 0$ ✓.
+
+**4. Conclusión.** Con $E = 8$ V el diodo **conduce**.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'Resuelto: E = 4 V y E = 8 V',
+  steps: [
+    {
+      note: 'E = 4 V · D OFF: i1 = 4 mA, i2 = 0. V_AK = 4 − 5 = −1 V < 0.7 V ✓.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'm', x: 8, y: 4 }, { id: 'p', x: 8, y: 8 } ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 4, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n1' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n1', to: 'm', value: 2200, label: 'R2' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'm', to: 'p', label: 'D', tone: 'si' },
+          { id: 'Vd', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '5V' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'off' }],
+        hypothesis: 'E = 4 V · D OFF (válida)',
+        currents: [{ part: 'R1', label: 'i_1', showValue: true }, { part: 'R2', label: 'i_2', showValue: true }],
+        voltages: [{ part: 'D', label: 'V_{AK}', plus: 'from', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.004, 'I(R2)': 0, 'V(m,p)': -1 },
+    },
+    {
+      note: 'E = 8 V · D ON: i1 = 8 mA, i2 = (8 − 5.7)/2.2k = 1.045 mA ≥ 0 ✓.',
+      circuit: {
+        nodes: [{ id: 'g', x: 0, y: 8, ground: true }, { id: 't', x: 0, y: 0 }, { id: 'n1', x: 4, y: 0 }, { id: 'b1', x: 4, y: 8 }, { id: 'm', x: 8, y: 4 }, { id: 'p', x: 8, y: 8 } ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 8, label: 'E' },
+          { id: 'w0', kind: 'wire', from: 't', to: 'n1' },
+          { id: 'R1', kind: 'resistor', from: 'n1', to: 'b1', value: 1000, label: 'R1' },
+          { id: 'R2', kind: 'resistor', from: 'n1', to: 'm', value: 2200, label: 'R2', state: 'answer' },
+          { id: 'D', kind: 'diode', model: 'si', from: 'm', to: 'p', label: 'D', tone: 'si' },
+          { id: 'Vd', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '5V' },
+          { id: 'w1', kind: 'wire', from: 'b1', to: 'g' },
+        ],
+        diodes: [{ part: 'D', assume: 'on' }],
+        hypothesis: 'E = 8 V · D ON (válida)',
+        currents: [{ part: 'R1', label: 'i_1', showValue: true }, { part: 'R2', label: 'i_2', showValue: true }],
+      },
+      expect: { 'I(R1)': 0.008, 'I(R2)': 0.0010455 },
+    },
+  ],
+}} />
+
+**Comprobación — resumen:**
+
+| $E$ | Hipótesis | Condición | $i_1$ | $i_2$ |
+|---|---|---|---|---|
+| $4$ V | $D$ OFF | $V_{AK} = -1 < 0.7$ ✓ | $4$ mA | $0$ |
+| $8$ V | $D$ ON | $i_2 = 1.045 \ge 0$ ✓ | $8$ mA | $1.045$ mA |
+
+</ExerciseBlock>

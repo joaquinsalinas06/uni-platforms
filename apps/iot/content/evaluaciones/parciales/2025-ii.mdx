@@ -1,0 +1,1172 @@
+---
+title: "Examen Parcial 2025-II, sección 1 (10 de octubre de 2025)"
+category: parciales
+categoryLabel: "Parciales"
+order: 2
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+CS5055 Internet de las Cosas, 2025-II. Sección teórica (preguntas 1–5) y sección de
+laboratorio (6–11). **Se califica el procedimiento** y **se descuenta por unidades omitidas o
+equivocadas**. Cada pregunta trae el enunciado (con su figura) y un bloque con pistas; la
+solución paso a paso se desbloquea al pedir todas las pistas: intenta antes de abrirla.
+
+## Pregunta 1 — MQTT: QoS 2 (2.0 puntos)
+
+En MQTT, QoS = 2 garantiza que cada mensaje se entregue exactamente una vez (*exactly
+once*). Describa el mecanismo que lo logra e indique los comandos o tipos de mensaje
+involucrados. Dé un ejemplo de dónde usaría QoS = 1, 0 y 2 y explique por qué.
+
+Tema: [QoS en MQTT](/topics/mqtt/subtopics/qos).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Describa el handshake de QoS 2 (mensajes y orden) y dé un ejemplo justificado para QoS 0, 1 y 2.",
+  hints: [
+    "QoS 2 usa cuatro paquetes por tramo. El primero es PUBLISH; los otros tres empiezan con PUB…",
+    "La clave es que el receptor guarda el packet id hasta el final: así reconoce un PUBLISH repetido y no lo entrega dos veces.",
+    "Para los ejemplos pregúntate qué pasa si el mensaje se pierde y qué pasa si llega dos veces.",
+  ],
+}}>
+
+### Mecanismo de QoS 2
+
+**1. El handshake de 4 paquetes** (en cada tramo emisor → receptor):
+
+1. **PUBLISH** (QoS 2, *packet identifier*): el emisor envía el mensaje y **lo guarda** hasta
+   que se confirme.
+2. **PUBREC** (*publish received*): el receptor confirma que lo recibió y **guarda el packet
+   id**. Si le llega otro PUBLISH con el mismo id (retransmisión con DUP = 1), sabe que es un
+   duplicado y no lo vuelve a entregar.
+3. **PUBREL** (*publish release*): el emisor, al recibir PUBREC, borra el mensaje y avisa que
+   ya no lo reenviará.
+4. **PUBCOMP** (*publish complete*): el receptor borra el id; el intercambio terminó.
+
+**2. Por qué da "exactamente una vez".** **Ambos extremos guardan estado** (mensaje e id)
+hasta completar el handshake: el emisor puede reenviar sin miedo y el receptor filtra los
+duplicados. Entre publisher → broker y broker → subscriber se hace un handshake
+independiente.
+
+**3. El precio, en paquetes por mensaje y por tramo:**
+
+$$
+\text{QoS } 0: 1 \qquad \text{QoS } 1: 2\ (\text{PUBLISH, PUBACK}) \qquad \text{QoS } 2: \boxed{4}\ (\text{PUBLISH, PUBREC, PUBREL, PUBCOMP})
+$$
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'QoS 2: PUBLISH → PUBREC → PUBREL → PUBCOMP',
+  steps: [
+    {
+      note: 'Tramo publisher → broker. El broker guarda el packet id desde PUBREC hasta PUBCOMP.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH "bomba=ON"', flags: 'QoS 2 · id 5', store: 'publisher guarda el msg' },
+        { from: 'b', to: 'p', label: 'PUBREC', flags: 'id 5', store: 'broker guarda id 5' },
+        { from: 'p', to: 'b', label: 'PUBREL', flags: 'id 5' },
+        { from: 'b', to: 'p', label: 'PUBCOMP', flags: 'id 5 · ambos borran' },
+      ],
+    },
+    {
+      note: 'El broker repite el mismo handshake con cada suscriptor QoS 2.',
+      actors: [{ id: 'p', label: 'Publisher' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Subscriber' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH · PUBREC · PUBREL · PUBCOMP', flags: 'tramo 1 completo', state: 'muted' },
+        { from: 'b', to: 's', label: 'PUBLISH "bomba=ON"', flags: 'QoS 2 · id 9' },
+        { from: 's', to: 'b', label: 'PUBREC', flags: 'id 9', store: 'entrega a la app una sola vez' },
+        { from: 'b', to: 's', label: 'PUBREL', flags: 'id 9' },
+        { from: 's', to: 'b', label: 'PUBCOMP', flags: 'id 9' },
+      ],
+    },
+  ],
+}} />
+
+### Ejemplos de QoS 0, 1 y 2
+
+**4. Elegir según qué pasa si el mensaje se pierde y qué pasa si llega dos veces:**
+
+| QoS | Ejemplo | Por qué |
+|---|---|---|
+| 0 | Sensor de humedad del jardín que publica cada 5 s | Dato perecedero: si se pierde uno, llega el siguiente; se ahorra tráfico. |
+| 1 | Alarma de incendio "humo detectado" | No puede perderse; si llega dos veces no pasa nada (la alarma ya suena). |
+| 2 | Comando "encender bomba de riego" o lectura mensual de un medidor eléctrico | Un duplicado tendría efecto real (accionar dos veces, facturar dos veces): debe llegar exactamente una vez. |
+
+**Comprobación:** cada fila responde las dos preguntas del paso 4: QoS 0 tolera perder,
+QoS 1 no tolera perder pero sí duplicar, QoS 2 no tolera ninguna de las dos.
+
+</ExerciseBlock>
+
+## Pregunta 2 — MQTT: retained vs. persistent session (1.5 puntos)
+
+Explique la diferencia entre el mensaje *retained* y la *persistent session* y su función
+dentro del proceso de comunicación.
+
+Tema: [Retained, sesión y LWT](/topics/mqtt/subtopics/retained-sesion-lwt).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Diferencie mensaje retained y persistent session: qué guarda cada uno, dónde, para quién y cuándo se entrega.",
+  hints: [
+    "Uno se guarda POR TÓPICO y el otro POR CLIENTE.",
+    "¿Cuántos mensajes guarda cada uno? ¿Depende del QoS?",
+  ],
+}}>
+
+**1. Comparar qué guarda el broker, para quién y cuándo lo entrega.** La clave: retained se
+guarda **por tópico**; la sesión persistente, **por cliente**.
+
+| | Mensaje retained | Persistent session |
+|---|---|---|
+| Qué guarda | El **último** mensaje publicado en un tópico (flag RETAIN = 1) | Suscripciones del cliente + mensajes QoS 1/2 pendientes |
+| Cuántos | Uno por tópico (el nuevo reemplaza al anterior) | Todos los pendientes de ese cliente |
+| Para quién | Cualquier cliente que se suscriba después | Solo ese cliente (identificado por su Client ID) |
+| Cuándo se entrega | Inmediatamente al suscribirse | Al **reconectarse** |
+| Cómo se activa | RETAIN = 1 en el PUBLISH | Clean Session = 0 en el CONNECT |
+| QoS | Independiente del QoS | Solo QoS 1 y 2 (QoS 0 no se encola) |
+| Función | Dar el **estado actual** sin esperar la próxima publicación | No perder mensajes durante una **desconexión** |
+
+**2. Verlo en el tiempo:** el mismo broker, dos mecanismos distintos.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Retained frente a sesión persistente',
+  steps: [
+    {
+      note: 'Retained: un cliente que llega tarde recibe al instante el último valor del tópico.',
+      actors: [{ id: 'p', label: 'Sensor' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Cliente nuevo' }],
+      msgs: [
+        { from: 'p', to: 'b', label: 'PUBLISH casa/temp = 22 °C', flags: 'RETAIN=1', store: 'último del tópico' },
+        { from: 's', to: 'b', label: 'SUBSCRIBE casa/temp' },
+        { from: 'b', to: 's', label: 'PUBLISH 22 °C', flags: 'retenido', state: 'active' },
+      ],
+    },
+    {
+      note: 'Sesión persistente: el broker encola para ESE cliente lo que publicaron mientras no estaba, y se lo entrega al volver.',
+      actors: [{ id: 'p', label: 'Sensor' }, { id: 'b', label: 'Broker' }, { id: 's', label: 'Cliente' }],
+      msgs: [
+        { from: 's', to: 'b', label: 'CONNECT', flags: 'Client ID app1 · Clean Session=0' },
+        { from: 's', to: 'b', label: 'SUBSCRIBE casa/alarma', flags: 'QoS 1' },
+        { from: 's', to: 'b', label: '— el cliente se desconecta —', divider: true },
+        { from: 'p', to: 'b', label: 'PUBLISH casa/alarma = "puerta"', flags: 'QoS 1', store: 'cola de app1' },
+        { from: 's', to: 'b', label: 'CONNECT', flags: 'app1 · Clean Session=0' },
+        { from: 'b', to: 's', label: 'PUBLISH "puerta"', flags: 'desde la cola', state: 'active' },
+        { from: 's', to: 'b', label: 'PUBACK' },
+      ],
+    },
+  ],
+}} />
+
+**Comprobación:** en el paso 1 del diagrama el cliente es nuevo (nunca estuvo) y aun así
+recibe el valor: eso solo lo logra retained. En el paso 2 el cliente ya estaba suscrito y
+recupera lo que se perdió: eso solo lo logra la sesión persistente.
+
+</ExerciseBlock>
+
+## Pregunta 3 — Edge computing vs. nube (1.5 puntos)
+
+¿Qué ventajas ofrece un sistema basado en *edge computing* frente a uno puramente en la nube?
+¿En qué escenarios IoT conviene procesar en el borde? Justifique con al menos un ejemplo
+práctico.
+
+Tema: [Edge, fog y cloud](/topics/edge-fog-cloud).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Ventajas del edge frente a la nube, escenarios donde conviene y un ejemplo.",
+  hints: [
+    "Compara el recorrido del dato: sensor → nodo local frente a sensor → Internet → centro de datos → vuelta.",
+    "Los escenarios típicos tienen al menos una de estas: respuesta en tiempo real, mucho dato crudo, conexión mala o cara, datos sensibles.",
+  ],
+}}>
+
+### Ventajas frente a la nube
+
+**1. Comparar el recorrido del dato.** En la nube la respuesta paga la ida y la vuelta por
+Internet; en el borde, solo el procesamiento local:
+
+$$
+t_{\text{nube}} = t_{\uparrow\,\text{red}} + t_{\text{proceso}} + t_{\downarrow\,\text{red}} \;\gg\; t_{\text{edge}} \approx t_{\text{proceso}}
+$$
+
+**2. Ventajas que salen de ahí:**
+- **Latencia baja**: la decisión se toma junto al dispositivo, sin el viaje de ida y vuelta
+  a un servidor remoto (que además compite con el resto del tráfico de Internet).
+- **Menos ancho de banda y costo**: se filtra y resume localmente; solo suben eventos o
+  promedios.
+- **Autonomía**: si se cae Internet, el sistema local sigue operando.
+- **Privacidad/seguridad**: los datos crudos (video, datos médicos) no salen del sitio.
+- **Energía**: transmitir es lo más caro para un nodo a batería; transmitir menos la alarga.
+
+La nube sigue siendo mejor para almacenamiento histórico, analítica pesada y paneles
+globales: lo usual es combinarlas.
+
+### Escenarios
+
+**3. Conviene el borde** cuando hay control en tiempo real (vehículos, robots,
+seguridad industrial), mucho dato crudo (cámaras, vibración a kHz), conectividad rural,
+intermitente o cara, y datos sensibles.
+
+### Ejemplo
+
+**4. Control de calidad en una línea de producción:** en una línea de producción, una cámara con procesamiento local detecta
+una pieza defectuosa y detiene la faja en milisegundos. Si el video fuera a la nube, la
+latencia (y el ancho de banda de subir video continuo) harían que la pieza ya hubiera pasado.
+A la nube solo sube el conteo diario de defectos.
+
+<Visualization viz={{
+  type: 'dag',
+  static: true,
+  title: 'Ejemplo: control de calidad en el borde',
+  steps: [{
+    note: 'El lazo rápido (cámara → decisión → faja) se cierra en el borde; la nube solo recibe el resumen.',
+    nodes: [
+      { id: 'cam', value: 'Cámara en la línea', parent: null },
+      { id: 'edge', value: 'Nodo edge: detecta defecto', parent: 'cam', state: 'active' },
+      { id: 'faja', value: 'Actuador: detiene la faja', parent: 'edge' },
+      { id: 'cloud', value: 'Nube: histórico y reportes', parent: 'edge' },
+    ],
+    links: [
+      { from: 'cam', to: 'edge', label: 'video crudo (local)' },
+      { from: 'edge', to: 'faja', label: 'ms' },
+      { from: 'edge', to: 'cloud', label: 'conteo diario' },
+    ],
+  }],
+}} />
+
+**Comprobación:** el ejemplo usa tres ventajas del paso 2: latencia (se detiene la faja en
+ms), ancho de banda (el video no sube) y costo (a la nube va un número por día).
+
+</ExerciseBlock>
+
+## Pregunta 4 — Digitalización (2.0 puntos)
+
+- a) Describa brevemente el proceso con el que se digitaliza una señal analógica.
+- b) ¿Puede considerarse reversible? Justifique.
+- c) Compare la digitalización con obtener la transformada de Fourier de una señal: ¿qué
+  información aporta cada uno y en qué dominios trabajan?
+
+Temas: [Digitalización y ADC](/topics/digitization-adc) · [Fourier y DFT](/topics/fourier-dft).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Describa muestreo y cuantización, discuta la reversibilidad y compare con la transformada de Fourier.",
+  hints: [
+    "Hay dos cortes: uno en el eje del tiempo y otro en el eje de la amplitud.",
+    "¿Qué pasa con lo que hizo la señal entre dos muestras? ¿Y con la diferencia entre el valor real y el nivel redondeado?",
+    "Fourier no discretiza nada: cambia de dominio. ¿Pierde información?",
+  ],
+}}>
+
+### a) Proceso de digitalización
+
+**1. Tres etapas, en este orden:**
+1. **Muestreo** (corte en el tiempo): se toma el valor de la señal cada $T_s$ segundos,
+   $x[n] = x(nT_s)$, con frecuencia de muestreo $f_s = 1/T_s$.
+2. **Cuantización** (corte en la amplitud): cada muestra se redondea al nivel más cercano de
+   los $2^n$ niveles del ADC, separados $V_{LSB} = (V_H - V_L)/2^n$.
+3. **Codificación**: cada nivel se representa con un código binario de $n$ bits, que es lo
+   que lee el microcontrolador.
+
+$$
+x[n] = x(nT_s) \;\xrightarrow{\text{cuantizar}}\; x_q[n] = V_L + V_{LSB}\cdot\text{round}\!\left(\frac{x[n] - V_L}{V_{LSB}}\right), \qquad V_{LSB} = \frac{V_H - V_L}{2^n}
+$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Señal analógica y su versión digitalizada',
+  steps: [{
+    note: 'La curva continua es la señal; los puntos son las muestras cada Ts = 1 s ya redondeadas a niveles enteros. Lo que pasa entre puntos y lo que se redondea se pierde.',
+    series: [
+      { id: 'x', label: 'x(t) analógica', fn: '3+2*sin(0.6*x)', domain: [0, 12] },
+      { id: 'xq', label: 'x[n] digital', kind: 'samples', fn: 'round(3+2*sin(0.6*x))', domain: [0, 12], samples: 1, tone: 'current' },
+    ],
+    x: { label: 't (s)' },
+    y: { label: 'amplitud (niveles)', min: 0, max: 6 },
+  }],
+}} />
+
+### b) ¿Es reversible?
+
+**2. La cuantización pierde información.** Muchos valores analógicos distintos dan el mismo
+código, así que el error de redondeo no se puede deshacer:
+
+$$
+|x[n] - x_q[n]| \le \frac{V_{LSB}}{2} \quad\Rightarrow\quad \boxed{\text{no es exactamente reversible}}
+$$
+
+La cuantización reemplaza cada valor real por el
+nivel más cercano: el error (hasta $\pm V_{LSB}/2$) no se puede deshacer, porque muchos
+valores analógicos distintos dan el mismo código. Además, de la señal solo quedan las
+muestras: lo que hizo entre ellas se pierde. En la práctica se trabaja con el supuesto de
+que, si $T_s$ es lo bastante pequeño y $n$ lo bastante grande, la señal digital representa
+fielmente a la analógica.
+
+> **Nota de apoyo** (no está en el material): por el teorema de Nyquist, el muestreo solo
+> sería reversible si $f_s > 2 f_{max}$; la cuantización nunca lo es.
+
+### c) Digitalización frente a Fourier
+
+**3. Comparar qué hace cada una y en qué dominio:**
+
+| | Digitalización | Transformada de Fourier |
+|---|---|---|
+| Qué hace | Discretiza tiempo y amplitud | Cambia de dominio |
+| Dominio | Tiempo → tiempo (discreto) | Tiempo → frecuencia |
+| Qué información da | Los valores de la señal en cada instante de muestreo | Qué frecuencias componen la señal y con qué amplitud/fase |
+| ¿Pierde información? | Sí (error de cuantización, entre muestras) | No: es exacta e invertible (la DFT sobre las muestras también) |
+
+Se complementan: primero se digitaliza (ADC) y luego, sobre las muestras, se calcula la DFT
+para analizar el espectro.
+
+**Comprobación:** en la figura del paso 1, los puntos (digitales) no coinciden exactamente
+con la curva (analógica): esa diferencia es el error de cuantización del paso 2, que la
+transformada de Fourier no introduce.
+
+</ExerciseBlock>
+
+## Pregunta 5 — Resistencia equivalente (3.0 puntos)
+
+En el circuito, la fuente de voltaje **E = 8 V**:
+
+- i. Obtenga el valor de la resistencia equivalente vista desde la fuente. *(2.5 pt)*
+- ii. ¿Cuál es el valor de potencia que consumirá el circuito? *(0.5 pt)*
+
+**Figura.** Entre el riel superior y el inferior, de izquierda a derecha: (1) un puente con
+3k y 7.5k a la izquierda, 4.8k y 12k a la derecha, y entre sus nodos medios un rombo 5k+1k
+arriba, 3.3k al medio y 10k+2.1k abajo; (2) sobre el riel superior un 1k en serie; (3) 3k
+hasta un nodo que baja por 1k y sube por 4k + 2k al riel superior; (4) 300 Ω hasta un
+cuadrado (2k+16k por un lado, 15k+3k por el otro) y 700 Ω al riel inferior; (5) sobre el
+riel superior un rombo de cinco 3k; (6) tras el rombo, 1.5k hasta un nodo con tres 9k al
+riel inferior (uno vertical, uno horizontal que baja por un cable, uno en diagonal).
+
+Temas: [Puente de Wheatstone](/topics/delta-wye-wheatstone/subtopics/puente-wheatstone) ·
+[Reducción serie-paralelo](/topics/basic-circuits/subtopics/reduccion-serie-paralelo).
+
+**Figura, redibujada** (etiquetas R1…R29 nuestras). Practica: reduce el circuito tocando pares de resistencias.
+
+<Visualization viz={(() => {
+  const N = (id, x, y, o) => ({ id, x, y, ...(o || {}) });
+  const R = (id, from, to, value) => ({ id, kind: 'resistor', from, to, value, label: id });
+  const W = (id, from, to) => ({ id, kind: 'wire', from, to });
+  return {
+    type: 'circuit',
+    title: 'Práctica: Req vista desde E',
+    practice: { kind: 'reduce', between: ['t', 'g'] },
+    steps: [{
+      note: 'Etiquetas R1…R29 nuestras (el enunciado no las nombra).',
+      circuit: {
+        nodes: [
+          N('g', 0, 20, { ground: true }), N('t', 0, 0),
+          N('L1', 3, 0), N('P', 3, 10, { label: 'P' }), N('LB1', 3, 20), N('pt', 7, 7), N('pb', 7, 13), N('L2', 11, 0), N('Q', 11, 10, { label: 'Q' }), N('LB2', 11, 20),
+          N('T2', 15, 0), N('M', 15, 10), N('MB', 15, 20), N('m2', 19, 10), N('T2b', 19, 0),
+          N('T2c', 22, 0), N('Nn', 22, 5), N('nr', 26, 5), N('nl', 22, 12), N('O', 26, 12), N('BB3', 22, 20), N('OB', 26, 20),
+          N('DL', 27, 0), N('dt', 31, -4), N('db', 31, 4), N('DR', 35, 0), N('BB4', 27, 20),
+          N('T3', 37, 0), N('S', 37, 10), N('SB', 37, 20), N('sr', 41, 10), N('SR', 41, 20),
+        ],
+        parts: [
+          { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 8, label: 'E' },
+          W('wt1', 't', 'L1'), W('wt2', 'L1', 'L2'), W('wt3', 'T2', 'T2b'), W('wt4', 'T2b', 'T2c'), W('wt5', 'T2c', 'DL'), W('wt6', 'DR', 'T3'),
+          W('wb1', 'g', 'LB1'), W('wb2', 'LB1', 'LB2'), W('wb3', 'LB2', 'MB'), W('wb4', 'MB', 'BB3'), W('wb5', 'BB3', 'OB'), W('wb6', 'OB', 'BB4'), W('wb7', 'BB4', 'SB'), W('wb8', 'SB', 'SR'), W('wsr', 'sr', 'SR'),
+          R('R1', 'L1', 'P', 3000), R('R2', 'P', 'LB1', 7500), R('R3', 'L2', 'Q', 4800), R('R4', 'Q', 'LB2', 12000),
+          R('R5', 'P', 'pt', 5000), R('R6', 'pt', 'Q', 1000), R('R7', 'P', 'Q', 3300), R('R8', 'P', 'pb', 10000), R('R9', 'pb', 'Q', 2100),
+          R('R10', 'L2', 'T2', 1000), R('R11', 'T2', 'M', 3000), R('R12', 'M', 'MB', 1000), R('R13', 'M', 'm2', 4000), R('R14', 'm2', 'T2b', 2000),
+          R('R15', 'T2c', 'Nn', 300), R('R16', 'Nn', 'nr', 2000), R('R17', 'nr', 'O', 16000), R('R18', 'Nn', 'nl', 15000), R('R19', 'nl', 'O', 3000), R('R20', 'O', 'OB', 700),
+          R('R21', 'DL', 'dt', 3000), R('R22', 'dt', 'DR', 3000), R('R23', 'DL', 'DR', 3000), R('R24', 'DL', 'db', 3000), R('R25', 'db', 'DR', 3000),
+          R('R26', 'T3', 'S', 1500), R('R27', 'S', 'SB', 9000), R('R28', 'S', 'sr', 9000), R('R29', 'S', 'SR', 9000),
+        ],
+      },
+      expect: { 'Req(t,g)': 1888 },
+    }],
+  };
+})()} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 4,
+  statement: "Halle Req vista desde la fuente y la potencia con E = 8 V.",
+  hints: [
+    "Bloque de la izquierda: compara 3k/7.5k con 4.8k/12k. Si son iguales, ¿qué pasa con todo lo que está entre los nodos medios?",
+    "El 1k del riel superior separa el bloque izquierdo del resto: todo lo de la derecha va en serie con él.",
+    "El 9k horizontal termina en un cable que baja al riel inferior: los tres 9k están en paralelo.",
+  ],
+}}>
+
+Llamamos T al riel superior izquierdo, B al inferior, y T′ al riel superior después del 1k.
+
+### Bloque izquierdo
+
+**1. Detectar el puente balanceado.** Se comparan las razones de los brazos izquierdo y derecho:
+
+$$
+\frac{3\text{k}}{7.5\text{k}} = 0.4 = \frac{4.8\text{k}}{12\text{k}} \;\Rightarrow\; V_P = V_Q
+$$
+
+**2. Quitar lo que está entre P y Q.** 5k, 1k, 3.3k, 10k y 2.1k no llevan corriente; quedan
+dos ramas serie en paralelo:
+
+$$
+(3\text{k} + 7.5\text{k}) \parallel (4.8\text{k} + 12\text{k}) = 10.5\text{k} \parallel 16.8\text{k} = \frac{10.5 \cdot 16.8}{27.3}\ \text{k}\Omega = 6.462\ \text{k}\Omega
+$$
+
+### Bloques a la derecha del 1k (todos entre T′ y B)
+
+**3. Primer bloque:** $(4\text{k} + 2\text{k})$ en paralelo con 3k, en serie con 1k.
+
+$$
+(4\text{k} + 2\text{k}) \parallel 3\text{k} = 2\text{k} \;\to\; 2\text{k} + 1\text{k} = 3\ \text{k}\Omega
+$$
+
+**4. Cuadrado:** dos caminos de 18k en paralelo, en serie con 300 Ω y 700 Ω.
+
+$$
+(2\text{k}+16\text{k}) \parallel (15\text{k}+3\text{k}) = 9\text{k} \;\to\; 300 + 9\text{k} + 700 = 10\ \text{k}\Omega
+$$
+
+**5. Rombo y los tres 9k.** El rombo son dos caminos de 6k y uno de 3k; los tres 9k van del
+nodo S al riel inferior (el horizontal baja por un cable):
+
+$$
+6\text{k} \parallel 3\text{k} \parallel 6\text{k} = 1.5\text{k} \qquad 9\text{k} \parallel 9\text{k} \parallel 9\text{k} = 3\text{k} \;\to\; 1.5\text{k} + 1.5\text{k} + 3\text{k} = 6\ \text{k}\Omega
+$$
+
+**6. Los tres bloques en paralelo, y en serie con el 1k:**
+
+$$
+3\text{k} \parallel 10\text{k} \parallel 6\text{k} = \frac{1}{\frac13 + \frac1{10} + \frac16}\ \text{k}\Omega = 1.667\ \text{k}\Omega \;\to\; 1\text{k} + 1.667\text{k} = 2.667\ \text{k}\Omega
+$$
+
+### i. Resistencia equivalente
+
+**7. Bloque izquierdo en paralelo con todo lo de la derecha:**
+
+$$
+R_{eq} = 6.462\text{k} \parallel 2.667\text{k} = \frac{6.462 \cdot 2.667}{6.462 + 2.667}\ \text{k}\Omega = \boxed{1.888\ \text{k}\Omega}
+$$
+
+### ii. Potencia
+
+**8. $P = E^2/R_{eq}$**, porque la fuente ve toda la red como $R_{eq}$:
+
+$$
+P = \frac{E^2}{R_{eq}} = \frac{(8\ \text{V})^2}{1888\ \Omega} = \boxed{33.9\ \text{mW}} \qquad (I = 4.24\ \text{mA})
+$$
+
+**Comprobación — corriente por bloque con 8 V:** $8/6.462\text{k} + 8/2.667\text{k} = 1.238 + 3.0 = 4.238$ mA $= 8/1.888\text{k}$ ✓.
+
+Reducción en el circuito, paso a paso:
+
+<Visualization viz={(() => {
+  const N = (id, x, y, o) => ({ id, x, y, ...(o || {}) });
+  const R = (id, from, to, value) => ({ id, kind: 'resistor', from, to, value, label: id });
+  const W = (id, from, to) => ({ id, kind: 'wire', from, to });
+  const M = (id, from, to, src, mk, o) => ({ id, kind: 'resistor', from, to, label: id, mergedFrom: src, mergeKind: mk, ...(o || {}) });
+  const nodes = [
+    N('g', 0, 20, { ground: true, label: 'B' }), N('t', 0, 0, { label: 'T' }),
+    N('L1', 3, 0), N('P', 3, 10, { label: 'P' }), N('LB1', 3, 20), N('pt', 7, 7), N('pb', 7, 13), N('L2', 11, 0), N('Q', 11, 10, { label: 'Q' }), N('LB2', 11, 20),
+    N('T2', 15, 0, { label: 'T′' }), N('M', 15, 10), N('MB', 15, 20), N('m2', 19, 10), N('T2b', 19, 0),
+    N('T2c', 22, 0), N('Nn', 22, 5), N('nr', 26, 5), N('nl', 22, 12), N('O', 26, 12), N('BB3', 22, 20), N('OB', 26, 20),
+    N('DL', 27, 0), N('dt', 31, -4), N('db', 31, 4), N('DR', 35, 0), N('BB4', 27, 20),
+    N('T3', 37, 0), N('S', 37, 10, { label: 'S' }), N('SB', 37, 20), N('sr', 41, 10), N('SR', 41, 20),
+  ];
+  let cur = [
+    { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 8, label: 'E' },
+    W('wt1', 't', 'L1'), W('wt2', 'L1', 'L2'), W('wt3', 'T2', 'T2b'), W('wt4', 'T2b', 'T2c'), W('wt5', 'T2c', 'DL'), W('wt6', 'DR', 'T3'),
+    W('wb1', 'g', 'LB1'), W('wb2', 'LB1', 'LB2'), W('wb3', 'LB2', 'MB'), W('wb4', 'MB', 'BB3'), W('wb5', 'BB3', 'OB'), W('wb6', 'OB', 'BB4'), W('wb7', 'BB4', 'SB'), W('wb8', 'SB', 'SR'), W('wsr', 'sr', 'SR'),
+    R('R1', 'L1', 'P', 3000), R('R2', 'P', 'LB1', 7500), R('R3', 'L2', 'Q', 4800), R('R4', 'Q', 'LB2', 12000),
+    R('R5', 'P', 'pt', 5000), R('R6', 'pt', 'Q', 1000), R('R7', 'P', 'Q', 3300), R('R8', 'P', 'pb', 10000), R('R9', 'pb', 'Q', 2100),
+    R('R10', 'L2', 'T2', 1000), R('R11', 'T2', 'M', 3000), R('R12', 'M', 'MB', 1000), R('R13', 'M', 'm2', 4000), R('R14', 'm2', 'T2b', 2000),
+    R('R15', 'T2c', 'Nn', 300), R('R16', 'Nn', 'nr', 2000), R('R17', 'nr', 'O', 16000), R('R18', 'Nn', 'nl', 15000), R('R19', 'nl', 'O', 3000), R('R20', 'O', 'OB', 700),
+    R('R21', 'DL', 'dt', 3000), R('R22', 'dt', 'DR', 3000), R('R23', 'DL', 'DR', 3000), R('R24', 'DL', 'db', 3000), R('R25', 'db', 'DR', 3000),
+    R('R26', 'T3', 'S', 1500), R('R27', 'S', 'SB', 9000), R('R28', 'S', 'sr', 9000), R('R29', 'S', 'SR', 9000),
+  ];
+  const S = (s, t) => ({ parts: s, tone: t, label: t === 'series' ? 'serie' : t === 'parallel' ? 'paralelo' : 'puente' });
+  const step = (note, drop, add, groups, extra) => {
+    cur = cur.filter((p) => !drop.includes(p.id)).concat(add);
+    return { note, circuit: { nodes, parts: cur, groups, ...((extra && extra.circuit) || {}) }, ...((extra && extra.rest) || {}) };
+  };
+  return {
+    type: 'circuit',
+    title: 'P5: reducción paso a paso',
+    steps: [
+      step('Puente izquierdo: R1/R2 = 3k/7.5k = 0.4 y R3/R4 = 4.8k/12k = 0.4. Balanceado: P y Q quedan al mismo potencial y nada de lo que está entre ellos lleva corriente.', [], [], [S(['R1', 'R2', 'R3', 'R4'], 'bridge')], { rest: { expect: { 'Req(t,g)': 1888, 'P(E)': 0.0339, 'V(P,Q)': 0, 'I(R7)': 0, 'I(R5)': 0, 'I(R8)': 0 } } }),
+      step('Se quitan R5…R9. Quedan dos ramas serie: R1 + R2 y R3 + R4.', ['R5', 'R6', 'R7', 'R8', 'R9'], [], [S(['R1', 'R2'], 'series'), S(['R3', 'R4'], 'series')]),
+      step('Ra = 10.5 kΩ y Rb = 16.8 kΩ, ambas entre T y B: paralelo.', ['R1', 'R2', 'R3', 'R4'], [M('Ra', 'L1', 'LB1', ['R1', 'R2'], 'series'), M('Rb', 'L2', 'LB2', ['R3', 'R4'], 'series')], [S(['Ra', 'Rb'], 'parallel')]),
+      step('Bloque izquierdo RI = 6.462 kΩ. Ahora a la derecha del 1k: R13 y R14 se unen en una esquina sin punto: serie.', ['Ra', 'Rb'], [M('RI', 'L1', 'LB1', ['Ra', 'Rb'], 'parallel')], [S(['R13', 'R14'], 'series')]),
+      step('Rc = R13 + R14 = 6 kΩ, de M a T′, igual que R11: paralelo.', ['R13', 'R14'], [M('Rc', 'M', 'T2b', ['R13', 'R14'], 'series', { via: [[19, 10]] })], [S(['R11', 'Rc'], 'parallel')]),
+      step('Rd = 3k ‖ 6k = 2 kΩ, en serie con R12.', ['R11', 'Rc'], [M('Rd', 'T2', 'M', ['R11', 'Rc'], 'parallel')], [S(['Rd', 'R12'], 'series')]),
+      step('Re = 2k + 1k = 3 kΩ entre T′ y B. Cuadrado: R16 + R17 y R18 + R19 en serie.', ['Rd', 'R12'], [M('Re', 'T2', 'MB', ['Rd', 'R12'], 'series')], [S(['R16', 'R17'], 'series'), S(['R18', 'R19'], 'series')]),
+      step('Rf = Rg = 18 kΩ, entre los mismos nodos: paralelo.', ['R16', 'R17', 'R18', 'R19'], [M('Rf', 'Nn', 'O', ['R16', 'R17'], 'series', { via: [[26, 5]] }), M('Rg', 'Nn', 'O', ['R18', 'R19'], 'series', { via: [[22, 12]] })], [S(['Rf', 'Rg'], 'parallel')]),
+      step('Rh = 9 kΩ, en serie con R15 (300 Ω) y R20 (700 Ω).', ['Rf', 'Rg'], [M('Rh', 'Nn', 'O', ['Rf', 'Rg'], 'parallel')], [S(['R15', 'Rh', 'R20'], 'series')]),
+      step('Ri = 300 + 9k + 700 = 10 kΩ. Rombo: R21 + R22 y R24 + R25 en serie.', ['R15', 'Rh', 'R20'], [M('Ri', 'T2c', 'BB3', ['R15', 'Rh', 'R20'], 'series')], [S(['R21', 'R22'], 'series'), S(['R24', 'R25'], 'series')]),
+      step('Rj = Rk = 6 kΩ comparten los extremos del rombo con R23: paralelo.', ['R21', 'R22', 'R24', 'R25'], [M('Rj', 'DL', 'DR', ['R21', 'R22'], 'series', { via: [[31, -4]] }), M('Rk', 'DL', 'DR', ['R24', 'R25'], 'series', { via: [[31, 4]] })], [S(['Rj', 'R23', 'Rk'], 'parallel')]),
+      step('Rombo Rl = 6k ‖ 3k ‖ 6k = 1.5 kΩ. Los tres 9k salen de S y llegan al riel B (R28 por el cable de la derecha): paralelo.', ['Rj', 'R23', 'Rk'], [M('Rl', 'DL', 'DR', ['Rj', 'R23', 'Rk'], 'parallel')], [S(['R27', 'R28', 'R29'], 'parallel')]),
+      step('Rm = 9k ‖ 9k ‖ 9k = 3 kΩ, en serie con R26.', ['R27', 'R28', 'R29'], [M('Rm', 'S', 'SB', ['R27', 'R28', 'R29'], 'parallel')], [S(['R26', 'Rm'], 'series')]),
+      step('Rn = 1.5k + 3k = 4.5 kΩ, en serie con el rombo Rl.', ['R26', 'Rm'], [M('Rn', 'T3', 'SB', ['R26', 'Rm'], 'series')], [S(['Rl', 'Rn'], 'series')]),
+      step('Ro = 1.5k + 4.5k = 6 kΩ. Re, Ri y Ro van de T′ a B: paralelo.', ['Rl', 'Rn'], [M('Ro', 'DL', 'BB4', ['Rl', 'Rn'], 'series')], [S(['Re', 'Ri', 'Ro'], 'parallel')]),
+      step('Rp = 3k ‖ 10k ‖ 6k = 1.667 kΩ, en serie con R10 (1k).', ['Re', 'Ri', 'Ro'], [M('Rp', 'T2', 'MB', ['Re', 'Ri', 'Ro'], 'parallel')], [S(['R10', 'Rp'], 'series')]),
+      step('Rq = 2.667 kΩ entre T y B, en paralelo con el bloque izquierdo RI.', ['R10', 'Rp'], [M('Rq', 'L2', 'LB2', ['R10', 'Rp'], 'series')], [S(['RI', 'Rq'], 'parallel')]),
+      step('Req = 6.462k ‖ 2.667k = 1.888 kΩ. P = E²/Req = 33.9 mW.', ['RI', 'Rq'], [M('Req', 'L1', 'LB1', ['RI', 'Rq'], 'parallel', { state: 'answer' })], [], { circuit: { req: { between: ['t', 'g'] }, currents: [{ part: 'E', label: 'I', showValue: true }] }, rest: { expect: { 'Req(t,g)': 1888, 'P(E)': 0.0339 } } }),
+    ],
+  };
+})()} />
+
+</ExerciseBlock>
+
+## Pregunta 6 — Diodos (3.5 puntos)
+
+Con **E = 15 V**, calcule:
+
+- a) La corriente $I_x$. *(0.5 pt)*
+- b) La corriente $I$ que entrega la fuente E. *(0.5 pt)*
+- c) El potencial $V_a$. *(0.5 pt)*
+- d) La diferencia de potencial $V_b$. *(0.5 pt)*
+- e) La potencia que consume la resistencia R2. *(0.5 pt)*
+- f) El valor mínimo de E que permite que la rama de diodos D1 y D2 esté en polarización directa. *(1.0 pt)*
+
+**Figura.** E (+ arriba) con tierra abajo a la izquierda. Riel superior: R1 = 1k ($I$ →) hasta
+un nodo del que baja D8 (Si) → R2 = 1k ($i_1$) hasta el nodo $V_a$ del riel inferior; sigue
+R4 = 2k ($V_b$, + a la izquierda) hasta un nodo del que baja D1 (Ge) → D2 (Si) → V2 = 3 V
+(+ arriba) ($i_2$), y a la derecha D6 (Si, apunta a la derecha, $I_x$) → D4 (Ge, hacia abajo)
+→ R3 = 3k → D5 (Ge, **apunta hacia arriba**) → esquina → D7 (Si, apunta a la izquierda) al
+nodo bajo V2. Riel inferior: tierra → R6 = 2k → $V_a$ → R5 = 4k → nodo bajo V2.
+
+Tema: [Diodos: método de hipótesis](/topics/diodes/subtopics/metodo-hipotesis).
+
+**Figura, redibujada:**
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'P6: circuito del enunciado (E = 15 V)',
+  steps: [{
+    note: 'Si = 0.7 V, Ge = 0.3 V. En la rama de D6, D5 apunta hacia arriba: al revés que los demás.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 20, ground: true },
+        { id: 'N1', x: 8, y: 0 }, { id: 'n1', x: 8, y: 8 }, { id: 'Va', x: 8, y: 20, label: 'Va' },
+        { id: 'N2', x: 16, y: 0 }, { id: 'p1', x: 16, y: 5 }, { id: 'p2', x: 16, y: 10 }, { id: 'N3', x: 16, y: 20 },
+        { id: 'q0', x: 24, y: 0 }, { id: 'q1', x: 24, y: 5 }, { id: 'q2', x: 24, y: 12 }, { id: 'q3', x: 24, y: 20 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 15, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'N1', value: 1000, label: 'R1' },
+        { id: 'D8', kind: 'diode', model: 'si', from: 'N1', to: 'n1', label: 'D8' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'Va', value: 1000, label: 'R2' },
+        { id: 'R6', kind: 'resistor', from: 'g', to: 'Va', value: 2000, label: 'R6' },
+        { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 2000, label: 'R4' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'N2', to: 'p1', label: 'D1' },
+        { id: 'D2', kind: 'diode', model: 'si', from: 'p1', to: 'p2', label: 'D2' },
+        { id: 'V2', kind: 'vsource', from: 'N3', to: 'p2', value: 3, label: 'V2' },
+        { id: 'R5', kind: 'resistor', from: 'Va', to: 'N3', value: 4000, label: 'R5' },
+        { id: 'D6', kind: 'diode', model: 'si', from: 'N2', to: 'q0', label: 'D6' },
+        { id: 'D4', kind: 'diode', model: 'ge', from: 'q0', to: 'q1', label: 'D4' },
+        { id: 'R3', kind: 'resistor', from: 'q1', to: 'q2', value: 3000, label: 'R3' },
+        { id: 'D5', kind: 'diode', model: 'ge', from: 'q3', to: 'q2', label: 'D5' },
+        { id: 'D7', kind: 'diode', model: 'si', from: 'q3', to: 'N3', label: 'D7' },
+      ],
+      currents: [{ part: 'R1', label: 'I' }, { part: 'R2', label: 'i_1' }, { part: 'D1', label: 'i_2' }, { part: 'D6', label: 'I_x' }],
+      voltages: [{ part: 'R4', label: 'V_b' }],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 5,
+  statement: "Con E = 15 V halle $I_x$, $I$, $V_a$, $V_b$, $P_{R2}$ y el E mínimo para que conduzca la rama D1–D2.",
+  hints: [
+    "Recorre la rama de D6: ¿hay algún diodo que apunte en contra de los demás?",
+    "Supón D8, D1 y D2 ON. Si $I$ es la corriente de R1, toda vuelve por R6: $V_a = 2\\,\\text{k}\\Omega \\cdot I$.",
+    "La rama D1-D2-V2 no tiene resistencia propia: su corriente pasa por R4 y R5, con una caída fija de 0.3 + 0.7 + 3 = 4 V.",
+    "(f): la rama de D1-D2 conduce mínimamente cuando $i_2 = 0$; entonces $I = i_1$.",
+  ],
+}}>
+
+Modelo de caída constante: Si = 0.7 V, Ge = 0.3 V. Tierra en el borne − de E. Unidades:
+mA, kΩ, V.
+
+### a) Corriente $I_x$
+
+**1. Leer la orientación de la rama D6 → D4 → R3 → D5 → D7.** D6, D4 y D7 dejan pasar en el
+sentido del recorrido, pero **D5 apunta al revés**; en sentido contrario bloquean D6, D4 y D7.
+
+**2. Hipótesis D5 OFF y validar.** Con la rama abierta, el ánodo de D5 (abajo) queda por debajo
+de su cátodo:
+
+$$
+V_{AK}^{D5} < 0 < 0.3\ \text{V}\ \checkmark \quad\Rightarrow\quad I_x = \boxed{0\ \text{A}}
+$$
+
+D6, D4 y D7 quedan **OFF (en el umbral)**: su $V_{AK}$ puede llegar a $V_\gamma$, pero como D5
+abre la rama su corriente es 0 (el panel del solver los marca así).
+
+### b) Corriente $I$ de la fuente
+
+**3. Hipótesis D8, D1 y D2 ON.** Sea $I$ la corriente de R1. Como la rama de D6 está abierta,
+toda $I$ regresa a tierra por R6: $V_a = 2I$, y el nodo tras R1 está a $15 - I$.
+
+$$
+i_1 = \frac{(15 - I) - 0.7 - 2I}{1} = 14.3 - 3I \qquad i_2 = \frac{(15 - I) - (0.3 + 0.7 + 3) - 2I}{2 + 4} = \frac{11 - 3I}{6}
+$$
+
+(la rama D1–D2–V2 no tiene resistencia propia: su corriente pasa por R4 y R5).
+
+**4. LCK en el nodo tras R1: $I = i_1 + i_2$.**
+
+$$
+I = 14.3 - 3I + \frac{11 - 3I}{6} \;\Rightarrow\; 4.5\,I = 16.133 \;\Rightarrow\; I = \boxed{3.585\ \text{mA}}
+$$
+
+**5. Validar las hipótesis.** Las dos corrientes de rama salen positivas:
+
+$$
+i_1 = 14.3 - 10.756 = 3.544\ \text{mA} \ge 0\ \checkmark \qquad i_2 = \frac{11 - 10.756}{6} = 0.0407\ \text{mA} \ge 0\ \checkmark
+$$
+
+### c) Potencial $V_a$
+
+**6. Ohm en R6** (lleva toda $I$):
+
+$$
+V_a = 2\ \text{k}\Omega \cdot 3.585\ \text{mA} = \boxed{7.170\ \text{V}}
+$$
+
+### d) Diferencia de potencial $V_b$
+
+**7. Ohm en R4** con $i_2$:
+
+$$
+V_b = 2\ \text{k}\Omega \cdot 0.0407\ \text{mA} = \boxed{81.5\ \text{mV}}
+$$
+
+### e) Potencia en R2
+
+**8. $P = i^2 R$** con $i_1$:
+
+$$
+P_{R2} = i_1^2\,R_2 = (3.544\ \text{mA})^2 \cdot 1\ \text{k}\Omega = \boxed{12.56\ \text{mW}}
+$$
+
+### f) E mínima para la rama D1–D2
+
+**9. Conducción mínima: $i_2 = 0$.** Entonces toda la corriente va por D8 ($I = i_1$) y la rama
+D1–D2 ve exactamente sus 4 V de caída fija:
+
+$$
+(E - I) - 4 - 2I = 0 \quad\text{y}\quad I = (E - 3I) - 0.7 = 4 - 0.7 = 3.3\ \text{mA}
+$$
+
+$$
+E_{min} = 4 + 3I = 4 + 3(3.3) = \boxed{13.9\ \text{V}}
+$$
+
+Con $E$ por debajo de 13.9 V, $i_2$ saldría negativa: D1 y D2 quedan OFF.
+
+**Comprobación (LKV por D8–R2):** $V_{N1} - 0.7 - i_1 R_2 = (15 - 3.585) - 0.7 - 3.544 = 7.171$ V $= V_a$ ✓.
+
+<Visualization viz={(() => {
+  const nodes = [
+    { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 20, ground: true },
+    { id: 'N1', x: 8, y: 0 }, { id: 'n1', x: 8, y: 8 }, { id: 'Va', x: 8, y: 20, label: 'Va', showPotential: true },
+    { id: 'N2', x: 16, y: 0 }, { id: 'p1', x: 16, y: 5 }, { id: 'p2', x: 16, y: 10 }, { id: 'N3', x: 16, y: 20 },
+    { id: 'q0', x: 24, y: 0 }, { id: 'q1', x: 24, y: 5 }, { id: 'q2', x: 24, y: 12 }, { id: 'q3', x: 24, y: 20 },
+  ];
+  const parts = (E) => [
+    { id: 'E', kind: 'vsource', from: 'g', to: 't', value: E, label: 'E' },
+    { id: 'R1', kind: 'resistor', from: 't', to: 'N1', value: 1000, label: 'R1' },
+    { id: 'D8', kind: 'diode', model: 'si', from: 'N1', to: 'n1', label: 'D8' },
+    { id: 'R2', kind: 'resistor', from: 'n1', to: 'Va', value: 1000, label: 'R2' },
+    { id: 'R6', kind: 'resistor', from: 'g', to: 'Va', value: 2000, label: 'R6' },
+    { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 2000, label: 'R4' },
+    { id: 'D1', kind: 'diode', model: 'ge', from: 'N2', to: 'p1', label: 'D1' },
+    { id: 'D2', kind: 'diode', model: 'si', from: 'p1', to: 'p2', label: 'D2' },
+    { id: 'V2', kind: 'vsource', from: 'N3', to: 'p2', value: 3, label: 'V2' },
+    { id: 'R5', kind: 'resistor', from: 'Va', to: 'N3', value: 4000, label: 'R5' },
+    { id: 'D6', kind: 'diode', model: 'si', from: 'N2', to: 'q0', label: 'D6' },
+    { id: 'D4', kind: 'diode', model: 'ge', from: 'q0', to: 'q1', label: 'D4' },
+    { id: 'R3', kind: 'resistor', from: 'q1', to: 'q2', value: 3000, label: 'R3' },
+    { id: 'D5', kind: 'diode', model: 'ge', from: 'q3', to: 'q2', label: 'D5' },
+    { id: 'D7', kind: 'diode', model: 'si', from: 'q3', to: 'N3', label: 'D7' },
+  ];
+  const hyp = [{ part: 'D8', assume: 'on' }, { part: 'D1', assume: 'on' }, { part: 'D2', assume: 'on' }, { part: 'D6', assume: 'on', showModel: false }, { part: 'D4', assume: 'on', showModel: false }, { part: 'D5', assume: 'off' }, { part: 'D7', assume: 'on', showModel: false }];
+  return {
+    type: 'circuit',
+    title: 'P6: suponer → resolver → validar',
+    steps: [
+      {
+        note: 'Rama de D6: D5 apunta en contra del resto. Supongo D5 OFF: la rama queda abierta, Ix = 0. Validación: V_AK de D5 negativa ✓. D6, D4 y D7 quedan OFF (en el umbral): V_AK = Vγ pero I = 0, no conducen.',
+        circuit: { nodes, parts: parts(15), diodes: hyp, hypothesis: 'D5 OFF · D6 D4 D7 OFF (umbral)', currents: [{ part: 'D6', label: 'I_x', showValue: true }] },
+        expect: { 'I(D6)': 0, 'I(R3)': 0 },
+      },
+      {
+        note: 'Hipótesis D8, D1, D2 ON. El solver resuelve y valida: i1 e i2 positivas ✓. I es la corriente de R1 y Va el potencial del nodo del riel inferior.',
+        circuit: { nodes, parts: parts(15), diodes: hyp, hypothesis: 'D8 D1 D2 ON', currents: [{ part: 'R1', label: 'I', showValue: true }, { part: 'R2', label: 'i_1', showValue: true }, { part: 'D1', label: 'i_2', showValue: true }], voltages: [{ part: 'R4', label: 'V_b', showValue: true }] },
+        expect: { 'I(R1)': 0.003585, 'V(Va)': 7.170, 'V(N1,N2)': 0.0815, 'I(D1)': 0.0000407 },
+      },
+      {
+        note: 'Potencia en R2: P = i1² · R2.',
+        circuit: { nodes, parts: parts(15), diodes: hyp, hypothesis: 'validado', currents: [{ part: 'R2', label: 'i_1', showValue: true }], voltages: [{ part: 'R2', label: 'V_{R2}', showValue: true }] },
+        expect: { 'P(R2)': 0.01256, 'I(R2)': 0.003544 },
+      },
+      {
+        note: 'f) Con E = 13.9 V la rama D1-D2 queda justo en el umbral: i2 = 0 y toda la corriente va por D8 (I = i1 = 3.3 mA).',
+        circuit: { nodes, parts: parts(13.9), diodes: hyp, hypothesis: 'D1 D2 ON (umbral)', currents: [{ part: 'D1', label: 'i_2', showValue: true }, { part: 'R1', label: 'I', showValue: true }] },
+        expect: { 'I(D1)': 0, 'I(R1)': 0.0033 },
+      },
+      {
+        note: 'Con E = 13 V (menor que el mínimo), suponer D1-D2 ON da i2 negativa ✗: la rama queda OFF.',
+        circuit: { nodes, parts: parts(13), diodes: hyp, hypothesis: 'D1 D2 ON', currents: [{ part: 'D1', label: 'i_2', showValue: true }] },
+      },
+    ],
+  };
+})()} />
+
+**Explora:** mueve E y observa el umbral de 13.9 V de la rama D1-D2.
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'P6: barrido de E',
+  interactive: { part: 'E', min: 0, max: 20, step: 0.1, label: 'E' },
+  steps: [{
+    note: 'D8 conduce casi desde el inicio; D1-D2 recién desde 13.9 V; la rama de D6 nunca.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0 }, { id: 'g', x: 0, y: 20, ground: true },
+        { id: 'N1', x: 8, y: 0 }, { id: 'n1', x: 8, y: 8 }, { id: 'Va', x: 8, y: 20, label: 'Va', showPotential: true },
+        { id: 'N2', x: 16, y: 0 }, { id: 'p1', x: 16, y: 5 }, { id: 'p2', x: 16, y: 10 }, { id: 'N3', x: 16, y: 20 },
+        { id: 'q0', x: 24, y: 0 }, { id: 'q1', x: 24, y: 5 }, { id: 'q2', x: 24, y: 12 }, { id: 'q3', x: 24, y: 20 },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 15, label: 'E' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'N1', value: 1000, label: 'R1' },
+        { id: 'D8', kind: 'diode', model: 'si', from: 'N1', to: 'n1', label: 'D8' },
+        { id: 'R2', kind: 'resistor', from: 'n1', to: 'Va', value: 1000, label: 'R2' },
+        { id: 'R6', kind: 'resistor', from: 'g', to: 'Va', value: 2000, label: 'R6' },
+        { id: 'R4', kind: 'resistor', from: 'N1', to: 'N2', value: 2000, label: 'R4' },
+        { id: 'D1', kind: 'diode', model: 'ge', from: 'N2', to: 'p1', label: 'D1' },
+        { id: 'D2', kind: 'diode', model: 'si', from: 'p1', to: 'p2', label: 'D2' },
+        { id: 'V2', kind: 'vsource', from: 'N3', to: 'p2', value: 3, label: 'V2' },
+        { id: 'R5', kind: 'resistor', from: 'Va', to: 'N3', value: 4000, label: 'R5' },
+        { id: 'D6', kind: 'diode', model: 'si', from: 'N2', to: 'q0', label: 'D6' },
+        { id: 'D4', kind: 'diode', model: 'ge', from: 'q0', to: 'q1', label: 'D4' },
+        { id: 'R3', kind: 'resistor', from: 'q1', to: 'q2', value: 3000, label: 'R3' },
+        { id: 'D5', kind: 'diode', model: 'ge', from: 'q3', to: 'q2', label: 'D5' },
+        { id: 'D7', kind: 'diode', model: 'si', from: 'q3', to: 'N3', label: 'D7' },
+      ],
+      currents: [{ part: 'R1', label: 'I', showValue: true }, { part: 'D1', label: 'i_2', showValue: true }, { part: 'D6', label: 'I_x', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.003585, 'I(D6)': 0 },
+  }],
+}} />
+
+</ExerciseBlock>
+
+## Pregunta 7 — Sensor de humedad de suelo (1.5 puntos)
+
+Escriba la sección de código que lee la humedad de suelo conectada al pin **A1** y la
+convierte a escala de 0 a 100 %, donde 100 % es la máxima humedad (sensor del laboratorio,
+no el del simulador).
+
+Tema: [Arduino y sensores](/topics/arduino-sensors).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Lea el YL-69 en A1 y conviértalo a 0–100 % de humedad.",
+  hints: [
+    "analogRead devuelve 0–1023 (ADC de 10 bits del Arduino UNO).",
+    "En el YL-69 + módulo YL-38, la salida analógica es ALTA con suelo seco y BAJA con suelo húmedo: la escala está invertida.",
+    "map(valor, deMin, deMax, aMin, aMax) acepta rangos invertidos.",
+  ],
+}}>
+
+**1. Rango de la lectura.** `analogRead` usa el ADC de 10 bits del Arduino UNO:
+
+$$
+D \in [0,\ 2^{10} - 1] = [0,\ 1023]
+$$
+
+**2. Sentido de la escala.** El sensor del laboratorio es el **YL-69** con su módulo **YL-38**
+(comparador LM393); su salida A0 va a A1 del Arduino. La resistencia del suelo baja al
+aumentar la humedad y el módulo entrega una tensión **alta en seco (≈ 1023)** y **baja en
+mojado (≈ 0)**: la escala está **invertida**.
+
+**3. Recta que pasa por (1023, 0 %) y (0, 100 %).** Es lo que hace `map(lectura, 1023, 0, 0, 100)`:
+
+$$
+h = 100 \cdot \frac{1023 - D}{1023}\ \%
+$$
+
+**4. Código:**
+
+```cpp
+const int pinHumedad = A1;      // A0 del modulo YL-38 -> A1 del Arduino
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  int lectura = analogRead(pinHumedad);          // 0..1023 (ADC de 10 bits)
+  int humedad = map(lectura, 1023, 0, 0, 100);   // seco (1023) -> 0 %, mojado (0) -> 100 %
+  humedad = constrain(humedad, 0, 100);          // por si la lectura sale del rango
+  Serial.print("Humedad del suelo: ");
+  Serial.print(humedad);
+  Serial.println(" %");
+  delay(1000);
+}
+```
+
+Si se calibra el sensor (seco al aire y sumergido en agua), se reemplazan 1023 y 0 por las
+lecturas medidas, p. ej. `map(lectura, lecturaSeco, lecturaAgua, 0, 100)`.
+
+**Comprobación:** $D = 1023 \to h = 0\,\%$ (seco), $D = 0 \to h = 100\,\%$ (mojado) y
+$D = 512 \to h = 49\,\%$ (`map` trabaja con enteros y trunca) ✓.
+
+</ExerciseBlock>
+
+## Pregunta 8 — Actuadores: relé y bomba (2.0 puntos)
+
+Dibuje un diagrama de conexión para encender la bomba de agua (o motor DC) de su
+laboratorio con los elementos de la Fig. a: **fuente para protoboard**, **motor** y **relé de 2
+canales** (contactos NO, COM, NC; bornes de control VCC, IN1, IN2, GND). Indique qué pines del
+Arduino van al control del relé.
+
+Tema: [Motor, relé y driver](/topics/lab-actuators/subtopics/motor-rele-driver).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Conecte Arduino, módulo de 2 relés, fuente de protoboard y bomba.",
+  hints: [
+    "El Arduino solo maneja la bobina del relé; la potencia del motor sale de la fuente de protoboard.",
+    "Control: VCC, GND y un pin digital a IN1. Potencia: la fuente pasa por COM y NO antes de llegar al motor.",
+  ],
+}}>
+
+**1. Separar control y potencia.** El Arduino solo maneja la bobina del relé; la corriente
+del motor sale de la fuente de protoboard y pasa por el contacto COM–NO.
+
+- **Control:** Arduino **5V → VCC**, **GND → GND**, **pin digital D7 → IN1** (el canal 2, IN2,
+  queda libre). En el código: `pinMode(7, OUTPUT);` y `digitalWrite(7, LOW/HIGH)` según el
+  nivel de activación del módulo (los SRD-05VDC comunes se activan con LOW).
+- **Potencia:** fuente de protoboard **+ → COM** del relé 1; **NO → + del motor/bomba**; **− del
+  motor → − de la fuente**. **NC libre** (si se usara NC, el motor funcionaría con el relé en
+  reposo).
+**2. Aislamiento.** El GND de la fuente de protoboard **no** necesita ir al Arduino: el relé aísla ambos
+  circuitos; la corriente del motor nunca pasa por el Arduino.
+
+**3. Diagrama:**
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'P8: Arduino + relé + fuente de protoboard + bomba',
+  steps: [{
+    note: 'Izquierda: control (Arduino → bobina K1 por IN1). Derecha: potencia (fuente PB → COM → contacto NO → bomba → fuente PB). Contacto dibujado cerrado: relé activado.',
+    circuit: {
+      variant: 'wiring',
+      nodes: [
+        { id: 'a5', x: 0, y: 0, label: 'Arduino 5V' }, { id: 'ad', x: 0, y: 5, label: 'Arduino D7' }, { id: 'ag', x: 0, y: 10, label: 'Arduino GND' },
+        { id: 'mv', x: 7, y: 0, label: 'VCC' }, { id: 'mi', x: 7, y: 5, label: 'IN1' }, { id: 'mg', x: 7, y: 10, label: 'GND' },
+        { id: 'com', x: 14, y: 0, label: 'COM' }, { id: 'no', x: 21, y: 0, label: 'NO' }, { id: 'mb', x: 21, y: 10 }, { id: 'fm', x: 14, y: 10, label: '− fuente' },
+      ],
+      parts: [
+        { id: 'w1', kind: 'wire', from: 'a5', to: 'mv' },
+        { id: 'w2', kind: 'wire', from: 'ad', to: 'mi' },
+        { id: 'w3', kind: 'wire', from: 'ag', to: 'mg' },
+        { id: 'K1', kind: 'relay', from: 'mi', to: 'mg', label: 'bobina K1' },
+        { id: 'Vpb', kind: 'vsource', from: 'fm', to: 'com', value: 5, label: 'Fuente PB' },
+        { id: 'K1c', kind: 'switch', from: 'com', to: 'no', label: 'contacto K1' },
+        { id: 'M', kind: 'motor', from: 'no', to: 'mb', label: 'Bomba' },
+        { id: 'w4', kind: 'wire', from: 'mb', to: 'fm' },
+      ],
+    },
+  }],
+}} />
+
+**Comprobación:** con IN1 inactivo, COM toca NC (libre) y el motor queda sin alimentación;
+al activarlo, COM pasa a NO y cierra el lazo fuente → motor ✓.
+
+</ExerciseBlock>
+
+## Pregunta 9 — LEDs en protoboard (2.0 puntos)
+
+En la Fig. b, ¿qué LED(s) se encenderá(n)? ¿Por qué? Comente las conexiones (en D4 se indica
+ánodo A y cátodo C).
+
+**Figura (descripción precisa).** Un portapilas de 4 × AAA: su cable rojo va a la fila **+**
+del riel superior (**5 V**) y su cable negro a la fila de tierra del riel inferior (**GND**).
+Cuatro LEDs rojos en la mitad superior, todos con la **pata izquierda doblada = ánodo** y la
+derecha = cátodo (como marca D4):
+- **D1**: un puente rojo baja del riel de 5 V a la columna de la **pata derecha (cátodo)**; la
+  pata izquierda (ánodo) sigue por una resistencia que cruza el canal central y un cable negro
+  a GND.
+- **D2**: el puente de 5 V llega a la columna de la **pata izquierda (ánodo)**; la pata derecha
+  sigue por una resistencia que cruza el canal y un cable negro a GND.
+- **D3**: el puente de 5 V llega al **ánodo**; del cátodo un cable azul cruza el canal a la fila
+  E de la mitad inferior, pero la resistencia se inserta en las filas D y A de **esa misma
+  columna**, y el cable negro a GND sale también de esa columna.
+- **D4**: un puente de 5 V baja a una columna libre; de ahí una resistencia horizontal (fila H)
+  llega al **ánodo A**; el **cátodo C** baja por un cable negro largo directo a GND.
+
+Tema: [Protoboard y simulación](/topics/breadboard-simulation) · [LED y protección](/topics/diodes/subtopics/led-y-proteccion).
+
+<ExerciseBlock client:visible exercise={{
+  level: 4,
+  statement: "¿Qué LEDs de la Fig. b encienden y por qué?",
+  hints: [
+    "Recuerda cómo conecta una protoboard: en cada mitad, las 5 perforaciones de una misma columna (A–E o F–J) están unidas; el canal central las separa; los rieles corren a lo largo.",
+    "Para cada LED revisa: ¿a qué pata llega el 5 V, al ánodo o al cátodo?",
+    "Mira dónde están las dos patas de cada resistencia: si ambas quedan en la misma tira de 5, la resistencia está en corto.",
+  ],
+}}>
+
+**1. Regla de la protoboard.** En cada mitad, las 5 perforaciones de una **columna** están unidas
+entre sí; el canal central separa la mitad superior (F–J) de la inferior (A–E); los rieles
+de alimentación corren a lo largo de la placa. Un LED conduce si su **ánodo** está a mayor
+potencial que su cátodo por al menos ≈ 2 V, y necesita una **resistencia en serie** que limite
+la corriente.
+
+**2. Recorrer cada LED: ¿a qué pata llega el 5 V y qué hay en el camino a GND?**
+
+| LED | 5 V llega a… | Camino a GND | ¿Enciende? |
+|---|---|---|---|
+| D1 | cátodo | ánodo → R → GND | **No**: polarización inversa |
+| D2 | ánodo | cátodo → R → GND | **Sí** |
+| D3 | ánodo | cátodo → cable azul → R **en corto** → GND | Conduce **sin limitación**: se quema (conexión incorrecta) |
+| D4 | columna libre → R → ánodo | cátodo → cable negro → GND | **Sí** |
+
+**3. D1: validar la polarización.** El puente de 5 V llega al cátodo y el ánodo queda del lado
+de GND (por R, sin corriente):
+
+$$
+V_{AK}^{D1} = 0 - 5 = -5\ \text{V} < 2\ \text{V} \quad\Rightarrow\quad \boxed{\text{D1 no enciende}}
+$$
+
+**4. D2 y D4: conexión correcta.** 5 V → LED → R → GND (o 5 V → R → LED → GND: da igual el
+orden). Con ≈ 1 kΩ:
+
+$$
+I_{D2} = I_{D4} = \frac{5 - 2}{1\ \text{k}\Omega} = \boxed{3\ \text{mA}} \quad\Rightarrow\quad \boxed{\text{D2 y D4 encienden}}
+$$
+
+**5. D3: resistencia en corto.** El cable azul y **las dos patas** de la resistencia quedan en
+la misma columna de la mitad inferior (filas E, D y A), así que esa columna ya es un solo
+nodo: la resistencia queda puenteada (corriente por ella = 0) y el cátodo va directo a GND.
+Solo limita la corriente la resistencia interna de las pilas, $r_{int}$, que es pequeña:
+
+$$
+I_{D3} = \frac{5 - 2}{r_{int}} \gg 20\ \text{mA} \quad\Rightarrow\quad \boxed{\text{D3 brilla un instante y se daña}}
+$$
+
+Hay que mover una pata de la resistencia a otra columna.
+
+Equivalente eléctrico de D1, D2 y D4 (resistencias de ≈ 1 kΩ según sus bandas; el valor no
+cambia qué LED enciende):
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'P9: D1, D2 y D4 en protoboard',
+  steps: [{
+    note: 'D1 queda en inversa (OFF). D2 y D4 conducen con (5 − 2)/1 kΩ = 3 mA cada uno. D3 se analiza aparte: su resistencia está en corto.',
+    circuit: {
+      variant: 'breadboard',
+      nodes: [
+        { id: 'p', x: 0, y: 0, label: '5 V' }, { id: 'g', x: 0, y: 10, ground: true },
+        { id: 't1', x: 5, y: 0 }, { id: 'a1', x: 5, y: 5 }, { id: 'b1', x: 5, y: 10 },
+        { id: 't2', x: 10, y: 0 }, { id: 'k2', x: 10, y: 5 }, { id: 'b2', x: 10, y: 10 },
+        { id: 't4', x: 15, y: 0 }, { id: 'a4', x: 15, y: 5 }, { id: 'b4', x: 15, y: 10 },
+      ],
+      parts: [
+        { id: 'V', kind: 'vsource', from: 'g', to: 'p', value: 5, label: '4×AAA' },
+        { id: 'w1', kind: 'wire', from: 'p', to: 't1' }, { id: 'w2', kind: 'wire', from: 't1', to: 't2' }, { id: 'w3', kind: 'wire', from: 't2', to: 't4' },
+        { id: 'w4', kind: 'wire', from: 'g', to: 'b1' }, { id: 'w5', kind: 'wire', from: 'b1', to: 'b2' }, { id: 'w6', kind: 'wire', from: 'b2', to: 'b4' },
+        { id: 'D1', kind: 'led', from: 'a1', to: 't1', label: 'D1' },
+        { id: 'R1', kind: 'resistor', from: 'a1', to: 'b1', value: 1000, label: 'R' },
+        { id: 'D2', kind: 'led', from: 't2', to: 'k2', label: 'D2' },
+        { id: 'R2', kind: 'resistor', from: 'k2', to: 'b2', value: 1000, label: 'R' },
+        { id: 'R4', kind: 'resistor', from: 't4', to: 'a4', value: 1000, label: 'R' },
+        { id: 'D4', kind: 'led', from: 'a4', to: 'b4', label: 'D4' },
+      ],
+      currents: [{ part: 'D2', label: 'I_{D2}', showValue: true }, { part: 'D4', label: 'I_{D4}', showValue: true }],
+    },
+    expect: { 'I(D1)': 0, 'I(D2)': 0.003, 'I(D4)': 0.003 },
+  }],
+}} />
+
+**Comprobación:** en la figura, el solver confirma $I_{D1} = 0$ e $I_{D2} = I_{D4} = 3$ mA ✓.
+
+</ExerciseBlock>
+
+## Pregunta 10 — Errores en el código (1.5 puntos)
+
+El código debe encender solo el LED 1 si el botón está presionado y solo el LED 2 si no lo
+está. Identifique los errores.
+
+```cpp
+#define Boton 3
+#define LED1 4
+#define LED2 5
+void setup() {
+  Serial.start(115200);
+  pinMode(Boton, INPUT);
+}
+void loop() {
+  Serial.print("Estado del boton: ");
+  Serial.println(digitalRead(Boton));
+  if(digitalRead(Boton)){
+    digitalWrite(LED1,HIGH);
+    digitalWrite(LED2,0);
+  }
+  else{
+    digitalWrite(LED1,LOW);
+    digitalWrite(LED2,ON);
+  }
+  delay(500);
+}
+```
+
+Tema: [Arduino y sensores](/topics/arduino-sensors).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Encuentre los errores del código del botón y los dos LEDs.",
+  hints: [
+    "Revisa el nombre de la función que inicia el puerto serie.",
+    "Para que un pin entregue HIGH/LOW, ¿qué hay que declarar en setup()?",
+    "Revisa las constantes que acepta digitalWrite: HIGH/LOW (o 1/0). ¿Existe ON?",
+  ],
+}}>
+
+**1. Revisar línea por línea** las funciones, el `setup()` y las constantes:
+
+| Línea | Error | Corrección |
+|---|---|---|
+| 5 | `Serial.start(115200);` — la función no existe (error de compilación) | `Serial.begin(115200);` |
+| 6–7 | Faltan `pinMode` de los LEDs: sin `OUTPUT` el pin no entrega corriente suficiente (solo activa el pull-up interno) | `pinMode(LED1, OUTPUT); pinMode(LED2, OUTPUT);` |
+| 17 | `digitalWrite(LED2,ON);` — `ON` no está definido (error de compilación) | `digitalWrite(LED2, HIGH);` |
+
+**2. Lo que parece error pero no lo es:** `digitalWrite(LED2,0)` (0 equivale a `LOW`) ni `if(digitalRead(Boton))`
+(HIGH = 1 es verdadero). Comentario de conexión: con `INPUT` el botón necesita una
+resistencia de **pull-down** externa (ver pregunta 11); si no, el pin queda flotando y lee
+valores aleatorios.
+
+**3. Código corregido:**
+
+```cpp
+#define Boton 3
+#define LED1 4
+#define LED2 5
+void setup() {
+  Serial.begin(115200);
+  pinMode(Boton, INPUT);        // con pull-down externo
+  pinMode(LED1, OUTPUT);
+  pinMode(LED2, OUTPUT);
+}
+void loop() {
+  Serial.print("Estado del boton: ");
+  Serial.println(digitalRead(Boton));
+  if (digitalRead(Boton)) {
+    digitalWrite(LED1, HIGH);
+    digitalWrite(LED2, LOW);
+  } else {
+    digitalWrite(LED1, LOW);
+    digitalWrite(LED2, HIGH);
+  }
+  delay(500);
+}
+```
+
+**Comprobación:** con el botón presionado, `digitalRead(3) = 1`: LED1 en HIGH y LED2 en
+LOW; suelto (pull-down), `digitalRead(3) = 0`: al revés ✓.
+
+</ExerciseBlock>
+
+## Pregunta 11 — Botón en configuración pull-down (1.0 punto)
+
+Realice un diagrama esquemático para la configuración **PULL-DOWN** (botón presionado → el pin
+lee 5 V; sin presionar → 0 V). Use una resistencia de **20 kΩ** y un botón de dos pines.
+
+Tema: [Arduino y sensores](/topics/arduino-sensors).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Dibuje el esquema pull-down con 20 kΩ y un botón de dos pines.",
+  hints: [
+    "Pull-DOWN: la resistencia \"tira\" el pin hacia abajo (GND) cuando el botón está suelto.",
+    "Entonces el botón va entre 5 V y el pin, y la resistencia entre el pin y GND.",
+  ],
+}}>
+
+**1. Ubicar la resistencia.** Pull-*down* = la resistencia "tira" el pin hacia GND cuando el
+botón está suelto; el botón va del lado de 5 V.
+
+- Un pin del botón a **5 V** del Arduino; el otro pin del botón al **pin digital** (p. ej. D2,
+  `pinMode(2, INPUT)`).
+- Del **mismo nodo del pin**, la resistencia de **20 kΩ a GND**.
+**2. Botón suelto.** El pin solo ve GND a través de los 20 kΩ; la entrada no consume
+corriente, así que R no cae:
+
+$$
+I_R = 0 \;\Rightarrow\; V_{pin} = V_{GND} + I_R\,R = 0 + 0 \cdot 20\ \text{k}\Omega = \boxed{0\ \text{V} = \text{LOW}}
+$$
+
+**3. Botón presionado.** El pin queda unido a 5 V y R queda entre 5 V y GND:
+
+$$
+V_{pin} = \boxed{5\ \text{V} = \text{HIGH}} \qquad I_R = \frac{5\ \text{V}}{20\ \text{k}\Omega} = \boxed{0.25\ \text{mA}}
+$$
+
+(sin R, presionar el botón sería un corto 5 V–GND).
+
+<Visualization viz={{
+  type: 'circuit',
+  title: 'P11: pull-down con 20 kΩ',
+  steps: [
+    {
+      note: 'Botón suelto: el pin queda unido a GND por R: lee 0 V (LOW). No circula corriente.',
+      circuit: {
+        nodes: [
+          { id: 'p', x: 0, y: 0, label: '5 V' }, { id: 'g', x: 0, y: 10, ground: true },
+          { id: 'k', x: 6, y: 0, label: 'pin D2', showPotential: true }, { id: 'k2', x: 6, y: 10 }, { id: 'q', x: 12, y: 0 }, { id: 'q2', x: 12, y: 10 },
+        ],
+        parts: [
+          { id: 'V', kind: 'vsource', from: 'g', to: 'p', value: 5, label: 'Arduino 5V' },
+          { id: 'S', kind: 'button', from: 'p', to: 'k', value: 0, label: 'botón' },
+          { id: 'R', kind: 'resistor', from: 'k', to: 'k2', value: 20000, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'k2', to: 'g' },
+          { id: 'w2', kind: 'wire', from: 'k', to: 'q' },
+          { id: 'IN', kind: 'voltmeter', from: 'q', to: 'q2', label: 'entrada D2' },
+          { id: 'w3', kind: 'wire', from: 'q2', to: 'k2' },
+        ],
+      },
+      expect: { 'V(k)': 0, 'I(R)': 0 },
+    },
+    {
+      note: 'Botón presionado: el pin queda unido a 5 V: lee HIGH. Por R circulan 5 V / 20 kΩ = 0.25 mA.',
+      circuit: {
+        nodes: [
+          { id: 'p', x: 0, y: 0, label: '5 V' }, { id: 'g', x: 0, y: 10, ground: true },
+          { id: 'k', x: 6, y: 0, label: 'pin D2', showPotential: true }, { id: 'k2', x: 6, y: 10 }, { id: 'q', x: 12, y: 0 }, { id: 'q2', x: 12, y: 10 },
+        ],
+        parts: [
+          { id: 'V', kind: 'vsource', from: 'g', to: 'p', value: 5, label: 'Arduino 5V' },
+          { id: 'S', kind: 'button', from: 'p', to: 'k', value: 1, label: 'botón', state: 'active' },
+          { id: 'R', kind: 'resistor', from: 'k', to: 'k2', value: 20000, label: 'R' },
+          { id: 'w1', kind: 'wire', from: 'k2', to: 'g' },
+          { id: 'w2', kind: 'wire', from: 'k', to: 'q' },
+          { id: 'IN', kind: 'voltmeter', from: 'q', to: 'q2', label: 'entrada D2' },
+          { id: 'w3', kind: 'wire', from: 'q2', to: 'k2' },
+        ],
+        currents: [{ part: 'R', label: 'I_R', showValue: true }],
+      },
+      expect: { 'V(k)': 5, 'I(R)': 0.00025 },
+    },
+  ],
+}} />
+
+**Comprobación:** la potencia en R con el botón presionado es $5^2/20\,000 = 1.25$ mW,
+muy por debajo de lo que disipa una resistencia de 1/4 W ✓.
+
+</ExerciseBlock>

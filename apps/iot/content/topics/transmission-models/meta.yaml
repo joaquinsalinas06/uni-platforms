@@ -1,0 +1,11 @@
+id: transmission-models
+title: "Modelos de transmisión: cliente-servidor y pub/sub"
+type: concept
+unit: s5
+prerequisites: [wireless-tech]
+buildsOn: []
+usedBy: [app-protocols, mqtt]
+hasVisualization: true
+visualizationType: sequence
+placeholder: false
+formulas: []

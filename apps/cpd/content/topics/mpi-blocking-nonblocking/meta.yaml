@@ -1,0 +1,15 @@
+id: mpi-blocking-nonblocking
+title: "Comunicación bloqueante vs no bloqueante"
+type: concept
+unit: u3
+
+prerequisites: [mpi-intro, pram-models]
+buildsOn: []
+usedBy: []
+
+complexity: {}
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: timeline
+placeholder: false
