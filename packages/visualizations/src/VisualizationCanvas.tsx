@@ -823,9 +823,9 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
         <div
           hidden={isStatic && !step.note}
           style={{
-            minHeight: minNoteHeight > 0 ? `${minNoteHeight}px` : undefined,
+            minHeight: minNoteHeight > 0 ? `${Math.min(minNoteHeight, 92)}px` : '3.5rem',
           }}
-          className="px-5 py-3.5 text-[0.9375rem] leading-relaxed transition-opacity duration-200"
+          className="flex flex-col justify-center px-5 py-3 text-[0.9375rem] leading-relaxed transition-opacity duration-200"
           aria-live="polite"
           dangerouslySetInnerHTML={{
             __html: renderInlineMath(step.note ?? ''),
@@ -883,24 +883,28 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
               <IconChevronRight className="h-4 w-4" />
             </button>
 
-            {/* Indicadores de pasos (dots) */}
-            <div className="ml-2 flex items-center gap-1.5">
+            {/* Botones de cada paso (1, 2, 3... claros y clickeables) */}
+            <div className="flex items-center gap-1 overflow-x-auto px-2">
               {steps.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => { setPlaying(false); setI(idx); }}
                   aria-label={`Ir al paso ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] ${
-                    idx === i ? 'w-5 bg-[var(--accent)]' : 'w-1.5 bg-[var(--rule)] hover:bg-[var(--muted)]'
+                  className={`flex h-6 min-w-6 items-center justify-center rounded px-1.5 font-mono text-xs font-medium transition-all ${
+                    idx === i
+                      ? 'bg-[var(--accent)] text-white shadow-sm'
+                      : 'border border-[var(--rule)] bg-[var(--paper)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]'
                   }`}
-                />
+                >
+                  {idx + 1}
+                </button>
               ))}
             </div>
 
-            {/* Contador de paso */}
-            <span className="ml-auto font-mono text-[0.6875rem] tracking-widest whitespace-nowrap text-[var(--faint)] uppercase">
-              paso {i + 1}/{steps.length}
-            </span>
+            {/* Contador de paso perfectamente alineado */}
+            <div className="ml-auto flex items-center pr-1 font-mono text-xs tracking-wider text-[var(--muted)] uppercase whitespace-nowrap">
+              <span>paso {i + 1} / {steps.length}</span>
+            </div>
           </div>
         )}
       </figcaption>
