@@ -76,10 +76,12 @@ export const collections = {
   // pregunta — cada examen trae su propia forma (tablas, figuras, código).
   evaluaciones: defineCollection({
     loader: glob({
-      pattern: '**/*.md',
+      pattern: '**/*.{md,mdx}',
       base: './content/evaluaciones',
       // id = "pd1/2026-i", "parciales/2025-ii-s01", etc.
-      generateId: ({ entry }) => entry.replace(/\.md$/, ''),
+      // .mdx es para el examen puntual que necesita un diagrama intercalado
+      // a mitad de una pregunta; el resto sigue en .md.
+      generateId: ({ entry }) => entry.replace(/\.mdx?$/, ''),
     }),
     schema: z.object({
       title: z.string(),

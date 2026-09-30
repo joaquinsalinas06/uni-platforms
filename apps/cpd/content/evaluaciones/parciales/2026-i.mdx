@@ -9,6 +9,8 @@ order: 4
 
 Las gráficas muestran speedup vs. número de nodos (izquierda) y eficiencia vs. número de nodos (derecha) de un código de N-cuerpos que usa HPX (librería de concurrencia/paralelismo en C++), para distintos tamaños de problema $N$ (de 100.000 a 1.000.000.000). En speedup, las curvas para $N$ grande ($10^8$, $10^9$) se acercan mucho a la recta ideal $S=p$ hasta $p=128$; las curvas de $N$ chico ($10^5$, $10^6$) se aplanan rápido e incluso caen. En eficiencia, las curvas de $N$ grande se mantienen cerca de 1 en todo el rango de $p$, mientras que las de $N$ chico caen fuerte (hasta $\sim 0{,}7$ para $N=10^5$ con pocos nodos).
 
+![Figura 1: speedup vs. número de nodos (izquierda) y eficiencia vs. número de nodos (derecha) de un código de N-cuerpos con HPX, para N entre 100.000 y 1.000.000.000](/evaluaciones/parciales/2026-i/hpx-speedup-eficiencia.png)
+
 #### (a) Tiempo de ejecución y speedup teóricos (1 pt)
 
 Se obtiene con HPX un tiempo de cómputo $T_{comp}=O(\log(1/\epsilon)\,N/p)$, con tolerancia $\epsilon$, y un tiempo de comunicación $T_{comm}=O(\log(p))$.
@@ -35,7 +37,7 @@ La diferencia cualitativa entre la teoría y el experimento es causada por el ov
 
 **Respuesta:** Se observa escalabilidad fuerte en las curvas de mayor $N$ en ambas gráficas (la eficiencia se mantiene casi constante al crecer $p$ manteniendo $N$ fijo). Cuando $N$ es pequeño, no existe escalabilidad fuerte, $p$ domina. Escalabilidad débil es también observable, con $N$ creciente, lo que requeriría conservar la relación $n\propto\sqrt{p\log(p)}$.
 
-*Descripción de la Figura 2 del examen:* misma gráfica de eficiencia vs. número de nodos anotada con dos flechas — una señala la curva de mayor $N$ (que se superpone a la recta ideal $E=1$) como ejemplo de "escalabilidad fuerte para $N$ grande", y otra señala las curvas de $N$ decreciente cayendo desde $\sim 0{,}7$–$0{,}85$ como ejemplo de "escalabilidad débil para $N$ creciente" (mejora al ir de curvas de $N$ chico a $N$ grande).
+![Figura 2: misma gráfica de eficiencia vs. número de nodos, anotada con dos flechas — una señala la curva de mayor N (superpuesta a la recta ideal E=1) como "escalabilidad fuerte para N grande", y otra señala las curvas de N chico cayendo hacia 0,7 como "escalabilidad débil para N creciente"](/evaluaciones/parciales/2026-i/hpx-eficiencia-anotada.png)
 
 #### (e) ¿Cambia el resultado si $T_{comm}=O(p)$? (1 pt)
 

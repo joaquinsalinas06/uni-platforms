@@ -5,9 +5,60 @@ categoryLabel: "Parciales"
 order: 2
 ---
 
+import Visualization from '../../../src/components/Visualization.astro';
+
 ## Pregunta 1 — k-Nearest-Neighbors (5 puntos)
 
-Se muestra el DAG de un modelo kNN (con un nodo de parámetros iniciales, ramas independientes de distancia/orden/$k$-más-cercanos por partición, y un nodo final de mayoría simple), así como gráficas de tiempo de ejecución para pruebas de *weak-scaling* (izquierda) y *strong-scaling* (derecha) en dos clústeres (Shaheen-III, MareNostrum 5), hasta 32 procesos MPI. $n_{tr}$ es la data de entrenamiento y $n_{te}$ la data de prueba. En cada curva se anota la eficiencia medida (%) por cantidad de nodos, sobre la curva de tiempo de ejecución (azul) y la curva de tiempo esperado para eficiencia constante (línea roja punteada).
+Se muestra el DAG de un modelo kNN: un nodo de parámetros iniciales, ramas independientes de distancia/orden/$k$-más-cercanos por partición, y un nodo final de mayoría simple.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Nodo raíz: los parámetros iniciales del modelo kNN, antes de repartirse entre las p particiones.",
+      nodes: [
+        { id: 'root', value: 'Initial\nparameters', state: 'active' },
+      ],
+    },
+    {
+      note: "Scatter (overhead) de los parámetros hacia cada partición i = 0..p-1. Cada partición calcula, de forma independiente y en paralelo, las distancias, el ordenamiento y los k vecinos más cercanos de su bloque de datos: trabajo O(n_tr·n_te/p) por partición.",
+      nodes: [
+        { id: 'root', value: 'Initial\nparameters', state: 'muted' },
+        { id: 'dist0', value: 'dist₀\nsort\nk-nearest', tag: 'P0', parent: 'root', state: 'active' },
+        { id: 'dist1', value: 'dist₁\nsort\nk-nearest', tag: 'P1', parent: 'root', state: 'active' },
+        { id: 'distp1', value: 'dist_p-1\nsort\nk-nearest', tag: 'Pp-1', parent: 'root', state: 'active' },
+      ],
+      links: [
+        { from: 'root', to: 'dist0', label: 'overhead' },
+        { from: 'root', to: 'dist1', label: 'overhead' },
+        { from: 'root', to: 'distp1', label: 'overhead' },
+      ],
+    },
+    {
+      note: "Gather (overhead) de los k-vecinos locales de cada partición hacia un único nodo final, que aplica mayoría simple sobre los votos combinados — la predicción del modelo kNN.",
+      highlight: ['majority'],
+      nodes: [
+        { id: 'root', value: 'Initial\nparameters', state: 'muted' },
+        { id: 'dist0', value: 'dist₀\nsort\nk-nearest', tag: 'P0', parent: 'root', state: 'muted' },
+        { id: 'dist1', value: 'dist₁\nsort\nk-nearest', tag: 'P1', parent: 'root', state: 'muted' },
+        { id: 'distp1', value: 'dist_p-1\nsort\nk-nearest', tag: 'Pp-1', parent: 'root', state: 'muted' },
+        { id: 'majority', value: 'apply\nsimply\nmajority', state: 'answer' },
+      ],
+      links: [
+        { from: 'root', to: 'dist0', label: 'overhead' },
+        { from: 'root', to: 'dist1', label: 'overhead' },
+        { from: 'root', to: 'distp1', label: 'overhead' },
+        { from: 'dist0', to: 'majority', label: 'overhead' },
+        { from: 'dist1', to: 'majority', label: 'overhead' },
+        { from: 'distp1', to: 'majority', label: 'overhead' },
+      ],
+    },
+  ],
+}} />
+
+Las siguientes gráficas muestran el tiempo de ejecución para pruebas de *weak-scaling* (izquierda) y *strong-scaling* (derecha) en dos clústeres (Shaheen-III, MareNostrum 5), hasta 32 procesos MPI. $n_{tr}$ es la data de entrenamiento y $n_{te}$ la data de prueba. En cada curva se anota la eficiencia medida (%) por cantidad de nodos, sobre la curva de tiempo de ejecución (azul) y la curva de tiempo esperado para eficiencia constante (línea roja punteada).
+
+![Gráficas de weak-scaling (izquierda) y strong-scaling (derecha) del modelo kNN paralelo en los clústeres Shaheen-III y MareNostrum 5, hasta 32 procesos MPI, con eficiencia anotada por cantidad de nodos](/evaluaciones/parciales/2025-ii-s01/knn-weak-strong-scaling.png)
 
 #### (a) Descripción de las gráficas y comparación entre clústeres (1.5 pts)
 
