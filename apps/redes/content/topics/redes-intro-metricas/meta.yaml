@@ -1,0 +1,23 @@
+id: "redes-intro-metricas"
+title: "Fundamentos de Redes, Conmutación y Retardos Nodales"
+type: "concept"
+unit: "s1"
+prerequisites: []
+buildsOn: []
+usedBy:
+  - "arquitectura-capas-internet"
+  - "capa-aplicacion-http"
+formulas:
+  - name: "Retardo Nodal Total"
+    tex: "d_{\\text{nodal}} = d_{\\text{proc}} + d_{\\text{queue}} + d_{\\text{trans}} + d_{\\text{prop}}"
+    reasoning: "Calcula el retardo total experimentado por un paquete en un único nodo o enrutador sumando procesamiento, encolamiento, transmisión y propagación."
+  - name: "Retardo de Transmisión"
+    tex: "d_{\\text{trans}} = \\frac{L}{R}"
+    reasoning: "Determina el tiempo requerido para inyectar todos los bits de un paquete de longitud L bits en un enlace con tasa de transmisión R bits por segundo."
+  - name: "Retardo de Propagación"
+    tex: "d_{\\text{prop}} = \\frac{d}{s}"
+    reasoning: "Modela el tiempo que tarda un bit en viajar a través del medio físico desde el emisor hasta el receptor a lo largo de una distancia d con velocidad de propagación s."
+  - name: "Intensidad de Tráfico"
+    tex: "I = \\frac{L \\cdot a}{R}"
+    reasoning: "Estima la carga de la cola en el enrutador considerando la tasa media de llegada de paquetes 'a', longitud 'L' y capacidad de transmisión 'R'; si I > 1 la cola tiende a infinito."
+hasVisualization: false

@@ -1,0 +1,77 @@
+---
+import katex from 'katex';
+import Base from '../layouts/Base.astro';
+import { knowledgeMap } from '../lib/knowledge-map';
+import { allMeta } from '../lib/topics';
+import { renderRich } from '../components/rich-text.ts';
+
+// El formulario sale entero de `formulas` en cada meta.yaml: nada escrito a
+// mano acá, igual que la nav y el índice de búsqueda.
+const metaById = new Map(allMeta().map((m) => [m.id, m]));
+
+const weeks = knowledgeMap.units
+  .map((unit) => ({
+    unit,
+    topics: unit.topics
+      .map((id) => metaById.get(id))
+      .filter((m): m is NonNullable<typeof m> => !!m && m.formulas.length > 0),
+  }))
+  .filter((w) => w.topics.length > 0);
+---
+
+<Base title="Formulario" crumb="formulario">
+  <header class="stagger mb-12">
+    <p class="tag">referencia rápida</p>
+    <h1 class="mt-2 max-w-[28ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      Formulario del curso
+    </h1>
+    <p class="mt-5 max-w-[62ch] text-[1.0625rem] leading-relaxed text-[var(--muted)]">
+      Todas las fórmulas del curso en un solo lugar, agrupadas por semana y tema — para
+      repasar rápido sin ir tema por tema. Cada fórmula enlaza a su tema si necesitás el
+      razonamiento completo en contexto.
+    </p>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  {
+    weeks.length === 0 && (
+      <p class="tag">todavía no hay fórmulas cargadas en ningún meta.yaml</p>
+    )
+  }
+
+  <div class="space-y-14">
+    {
+      weeks.map(({ unit, topics }) => (
+        <section class="reveal">
+          <div class="mb-5 flex items-baseline gap-4">
+            <span class="tag">{unit.title}</span>
+            <span class="h-px flex-1 bg-[var(--rule)]" />
+          </div>
+
+          <div class="space-y-10">
+            {topics.map((m) => (
+              <div>
+                <a href={`/topics/${m.id}`} class="text-[1.0625rem] font-medium no-underline hover:text-[var(--accent)]">
+                  {m.title} ↗
+                </a>
+                <dl class="mt-4 space-y-5 border-l border-[var(--rule)] pl-5">
+                  {m.formulas.map((f) => (
+                    <div>
+                      <dt class="text-[0.9375rem] font-medium">{f.name}</dt>
+                      <dd
+                        class="mt-1.5 overflow-x-auto"
+                        set:html={katex.renderToString(f.tex, { throwOnError: false, displayMode: true })}
+                      />
+                      <dd class="rich mt-1.5 max-w-[68ch] text-[0.875rem] text-[var(--muted)]" set:html={renderRich(f.reasoning)} />
+                      {f.source && <dd class="tag mt-1.5">fuente · {f.source}</dd>}
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</Base>

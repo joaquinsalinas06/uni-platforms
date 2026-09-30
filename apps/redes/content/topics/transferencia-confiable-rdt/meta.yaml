@@ -1,0 +1,18 @@
+id: "transferencia-confiable-rdt"
+title: "Principios de Transferencia Confiable (RDT 1.0 a 3.0)"
+type: "concept"
+unit: "s5"
+prerequisites: ["capa-transporte-multiplexacion"]
+buildsOn: ["capa-transporte-multiplexacion"]
+usedBy: ["protocolos-pipeline-gbn-sr", "protocolo-tcp-mecanismos"]
+formulas:
+  - name: "Tiempo de transmisión de paquete"
+    tex: "t_{\\text{trans}} = \\frac{L}{R}"
+    reasoning: "Tiempo necesario para que el emisor inyecte todos los L bits del paquete en un enlace de transmisión con capacidad de R bits por segundo."
+  - name: "Utilización del canal en Stop-and-Wait"
+    tex: "U_{\\text{sender}} = \\frac{L / R}{RTT + L / R}"
+    reasoning: "Fracción de tiempo durante la cual el emisor está efectivamente inyectando bits útiles al canal físico en un protocolo de parada y espera."
+  - name: "Rendimiento efectivo en Stop-and-Wait"
+    tex: "\\text{Throughput}_{\\text{eff}} = \\frac{L}{RTT + L / R}"
+    reasoning: "Tasa neta de bits de aplicación transferidos exitosamente por segundo considerando el retardo de ida y vuelta del canal."
+hasVisualization: false

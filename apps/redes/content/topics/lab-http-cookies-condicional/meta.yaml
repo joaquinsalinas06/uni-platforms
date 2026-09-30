@@ -1,0 +1,19 @@
+id: "lab-http-cookies-condicional"
+title: "Laboratorio: Análisis Avanzado HTTP con Wireshark"
+type: "lab"
+unit: "s2"
+prerequisites:
+  - "web-caching-cookies"
+  - "lab-wireshark-http-intro"
+buildsOn:
+  - "web-caching-cookies"
+usedBy:
+  - "lab-dns-wireshark-nslookup"
+formulas:
+  - name: "Condición de Recarga Condicional HTTP"
+    tex: "\\Delta t = t_{\\text{cache}} - t_{\\text{Last-Modified}}"
+    reasoning: "Determina si el recurso almacenado en la caché local del navegador está desactualizado respecto a la marca temporal del servidor."
+  - name: "Decodificación Base64 en HTTP Basic Auth"
+    tex: "\\text{Credencial} = \\text{base64\\_decode}(\\text{TokenAuth})"
+    reasoning: "Demuestra la reversibilidad matemática del esquema de autenticación HTTP básica al no aplicar una función unidireccional ni cifrado."
+hasVisualization: false

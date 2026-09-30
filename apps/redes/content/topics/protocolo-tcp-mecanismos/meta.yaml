@@ -1,0 +1,22 @@
+id: "protocolo-tcp-mecanismos"
+title: "Protocolo TCP: Estructura del Segmento y Gestión de Conexión"
+type: "concept"
+unit: "s7"
+prerequisites:
+  - "protocolos-pipeline-gbn-sr"
+buildsOn:
+  - "protocolos-pipeline-gbn-sr"
+usedBy:
+  - "rtt-timeout-retransmision"
+  - "control-flujo-congestion-tcp"
+formulas:
+  - name: "Tamaño Máximo de Segmento (MSS)"
+    tex: "\\text{MSS} = \\text{MTU} - (\\text{Header}_{\\text{IP}} + \\text{Header}_{\\text{TCP}})"
+    reasoning: "Determina la cantidad máxima de datos de capa de aplicación que TCP puede empaquetar en un único segmento sin provocar fragmentación IP."
+  - name: "Número de Secuencia del Siguiente Segmento"
+    tex: "\\text{Seq}_{k+1} = \\text{Seq}_k + \\text{PayloadBytes}_k"
+    reasoning: "Calcula el número de secuencia del siguiente segmento sumando el total de bytes de carga útil transmitidos en el segmento actual."
+  - name: "Acuse de Recibo Acumulativo TCP"
+    tex: "\\text{ACK} = \\text{LastByteReceivedInOrder} + 1"
+    reasoning: "Indica al emisor el número de secuencia del siguiente byte que el receptor espera recibir de manera ordenada y sin huecos."
+hasVisualization: false

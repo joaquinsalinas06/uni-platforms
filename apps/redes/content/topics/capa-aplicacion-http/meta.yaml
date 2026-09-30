@@ -1,0 +1,22 @@
+id: "capa-aplicacion-http"
+title: "Capa de Aplicación y Protocolo HTTP (1.0 / 1.1 / 2)"
+type: "concept"
+unit: "s2"
+prerequisites:
+  - "arquitectura-capas-internet"
+buildsOn:
+  - "arquitectura-capas-internet"
+usedBy:
+  - "web-caching-cookies"
+  - "dns-arquitectura-resolucion"
+formulas:
+  - name: "Latencia HTTP No Persistente"
+    tex: "T_{\\text{no-persistente}} = 2 \\cdot \\text{RTT} + \\frac{S_{\\text{base}}}{R} + \\sum_{i=1}^{M} \\left( 2 \\cdot \\text{RTT} + \\frac{S_i}{R} \\right)"
+    reasoning: "Modela el tiempo total de descarga cuando cada objeto web requiere una conexión TCP individual e independiente (1 RTT de handshake más 1 RTT de solicitud/respuesta)."
+  - name: "Latencia HTTP Persistente sin Pipelining"
+    tex: "T_{\\text{persistente}} = 2 \\cdot \\text{RTT} + \\frac{S_{\\text{base}}}{R} + \\sum_{i=1}^{M} \\left( \\text{RTT} + \\frac{S_i}{R} \\right)"
+    reasoning: "Modela el tiempo de descarga reutilizando la conexión TCP abierta, requiriendo solo 1 RTT por cada objeto adicional de manera secuencial."
+  - name: "Latencia HTTP Persistente con Pipelining"
+    tex: "T_{\\text{pipelining}} = 2 \\cdot \\text{RTT} + \\frac{S_{\\text{base}}}{R} + \\text{RTT} + \\sum_{i=1}^{M} \\frac{S_i}{R}"
+    reasoning: "Calcula el tiempo cuando todas las solicitudes de objetos referenciados se envían en una única ráfaga consecutiva sin esperar las respuestas intermedias."
+hasVisualization: false

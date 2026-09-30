@@ -1,0 +1,23 @@
+id: "control-flujo-congestion-tcp"
+title: "Control de Flujo (rwnd) y Control de Congestión en TCP"
+type: "concept"
+unit: "s7"
+prerequisites:
+  - "rtt-timeout-retransmision"
+buildsOn:
+  - "rtt-timeout-retransmision"
+usedBy: []
+formulas:
+  - name: "Ventana de Recepción Libre (rwnd)"
+    tex: "\\text{rwnd} = \\text{RcvBuffer} - [\\text{LastByteRcvd} - \\text{LastByteRead}]"
+    reasoning: "Calcula el espacio remanente disponible en el búfer de recepción para evitar el desbordamiento de memoria por lentitud de la aplicación consumidora."
+  - name: "Ventana de Transmisión Efectiva"
+    tex: "\\text{VentanaEfectiva} = \\min(\\text{cwnd}, \\text{rwnd})"
+    reasoning: "Limita los datos en vuelo como el mínimo entre la capacidad de la red (cwnd) y la capacidad del búfer del receptor (rwnd)."
+  - name: "Actualización de ssthresh ante Pérdidas"
+    tex: "\\text{ssthresh} = \\max\\left(\\frac{\\text{FlightSize}}{2}, 2 \\cdot \\text{MSS}\\right)"
+    reasoning: "Reduce el umbral de arranque lento a la mitad del volumen de datos en vuelo al detectar congestión en la red."
+  - name: "Throughput Promedio de TCP en Congestion Avoidance"
+    tex: "\\text{Throughput}_{\\text{promedio}} \\approx 0.75 \\cdot \\frac{\\text{W}_{\\max} \\cdot \\text{MSS}}{\\text{RTT}}"
+    reasoning: "Modela la tasa media de transferencia de TCP debida al comportamiento de diente de sierra AIMD que oscila entre Wmax/2 y Wmax."
+hasVisualization: false

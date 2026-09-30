@@ -1,0 +1,21 @@
+id: "arquitecturas-p2p-distribucion"
+title: "Distribución P2P vs Cliente-Servidor y Escalabilidad"
+type: "concept"
+unit: "s4"
+prerequisites:
+  - "capa-aplicacion-http"
+buildsOn:
+  - "capa-aplicacion-http"
+usedBy:
+  - "bittorrent-dht"
+formulas:
+  - name: "Cota inferior de distribución Cliente-Servidor"
+    tex: "D_{\\text{cs}} \\ge \\max \\left\\{ \\frac{N \\cdot F}{u_s}, \\frac{F}{d_{\\min}} \\right\\}"
+    reasoning: "Calcula el tiempo mínimo para distribuir un archivo de tamaño F a N receptores en arquitectura cliente-servidor, condicionado por la tasa de subida del servidor y la descarga más lenta."
+  - name: "Cota inferior de distribución Peer-to-Peer"
+    tex: "D_{\\text{P2P}} \\ge \\max \\left\\{ \\frac{F}{u_s}, \\frac{F}{d_{\\min}}, \\frac{N \\cdot F}{u_s + \\sum_{i=1}^N u_i} \\right\\}"
+    reasoning: "Modela el tiempo teórico de distribución en redes P2P donde los pares colaboran redistribuyendo fragmentos aprovechando el ancho de banda agregado de subida."
+  - name: "Escalabilidad asintótica P2P con pares homogéneos"
+    tex: "\\lim_{N \\to \\infty} D_{\\text{P2P}} = \\max \\left\\{ \\frac{F}{u_s}, \\frac{F}{d_{\\min}}, \\frac{F}{u} \\right\\} = \\mathcal{O}(1)"
+    reasoning: "Expresa que cuando los pares poseen capacidades de subida homogéneas (ui = u), el tiempo total de distribución P2P se estabiliza de forma constante O(1) independiente del número de nodos N."
+hasVisualization: false

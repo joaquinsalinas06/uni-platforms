@@ -1,0 +1,21 @@
+id: "rtt-timeout-retransmision"
+title: "Estimación de RTT, Timeout y Fast Retransmit en TCP"
+type: "concept"
+unit: "s7"
+prerequisites:
+  - "protocolo-tcp-mecanismos"
+buildsOn:
+  - "protocolo-tcp-mecanismos"
+usedBy:
+  - "control-flujo-congestion-tcp"
+formulas:
+  - name: "Media Móvil Ponderada Exponencial (EstimatedRTT)"
+    tex: "\\text{EstimatedRTT} = (1 - \\alpha) \\cdot \\text{EstimatedRTT} + \\alpha \\cdot \\text{SampleRTT}"
+    reasoning: "Actualiza el tiempo de ida y vuelta promedio ponderando el historial con el nuevo valor medido usando típicamente alfa = 0.125."
+  - name: "Desviación Media de RTT (DevRTT)"
+    tex: "\\text{DevRTT} = (1 - \\beta) \\cdot \\text{DevRTT} + \\beta \\cdot |\\text{SampleRTT} - \\text{EstimatedRTT}|"
+    reasoning: "Estima la variabilidad y fluctuación estadística del RTT muestral respecto a la media estimada usando típicamente beta = 0.25."
+  - name: "Intervalo de Temporización de Retransmisión (TimeoutInterval)"
+    tex: "\\text{TimeoutInterval} = \\text{EstimatedRTT} + 4 \\cdot \\text{DevRTT}"
+    reasoning: "Calcula el temporizador de retransmisión seguro añadiendo un margen de cuatro desviaciones para evitar retransmisiones prematuras."
+hasVisualization: false

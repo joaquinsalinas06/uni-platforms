@@ -1,0 +1,15 @@
+id: "lab-wireshark-http-intro"
+title: "Laboratorio: Wireshark y Captura Inicial de HTTP"
+type: "lab"
+unit: "s1"
+prerequisites:
+  - "arquitectura-capas-internet"
+buildsOn:
+  - "arquitectura-capas-internet"
+usedBy:
+  - "lab-http-cookies-condicional"
+formulas:
+  - name: "Filtro Booleano de Visualización Wireshark"
+    tex: "\\text{Filtro} = \\text{proto} \\land (\\text{src\\_ip} \\lor \\text{dst\\_port})"
+    reasoning: "Expresa la combinación formal de operadores lógicos booleanos aplicados a cabeceras de protocolo para aislar flujos de paquetes específicos en Wireshark."
+hasVisualization: false

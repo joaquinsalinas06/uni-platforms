@@ -1,0 +1,111 @@
+---
+import Base from '../layouts/Base.astro';
+import { knowledgeMap, TYPE_LABEL } from '../lib/knowledge-map';
+
+const topics = Object.entries(knowledgeMap.topics);
+const done = topics.filter(([, t]) => t.status === 'generated').length;
+const pct = Math.round((done / topics.length) * 100);
+---
+
+<Base title="Mapa del curso">
+  <header class="stagger mb-16">
+    <p class="tag">Redes y Comunicaciones · CS4054 · UTEC</p>
+    <h1
+      class="mt-2 max-w-[18ch] text-[clamp(2.5rem,6vw,4.5rem)] leading-[0.98] font-semibold tracking-[-0.04em]"
+    >
+      Redes de Computadoras
+    </h1>
+    <hr class="draw mt-8 border-0 border-t-2 border-[var(--ink)]" />
+    <p class="mt-6 max-w-[62ch] text-[1.125rem] leading-relaxed text-[var(--muted)]">
+      Todo lo que hay aquí sale del material oficial del curso (teoría, laboratorios de Wireshark y sockets UDP, y exámenes parciales). La navegación, los prerrequisitos y las
+      relaciones se derivan de <code
+        class="rounded border border-[var(--rule)] bg-[var(--fill)] px-1.5 py-0.5 font-mono text-[0.875rem] text-[var(--ink)]"
+        >knowledge-map.json</code
+      >; nada se inventa.
+    </p>
+
+    <div class="mt-8 flex max-w-md items-center gap-4">
+      <span class="flex h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--sunken)]">
+        <span class="h-full rounded-full bg-[var(--accent)]" style={`width:${pct}%`}></span>
+      </span>
+      <span class="tag whitespace-nowrap">
+        {done}/{topics.length} temas · {knowledgeMap.units.length} semanas
+      </span>
+    </div>
+
+    <ul class="mt-8 flex flex-wrap gap-3">
+      {
+        [
+          { href: '/evaluaciones', label: 'Parciales resueltos' },
+          { href: '/formulario', label: 'Formulario de redes' },
+          { href: '/practica', label: 'Práctica y ejercicios' },
+        ].map((link) => (
+          <li>
+            <a
+              href={link.href}
+              class="tag inline-block rounded border border-[var(--rule)] px-3 py-1.5 no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              {link.label} ↗
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </header>
+
+  <div class="space-y-14">
+    {
+      knowledgeMap.units.map((unit) => (
+        <section class="reveal">
+          <div class="mb-4 flex items-baseline gap-4">
+            <a href={`/units/${unit.id}`} class="tag no-underline hover:text-[var(--accent)]">
+              {unit.id}
+            </a>
+            <span class="h-px flex-1 bg-[var(--rule)]" />
+          </div>
+
+          <h2 class="mb-5 text-2xl font-semibold tracking-[-0.02em]">{unit.title}</h2>
+
+          <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {unit.topics.map((id) => {
+              const t = knowledgeMap.topics[id];
+              const ready = t?.status === 'generated';
+              return (
+                <li>
+                  <a
+                    href={ready ? `/topics/${id}` : '#'}
+                    class:list={[
+                      'group flex h-full flex-col justify-between gap-4 rounded-lg border p-4 no-underline transition-all',
+                      ready
+                        ? 'border-[var(--rule)] hover:-translate-y-0.5 hover:border-[var(--accent)] hover:shadow-[0_4px_16px_-6px_color-mix(in_srgb,var(--accent)_35%,transparent)]'
+                        : 'pointer-events-none border-dashed border-[var(--rule)] opacity-55',
+                    ]}
+                  >
+                    <div>
+                      <p class="tag">
+                        {t?.supportConcept ? 'concepto de apoyo' : t && TYPE_LABEL[t.type]}
+                      </p>
+                      <p class="mt-1.5 text-[1.0625rem] leading-snug font-medium group-hover:text-[var(--accent)]">
+                        {t?.title ?? id}
+                      </p>
+                    </div>
+                    <div class="flex items-baseline justify-between gap-2">
+                      <span class="font-mono text-[0.6875rem] text-[var(--faint)]">{id}</span>
+                      <span class="tag">
+                        {ready
+                          ? t.subtopics.length
+                            ? `${t.subtopics.length} subtemas`
+                            : 'listo'
+                          : 'pendiente'}
+                      </span>
+                    </div>
+                  </a>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))
+    }
+  </div>
+</Base>

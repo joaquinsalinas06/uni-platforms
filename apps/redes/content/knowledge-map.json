@@ -1,0 +1,603 @@
+{
+  "course": "Redes y Comunicaciones",
+  "code": "CS4054",
+  "units": [
+    {
+      "id": "s1",
+      "title": "Semana 1 — Introducción, Conmutación y Arquitectura de Capas",
+      "sourceFiles": [
+        "raw-materials/text/Sem1_NetT-Introduction.txt",
+        "raw-materials/text/Sem01_NetIntroduction.txt",
+        "raw-materials/text/Sem1_LAB0_Wireshark.txt",
+        "raw-materials/text/Sem01_LAB1_A_HTTP_Part1-1.txt"
+      ],
+      "topics": [
+        "redes-intro-metricas",
+        "arquitectura-capas-internet",
+        "lab-wireshark-http-intro"
+      ]
+    },
+    {
+      "id": "s2",
+      "title": "Semana 2 — Capa de Aplicación, HTTP y Web Caching",
+      "sourceFiles": [
+        "raw-materials/text/Sem2_NetT-AppLayer.txt",
+        "raw-materials/text/Sem02_LAB1_A_HTTP_Part2-1.txt",
+        "raw-materials/text/Sem02_LAB1_B_DNS_Part1-2.txt"
+      ],
+      "topics": [
+        "capa-aplicacion-http",
+        "web-caching-cookies",
+        "lab-http-cookies-condicional"
+      ]
+    },
+    {
+      "id": "s3",
+      "title": "Semana 3 — Sistema de Nombres de Dominio (DNS)",
+      "sourceFiles": [
+        "raw-materials/text/Sem3_NetT-DNS.txt",
+        "raw-materials/text/Sem03_LAB1_B_DNS_Part2-2.txt",
+        "raw-materials/text/Sem03_Excercises1.txt"
+      ],
+      "topics": [
+        "dns-arquitectura-resolucion",
+        "registros-rr-seguridad-dns",
+        "lab-dns-wireshark-nslookup"
+      ]
+    },
+    {
+      "id": "s4",
+      "title": "Semana 4 — Arquitecturas P2P y Sockets UDP",
+      "sourceFiles": [
+        "raw-materials/text/Sem4_NetT-P2P.txt",
+        "raw-materials/text/Sem04_LAB2_UDP_1-2.txt",
+        "raw-materials/text/Sem04_LAB2_UDP_2-1.txt"
+      ],
+      "topics": [
+        "arquitecturas-p2p-distribucion",
+        "bittorrent-dht",
+        "lab-sockets-udp-python"
+      ]
+    },
+    {
+      "id": "s5",
+      "title": "Semana 5 — Capa de Transporte, RDT y Protocolos Pipeline",
+      "sourceFiles": [
+        "raw-materials/text/Sem5_NetT-Transport.txt",
+        "raw-materials/text/Sem05_LAB2_UDP_3.txt",
+        "raw-materials/text/Sem05_LAB2_UDP_4.txt"
+      ],
+      "topics": [
+        "capa-transporte-multiplexacion",
+        "transferencia-confiable-rdt",
+        "protocolos-pipeline-gbn-sr"
+      ]
+    },
+    {
+      "id": "s6",
+      "title": "Semana 6 — Protocolo UDP, Checksum y Rendimiento",
+      "sourceFiles": [
+        "raw-materials/text/Sem6_NetT-UDP.txt",
+        "raw-materials/text/Sem06_LAB2_UDP_5-1.txt",
+        "raw-materials/text/Sem06_Excercises2-2.txt"
+      ],
+      "topics": [
+        "protocolo-udp",
+        "algoritmo-checksum-udp",
+        "lab-udp-rdt-simulacion"
+      ]
+    },
+    {
+      "id": "s7",
+      "title": "Semana 7 — Protocolo TCP en Profundidad",
+      "sourceFiles": [
+        "raw-materials/text/Sem7_NetT-TCP.txt",
+        "raw-materials/text/Sem07_Excercises3-1.txt"
+      ],
+      "topics": [
+        "protocolo-tcp-mecanismos",
+        "rtt-timeout-retransmision",
+        "control-flujo-congestion-tcp"
+      ]
+    }
+  ],
+  "topics": {
+    "redes-intro-metricas": {
+      "type": "concept",
+      "title": "Fundamentos de Redes, Conmutación y Retardos Nodales",
+      "unit": "s1",
+      "prerequisites": [],
+      "buildsOn": [],
+      "usedBy": [
+        "arquitectura-capas-internet",
+        "capa-aplicacion-http"
+      ],
+      "subtopics": [
+        "retardo-nodal-componentes",
+        "conmutacion-paquetes-circuitos"
+      ],
+      "sourceSlides": [
+        "Sem1_NetT-Introduction"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "arquitectura-capas-internet": {
+      "type": "concept",
+      "title": "Modelo de Capas de Internet y Encapsulación",
+      "unit": "s1",
+      "prerequisites": [
+        "redes-intro-metricas"
+      ],
+      "buildsOn": [
+        "redes-intro-metricas"
+      ],
+      "usedBy": [
+        "capa-aplicacion-http",
+        "capa-transporte-multiplexacion"
+      ],
+      "subtopics": [
+        "pila-protocolos-5-capas",
+        "encapsulacion-pdu"
+      ],
+      "sourceSlides": [
+        "Sem1_NetT-Introduction"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "lab-wireshark-http-intro": {
+      "type": "lab",
+      "title": "Laboratorio: Wireshark y Captura Inicial de HTTP",
+      "unit": "s1",
+      "prerequisites": [
+        "arquitectura-capas-internet"
+      ],
+      "buildsOn": [
+        "arquitectura-capas-internet"
+      ],
+      "usedBy": [
+        "lab-http-cookies-condicional"
+      ],
+      "subtopics": [
+        "filtros-captura-visualizacion",
+        "inspeccion-tramas-http"
+      ],
+      "sourceSlides": [
+        "Sem1_LAB0_Wireshark",
+        "Sem01_LAB1_A_HTTP_Part1-1"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "capa-aplicacion-http": {
+      "type": "concept",
+      "title": "Capa de Aplicación y Protocolo HTTP (1.0 / 1.1 / 2)",
+      "unit": "s2",
+      "prerequisites": [
+        "arquitectura-capas-internet"
+      ],
+      "buildsOn": [
+        "arquitectura-capas-internet"
+      ],
+      "usedBy": [
+        "web-caching-cookies",
+        "dns-arquitectura-resolucion"
+      ],
+      "subtopics": [
+        "conexiones-persistentes-vs-no-persistentes",
+        "formato-mensajes-http"
+      ],
+      "sourceSlides": [
+        "Sem2_NetT-AppLayer"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "web-caching-cookies": {
+      "type": "concept",
+      "title": "Web Caching, Conditional GET y Manejo de Cookies",
+      "unit": "s2",
+      "prerequisites": [
+        "capa-aplicacion-http"
+      ],
+      "buildsOn": [
+        "capa-aplicacion-http"
+      ],
+      "usedBy": [
+        "lab-http-cookies-condicional"
+      ],
+      "subtopics": [
+        "proxies-web-caching",
+        "mecanismo-cookies-sesion"
+      ],
+      "sourceSlides": [
+        "Sem2_NetT-AppLayer"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "lab-http-cookies-condicional": {
+      "type": "lab",
+      "title": "Laboratorio: Análisis Avanzado HTTP con Wireshark",
+      "unit": "s2",
+      "prerequisites": [
+        "web-caching-cookies",
+        "lab-wireshark-http-intro"
+      ],
+      "buildsOn": [
+        "web-caching-cookies"
+      ],
+      "usedBy": [
+        "lab-dns-wireshark-nslookup"
+      ],
+      "subtopics": [
+        "analisis-conditional-get",
+        "trazas-cookies-autenticacion"
+      ],
+      "sourceSlides": [
+        "Sem02_LAB1_A_HTTP_Part2-1"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "dns-arquitectura-resolucion": {
+      "type": "concept",
+      "title": "Arquitectura Jerárquica y Resolución DNS",
+      "unit": "s3",
+      "prerequisites": [
+        "capa-aplicacion-http"
+      ],
+      "buildsOn": [
+        "capa-aplicacion-http"
+      ],
+      "usedBy": [
+        "registros-rr-seguridad-dns",
+        "lab-dns-wireshark-nslookup"
+      ],
+      "subtopics": [
+        "jerarquia-servidores-dns",
+        "resolucion-iterativa-vs-recursiva"
+      ],
+      "sourceSlides": [
+        "Sem3_NetT-DNS"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "registros-rr-seguridad-dns": {
+      "type": "concept",
+      "title": "Registros de Recursos (RR), Mensaje DNS y Seguridad",
+      "unit": "s3",
+      "prerequisites": [
+        "dns-arquitectura-resolucion"
+      ],
+      "buildsOn": [
+        "dns-arquitectura-resolucion"
+      ],
+      "usedBy": [
+        "lab-dns-wireshark-nslookup"
+      ],
+      "subtopics": [
+        "tipos-registros-recursos",
+        "formato-mensaje-ataques-dns"
+      ],
+      "sourceSlides": [
+        "Sem3_NetT-DNS"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "lab-dns-wireshark-nslookup": {
+      "type": "lab",
+      "title": "Laboratorio: Análisis DNS con nslookup y Wireshark",
+      "unit": "s3",
+      "prerequisites": [
+        "registros-rr-seguridad-dns"
+      ],
+      "buildsOn": [
+        "registros-rr-seguridad-dns"
+      ],
+      "usedBy": [
+        "lab-sockets-udp-python"
+      ],
+      "subtopics": [
+        "consultas-nslookup-tipos-rr",
+        "inspeccion-paquetes-dns-wireshark"
+      ],
+      "sourceSlides": [
+        "Sem02_LAB1_B_DNS_Part1-2",
+        "Sem03_LAB1_B_DNS_Part2-2",
+        "Sem03_Excercises1"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "arquitecturas-p2p-distribucion": {
+      "type": "concept",
+      "title": "Distribución P2P vs Cliente-Servidor y Escalabilidad",
+      "unit": "s4",
+      "prerequisites": [
+        "capa-aplicacion-http"
+      ],
+      "buildsOn": [
+        "capa-aplicacion-http"
+      ],
+      "usedBy": [
+        "bittorrent-dht"
+      ],
+      "subtopics": [
+        "modelo-matematico-distribucion",
+        "analisis-escalabilidad-asintotica"
+      ],
+      "sourceSlides": [
+        "Sem4_NetT-P2P"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "bittorrent-dht": {
+      "type": "concept",
+      "title": "BitTorrent, Churn y Tablas Hash Distribuidas (DHT)",
+      "unit": "s4",
+      "prerequisites": [
+        "arquitecturas-p2p-distribucion"
+      ],
+      "buildsOn": [
+        "arquitecturas-p2p-distribucion"
+      ],
+      "usedBy": [
+        "capa-transporte-multiplexacion"
+      ],
+      "subtopics": [
+        "protocolo-bittorrent-mecanismos",
+        "dht-circular-enrutamiento"
+      ],
+      "sourceSlides": [
+        "Sem4_NetT-P2P"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "lab-sockets-udp-python": {
+      "type": "lab",
+      "title": "Laboratorio: Programación de Sockets Datagrama UDP",
+      "unit": "s4",
+      "prerequisites": [
+        "arquitectura-capas-internet"
+      ],
+      "buildsOn": [
+        "arquitectura-capas-internet"
+      ],
+      "usedBy": [
+        "lab-udp-rdt-simulacion"
+      ],
+      "subtopics": [
+        "api-socket-udp-python",
+        "comunicacion-cliente-servidor-udp"
+      ],
+      "sourceSlides": [
+        "Sem04_LAB2_UDP_1-2",
+        "Sem04_LAB2_UDP_2-1"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "capa-transporte-multiplexacion": {
+      "type": "concept",
+      "title": "Capa de Transporte: Principios y Demultiplexación",
+      "unit": "s5",
+      "prerequisites": [
+        "arquitectura-capas-internet"
+      ],
+      "buildsOn": [
+        "arquitectura-capas-internet"
+      ],
+      "usedBy": [
+        "transferencia-confiable-rdt",
+        "protocolo-udp"
+      ],
+      "subtopics": [
+        "servicios-transporte-vs-red",
+        "multiplexacion-orientada-y-no-orientada"
+      ],
+      "sourceSlides": [
+        "Sem5_NetT-Transport"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "transferencia-confiable-rdt": {
+      "type": "concept",
+      "title": "Principios de Transferencia Confiable (RDT 1.0 a 3.0)",
+      "unit": "s5",
+      "prerequisites": [
+        "capa-transporte-multiplexacion"
+      ],
+      "buildsOn": [
+        "capa-transporte-multiplexacion"
+      ],
+      "usedBy": [
+        "protocolos-pipeline-gbn-sr",
+        "protocolo-tcp-mecanismos"
+      ],
+      "subtopics": [
+        "evolucion-fsm-rdt1-a-rdt22",
+        "rdt3-temporizadores-stop-and-wait"
+      ],
+      "sourceSlides": [
+        "Sem5_NetT-Transport"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "protocolos-pipeline-gbn-sr": {
+      "type": "concept",
+      "title": "Protocolos de Tubería: Go-Back-N vs Selective Repeat",
+      "unit": "s5",
+      "prerequisites": [
+        "transferencia-confiable-rdt"
+      ],
+      "buildsOn": [
+        "transferencia-confiable-rdt"
+      ],
+      "usedBy": [
+        "protocolo-udp",
+        "protocolo-tcp-mecanismos"
+      ],
+      "subtopics": [
+        "go-back-n-ventanas-acumulativas",
+        "selective-repeat-buffers-regla-ventana"
+      ],
+      "sourceSlides": [
+        "Sem5_NetT-Transport"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "protocolo-udp": {
+      "type": "concept",
+      "title": "Protocolo UDP (User Datagram Protocol)",
+      "unit": "s6",
+      "prerequisites": [
+        "capa-transporte-multiplexacion"
+      ],
+      "buildsOn": [
+        "capa-transporte-multiplexacion"
+      ],
+      "usedBy": [
+        "algoritmo-checksum-udp",
+        "protocolo-tcp-mecanismos"
+      ],
+      "subtopics": [
+        "ventajas-y-segmento-udp",
+        "aplicaciones-streaming-y-overhead"
+      ],
+      "sourceSlides": [
+        "Sem6_NetT-UDP"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "algoritmo-checksum-udp": {
+      "type": "concept",
+      "title": "Checksum de Internet (RFC 1071) y Pseudocabecera",
+      "unit": "s6",
+      "prerequisites": [
+        "protocolo-udp"
+      ],
+      "buildsOn": [
+        "protocolo-udp"
+      ],
+      "usedBy": [
+        "lab-udp-rdt-simulacion"
+      ],
+      "subtopics": [
+        "calculo-suma-complemento-a-uno",
+        "pseudocabecera-deteccion-errores"
+      ],
+      "sourceSlides": [
+        "Sem6_NetT-UDP"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "lab-udp-rdt-simulacion": {
+      "type": "lab",
+      "title": "Laboratorio: Emulación de Canal Lossy y RDT sobre UDP",
+      "unit": "s6",
+      "prerequisites": [
+        "algoritmo-checksum-udp",
+        "lab-sockets-udp-python"
+      ],
+      "buildsOn": [
+        "algoritmo-checksum-udp"
+      ],
+      "usedBy": [
+        "protocolo-tcp-mecanismos"
+      ],
+      "subtopics": [
+        "inyeccion-perdidas-timeouts-udp",
+        "resolucion-ejercicios-utilizacion"
+      ],
+      "sourceSlides": [
+        "Sem05_LAB2_UDP_3",
+        "Sem05_LAB2_UDP_4",
+        "Sem06_LAB2_UDP_5-1",
+        "Sem06_Excercises2-2"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "protocolo-tcp-mecanismos": {
+      "type": "concept",
+      "title": "Protocolo TCP: Estructura del Segmento y Gestión de Conexión",
+      "unit": "s7",
+      "prerequisites": [
+        "protocolos-pipeline-gbn-sr"
+      ],
+      "buildsOn": [
+        "protocolos-pipeline-gbn-sr"
+      ],
+      "usedBy": [
+        "rtt-timeout-retransmision",
+        "control-flujo-congestion-tcp"
+      ],
+      "subtopics": [
+        "segmento-tcp-secuencia-ack",
+        "handshake-tres-vias-y-cierre"
+      ],
+      "sourceSlides": [
+        "Sem7_NetT-TCP"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "rtt-timeout-retransmision": {
+      "type": "concept",
+      "title": "Estimación de RTT, Timeout y Fast Retransmit en TCP",
+      "unit": "s7",
+      "prerequisites": [
+        "protocolo-tcp-mecanismos"
+      ],
+      "buildsOn": [
+        "protocolo-tcp-mecanismos"
+      ],
+      "usedBy": [
+        "control-flujo-congestion-tcp"
+      ],
+      "subtopics": [
+        "calculo-ewma-estimated-rtt-devrtt",
+        "retransmision-rapida-tres-acks"
+      ],
+      "sourceSlides": [
+        "Sem7_NetT-TCP",
+        "Sem07_Excercises3-1"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    },
+    "control-flujo-congestion-tcp": {
+      "type": "concept",
+      "title": "Control de Flujo (rwnd) y Control de Congestión en TCP",
+      "unit": "s7",
+      "prerequisites": [
+        "rtt-timeout-retransmision"
+      ],
+      "buildsOn": [
+        "rtt-timeout-retransmision"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "control-flujo-ventana-recepcion",
+        "fases-congestion-aimd-tahoe-reno"
+      ],
+      "sourceSlides": [
+        "Sem7_NetT-TCP",
+        "Sem07_Excercises3-1"
+      ],
+      "hasVisualization": false,
+      "status": "generated"
+    }
+  }
+}

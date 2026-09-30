@@ -1,0 +1,21 @@
+id: "lab-dns-wireshark-nslookup"
+title: "Laboratorio: Análisis DNS con nslookup y Wireshark"
+type: "lab"
+unit: "s3"
+prerequisites:
+  - "registros-rr-seguridad-dns"
+buildsOn:
+  - "registros-rr-seguridad-dns"
+usedBy:
+  - "lab-sockets-udp-python"
+formulas:
+  - name: "Latencia de resolución DNS medida en Wireshark"
+    tex: "\\Delta t_{\\text{DNS}} = t_{\\text{DNS, reply}} - t_{\\text{DNS, query}}"
+    reasoning: "Calcula el retardo exacto de resolución DNS a partir de las marcas de tiempo (timestamps) registradas en los paquetes de captura entre la consulta y su respuesta correspondiente."
+  - name: "Retardo compuesto de sesión web inicial"
+    tex: "T_{\\text{sesion}} = \\Delta t_{\\text{DNS}} + \\Delta t_{\\text{TCP}} + \\Delta t_{\\text{HTTP}}"
+    reasoning: "Determina el retardo total para acceder al primer objeto web sumando los intervalos medidos en Wireshark para la fase DNS, el handshake TCP de 3 vías y la petición HTTP GET."
+  - name: "Conmutación de transporte por truncamiento TC"
+    tex: "\\text{Transporte} = \\begin{cases} \\text{UDP / 53}, & \\text{si } \\text{TC} = 0 \\\\ \\text{TCP / 53}, & \\text{si } \\text{TC} = 1 \\end{cases}"
+    reasoning: "Modela la regla de conmutación de protocolo en el cliente DNS al detectar el flag de truncamiento (TC=1) en respuestas que superan los 512 bytes de carga útil UDP."
+hasVisualization: false

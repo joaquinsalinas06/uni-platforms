@@ -1,0 +1,21 @@
+id: "registros-rr-seguridad-dns"
+title: "Registros de Recursos (RR), Mensaje DNS y Seguridad"
+type: "concept"
+unit: "s3"
+prerequisites:
+  - "dns-arquitectura-resolucion"
+buildsOn:
+  - "dns-arquitectura-resolucion"
+usedBy:
+  - "lab-dns-wireshark-nslookup"
+formulas:
+  - name: "Estructura de un Registro de Recurso (RR)"
+    tex: "\\text{RR} = (\\text{Name}, \\text{Value}, \\text{Type}, \\text{TTL})"
+    reasoning: "Define la estructura formal de cuatro tuplas con la que todos los servidores DNS almacenan e intercambian información en los archivos de zona y mensajes del protocolo."
+  - name: "Prioridad en servidores de correo MX"
+    tex: "\\text{Server}_{\\text{target}} = \\arg\\min_k \\{ \\text{Preference}_k \\}"
+    reasoning: "Determina el servidor de correo SMTP que debe ser contactado de forma prioritaria en función del menor valor numérico del campo de preferencia en registros MX."
+  - name: "Límite de tamaño de mensaje DNS clásico sobre UDP"
+    tex: "L_{\\text{DNS, UDP}} \\le 512 \\text{ bytes} \\implies (L > 512) \\implies \\text{TC} = 1"
+    reasoning: "Establece el límite de longitud de 512 bytes para mensajes DNS sobre UDP según RFC 1035; si se supera, el servidor activa el bit de truncamiento (TC) forzando el uso de TCP."
+hasVisualization: false

@@ -1,0 +1,21 @@
+id: "bittorrent-dht"
+title: "BitTorrent, Churn y Tablas Hash Distribuidas (DHT)"
+type: "concept"
+unit: "s4"
+prerequisites:
+  - "arquitecturas-p2p-distribucion"
+buildsOn:
+  - "arquitecturas-p2p-distribucion"
+usedBy:
+  - "capa-transporte-multiplexacion"
+formulas:
+  - name: "Segmentación de un archivo en fragmentos (Chunks)"
+    tex: "K = \\left\\lceil \\frac{F}{S_{\\text{chunk}}} \\right\\rceil, \\quad S_{\\text{chunk}} = 256\\text{ KiB}"
+    reasoning: "Determina la cantidad total K de fragmentos atómicos verificables mediante hash SHA-1 en los que se divide un archivo de tamaño F dentro de un archivo de metadatos torrent."
+  - name: "Distancia modular en anillo DHT circular"
+    tex: "d(x, y) = (y - x) \\pmod{2^m}"
+    reasoning: "Calcula la distancia unidireccional en sentido horario entre dos identificadores en un espacio de claves de m bits en una tabla hash distribuida como Chord."
+  - name: "Complejidad de búsqueda con Finger Tables en DHT"
+    tex: "C_{\\text{lookup}} = \\mathcal{O}(\\log N)"
+    reasoning: "Establece el número de saltos de encaminamiento entre nodos del overlay para resolver la ubicación de una clave mediante tablas de punteros exponenciales (Finger Tables)."
+hasVisualization: false

@@ -1,0 +1,22 @@
+id: "dns-arquitectura-resolucion"
+title: "Arquitectura Jerárquica y Resolución DNS"
+type: "concept"
+unit: "s3"
+prerequisites:
+  - "capa-aplicacion-http"
+buildsOn:
+  - "capa-aplicacion-http"
+usedBy:
+  - "registros-rr-seguridad-dns"
+  - "lab-dns-wireshark-nslookup"
+formulas:
+  - name: "Retardo de resolución DNS sin caché"
+    tex: "T_{\\text{DNS}} = \\text{RTT}_{\\text{local}} + \\sum_{i=1}^{n} \\text{RTT}_i"
+    reasoning: "Calcula el retardo acumulado de resolución DNS cuando el resolver local debe consultar secuencialmente n servidores en la jerarquía (Root, TLD y Autoritativo)."
+  - name: "Ahorro de retardo por almacenamiento en caché"
+    tex: "\\Delta T_{\\text{cache}} = \\sum_{i=1}^{k} \\text{RTT}_i"
+    reasoning: "Modela la reducción del tiempo de respuesta percibido cuando k consultas a servidores intermedios son suprimidas por la presencia de registros válidos en caché."
+  - name: "Retardo extremo a extremo de transacción web inicial"
+    tex: "T_{\\text{total}} = T_{\\text{DNS}} + 2 \\cdot \\text{RTT}_0 + d_{\\text{trans}}"
+    reasoning: "Calcula el tiempo total desde el clic del usuario hasta recibir el objeto HTML, integrando la resolución de nombres DNS, el handshake TCP de 1 RTT0 y la petición HTTP de 1 RTT0."
+hasVisualization: false

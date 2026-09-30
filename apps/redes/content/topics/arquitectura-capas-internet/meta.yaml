@@ -1,0 +1,19 @@
+id: "arquitectura-capas-internet"
+title: "Modelo de Capas de Internet y Encapsulación"
+type: "concept"
+unit: "s1"
+prerequisites:
+  - "redes-intro-metricas"
+buildsOn:
+  - "redes-intro-metricas"
+usedBy:
+  - "capa-aplicacion-http"
+  - "capa-transporte-multiplexacion"
+formulas:
+  - name: "Overhead de Encapsulación"
+    tex: "\\text{Overhead} = \\frac{\\sum \\text{Header}_{i}}{\\text{Payload} + \\sum \\text{Header}_{i}} \\times 100\\%"
+    reasoning: "Calcula la proporción porcentual de datos de control añadidos por las sucesivas cabeceras en comparación con el tamaño total transmitido."
+  - name: "Eficiencia de Transmisión (Goodput)"
+    tex: "\\eta = \\frac{\\text{Payload}}{\\text{Payload} + \\sum \\text{Header}_{i}}"
+    reasoning: "Evalúa la fracción neta de carga útil de datos respecto al volumen total de bits transmitidos en el medio físico."
+hasVisualization: false

@@ -1,0 +1,18 @@
+id: "lab-udp-rdt-simulacion"
+title: "Laboratorio: Emulación de Canal Lossy y RDT sobre UDP"
+type: "lab"
+unit: "s6"
+prerequisites: ["algoritmo-checksum-udp", "lab-sockets-udp-python"]
+buildsOn: ["algoritmo-checksum-udp"]
+usedBy: ["protocolo-tcp-mecanismos"]
+formulas:
+  - name: "Tasa de pérdida de paquetes (Packet Loss Rate)"
+    tex: "P_{\\text{loss}} = \\frac{N_{\\text{sent}} - N_{\\text{recv}}}{N_{\\text{sent}}} \\times 100\\%"
+    reasoning: "Cuantifica el porcentaje de datagramas descartados por saturación de buffers de recepción en el sistema operativo."
+  - name: "Cota inferior de distribución Cliente-Servidor"
+    tex: "D_{\\text{cs}} \\ge \\max\\left(\\frac{N \\cdot F}{u_s},\\, \\frac{F}{d_{\\min}}\\right)"
+    reasoning: "Tiempo mínimo requerido para distribuir un archivo de F bits a N usuarios mediante un servidor central con tasa de subida u_s."
+  - name: "Cota inferior de distribución P2P (Modelo fluido)"
+    tex: "D_{\\text{P2P}} \\ge \\max\\left(\\frac{F}{u_s},\\, \\frac{F}{d_{\\min}},\\, \\frac{N \\cdot F}{u_s + \\sum_{i=1}^{N} u_i}\\right)"
+    reasoning: "Tiempo mínimo teórico de distribución entre pares cooperativos aprovechando la suma total de anchos de banda de subida."
+hasVisualization: false

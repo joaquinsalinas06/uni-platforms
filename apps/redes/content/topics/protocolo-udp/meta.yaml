@@ -1,0 +1,18 @@
+id: "protocolo-udp"
+title: "Protocolo UDP (User Datagram Protocol)"
+type: "concept"
+unit: "s6"
+prerequisites: ["capa-transporte-multiplexacion"]
+buildsOn: ["capa-transporte-multiplexacion"]
+usedBy: ["algoritmo-checksum-udp", "protocolo-tcp-mecanismos"]
+formulas:
+  - name: "Carga útil máxima de transporte UDP"
+    tex: "\\text{Payload}_{\\max, \\text{UDP}} = 2^{16} - 1 - 8 = 65527\\text{ bytes}"
+    reasoning: "Límite teórico determinado por el campo de longitud de 16 bits de la cabecera UDP descontando sus 8 bytes de cabecera obligatoria."
+  - name: "Carga útil máxima práctica sobre IPv4"
+    tex: "\\text{Payload}_{\\max, \\text{IPv4}} = 65535 - 20 - 8 = 65507\\text{ bytes}"
+    reasoning: "Capacidad máxima útil de datos de aplicación transmitibles en un datagrama UDP encapsulado en un paquete IPv4 sin opciones."
+  - name: "Sobrecarga relativa de cabecera UDP"
+    tex: "\\text{Overhead}_{\\text{UDP}} = \\frac{8}{8 + L_{\\text{data}}} \\times 100\\%"
+    reasoning: "Porcentaje de sobrecarga introducido por los 8 bytes fijos del encabezado UDP respecto al tamaño total del segmento transmitido."
+hasVisualization: false

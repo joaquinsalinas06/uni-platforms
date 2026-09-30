@@ -1,0 +1,58 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+
+const entries = await getCollection('evaluaciones');
+const categories = [
+  { id: 'parciales', label: 'Exámenes Parciales' },
+  { id: 'laboratorio', label: 'Laboratorios y Ejercicios Extra' },
+];
+---
+
+<Base title="Evaluaciones" crumb="evaluaciones">
+  <header class="stagger mb-12">
+    <p class="tag">exámenes resueltos</p>
+    <h1 class="mt-2 max-w-[28ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      Evaluaciones
+    </h1>
+    <p class="mt-5 max-w-[62ch] text-[1.0625rem] leading-relaxed text-[var(--muted)]">
+      PDs, parciales y ejercicios de repaso reales del curso, cada pregunta con su solución
+      completa — el nivel de razonamiento que se espera en un examen, no sólo la teoría.
+    </p>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  <div class="space-y-14">
+    {
+      categories.map((cat) => {
+        const items = entries.filter((e) => e.data.category === cat.id).sort((a, b) => a.data.order - b.data.order);
+        return (
+          <section class="reveal">
+            <div class="mb-5 flex items-baseline gap-4">
+              <h2 class="tag">{cat.label}</h2>
+              <span class="h-px flex-1 bg-[var(--rule)]" />
+            </div>
+            {items.length === 0 ? (
+              <p class="tag">todavía no hay exámenes cargados</p>
+            ) : (
+              <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {items.map((e) => (
+                  <li>
+                    <a
+                      href={`/evaluaciones/${e.id}`}
+                      class="group block h-full rounded-lg border border-[var(--rule)] p-4 no-underline transition-all hover:-translate-y-0.5 hover:border-[var(--accent)]"
+                    >
+                      <p class="text-[1.0625rem] leading-snug font-medium group-hover:text-[var(--accent)]">
+                        {e.data.title}
+                      </p>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        );
+      })
+    }
+  </div>
+</Base>

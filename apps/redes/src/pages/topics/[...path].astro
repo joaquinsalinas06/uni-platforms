@@ -1,0 +1,53 @@
+---
+import { getCollection, render } from 'astro:content';
+import TopicLayout from '../../layouts/TopicLayout.astro';
+import PrerequisiteBanner from '../../components/PrerequisiteBanner.astro';
+import SectionRail from '../../components/SectionRail.astro';
+import Visualization from '../../components/Visualization.astro';
+import { loadMeta } from '../../lib/topics';
+
+// Una sola ruta para todos los documentos de un tema: la teoría vive en
+// /topics/<id> y cada subtema en /topics/<id>/subtopics/<name>.
+export async function getStaticPaths() {
+  const docs = await getCollection('docs');
+
+  return docs.map((doc) => {
+    const topicId = doc.id.split('/')[0];
+    const siblings = docs.filter((d) => d.id.split('/')[0] === topicId);
+    const tabs = [
+      ...siblings
+        .filter((d) => d.data.kind === 'theory')
+        .map(() => ({ href: `/topics/${topicId}`, label: 'teoría' })),
+      ...siblings
+        .filter((d) => d.data.kind === 'subtopic')
+        .sort((a, b) => (a.data as any).order - (b.data as any).order)
+        .map((d) => ({ href: `/topics/${d.id}`, label: d.data.title })),
+    ];
+    return {
+      params: { path: doc.data.kind === 'theory' ? topicId : doc.id },
+      props: { doc, topicId, tabs },
+    };
+  });
+}
+
+const { doc, topicId, tabs } = Astro.props;
+const meta = loadMeta(topicId);
+const { Content, headings } = await render(doc);
+
+const data = doc.data;
+const section = data.kind === 'theory' ? 'teoría' : data.title;
+
+const hasRail = headings.some((h) => h.depth === 2);
+---
+
+<TopicLayout meta={meta} section={section} tabs={tabs} rail={hasRail}>
+  {data.kind === 'theory' && <PrerequisiteBanner id={topicId} />}
+
+  {data.visualization && <Visualization viz={data.visualization} />}
+
+  <div class="prose">
+    <Content />
+  </div>
+
+  <SectionRail slot="rail" headings={headings} meta={meta} />
+</TopicLayout>
