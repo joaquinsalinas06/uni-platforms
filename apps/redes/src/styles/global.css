@@ -27,9 +27,9 @@
   --rule: #e4e6e8;
   --fill: #f5f6f8;
   --sunken: #edeff2;
-  --accent: #0f766e;
+  --accent: #dc2626;
   --accent-ink: #ffffff;
-  --accent-wash: #e6f5f3;
+  --accent-wash: #fef2f2;
   /* `marked` (delimitador, el amarillo del profesor) y `answer` (raíz de
      subárbol canónico, su rojo) — los dos únicos estados además de `active`
      que llevan color. Contraste AA verificado contra su propio `-ink`. */
@@ -69,9 +69,9 @@
     --rule: #212529;
     --fill: #111318;
     --sunken: #171a20;
-    --accent: #2dd4bf;
-    --accent-ink: #062421;
-    --accent-wash: #0f2926;
+    --accent: #f87171;
+    --accent-ink: #2a0808;
+    --accent-wash: #2b1111;
     --marked: #f0a939;
     --marked-ink: #1f1300;
     --answer: #ef8a80;
@@ -101,9 +101,9 @@
   --rule: #212529;
   --fill: #111318;
   --sunken: #171a20;
-  --accent: #2dd4bf;
-  --accent-ink: #062421;
-  --accent-wash: #0f2926;
+  --accent: #f87171;
+  --accent-ink: #2a0808;
+  --accent-wash: #2b1111;
   --marked: #f0a939;
   --marked-ink: #1f1300;
   --answer: #ef8a80;
