@@ -1,0 +1,78 @@
+---
+kind: theory
+title: "Distribución P2P vs Cliente-Servidor y Escalabilidad"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+La pregunta de la slide: **¿cuánto demora distribuir un archivo de tamaño $F$ desde un servidor a $N$ peers?** Se compara el modelo cliente-servidor (el servidor envía todo) con P2P (los clientes que ya tienen partes también suben).
+
+<Visualization viz={{ type: 'net-scene', static: true, title: 'Servidor y N pares: tasas de subida y bajada', steps: [
+  { note: 'El servidor sube a la tasa u_s. Cada par i sube a u_i y baja a d_i. Todo cruza Internet; d_min es la menor d_i.',
+    devices: [
+      { id: 's', kind: 'server', label: 'Servidor', sub: 'archivo F, sube a u_s', x: 12, y: 50 },
+      { id: 'net', kind: 'cloud', label: 'Internet', x: 50, y: 50 },
+      { id: 'p1', kind: 'laptop', label: 'Par 1', sub: 'u_1 · d_1', x: 88, y: 14 },
+      { id: 'p2', kind: 'laptop', label: 'Par 2', sub: 'u_2 · d_2', x: 88, y: 38 },
+      { id: 'p3', kind: 'laptop', label: 'Par 3', sub: 'u_3 · d_3', x: 88, y: 60 },
+      { id: 'pn', kind: 'laptop', label: 'Par N', sub: 'u_N · d_N', x: 88, y: 82 } ],
+    cables: [
+      { from: 's', to: 'net', label: 'u_s' },
+      { from: 'net', to: 'p1' }, { from: 'net', to: 'p2' }, { from: 'net', to: 'p3' }, { from: 'net', to: 'pn' } ] },
+]}} />
+
+---
+
+## 2. Conceptos
+
+Notación de la slide: $F$ = tamaño del archivo (bits), $u_s$ = tasa de subida del servidor, $u_i$ y $d_i$ = subida y bajada del par $i$, $d_{\min}$ = la menor $d_i$.
+
+### Cliente-servidor
+
+- **Servidor:** envía $N$ copias de forma secuencial. Una copia tarda $F/u_s$; las $N$ copias, $NF/u_s$.
+- **Cliente:** cada uno baja una copia; el más lento tarda $F/d_{\min}$.
+
+$$D_{cs} \ge \max\left\{ \frac{NF}{u_s},\ \frac{F}{d_{\min}} \right\}$$
+
+### Peer-to-peer
+
+- **Servidor:** debe subir al menos una copia: $F/u_s$.
+- **Cliente:** el más lento baja $F$ bits: $F/d_{\min}$.
+- **Entre todos:** hay que bajar $NF$ bits; el máximo que se puede subir es $u_{\text{total}} = u_s + u_1 + \cdots + u_N$.
+
+$$D_{P2P} \ge \max\left\{ \frac{F}{u_s},\ \frac{F}{d_{\min}},\ \frac{NF}{u_s + \sum_{i=1}^{N} u_i} \right\}$$
+
+Detalle de cómo se obtiene cada cota: [Modelo matemático de distribución](/topics/arquitecturas-p2p-distribucion/modelo-matematico-distribucion). Qué pasa al crecer $N$: [Análisis de escalabilidad](/topics/arquitecturas-p2p-distribucion/analisis-escalabilidad-asintotica).
+
+---
+
+## 3. Método paso a paso
+
+1. Pasa todo a las mismas unidades (bits y bps; $1\text{ GB} = 8000\text{ Mb}$ en el parcial 2026-I).
+2. Calcula cada término de la fórmula por separado.
+3. El tiempo mínimo es el **mayor**; ese término es el cuello de botella.
+4. Para P2P, suma $u_s$ más **todas** las $u_i$ antes de dividir.
+
+---
+
+## 4. Ejemplo resuelto
+
+Parcial 2026-I, pregunta 3: $F = 20\text{ GB} = 160\,000\text{ Mb}$, $N = 150$, $u_s = 40\text{ Mbps}$, $d_i = 12\text{ Mbps}$, $u_i = 3\text{ Mbps}$.
+
+$$D_{cs} = \max\left\{\frac{150 \cdot 160\,000}{40},\ \frac{160\,000}{12}\right\} = \max\{600\,000,\ 13\,333\}\text{ s} = \boxed{600\,000\text{ s}}$$
+
+Cuello de botella: la subida del servidor ($NF/u_s$).
+
+$$D_{P2P} = \max\left\{\frac{160\,000}{40},\ \frac{160\,000}{12},\ \frac{150 \cdot 160\,000}{40 + 150 \cdot 3}\right\} = \max\{4000,\ 13\,333,\ 48\,980\}\text{ s} \approx \boxed{48\,980\text{ s}}$$
+
+Aquí domina la capacidad total de subida. Otro ejemplo (tabla de Ejercicios 2): [Modelo matemático](/topics/arquitecturas-p2p-distribucion/modelo-matematico-distribucion).
+
+---
+
+## 5. Errores típicos
+
+- Usar $F/u_s$ en cliente-servidor: el servidor sube **$N$** copias.
+- Olvidar $u_s$ en el denominador de P2P: es $u_s + \sum u_i$.
+- Mezclar Mb con MB, o Kbps con Mbps.
+- Tomar la **suma** de los términos en vez del máximo.

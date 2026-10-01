@@ -1,0 +1,70 @@
+---
+kind: subtopic
+title: "Formato del mensaje DNS, transporte y seguridad"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Consulta y respuesta DNS comparten el mismo formato: una cabecera fija y cuatro secciones de longitud variable.
+
+---
+
+## 2. Conceptos
+
+<Visualization viz={{ type: 'packet', title: 'Mensaje DNS', steps: [
+  { note: 'Cabecera: 6 campos de 2 bytes. La identificación es un número de 16 bits que la respuesta repite para emparejarse con su consulta.',
+    fields: { width: 32, rows: [
+      [{ label: 'identificación', bits: 16, state: 'active' }, { label: 'flags', bits: 16 }],
+      [{ label: '# preguntas', bits: 16 }, { label: '# RR respuesta', bits: 16 }],
+      [{ label: '# RR autoridad', bits: 16 }, { label: '# RR adicionales', bits: 16 }],
+      [{ label: 'preguntas (número variable)', bits: 32 }],
+      [{ label: 'respuestas (RR variable)', bits: 32 }],
+      [{ label: 'autoridad (RR variable)', bits: 32 }],
+      [{ label: 'información adicional (RR variable)', bits: 32 }] ] } },
+  { note: 'Flags: consulta o respuesta, recursión deseada, recursión disponible y respuesta autoritativa.',
+    fields: { width: 32, rows: [
+      [{ label: 'identificación', bits: 16 }, { label: 'flags', bits: 16, state: 'active' }],
+      [{ label: '# preguntas', bits: 16 }, { label: '# RR respuesta', bits: 16 }],
+      [{ label: '# RR autoridad', bits: 16 }, { label: '# RR adicionales', bits: 16 }],
+      [{ label: 'preguntas (número variable)', bits: 32 }],
+      [{ label: 'respuestas (RR variable)', bits: 32 }],
+      [{ label: 'autoridad (RR variable)', bits: 32 }],
+      [{ label: 'información adicional (RR variable)', bits: 32 }] ] } },
+  { note: 'Secciones: preguntas (campos name y type de la consulta); respuestas (RR que responden); autoridad (registros de los servidores autoritativos); adicional (información útil, por ejemplo IP de los servidores NS).',
+    fields: { width: 32, rows: [
+      [{ label: 'identificación', bits: 16 }, { label: 'flags', bits: 16 }],
+      [{ label: '# preguntas', bits: 16 }, { label: '# RR respuesta', bits: 16 }],
+      [{ label: '# RR autoridad', bits: 16 }, { label: '# RR adicionales', bits: 16 }],
+      [{ label: 'preguntas: name, type', bits: 32, state: 'active' }],
+      [{ label: 'respuestas: RR que responden', bits: 32, state: 'active' }],
+      [{ label: 'autoridad: RR de servidores autoritativos', bits: 32, state: 'active' }],
+      [{ label: 'adicional: información útil', bits: 32, state: 'active' }] ] } },
+]}} />
+
+| Campo / bandera | Qué indica |
+|---|---|
+| identificación (16 bits) | Une la respuesta con su consulta (la respuesta usa el mismo número) |
+| consulta o respuesta | Tipo del mensaje |
+| recursión deseada | El cliente pide que el servidor resuelva por él si no sabe la respuesta |
+| recursión disponible | El servidor ofrece resolución recursiva |
+| respuesta autoritativa | La respuesta viene del servidor autoritativo (en `nslookup`: sin "Non-authoritative answer") |
+| TC (truncado) | La respuesta no cabe: el cliente debe repetir la consulta por TCP |
+
+### Transporte
+
+- Normal: **UDP**, puerto de destino **53** (en las capturas, el puerto de origen es efímero).
+- Una respuesta UDP está limitada a **512 bytes**; si es mayor, el servidor activa TC y el cliente repite por **TCP** (puerto 53). Ejemplo de Ex 3 (pregunta 10): respuesta TXT de 800 bytes. Secuencia: respuesta UDP con TC = 1, handshake TCP (1 RTT) y consulta/respuesta sobre TCP (1 RTT). El costo adicional del fallback es de $2\,\text{RTT}_{\text{local}}$, además de la ida y vuelta UDP inicial.
+- Un firewall que bloquee TCP 53 haría fallar las consultas cuya respuesta no cabe en UDP (por ejemplo `nslookup -type=ANY google.com`).
+
+### Seguridad
+
+El material solo menciona **DNSSEC**, que da autenticación e integridad de mensajes en la raíz. No incluye ataques ni otros mecanismos de seguridad.
+
+---
+
+## 3. Errores típicos
+
+- Confundir "recursión deseada" (la pide el cliente) con "recursión disponible" (la ofrece el servidor).
+- Asumir que el DNS siempre usa UDP: pasa a TCP cuando la respuesta se trunca.

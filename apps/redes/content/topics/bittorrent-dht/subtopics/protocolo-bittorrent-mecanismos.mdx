@@ -1,0 +1,81 @@
+---
+kind: subtopic
+title: "Mecanismos de BitTorrent"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+En BitTorrent un archivo se reparte entre muchos pares. Los pares del *swarm* se bajan trozos entre sí aunque ninguno de ellos tenga todavía el archivo completo.
+
+---
+
+## 2. Conceptos
+
+Términos de la slide *Definiciones interesantes en la red P2P*:
+
+| Término | Lo que dice el material |
+|---|---|
+| Torrent | Así se llama el archivo |
+| Chunk size | 256 Kb |
+| Swarm | Conjunto de pares que intercambian el torrent: "los pares de un swarm descargan de otros pares que quizá no tienen todavía el archivo completo" |
+| Trackers | Listado como término; la slide no lo define |
+| Peer finder | Listado como término; la slide no lo define |
+| Network citizenship: Bad Peer | Listado como término; la slide no lo define |
+| Choking | Listado como término; la slide no lo define |
+
+<Visualization viz={{ type: 'net-scene', title: 'Swarm de BitTorrent (diagrama de la slide)', steps: [
+  { note: 'El par A tiene el archivo completo. B, C y D tienen solo algunos chunks (cada uno distintos).',
+    devices: [
+      { id: 'a', kind: 'host', label: 'Par A', sub: 'archivo completo', x: 50, y: 12, state: 'answer' },
+      { id: 'b', kind: 'host', label: 'Par B', sub: 'chunks parciales', x: 15, y: 48 },
+      { id: 'd', kind: 'host', label: 'Par D', sub: 'chunks parciales', x: 85, y: 48 },
+      { id: 'c', kind: 'host', label: 'Par C', sub: 'chunks parciales', x: 50, y: 80 } ],
+    cables: [
+      { from: 'a', to: 'b' }, { from: 'a', to: 'd' }, { from: 'a', to: 'c' },
+      { from: 'b', to: 'd' }, { from: 'b', to: 'c' }, { from: 'd', to: 'c' } ],
+    zones: [{ label: 'Swarm', devices: ['a', 'b', 'c', 'd'] }] },
+  { note: 'A reparte chunks a B, C y D.',
+    devices: [
+      { id: 'a', kind: 'host', label: 'Par A', sub: 'archivo completo', x: 50, y: 12, state: 'answer' },
+      { id: 'b', kind: 'host', label: 'Par B', sub: 'chunks parciales', x: 15, y: 48 },
+      { id: 'd', kind: 'host', label: 'Par D', sub: 'chunks parciales', x: 85, y: 48 },
+      { id: 'c', kind: 'host', label: 'Par C', sub: 'chunks parciales', x: 50, y: 80 } ],
+    cables: [
+      { from: 'a', to: 'b' }, { from: 'a', to: 'd' }, { from: 'a', to: 'c' },
+      { from: 'b', to: 'd' }, { from: 'b', to: 'c' }, { from: 'd', to: 'c' } ],
+    packets: [
+      { from: 'a', to: 'b', label: 'chunk', order: 1, state: 'active' },
+      { from: 'a', to: 'd', label: 'chunk', order: 2, state: 'active' },
+      { from: 'a', to: 'c', label: 'chunk', order: 3, state: 'active' } ],
+    zones: [{ label: 'Swarm', devices: ['a', 'b', 'c', 'd'] }] },
+  { note: 'Los pares sin el archivo completo también se pasan chunks entre sí (B, D y C intercambian en ambos sentidos en la slide).',
+    devices: [
+      { id: 'a', kind: 'host', label: 'Par A', sub: 'archivo completo', x: 50, y: 12, state: 'answer' },
+      { id: 'b', kind: 'host', label: 'Par B', sub: 'chunks parciales', x: 15, y: 48 },
+      { id: 'd', kind: 'host', label: 'Par D', sub: 'chunks parciales', x: 85, y: 48 },
+      { id: 'c', kind: 'host', label: 'Par C', sub: 'chunks parciales', x: 50, y: 80 } ],
+    cables: [
+      { from: 'a', to: 'b' }, { from: 'a', to: 'd' }, { from: 'a', to: 'c' },
+      { from: 'b', to: 'd' }, { from: 'b', to: 'c' }, { from: 'd', to: 'c' } ],
+    packets: [
+      { from: 'b', to: 'd', label: 'chunk', order: 4, state: 'active' },
+      { from: 'd', to: 'b', label: 'chunk', order: 5, state: 'active' },
+      { from: 'b', to: 'c', label: 'chunk', order: 6, state: 'active' },
+      { from: 'c', to: 'd', label: 'chunk', order: 7, state: 'active' } ],
+    zones: [{ label: 'Swarm', devices: ['a', 'b', 'c', 'd'] }] },
+]}} />
+
+---
+
+## 3. Ejemplo resuelto
+
+Usando el diagrama: ¿quién puede enviar chunks a quién? Cualquier par con algún chunk que otro no tiene. Además de A, que lo tiene todo, B, C y D también aportan. Eso es lo que permite que P2P escale (ver [Distribución P2P](/topics/arquitecturas-p2p-distribucion)).
+
+---
+
+## 4. Errores típicos
+
+- Pensar que hay que esperar a que un par tenga el archivo completo para descargarle: no, basta con que tenga algún chunk que falta.
+- Dar por definidos *tracker*, *choking* o *bad peer*: la slide los lista pero no los desarrolla.

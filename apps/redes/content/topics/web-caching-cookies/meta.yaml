@@ -9,13 +9,14 @@ buildsOn:
 usedBy:
   - "lab-http-cookies-condicional"
 formulas:
-  - name: "Retardo Promedio con Web Caching"
-    tex: "T_{\\text{promedio}} = h \\cdot T_{\\text{cache}} + (1 - h) \\cdot (T_{\\text{cache}} + T_{\\text{origen}})"
-    reasoning: "Calcula el retardo medio de respuesta experimentado por los clientes considerando la tasa de acierto h en el proxy local y el acceso a Internet en caso de fallo."
-  - name: "Intensidad de Tráfico en Enlace de Acceso con Caché"
-    tex: "I_{\\text{acceso}} = \\frac{\\beta \\cdot (1 - h) \\cdot L_{\\text{prom}}}{R_{\\text{acceso}}}"
-    reasoning: "Cuantifica la reducción del factor de congestión en el enlace cuello de botella de la institución al filtrar una fracción h de solicitudes en el proxy local."
-  - name: "Validación Temporal de Caché HTTP"
-    tex: "\\Delta t_{\\text{validez}} = t_{\\text{actual}} - t_{\\text{Last-Modified}}"
-    reasoning: "Calcula el tiempo transcurrido desde la última modificación del recurso para evaluar frescura o emitir una petición condicional If-Modified-Since."
-hasVisualization: false
+  - name: "Tiempo de transmisión medio de un objeto por el enlace de acceso"
+    tex: "\\Delta = \\frac{L}{R}"
+    reasoning: "Tiempo promedio para enviar un objeto de L bits por el enlace de acceso de capacidad R; es la entrada del modelo de retardo de acceso."
+  - name: "Retardo medio de acceso"
+    tex: "d_{\\text{acceso}} = \\frac{\\Delta}{1 - \\Delta\\beta}"
+    reasoning: "Modelo del ejercicio para el retardo en el enlace de acceso con tasa de llegada de objetos beta; solo es válido si el producto Delta por beta es menor que 1."
+  - name: "Tiempo de respuesta con caché"
+    tex: "T = p_{\\text{miss}}\\left(d_{\\text{acceso}}' + d_{\\text{Internet}}\\right)"
+    reasoning: "Solo los fallos de caché cruzan el enlace de acceso (con tasa de llegada reducida a p_miss por beta) y sufren el retardo de Internet; los aciertos se atienden en la LAN."
+hasVisualization: true
+visualizationType: "sequence"

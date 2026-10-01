@@ -1,0 +1,72 @@
+---
+kind: theory
+title: "Checksum de Internet (RFC 1071) y Pseudocabecera"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+El checksum detecta **errores** (bits cambiados) en un segmento transmitido. UDP y TCP lo usan; en la clase se ve junto a UDP y reaparece en rdt2.0 como "detección de errores similar al checksum de UDP".
+
+La slide lo ilustra con números: se transmite 5 y 6 con suma 11; llega 4 y 6, el receptor calcula otra suma que no coincide con la que venía, y detecta el error.
+
+---
+
+## 2. Conceptos
+
+**Emisor:**
+
+- Trata el contenido del segmento UDP (incluidos los campos de cabecera y las direcciones IP) como una secuencia de enteros de 16 bits.
+- Checksum = suma en complemento a uno de ese contenido; el resultado va en el campo checksum.
+
+**Receptor:**
+
+- Calcula el checksum del segmento recibido y lo compara con el campo.
+- **Distinto:** error detectado. **Igual:** no se detecta error, *pero puede haberlo*.
+
+**Regla de la suma:** si hay acarreo (*carryout*) del bit más significativo, se suma de vuelta al resultado (*wraparound*).
+
+Cómo se calcula paso a paso: [Suma en complemento a uno](/topics/algoritmo-checksum-udp/calculo-suma-complemento-a-uno). Qué cubre y sus límites: [Qué se suma y qué detecta](/topics/algoritmo-checksum-udp/pseudocabecera-deteccion-errores).
+
+---
+
+## 3. Método paso a paso
+
+1. Escribe los datos en palabras de 16 bits.
+2. Suma las palabras; si hay acarreo fuera de los 16 bits, súmalo al bit menos significativo.
+3. Complementa (cambia 0 por 1 y 1 por 0): ese es el checksum.
+4. El receptor suma lo mismo y compara (o suma todo con el checksum y espera todo unos).
+
+---
+
+## 4. Ejemplo resuelto
+
+Slide *Internet checksum: an example*, dos enteros de 16 bits:
+
+<Visualization viz={{ type: 'packet', title: 'Checksum de dos palabras de 16 bits', steps: [
+  { note: 'Las dos palabras a sumar.',
+    fields: { width: 16, rows: [
+      [{ label: 'palabra 1', bits: 16, value: '1110011001100110' }],
+      [{ label: 'palabra 2', bits: 16, value: '1101010101010101' }] ] } },
+  { note: 'Suma binaria: sale un acarreo fuera de los 16 bits (el 1 inicial).',
+    fields: { width: 16, rows: [
+      [{ label: 'palabra 1', bits: 16, value: '1110011001100110', state: 'muted' }],
+      [{ label: 'palabra 2', bits: 16, value: '1101010101010101', state: 'muted' }],
+      [{ label: 'suma (17 bits: acarreo 1 + 1011101110111011)', bits: 16, value: '1 1011101110111011', state: 'active' }] ] } },
+  { note: 'Wraparound: el acarreo se suma de vuelta al bit menos significativo.',
+    fields: { width: 16, rows: [
+      [{ label: 'suma sin acarreo', bits: 16, value: '1011101110111011', state: 'muted' }],
+      [{ label: 'suma + acarreo (wraparound)', bits: 16, value: '1011101110111100', state: 'active' }] ] } },
+  { note: 'Complemento a uno de la suma: es el valor que va en el campo checksum.',
+    fields: { width: 16, rows: [
+      [{ label: 'suma', bits: 16, value: '1011101110111100', state: 'muted' }],
+      [{ label: 'checksum = complemento', bits: 16, value: '0100010001000011', state: 'answer' }] ] } },
+]}} />
+
+---
+
+## 5. Errores típicos
+
+- Olvidar sumar el acarreo de vuelta (wraparound).
+- Enviar la suma en vez de su complemento.
+- Creer que checksum igual significa "sin errores": solo significa que no se detectó ninguno.

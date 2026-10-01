@@ -1,32 +1,43 @@
 ---
 kind: theory
-title: Diodos
+title: "Protocolo UDP (User Datagram Protocol)"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
-import ExerciseBlock from '../../../src/components/ExerciseBlock';
 
-## Idea
-…
+## 1. Idea y motivación
 
-## Conceptos
-…
+Qué problema resuelve, en 3-5 líneas.
 
-<Visualization viz={{ type: 'circuit', static: true, steps: [ /* ver circuit-examples.mdx */ ] }} />
+---
 
-## Método paso a paso
-…
+## 2. Conceptos
 
-## Ejemplo resuelto
-…
+<Visualization viz={{ type: 'packet', static: true, title: 'Segmento UDP', steps: [
+  { note: '8 bytes de cabecera: cuatro campos de 16 bits.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16 }, { label: 'puerto destino', bits: 16 }],
+      [{ label: 'longitud', bits: 16 }, { label: 'checksum', bits: 16 }],
+      [{ label: 'datos', bits: 32 }] ] } },
+]}} />
 
-## Errores típicos
-…
+Definiciones, tablas de campos de cabecera y fórmulas ($…$ y $$…$$).
 
-## Pregunta tipo examen
+### Subdivisión con `###`
 
-<ExerciseBlock client:visible exercise={{
-  level: 3,
-  statement: "En el circuito… (E = 12 V). Halle Ix.",
-  hints: ["Supón D1 ON y D2 OFF.", "Valida: I_D1 > 0 y V_D2 < 0.7 V."],
-  solution: "Ix = 2.3 mA …",
-}} />
+---
+
+## 3. Método paso a paso
+
+Cómo se resuelve un ejercicio de esto (cálculo de retardos, checksum, ventana, timeout…).
+
+---
+
+## 4. Ejemplo resuelto
+
+Los ejemplos de las slides, resueltos completos y con unidades.
+
+---
+
+## 5. Errores típicos
+
+- …

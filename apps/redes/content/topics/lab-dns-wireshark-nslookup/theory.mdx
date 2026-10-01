@@ -1,0 +1,31 @@
+---
+kind: theory
+title: "Laboratorio: Análisis DNS con nslookup y Wireshark"
+---
+
+## 1. Objetivo
+
+Observar el DNS en acción con herramientas de línea de comandos y con Wireshark (LAB1B, partes 1 y 2, y hojas de ejercicios Ex 1 y Ex 2).
+
+---
+
+## 2. Herramientas
+
+| Herramienta | Uso en el lab |
+|---|---|
+| `ping <host>` | La primera línea muestra la IP que el DNS devolvió para el nombre (aunque un firewall bloquee el ping) |
+| `nslookup` | Consultar registros A, MX, NS, ANY, AAAA; ver el servidor DNS por defecto; consulta inversa de una IP; consulta dirigida a un servidor concreto |
+| `ipconfig /all` (Windows) o `resolvectl status` (Linux) | IP, máscara, puerta de enlace y servidores DNS configurados |
+| `ipconfig /displaydns`, `ipconfig /flushdns` | Ver y borrar la caché DNS del host |
+| Wireshark con filtro `dns` | Ver consultas y respuestas |
+
+Antes de cada captura: **borrar la caché DNS del host** y la caché del navegador; de lo contrario la consulta no sale a la red.
+
+Detalle en los subtemas **Consultas nslookup y tipos de RR** e **Inspección de paquetes DNS en Wireshark**.
+
+---
+
+## 3. Errores típicos
+
+- Capturar sin borrar la caché: no se ve ninguna consulta.
+- Contar las tres consultas que genera `nslookup`: las dos primeras son específicas de la herramienta; la que importa es la última.

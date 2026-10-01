@@ -9,13 +9,8 @@ buildsOn:
 usedBy:
   - "lab-udp-rdt-simulacion"
 formulas:
-  - name: "Longitud total de datagrama UDP"
-    tex: "L_{\\text{UDP}} = L_{\\text{header}} + L_{\\text{payload}} = 8\\text{ bytes} + L_{\\text{datos}}"
-    reasoning: "Calcula la longitud codificada en la cabecera UDP sumando los 8 bytes fijos de metadatos de transporte y los bytes netos del mensaje de aplicación."
-  - name: "Carga útil máxima teórica de UDP en IPv4"
-    tex: "L_{\\text{payload, max}} = 65535 - 20 - 8 = 65507\\text{ bytes}"
-    reasoning: "Determina la capacidad máxima teórica de datos de aplicación en un datagrama UDP sobre IPv4 restando las cabeceras mínimas de IP (20 bytes) y UDP (8 bytes)."
-  - name: "Umbral de carga útil UDP sin fragmentación Ethernet"
-    tex: "L_{\\text{payload, no-frag}} = \\text{MTU} - L_{\\text{IP}} - L_{\\text{UDP}} = 1500 - 20 - 8 = 1472\\text{ bytes}"
-    reasoning: "Establece el tamaño máximo de payload UDP que puede transmitirse en una red Ethernet con MTU estándar de 1500 bytes sin desencadenar fragmentación en la capa de red."
-hasVisualization: false
+  - name: "Longitud de un segmento UDP"
+    tex: "\\text{length} = 8\\text{ bytes} + L_{\\text{datos}}"
+    reasoning: "El campo length de la cabecera UDP cuenta el segmento completo: los 8 bytes de la cabecera más los bytes del mensaje de aplicación."
+hasVisualization: true
+visualizationType: "sequence"

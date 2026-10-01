@@ -1,0 +1,206 @@
+import Base from '../../layouts/Base.astro';
+import Visualization from '../../components/Visualization.astro';
+
+<Base title="Galería de visualizaciones de redes" crumb="lab/redes-viz">
+
+<p class="tag">laboratorio · no es contenido del curso</p>
+
+# Galería: net-scene · spacetime · window · packet
+
+Banco de pruebas visual de las cuatro familias de redes (contrato en
+`templates/viz-redes.md`). Revisar a 1280 px y a 375 px, en claro y oscuro.
+
+## net-scene
+
+### Resolución DNS iterativa (8 pasos)
+
+<Visualization viz={{ type: 'net-scene', title: 'Resolución DNS iterativa', steps: (() => {
+  const devices = [
+    { id: 'h', kind: 'laptop', label: 'Host', sub: 'cis.poly.edu', x: 2, y: 80 },
+    { id: 'l', kind: 'dns', label: 'DNS local', sub: 'dns.poly.edu', x: 42, y: 80 },
+    { id: 'r', kind: 'dns', label: 'Raíz', x: 52, y: 4 },
+    { id: 't', kind: 'dns', label: 'TLD .edu', x: 96, y: 18 },
+    { id: 'a', kind: 'dns', label: 'Autoritativo', sub: 'dns.umass.edu', x: 96, y: 80 },
+  ];
+  const zones = [{ label: 'red poly.edu', devices: ['h', 'l'] }];
+  const all = [
+    { from: 'h', to: 'l', label: 'A? gaia.cs.umass.edu', order: 1 },
+    { from: 'l', to: 'r', label: 'A? gaia…', order: 2 },
+    { from: 'r', to: 'l', label: 'NS .edu', order: 3 },
+    { from: 'l', to: 't', label: 'A? gaia…', order: 4 },
+    { from: 't', to: 'l', label: 'NS dns.umass.edu', order: 5 },
+    { from: 'l', to: 'a', label: 'A? gaia…', order: 6 },
+    { from: 'a', to: 'l', label: 'A 128.119.245.12', order: 7 },
+    { from: 'l', to: 'h', label: 'A 128.119.245.12', order: 8 },
+  ];
+  const notes = [
+    'El host pregunta a su DNS local (consulta recursiva): "¿cuál es la IP de gaia.cs.umass.edu?".',
+    'El DNS local no la tiene en caché: pregunta a un servidor raíz.',
+    'La raíz no sabe la IP: responde con quién maneja .edu (consulta iterativa).',
+    'El DNS local pregunta al TLD .edu.',
+    'El TLD responde con el autoritativo de umass.edu.',
+    'El DNS local pregunta al autoritativo.',
+    'El autoritativo sí conoce la IP: responde con el registro A.',
+    'El DNS local guarda la respuesta en caché y se la entrega al host.',
+  ];
+  return notes.map((note, i) => ({
+    note, zones,
+    devices: devices.map((d) => ({ ...d, state: i === 7 && d.id === 'h' ? 'answer' : d.id === all[i].from ? 'active' : undefined })),
+    packets: all.slice(0, i + 1).map((p, j) => ({ ...p, state: j < i ? 'muted' : i === 7 ? 'answer' : 'active' })),
+  }));
+})() }} />
+
+### Todos los íconos, cables con tasa y retardo, paquete perdido
+
+<Visualization viz={{ type: 'net-scene', title: 'Íconos y cables', steps: [
+  { note: 'Un celular y un PC en la LAN de casa; el router sale a Internet. El segundo paquete se pierde en el enlace de acceso.',
+    devices: [
+      { id: 'p', kind: 'phone', label: 'Celular', sub: '192.168.1.11', x: 4, y: 15 },
+      { id: 'pc', kind: 'host', label: 'PC', sub: '192.168.1.10', x: 4, y: 80 },
+      { id: 'sw', kind: 'switch', label: 'Switch', x: 25, y: 48 },
+      { id: 'rt', kind: 'router', label: 'Router', sub: '200.10.1.1', x: 46, y: 48, state: 'marked' },
+      { id: 'in', kind: 'cloud', label: 'Internet', x: 68, y: 48 },
+      { id: 'srv', kind: 'server', label: 'Servidor web', sub: '128.119.40.12:80', x: 94, y: 10 },
+      { id: 'tr', kind: 'tracker', label: 'Tracker', x: 94, y: 85 },
+    ],
+    zones: [{ label: 'LAN casa', devices: ['p', 'pc', 'sw', 'rt'] }],
+    cables: [
+      { from: 'p', to: 'sw', rate: '100 Mbps' }, { from: 'pc', to: 'sw', rate: '1 Gbps' },
+      { from: 'sw', to: 'rt' }, { from: 'rt', to: 'in', rate: '10 Mbps', delay: '5 ms', state: 'active' },
+      { from: 'in', to: 'srv' }, { from: 'in', to: 'tr' },
+    ],
+    packets: [
+      { from: 'in', to: 'srv', label: 'GET /index.html', order: 1, state: 'active' },
+      { from: 'srv', to: 'in', label: '200 OK', order: 2, lost: true, state: 'active' },
+    ] },
+]}} />
+
+## spacetime
+
+### Stop-and-wait (escala real: L/R casi invisible frente al RTT)
+
+<Visualization viz={{ type: 'spacetime', static: true, title: 'Stop-and-wait', steps: [
+  { note: 'L/R = 0,008 ms de transmisión; RTT = 30 ms. El emisor está ocupado solo 0,008 de cada 30,008 ms.',
+    columns: [{ id: 'e', label: 'Emisor' }, { id: 'r', label: 'Receptor' }],
+    time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+    sends: [
+      { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'paquete', kind: 'data', state: 'active' },
+      { from: 'r', to: 'e', tStart: 15.008, tTrans: 0, tProp: 15, label: 'ACK', kind: 'ack' } ],
+    spans: [{ column: 'e', tStart: 0, tEnd: 30.008, label: 'RTT + L/R', kind: 'rtt' }] },
+]}} />
+
+### Pipelining: 3 paquetes por RTT (ilustrativo: L/R = 2 ms, d_prop = 10 ms)
+
+<Visualization viz={{ type: 'spacetime', title: 'Pipelining', steps: (() => {
+  const columns = [{ id: 'e', label: 'Emisor' }, { id: 'r', label: 'Receptor' }];
+  const time = { unit: 'ms', max: 30 };
+  const d = (k) => ({ from: 'e', to: 'r', tStart: 2 * k, tTrans: 2, tProp: 10, label: `pkt ${k}`, kind: 'data' });
+  const a = (k) => ({ from: 'r', to: 'e', tStart: 2 * k + 12, tProp: 10, label: `ACK ${k}`, kind: 'ack' });
+  const seq = [d(0), d(1), d(2), a(0), a(1), a(2)];
+  const notes = ['El primer bit de pkt 0 sale en t = 0; el último en t = L/R = 2 ms.', 'Sin esperar el ACK, el emisor transmite pkt 1…', '…y pkt 2: tres paquetes "en vuelo".', 'El ACK 0 vuelve: llega en t = 2 + 10 + 10 = 22 ms.', 'ACK 1.', 'ACK 2: en un RTT + L/R se enviaron 3 paquetes en vez de 1.'];
+  return notes.map((note, i) => ({ note, columns, time,
+    sends: seq.slice(0, i + 1).map((s, j) => ({ ...s, state: j === i ? 'active' : 'muted' })),
+    spans: i >= 3 ? [{ column: 'e', tStart: 0, tEnd: 22, label: 'RTT + L/R', kind: 'rtt' }, { column: 'r', tStart: 10, tEnd: 12, label: 'L/R', kind: 'trans', state: 'marked' }] : [{ column: 'r', tStart: 10, tEnd: 12, label: 'L/R', kind: 'trans', state: 'marked' }],
+  }));
+})() }} />
+
+### Store-and-forward con un router y pérdida + timeout
+
+<Visualization viz={{ type: 'spacetime', title: 'Router y timeout', steps: [
+  { note: 'El router recibe el paquete COMPLETO antes de reenviarlo: d_trans se paga dos veces.',
+    columns: [{ id: 'e', label: 'Emisor' }, { id: 'rt', label: 'Router' }, { id: 'r', label: 'Receptor' }],
+    time: { unit: 'ms', max: 60 },
+    sends: [
+      { from: 'e', to: 'rt', tStart: 0, tTrans: 4, tProp: 6, label: 'pkt 0', kind: 'data', state: 'active' },
+      { from: 'rt', to: 'r', tStart: 10, tTrans: 4, tProp: 6, label: 'pkt 0', kind: 'data', state: 'active' } ],
+    spans: [{ column: 'rt', tStart: 6, tEnd: 10, label: 'd_trans', kind: 'trans', state: 'marked' }] },
+  { note: 'El siguiente paquete se pierde en el router; el emisor espera hasta que vence el timeout.',
+    columns: [{ id: 'e', label: 'Emisor' }, { id: 'rt', label: 'Router' }, { id: 'r', label: 'Receptor' }],
+    time: { unit: 'ms', max: 60 },
+    sends: [
+      { from: 'e', to: 'rt', tStart: 0, tTrans: 4, tProp: 6, label: 'pkt 0', kind: 'data', state: 'muted' },
+      { from: 'rt', to: 'r', tStart: 10, tTrans: 4, tProp: 6, label: 'pkt 0', kind: 'data', state: 'muted' },
+      { from: 'e', to: 'r', tStart: 4, tTrans: 4, tProp: 12, label: 'pkt 1', kind: 'data', lost: true, state: 'active' } ],
+    spans: [{ column: 'rt', tStart: 6, tEnd: 10, label: 'd_trans', kind: 'trans' }, { column: 'e', tStart: 8, tEnd: 48, label: 'timeout', kind: 'timeout', state: 'active' }] },
+  { note: 'Vence el timeout: retransmite pkt 1.',
+    columns: [{ id: 'e', label: 'Emisor' }, { id: 'rt', label: 'Router' }, { id: 'r', label: 'Receptor' }],
+    time: { unit: 'ms', max: 60 },
+    sends: [
+      { from: 'e', to: 'rt', tStart: 0, tTrans: 4, tProp: 6, label: 'pkt 0', kind: 'data', state: 'muted' },
+      { from: 'rt', to: 'r', tStart: 10, tTrans: 4, tProp: 6, label: 'pkt 0', kind: 'data', state: 'muted' },
+      { from: 'e', to: 'r', tStart: 4, tTrans: 4, tProp: 12, label: 'pkt 1', kind: 'data', lost: true, state: 'muted' },
+      { from: 'e', to: 'rt', tStart: 48, tTrans: 4, tProp: 6, label: 'pkt 1', kind: 'data', state: 'active' } ],
+    spans: [{ column: 'rt', tStart: 6, tEnd: 10, label: 'd_trans', kind: 'trans' }, { column: 'e', tStart: 8, tEnd: 48, label: 'timeout', kind: 'timeout', state: 'muted' }] },
+]}} />
+
+## window
+
+### Go-Back-N, N = 4, con pérdida de pkt 2
+
+<Visualization viz={{ type: 'window', title: 'Go-Back-N (N = 4)', steps: (() => {
+  const row = (f) => Array.from({ length: 10 }, (_, n) => ({ n, state: f(n) }));
+  const snd = (base, sent, acked) => ({ role: 'sender', label: 'Emisor (GBN, N = 4)', base, size: 4, cells: row((n) => n < acked ? 'acked' : n < sent ? 'sent' : n < base + 4 ? 'usable' : 'unusable') });
+  const rcv = (exp) => ({ role: 'receiver', label: 'Receptor', base: exp, size: 1, cells: row((n) => n < exp ? 'received' : n === exp ? 'expected' : 'unusable') });
+  return [
+    { note: 'La ventana cubre 0–3: el emisor manda los cuatro sin esperar ACK.', windows: [snd(0, 4, 0), rcv(0)] },
+    { note: 'Llegan ACK 0 y ACK 1: la base avanza a 2 y se envían 4 y 5. pkt 2 se perdió.', windows: [snd(2, 6, 2), rcv(2)] },
+    { note: 'El receptor descarta 3, 4 y 5 (fuera de orden) y repite ACK 1. Vence el timeout de la base: reenvía 2–5.', windows: [snd(2, 6, 2), rcv(2)] },
+    { note: 'Ahora llegan en orden: ACK acumulativo 5, la ventana salta a 6–9.', windows: [snd(6, 6, 6), rcv(6)] },
+  ];
+})() }} />
+
+### Selective Repeat con espacio de secuencia 4
+
+<Visualization viz={{ type: 'window', static: true, title: 'Selective Repeat (seqSpace = 4)', steps: [
+  { note: 'El receptor guarda 1 y 2 en el buffer mientras espera 0. Los números se repiten módulo 4.',
+    windows: [
+      { role: 'sender', label: 'Emisor (SR, N = 3)', base: 4, size: 3, seqSpace: 4, cells: [0,1,2,3].map((n) => ({ n, state: 'acked' })).concat([{ n: 4, state: 'sent' }, { n: 5, state: 'acked' }, { n: 6, state: 'acked' }, { n: 7, state: 'unusable' }]) },
+      { role: 'receiver', label: 'Receptor', base: 4, size: 3, seqSpace: 4, cells: [0,1,2,3].map((n) => ({ n, state: 'received' })).concat([{ n: 4, state: 'expected' }, { n: 5, state: 'buffered' }, { n: 6, state: 'buffered' }, { n: 7, state: 'unusable' }]) },
+    ] },
+]}} />
+
+## packet
+
+### Segmento UDP con valores
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Segmento UDP', steps: [
+  { note: '8 bytes de cabecera: cuatro campos de 16 bits. Una consulta DNS va al puerto 53.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16, value: 5000 }, { label: 'puerto destino', bits: 16, value: 53, state: 'active' }],
+      [{ label: 'longitud', bits: 16, value: 37 }, { label: 'checksum', bits: 16, value: '0x1A2B' }],
+      [{ label: 'datos (mensaje de aplicación)', bits: 32 }] ] } },
+]}} />
+
+### Cabecera TCP (campos angostos)
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Segmento TCP', steps: [
+  { note: 'Los flags ocupan 1 bit cada uno: el rótulo se achica y se parte para caber.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16 }, { label: 'puerto destino', bits: 16 }],
+      [{ label: 'número de secuencia', bits: 32, state: 'active' }],
+      [{ label: 'número de ACK', bits: 32 }],
+      [{ label: 'long. cab.', bits: 4 }, { label: 'sin uso', bits: 6 }, { label: 'U', bits: 1 }, { label: 'A', bits: 1 }, { label: 'P', bits: 1 }, { label: 'R', bits: 1 }, { label: 'S', bits: 1 }, { label: 'F', bits: 1 }, { label: 'ventana de recepción', bits: 16 }],
+      [{ label: 'checksum', bits: 16 }, { label: 'puntero urgente', bits: 16 }] ] } },
+]}} />
+
+### Encapsulamiento paso a paso
+
+<Visualization viz={{ type: 'packet', title: 'Encapsulamiento', steps: (() => {
+  const L = [
+    { label: 'aplicación' },
+    { label: 'transporte', header: 'Ht' },
+    { label: 'red', header: 'Hn' },
+    { label: 'enlace', header: 'Hl', trailer: 'Tl' },
+  ];
+  const notes = ['La aplicación entrega el mensaje M.', 'Transporte agrega su cabecera Ht: segmento.', 'Red agrega Hn: datagrama.', 'Enlace agrega Hl y la cola Tl: trama.'];
+  return notes.map((note, i) => ({ note, layers: L.slice(0, i + 1).map((l, j) => ({ ...l, state: j === i ? 'active' : undefined })) }));
+})() }} />
+
+### Pila TCP/IP
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Pila de 5 capas', steps: [
+  { note: 'Pila simple: sin cabeceras, sólo capas.',
+    layers: [{ label: 'aplicación' }, { label: 'transporte', state: 'active' }, { label: 'red' }, { label: 'enlace' }, { label: 'física' }] },
+]}} />
+
+</Base>

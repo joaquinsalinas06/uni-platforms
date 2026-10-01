@@ -1,0 +1,45 @@
+---
+kind: subtopic
+title: "Inspección de tramas HTTP"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Con el filtro `http` aparecen dos mensajes por objeto: el **GET** del navegador y la **respuesta** del servidor. El panel de detalles de cada trama muestra, de arriba abajo, *Frame*, *Ethernet*, *IP*, *TCP* y *HTTP*, las capas en que viaja el mensaje.
+
+<Visualization viz={{ type: 'sequence', static: true, title: 'GET básico (archivo 1)', steps: [
+  { note: 'Dos mensajes HTTP en la lista: el GET y la respuesta 200 OK.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'gaia.cs.umass.edu' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /wireshark-labs/HTTP-wireshark-file1.html HTTP/1.1' },
+      { from: 's', to: 'c', label: 'HTTP/1.1 200 OK (HTML)' } ] },
+]}} />
+
+---
+
+## 2. Dónde está cada dato (preguntas de la guía)
+
+| Pregunta | Dónde mirar |
+|---|---|
+| Versión de HTTP del navegador y del servidor | Primera línea del GET y de la respuesta |
+| Idiomas aceptados | Cabecera `Accept-Language` del GET |
+| IP del computador y del servidor | Capa *IP*: `Src` y `Dst` |
+| Código de estado | Línea de estado de la respuesta (`200 OK`) |
+| Última modificación del archivo | Cabecera `Last-Modified` |
+| Tamaño del cuerpo | Cabecera `Content-Length` o campo *File Data* |
+| Cabeceras que el resumen no muestra | Bytes crudos del paquete |
+
+El formato completo de petición y respuesta está en el tema de HTTP (Semana 2).
+
+### Documento largo (archivo 3)
+
+La respuesta no cabe en un segmento TCP: se ve **un GET** y **varios segmentos TCP** con datos, que Wireshark reensambla en una sola respuesta. Preguntas: cuántos GET se enviaron, qué código y frase devolvió el servidor y cuántos segmentos con datos hicieron falta.
+
+---
+
+## 3. Errores típicos
+
+- Confundir la IP del servidor con la del DNS.
+- Contar la petición de `favicon.ico` como parte del experimento.

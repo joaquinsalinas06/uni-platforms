@@ -1,0 +1,66 @@
+---
+kind: subtopic
+title: "Aplicaciones de UDP y overhead"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Dónde se usa UDP y cuánto cuesta (o ahorra) frente a TCP, con lo que el laboratorio de la semana 5 muestra en Wireshark.
+
+---
+
+## 2. Conceptos
+
+### Usos que cita la slide
+
+- Streaming multimedia (tolera pérdidas, sensible a la tasa).
+- DNS.
+- SNMP.
+- HTTP/3: QUIC sobre UDP.
+
+Si hace falta confiabilidad sobre UDP (caso HTTP/3), se agrega **en la capa de aplicación**, y también el control de congestión.
+
+### Lo que se observa en el laboratorio
+
+- **Cabecera:** 8 bytes frente a un mínimo de 20 bytes en TCP (enunciado del lab 4, sección 7).
+- **Sin handshake:** el primer paquete capturado ya lleva datos; en TCP aparece antes el three-way handshake.
+- **Mensajes independientes:** tres palabras enviadas son tres datagramas, no un flujo continuo.
+- **Sin ACK de transporte:** el receptor no responde nada a nivel de transporte, lo que no añade tráfico.
+- **Sin cierre:** al cerrar el receptor no hay paquetes de despedida; el emisor sigue enviando sin enterarse. En TCP se ven los paquetes de cierre (FIN/RST).
+- **Puerto cerrado:** quien avisa es la capa de red con un mensaje ICMP, no UDP.
+- **Sin control de flujo ni de congestión:** en la prueba de estrés (3 emisores × 10 000 paquetes) los paquetes se pierden en silencio y el receptor no pide que bajen el ritmo.
+
+<Visualization viz={{ type: 'sequence', title: 'Lab 8: UDP frente a TCP al enviar "Apple"', steps: [
+  { note: 'UDP: el primer paquete ya lleva datos. No hay handshake ni ACK de transporte.',
+    actors: [{ id: 'b', label: 'Host B (emisor)' }, { id: 'a', label: 'Host A (escucha)' }],
+    msgs: [
+      { from: 'b', to: 'a', label: 'UDP: "Apple"' },
+      { from: 'b', to: 'a', label: 'UDP: "Banana"' },
+      { from: 'b', to: 'a', label: 'UDP: "Cherry"' } ] },
+  { note: 'TCP: antes de cualquier dato se ve SYN, SYN/ACK, ACK.',
+    actors: [{ id: 'b', label: 'Host B (emisor)' }, { id: 'a', label: 'Host A (escucha)' }],
+    msgs: [
+      { from: 'b', to: 'a', label: 'UDP: "Apple"', state: 'muted' },
+      { from: 'b', to: 'a', label: 'UDP: "Banana"', state: 'muted' },
+      { from: 'b', to: 'a', label: 'UDP: "Cherry"', state: 'muted' },
+      { divider: true, from: 'b', to: 'a', label: 'TCP' },
+      { from: 'b', to: 'a', label: 'SYN', state: 'active' },
+      { from: 'a', to: 'b', label: 'SYN, ACK', state: 'active' },
+      { from: 'b', to: 'a', label: 'ACK', state: 'active' },
+      { from: 'b', to: 'a', label: '"Apple"' } ] },
+]}} />
+
+---
+
+## 3. Ejemplo resuelto
+
+¿Por qué UDP para DNS? Una consulta es una pregunta corta y una respuesta corta: con UDP no se paga el RTT del handshake (laboratorio de la semana 4, nslookup).
+
+---
+
+## 4. Errores típicos
+
+- Decir que con UDP "se pierde todo": solo no se garantiza nada; en una red sin pérdidas llega igual.
+- Esperar un aviso de UDP cuando el puerto está cerrado: llega un ICMP (tipo/código a observar en el lab).

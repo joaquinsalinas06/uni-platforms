@@ -1,45 +1,42 @@
 # Cómo se escribe una solución de ejercicio
 
-Referencia viva: `content/topics/basic-circuits/subtopics/ley-ohm-potencia.mdx` § "Pregunta tipo examen".
+Referencia viva: `content/practica.mdx` § "Ejercicio 1.1".
 
 ## Forma
 - La solución NO va en `exercise.solution` (string plano, una línea, ilegible). Va como
   HIJOS del componente, en MDX completo. Se oculta hasta que se piden todas las pistas:
 
 ```mdx
-<Visualization viz={{ type: 'circuit', static: true, steps: [ /* circuito del enunciado, sin respuestas */ ] }} />
-
 <ExerciseBlock client:visible exercise={{
   level: 2,
-  statement: "En el circuito de la figura ($E = 12$ V, …) calcula …",
-  hints: ["…con $KaTeX$…", "…"],
+  statement: "Un host transmite un paquete de $L = 1500\\text{ bytes}$ por un enlace de $R = 100\\text{ Mbps}$ … Calcule $d_{\\text{trans}}$ y $d_{\\text{prop}}$.",
+  hints: ["Convierta bytes a bits.", "$d_{\\text{trans}} = L/R$ y $d_{\\text{prop}} = d/s$."],
 }}>
 
 **1. Nombre del paso.** Una línea que diga QUÉ se hace y POR QUÉ.
 
-$$R_{B\parallel C} = \frac{R_B R_C}{R_B + R_C} = \frac{6 \cdot 3}{6+3} = 2\,\Omega$$
+$$d_{\text{trans}} = \frac{L}{R} = \frac{12{,}000\text{ bits}}{100 \times 10^6\text{ bps}} = 120\,\mu\text{s}$$
 
 **2. …**
 
-$$…= \boxed{6\,\text{W}}$$
+$$…= \boxed{13.825\text{ ms}}$$
 
-<Visualization viz={{ … el circuito RESUELTO: currents/voltages con showValue, expect … }} />
-
-**Comprobación:** tabla o una línea (balance de potencia, validar hipótesis del diodo, etc.)
+**Comprobación:** tabla o una línea (orden de magnitud, qué retardo domina, etc.)
 
 </ExerciseBlock>
 ```
 
 ## Reglas
 - Un paso = una idea. Negrita numerada + 1 línea de explicación + ecuación en bloque `$$…$$`.
-- Respuestas finales en `\boxed{…}` con unidades.
-- Toda magnitud en KaTeX: `$I_A$`, `$R_{eq}$`, `$V_{AK}$`. Nunca `R_eq` suelto ni `x`/`·` en texto plano.
-- **Circuitos:** figura del enunciado ANTES del bloque (estática, sin valores) y figura resuelta
-  dentro de la solución (corrientes/tensiones con `showValue`, `expect` con todos los valores
-  pedidos). Si ya hay una animación del mismo circuito en la página, reusar sus nodos/piezas.
-- **Diodos:** mostrar hipótesis → resolver → validar (con las desigualdades) → conclusión, y en la
-  figura resuelta `diodes: [{part, assume}]` con la hipótesis correcta.
-- **Conceptuales** (MQTT, edge, tecnologías…): respuesta modelo en viñetas o tabla, y un
-  diagrama (sequence/flow/dag/xy-chart) cuando aclare (p. ej. el handshake de QoS 2).
+- Respuestas finales en `\boxed{…}` con unidades (ms, bps, bytes).
+- Toda magnitud en KaTeX: `$d_{\text{prop}}$`, `$\text{EstimatedRTT}$`, `$cwnd$`. Nunca en texto plano.
+- **Cálculos** (retardos, throughput, checksum, EstimatedRTT/TimeoutInterval, cwnd/ssthresh,
+  utilización de stop-and-wait vs. pipelining): convertir unidades primero, luego fórmula,
+  luego sustitución.
+- **Checksum UDP:** sumar palabras de 16 bits en binario, mostrar el *wrap-around* y el
+  complemento a 1 en pasos separados.
+- **Conceptuales** (HTTP persistente vs. no persistente, DNS iterativo vs. recursivo, GBN vs.
+  SR, P2P vs. cliente-servidor…): respuesta modelo en viñetas o tabla.
+- **Traza de protocolo** (handshake TCP, intercambio DNS, GET condicional): tabla con
+  columnas tiempo / emisor → receptor / mensaje / campos clave.
 - El enunciado tampoco va en texto plano: KaTeX para símbolos y valores.
-- Validar: `node scripts/validate-viz.mjs <archivo>` y `pnpm verify` (0 discrepancias).

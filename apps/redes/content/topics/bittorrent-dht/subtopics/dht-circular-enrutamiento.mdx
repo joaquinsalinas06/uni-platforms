@@ -1,0 +1,89 @@
+---
+kind: subtopic
+title: "DHT circular y búsqueda"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Una **DHT** (tabla hash distribuida) usa una función hash para dar a nodos y objetos identificadores en un mismo espacio; los nodos forman un anillo y una búsqueda salta de nodo en nodo hasta llegar al que corresponde.
+
+---
+
+## 2. Conceptos
+
+Según la slide *Structured Overlays*:
+
+- Función hash: $hash(x) \to n$.
+- Los nodos se dibujan como puntos sobre un **anillo**; cada punto tiene un identificador (el del objeto buscado también).
+- `locate(id)`: búsqueda del nodo que corresponde a un objeto.
+
+Ejemplo de la slide: `locate(d46a1c)` iniciado en el nodo `65a1fc`.
+
+<Visualization viz={{ type: 'net-scene', title: 'locate(d46a1c) desde el nodo 65a1fc', steps: [
+  { note: 'Anillo con los nodos que aparecen en la slide (se omiten los demás). El objeto d46a1c se busca desde 65a1fc.',
+    devices: [
+      { id: 'n1', kind: 'host', label: '65a1fc', sub: 'origen', x: 22, y: 78, state: 'marked' },
+      { id: 'n2', kind: 'host', label: 'd13da3', x: 80, y: 74 },
+      { id: 'n3', kind: 'host', label: 'd4213f', x: 90, y: 50 },
+      { id: 'n4', kind: 'host', label: 'd462ba', x: 82, y: 22 },
+      { id: 'n5', kind: 'host', label: 'd467c4', x: 62, y: 10 },
+      { id: 'o', kind: 'server', label: 'Objeto d46a1c', sub: 'objeto buscado', x: 38, y: 30, state: 'marked' } ],
+    zones: [{ label: 'Anillo de ids', devices: ['n1', 'n2', 'n3', 'n4', 'n5'] }] },
+  { note: 'Salto 1: de 65a1fc a d13da3 (salto largo).',
+    devices: [
+      { id: 'n1', kind: 'host', label: '65a1fc', sub: 'origen', x: 22, y: 78, state: 'marked' },
+      { id: 'n2', kind: 'host', label: 'd13da3', x: 80, y: 74 },
+      { id: 'n3', kind: 'host', label: 'd4213f', x: 90, y: 50 },
+      { id: 'n4', kind: 'host', label: 'd462ba', x: 82, y: 22 },
+      { id: 'n5', kind: 'host', label: 'd467c4', x: 62, y: 10 },
+      { id: 'o', kind: 'server', label: 'Objeto d46a1c', x: 38, y: 30, state: 'marked' } ],
+    packets: [{ from: 'n1', to: 'n2', label: 'locate(d46a1c)', order: 1, state: 'active' }],
+    zones: [{ label: 'Anillo de ids', devices: ['n1', 'n2', 'n3', 'n4', 'n5'] }] },
+  { note: 'Saltos 2 y 3: la consulta se acerca al identificador, pasando por d4213f y d462ba.',
+    devices: [
+      { id: 'n1', kind: 'host', label: '65a1fc', sub: 'origen', x: 22, y: 78, state: 'marked' },
+      { id: 'n2', kind: 'host', label: 'd13da3', x: 80, y: 74 },
+      { id: 'n3', kind: 'host', label: 'd4213f', x: 90, y: 50 },
+      { id: 'n4', kind: 'host', label: 'd462ba', x: 82, y: 22 },
+      { id: 'n5', kind: 'host', label: 'd467c4', x: 62, y: 10 },
+      { id: 'o', kind: 'server', label: 'Objeto d46a1c', x: 38, y: 30, state: 'marked' } ],
+    packets: [
+      { from: 'n1', to: 'n2', label: 'locate(d46a1c)', order: 1, state: 'muted' },
+      { from: 'n2', to: 'n3', label: 'locate', order: 2, state: 'active' },
+      { from: 'n3', to: 'n4', label: 'locate', order: 3, state: 'active' } ],
+    zones: [{ label: 'Anillo de ids', devices: ['n1', 'n2', 'n3', 'n4', 'n5'] }] },
+  { note: 'Salto 4: la consulta llega a d467c4, el nodo que en la slide queda junto a d46a1c.',
+    devices: [
+      { id: 'n1', kind: 'host', label: '65a1fc', sub: 'origen', x: 22, y: 78, state: 'muted' },
+      { id: 'n2', kind: 'host', label: 'd13da3', x: 80, y: 74, state: 'muted' },
+      { id: 'n3', kind: 'host', label: 'd4213f', x: 90, y: 50, state: 'muted' },
+      { id: 'n4', kind: 'host', label: 'd462ba', x: 82, y: 22, state: 'muted' },
+      { id: 'n5', kind: 'host', label: 'd467c4', x: 62, y: 10, state: 'answer' },
+      { id: 'o', kind: 'server', label: 'Objeto d46a1c', x: 38, y: 30, state: 'marked' } ],
+    packets: [
+      { from: 'n1', to: 'n2', label: '', order: 1, state: 'muted' },
+      { from: 'n2', to: 'n3', label: '', order: 2, state: 'muted' },
+      { from: 'n3', to: 'n4', label: '', order: 3, state: 'muted' },
+      { from: 'n4', to: 'n5', label: 'locate', order: 4, state: 'active' } ],
+    zones: [{ label: 'Anillo de ids', devices: ['n1', 'n2', 'n3', 'n4', 'n5'] }] },
+]}} />
+
+---
+
+## 3. Ejemplo resuelto
+
+Ruta de `locate(d46a1c)` según la slide:
+
+$$65a1fc \to d13da3 \to d4213f \to d462ba \to d467c4$$
+
+Cada salto acerca la consulta al identificador buscado. No hay servidor central: solo nodos que se reenvían la consulta.
+
+---
+
+## 4. Errores típicos
+
+- Pensar que la DHT usa direcciones IP como ids: la slide muestra ids hexadecimales (como `d46a1c`) y la función $hash(x) \to n$.
+- Leer el anillo como topología física: es un orden lógico de ids (overlay).
+- Esperar detalles de enrutamiento (tablas de saltos, Chord): la slide solo muestra el anillo y este ejemplo.

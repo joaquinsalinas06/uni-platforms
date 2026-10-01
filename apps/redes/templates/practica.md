@@ -8,14 +8,11 @@ title: "Ejemplos y ejercicios de laboratorio"
 <!--
 El cuerpo MDX ES el contenido:
 
-  import Visualization from '../src/components/Visualization.astro';
   import ExerciseBlock from '../src/components/ExerciseBlock';
 
   ## Semana N — <título de la unidad en knowledge-map.json>
 
   ### <nombre corto del ejercicio>
-
-  <Visualization …figura del enunciado: static, sin valores… />
 
   <ExerciseBlock client:visible exercise={{ level: 1-6, statement: "…", hints: ["…"] }}>
   …solución paso a paso como HIJOS (forma y reglas: templates/exercise-solution.md)…

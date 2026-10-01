@@ -1,0 +1,96 @@
+---
+kind: subtopic
+title: "API de sockets UDP en Python"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Cuatro llamadas bastan: crear el socket, `bind` (receptor), `sendto` y `recvfrom`. Todo el código de esta página es el del material del curso.
+
+---
+
+## 2. Conceptos
+
+### Crear el socket
+
+```python
+sock = socket.socket(socket.AF_INET,    # Internet
+                     socket.SOCK_DGRAM) # UDP
+```
+
+### Receptor (`udp_receiver.py`, lab de la semana 4)
+
+```python
+import socket
+
+UDP_IP = "127.0.0.1"
+UDP_PORT = 5005
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind((UDP_IP, UDP_PORT))
+
+while True:
+    data, addr = sock.recvfrom(1024)  # buffer de 1024 bytes
+    print("received message: %s" % data)
+```
+
+`recvfrom` devuelve los datos **y** la dirección `(IP, puerto)` de quien envió; con esa dirección se responde.
+
+### Emisor (`udp_sender.py`)
+
+El emisor del lab arma la cabecera a mano y la antepone al mensaje:
+
+```python
+MESSAGE = b"Hello, World!"
+data_length = len(MESSAGE)
+checksum = int("4", 16)   # valor forzado; crc32 queda comentado
+
+udp_header = struct.pack("!IIII", UDP_PORT, UDP_PORT, data_length, checksum)
+MESSAGE = udp_header + MESSAGE
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.sendto(MESSAGE, (UDP_IP, UDP_PORT))
+```
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Lo que arma udp_sender.py (struct.pack "!IIII")', steps: [
+  { note: 'Cada campo es un entero de 4 bytes, no de 2 como en la cabecera UDP real: esta cabecera propia mide 16 bytes y viaja como DATOS dentro del datagrama UDP que crea el sistema operativo.',
+    fields: { width: 32, rows: [
+      [{ label: 'UDP_PORT (origen)', bits: 32, value: 5005 }],
+      [{ label: 'UDP_PORT (destino)', bits: 32, value: 5005 }],
+      [{ label: 'data_length', bits: 32, value: 13 }],
+      [{ label: 'checksum', bits: 32, value: 4 }],
+      [{ label: 'mensaje: b"Hello, World!"', bits: 32 }] ] } },
+]}} />
+
+### Broadcast (lab de la semana 5)
+
+```python
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)  # permiso de broadcast
+UDP_IP = "<broadcast>"   # equivale a 255.255.255.255
+UDP_PORT = 5005
+sock.sendto(b"Broadcast Test from Sender Node!", (UDP_IP, UDP_PORT))
+sock.close()
+```
+
+El enunciado pide que los receptores escuchen en todas las interfaces y el emisor puede apuntar también a la dirección de broadcast de la subred (192.168.X.255).
+
+### Tiempo de espera
+
+En los ejercicios extra, `sock.settimeout(2)` hace que `recvfrom` lance `socket.timeout` si no llega nada; así el emisor sabe cuándo retransmitir (ver [lab de RDT sobre UDP](/topics/lab-udp-rdt-simulacion)).
+
+---
+
+## 3. Ejemplo resuelto
+
+Pregunta del lab: ¿cómo enviar el paquete a **otra** computadora? Cambiar `UDP_IP` en el emisor por la IP del receptor y hacer que el receptor escuche en una interfaz alcanzable (no solo 127.0.0.1); las dos máquinas en la misma red y el firewall permitiendo UDP.
+
+---
+
+## 4. Errores típicos
+
+- Enlazar el receptor a `127.0.0.1` y esperar recibir de otra máquina.
+- Olvidar `SO_BROADCAST` al enviar a la dirección de broadcast.
+- Creer que `sendto` falla si nadie escucha: no falla; el aviso, si llega, es un ICMP.

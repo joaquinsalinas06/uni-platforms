@@ -1,0 +1,52 @@
+---
+kind: subtopic
+title: "Ventajas de UDP y estructura del segmento"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Cada ventaja de UDP es la ausencia de un mecanismo de TCP. La slide *Why is there a UDP?* las lista.
+
+---
+
+## 2. Conceptos
+
+| Característica de UDP | Qué se gana |
+|---|---|
+| Sin establecimiento de conexión (sin handshaking) | No se paga un RTT antes de enviar |
+| Sin estado de conexión en emisor ni receptor | Más simple; cada segmento se maneja de forma independiente |
+| Cabecera pequeña | Menos bytes por segmento |
+| Sin control de congestión | Puede enviar tan rápido como se quiera |
+| Funciona aun con la red congestionada | |
+
+### Límites de los campos *(slides 14 y 15 y Ejercicios 2)*
+
+- Puerto de 16 bits: el mayor es $2^{16} - 1 = 65535$.
+- Carga útil máxima según la slide: $65535 - 8 = 65527$ bytes (el máximo del campo de longitud menos la cabecera).
+- Ejercicios 2, pregunta 8, habla de 65 507 bytes como el límite teórico del payload UDP: es $65535 - 20 - 8$, es decir, descontando también la cabecera IP *(derivado)*. Las dos cifras aparecen en el material.
+- Número de protocolo de UDP en la cabecera IP: 17 (en Wireshark: `proto=UDP 17`; en hexadecimal, `0x11`).
+
+---
+
+## 3. Ejemplo resuelto
+
+Trama del parcial 2026-I (pregunta 7, Figura 2): mensaje de 4096 bytes enviado con ncat. Wireshark muestra el segmento UDP completo:
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Frame UDP del parcial 2026-I (checksum "unverified")', steps: [
+  { note: 'length = 4104 = 8 + 4096. El checksum 0x99bb aparece como [unverified] en Wireshark.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16, value: 36684 }, { label: 'puerto destino', bits: 16, value: 31337 }],
+      [{ label: 'longitud', bits: 16, value: 4104, state: 'active' }, { label: 'checksum', bits: 16, value: '0x99bb' }],
+      [{ label: 'datos (4096 bytes)', bits: 32 }] ] } },
+]}} />
+
+Esos 4104 bytes de UDP más los 20 de IP no caben en un MTU de 1500: se fragmenta en tres tramas (de 1514, 1514 y 1178 bytes en la captura; cada una con 14 bytes de cabecera Ethernet). Los fragmentos llevan *offset* 0, 1480 y 2960 bytes *(derivado de la captura)*.
+
+---
+
+## 4. Errores típicos
+
+- Dar 65535 como carga útil máxima: ese es el máximo de `length`, que incluye la cabecera.
+- Creer que "sin control de congestión" es solo una desventaja: la slide lo lista como razón para usarlo.

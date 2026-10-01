@@ -1,0 +1,73 @@
+---
+kind: theory
+title: "Laboratorio: Emulación de Canal Lossy y RDT sobre UDP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+UDP no recupera pérdidas ni avisa de problemas. Estas prácticas lo comprueban con Wireshark y con Python: (1) se observa cómo se comporta UDP cuando algo sale mal (puerto cerrado, receptor saturado, inundación) y (2) se construye por encima un protocolo confiable (rdt3.0 / alternating-bit) sobre un canal con pérdidas artificiales.
+
+---
+
+## 2. Conceptos
+
+| Práctica | Qué se hace | Qué se observa |
+|---|---|---|
+| Broadcast (lab sem. 5, §5) | Un emisor envía a la dirección de broadcast, tres receptores escuchan | Los tres capturan el mismo paquete; el destino IP es de broadcast; TCP no puede hacerlo |
+| Prueba de estrés (§6) | Tres emisores envían 10 000 paquetes cada uno a un receptor | Pérdida de paquetes sin aviso; UDP no tiene control de flujo ni de congestión |
+| Error con NetCat (§7) | Enviar con `nc -u` a un puerto cerrado | UDP no confirma nada; el aviso lo da ICMP |
+| UDP frente a TCP (§8) | Mismas pruebas con `nc` y `nc -u` | UDP: sin handshake, tres palabras = tres datagramas, sin ACK ni cierre. TCP: handshake, ACK, FIN/RST |
+| Inundación UDP (sem. 6, §9) | Tres atacantes inundan a una víctima 10 a 15 s | Pico de paquetes en Statistics → I/O Graphs y de CPU/red en el monitor de recursos |
+| Canal con pérdidas (Ejercicios Extra, preg. 3 y 4) | Pérdida aleatoria de paquetes y rdt3.0 / ABP en Python | Detalle en [Inyección de pérdidas y timeouts](/topics/lab-udp-rdt-simulacion/inyeccion-perdidas-timeouts-udp) |
+
+<Visualization viz={{ type: 'sequence',
+  title: 'UDP hacia un puerto cerrado: avisa ICMP, no UDP',
+  steps: [
+    {
+      note: 'Host A (ncat -u) envía un datagrama UDP al puerto 1234 de Host B, donde nadie escucha.',
+      actors: [
+        { id: 'a', label: 'Host A (emisor)' },
+        { id: 'b', label: 'Host B (puerto 1234 cerrado)' }
+      ],
+      msgs: [
+        { from: 'a', to: 'b', label: 'UDP "Hello, is anyone there?"', flags: 'destino = 1234', state: 'active' }
+      ]
+    },
+    {
+      note: 'Es la capa de red de B la que responde con un mensaje ICMP de destino inalcanzable. Dentro del ICMP viene la cabecera IP original y los primeros 8 bytes del datagrama UDP fallido (justo los puertos).',
+      actors: [
+        { id: 'a', label: 'Host A (emisor)' },
+        { id: 'b', label: 'Host B (puerto 1234 cerrado)' }
+      ],
+      msgs: [
+        { from: 'a', to: 'b', label: 'UDP "Hello, is anyone there?"', flags: 'destino = 1234', state: 'muted' },
+        { from: 'b', to: 'a', label: 'ICMP Destination unreachable', flags: 'Port unreachable', state: 'active' }
+      ]
+    }
+  ] }} />
+
+El resumen de los ejercicios de la semana 6 y la cuenta de utilización: [Ejercicios resueltos](/topics/lab-udp-rdt-simulacion/resolucion-ejercicios-utilizacion).
+
+---
+
+## 3. Método paso a paso
+
+1. Define los roles del grupo (emisor/receptor, víctima/atacantes) y el puerto (5005, 1234 o 4444 en los laboratorios).
+2. Arranca la captura con el filtro del lab (`udp.port == 5005`, `udp || icmp`, `tcp.port == 4444`).
+3. Ejecuta primero el receptor, luego los emisores.
+4. Para pérdida: *Statistics → Capture File Properties* da los paquetes capturados; compara con los enviados.
+
+---
+
+## 4. Ejemplo resuelto
+
+Prueba de estrés: se envían $3 \times 10\,000 = 30\,000$ paquetes. Si el receptor capturó $N_c$, la pérdida es $1 - N_c/30\,000$. El enunciado pide ese cálculo con los valores reales del grupo; el material no trae valores medidos. En el envío de cada emisor, el payload lleva el número de paquete (`Sender_1 - Packet i`), así que un salto en la numeración delata las pérdidas.
+
+---
+
+## 5. Errores típicos
+
+- Suponer que `nc -u` "conecta": no envía nada hasta que se escribe el mensaje.
+- Confundir quién avisa un puerto cerrado: es ICMP (red), no UDP (transporte).
+- Intentar broadcast con TCP: exige una conexión uno a uno.

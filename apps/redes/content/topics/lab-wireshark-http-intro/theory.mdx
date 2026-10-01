@@ -1,0 +1,44 @@
+---
+kind: theory
+title: "Laboratorio: Wireshark y Captura Inicial de HTTP"
+---
+
+## 1. Objetivo
+
+**Wireshark** es un *packet sniffer*: captura y decodifica los paquetes que pasan por una interfaz de red. En el curso sirve para ver los protocolos reales (TCP, UDP, ICMP, HTTP, DNS) en lugar de configurar dispositivos (eso sería un curso de Packet Tracer). Usos: diagnóstico de red, análisis de seguridad, desarrollo de protocolos y aprendizaje.
+
+Funciona a nivel del núcleo del sistema operativo porque necesita control directo de la capa de enlace (funciones de biblioteca asociadas a los drivers).
+
+---
+
+## 2. Flujo del laboratorio
+
+1. Abrir Wireshark y **seleccionar la interfaz** (Ethernet `eth/en` o inalámbrica `w`).
+2. Escribir el filtro `http` en la ventana de filtros de visualización.
+3. **Iniciar la captura**, abrir la URL en el navegador y **detener** la captura.
+4. En el panel de detalles, desplegar *Frame*, *Ethernet*, *IP* y *TCP* solo si hace falta, y dejar abierto *HTTP*.
+
+Detalle de filtros y de la lectura de campos:
+
+- Subtema **Filtros de captura y visualización**.
+- Subtema **Inspección de tramas HTTP**.
+
+---
+
+## 3. Experimentos de la guía LAB1A (parte 1)
+
+| Sección | URL (gaia.cs.umass.edu/wireshark-labs/) | Qué se observa |
+|---|---|---|
+| 1. GET/respuesta básico | `HTTP-wireshark-file1.html` | Dos mensajes HTTP: el GET y la respuesta 200 OK |
+| 2. GET condicional | `HTTP-wireshark-file2.html` | Segundo GET con `If-Modified-Since` (se analiza en el lab de la Semana 2) |
+| 3. Documento largo | `HTTP-wireshark-file3.html` | Una respuesta que ocupa varios segmentos TCP |
+
+Nota del lab: ignore las peticiones de `favicon.ico`; es el navegador pidiendo el ícono de la pestaña.
+
+---
+
+## 4. Errores típicos
+
+- Poner `https` en la URL: el contenido va cifrado y no aparecen mensajes HTTP.
+- Dejar abierta la captura mientras hay otras pestañas con tráfico y llenar la lista de paquetes que no interesan.
+- Repetir el experimento del archivo 1 sin esperar un minuto: el servidor pone la fecha de modificación al minuto actual, por eso el navegador a veces recibe un archivo "nuevo".

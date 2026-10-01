@@ -1,0 +1,148 @@
+---
+kind: subtopic
+title: "Inyección de pérdidas y timeouts sobre UDP"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Como UDP no repara pérdidas, el ejercicio extra obliga a hacerlo: se simula un canal malo descartando paquetes y se implementa sobre UDP un protocolo de parada y espera (rdt3.0 / alternating-bit).
+
+---
+
+## 2. Conceptos
+
+### Canal con 15 % de pérdidas (Ejercicios Extra, pregunta 3)
+
+Se inyecta en emisor **y** receptor:
+
+```python
+import random
+# Dentro del bucle de envío/recepción:
+if random.random() < 0.15:
+    continue  # descarta el paquete a propósito
+```
+
+Implementar un rdt3.0 simplificado que entregue un archivo binario (p. ej. una imagen de 2 MB) idéntico entre dos laptops:
+
+- **Emisor:** trozos de 1024 bytes, número de secuencia 0 o 1, espera el ACK específico; con timeout (p. ej. 0,5 s) retransmite el trozo actual.
+- **Receptor:** si llega el trozo esperado, lo escribe a disco y envía su ACK; si es un duplicado, descarta los datos pero **reenvía el ACK**.
+- **Prueba:** `md5sum` (o `CertUtil -hashfile`) en ambos equipos: deben coincidir pese al 15 % de pérdidas.
+
+<Visualization viz={{ type: 'sequence',
+  title: 'Receptor rdt3.0 sobre UDP: un duplicado se descarta pero se vuelve a confirmar',
+  steps: [
+    {
+      note: 'El emisor envía el trozo con secuencia 0; el receptor lo escribe a disco y responde ACK 0, que se pierde (simulado con el 15 %).',
+      actors: [
+        { id: 's', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'trozo seq 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK 0', lost: true, state: 'active' }
+      ]
+    },
+    {
+      note: 'Timeout (0,5 s): el emisor retransmite el trozo actual. El receptor ve un duplicado: descarta los datos y reenvía ACK 0.',
+      actors: [
+        { id: 's', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'trozo seq 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK 0', lost: true, state: 'muted' },
+        { from: 's', to: 'r', label: 'trozo seq 0 (retransmisión)', flags: 'timeout 0,5 s', state: 'active' },
+        { from: 'r', to: 's', label: 'ACK 0', flags: 'duplicado: no se escribe', state: 'active' }
+      ]
+    },
+    {
+      note: 'El emisor recibe ACK 0 y pasa al siguiente trozo, con secuencia 1.',
+      actors: [
+        { id: 's', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'trozo seq 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK 0', lost: true, state: 'muted' },
+        { from: 's', to: 'r', label: 'trozo seq 0 (retransmisión)', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK 0', state: 'muted' },
+        { from: 's', to: 'r', label: 'trozo seq 1', state: 'answer' }
+      ]
+    }
+  ] }} />
+
+### ABP sobre RTP (Ejercicios Extra, pregunta 4)
+
+Alternating-Bit Protocol: dos canales no confiables y dos banderas booleanas; el emisor envía pares `<Bool, Paquete>` y el receptor confirma con el booleano. Se simula con paquetes RTP sobre UDP:
+
+<Visualization viz={{ type: 'packet',
+  static: true,
+  title: 'Cabecera RTP del ejercicio ABP (12 bytes, struct "!BBHII")',
+  steps: [
+    {
+      note: 'create_rtp_packet(): versión 2, payload type 96, número de secuencia que alterna 0 y 1, timestamp = int(time.time()), SSRC = 1234. El payload empieza en el byte 12 (el receptor lee rtp_packet[12:]).',
+      fields: {
+        width: 32,
+        rows: [
+          [
+            { label: 'V (2)', bits: 2, value: 2 },
+            { label: 'P', bits: 1, value: 0 },
+            { label: 'X', bits: 1, value: 0 },
+            { label: 'CC', bits: 4, value: 0 },
+            { label: 'Payload type', bits: 8, value: 96 },
+            { label: 'Número de secuencia (0 o 1)', bits: 16, state: 'active' }
+          ],
+          [
+            { label: 'Timestamp (int(time.time()))', bits: 32 }
+          ],
+          [
+            { label: 'SSRC', bits: 32, value: 1234 }
+          ],
+          [
+            { label: 'Payload: "Hello RTP with ABP!"', bits: 32 }
+          ]
+        ]
+      }
+    }
+  ] }} />
+
+Emisor (`rtp_sender`, resumido):
+
+```python
+sender_socket.settimeout(2)        # timeout de retransmisión
+seq_num = 0
+while True:
+    rtp_packet = create_rtp_packet(seq_num, payload)
+    sender_socket.sendto(rtp_packet, receiver_address)   # ('127.0.0.1', 5005)
+    try:
+        ack_packet, _ = sender_socket.recvfrom(1024)
+        ack_seq_num = struct.unpack('!H', ack_packet[:2])[0]
+        if ack_seq_num == seq_num:
+            seq_num = (seq_num + 1) % 2                  # alterna 0 y 1
+    except socket.timeout:
+        print(f"Timeout! Resending packet with Seq: {seq_num}")
+```
+
+Receptor (`rtp_receiver`): enlaza a `127.0.0.1:5005`, espera `expected_seq_num = 0`; si el número de secuencia coincide, envía el ACK (`struct.pack('!H', seq_num)`) y alterna el esperado; si no, solo imprime "out-of-order" y sigue.
+
+**Observación sobre el código:** este receptor **no reenvía el ACK** de un duplicado, a diferencia de lo que pide la pregunta 3 y de la FSM de rdt2.2/3.0. Si se perdiera un ACK, el emisor retransmitiría y el receptor lo ignoraría. Es una diferencia entre los dos enunciados.
+
+Experimento opcional: añadir `if random.random() < 0.1: continue` en el emisor y variar el `TIMEOUT` para ver el efecto.
+
+Entregables: ambos archivos Python, bitácoras con comunicación exitosa, timeouts y retransmisiones, y la captura del tráfico en el loopback.
+
+---
+
+## 3. Ejemplo resuelto
+
+Con pérdida del 15 % y trozos de 1024 bytes, un archivo de 2 MB son del orden de $2 \times 1024 \times 1024 / 1024 = 2048$ trozos *(derivado, tomando MB = 1 048 576 bytes)*: cada trozo es un ciclo stop-and-wait; el tiempo total depende de cuántos timeouts de 0,5 s ocurran.
+
+---
+
+## 4. Errores típicos
+
+- Aplicar la pérdida solo en el emisor: el enunciado la pide en ambos lados (pueden perderse los ACK).
+- Timeout menor que el RTT real: duplicados innecesarios.
+- No reenviar el ACK de un duplicado.

@@ -8,8 +8,6 @@ buildsOn:
   - "arquitectura-capas-internet"
 usedBy:
   - "lab-http-cookies-condicional"
-formulas:
-  - name: "Filtro Booleano de Visualización Wireshark"
-    tex: "\\text{Filtro} = \\text{proto} \\land (\\text{src\\_ip} \\lor \\text{dst\\_port})"
-    reasoning: "Expresa la combinación formal de operadores lógicos booleanos aplicados a cabeceras de protocolo para aislar flujos de paquetes específicos en Wireshark."
-hasVisualization: false
+formulas: []
+hasVisualization: true
+visualizationType: "sequence"

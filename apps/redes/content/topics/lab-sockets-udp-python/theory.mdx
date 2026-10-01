@@ -1,0 +1,47 @@
+---
+kind: theory
+title: "Laboratorio: Programación de Sockets Datagrama UDP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+El laboratorio de las semanas 4 y 5 lleva UDP a la práctica: capturar tráfico UDP real en Wireshark (navegar, `nslookup`), y luego programar un emisor y un receptor en Python con sockets datagrama. Todo el código del curso es de unas pocas líneas porque UDP no tiene conexión: no hay `connect`, `listen` ni `accept`.
+
+---
+
+## 2. Conceptos
+
+| Paso del lab | Qué se hace |
+|---|---|
+| 1. Captura simple | Wireshark con filtro UDP mientras se navega a www.utec.edu.pe; se describen puertos, longitud y checksum de un paquete |
+| 2. `nslookup` | Consulta a www.cisco.com: genera segmentos UDP de DNS |
+| 3. Python en loopback | `udp_receiver.py` y `udp_sender.py` en 127.0.0.1, puerto 5005, captura en la interfaz loopback |
+| 4. Python entre dos laptops | Misma LAN, sin la WiFi de la universidad; permiso de firewall para UDP; capturar y comparar tamaños |
+| 5. Broadcast | Un emisor, tres receptores; el emisor envía a la dirección de broadcast |
+
+La API y el código: [API de sockets UDP en Python](/topics/lab-sockets-udp-python/api-socket-udp-python). El intercambio cliente-servidor y las preguntas de los checkpoints: [Comunicación cliente-servidor](/topics/lab-sockets-udp-python/comunicacion-cliente-servidor-udp).
+
+---
+
+## 3. Método paso a paso
+
+1. Abre Wireshark y elige la interfaz (loopback, `lo0`, `localhost`, o la de la LAN).
+2. Ejecuta primero el **receptor** y después el **emisor**.
+3. Detén la captura y filtra con `udp` o `udp.port == 5005`.
+4. Abre el paquete: puerto origen, puerto destino, longitud y checksum; compara con lo que programaste.
+
+---
+
+## 4. Ejemplo resuelto
+
+Mensaje `b"Hello, World!"` (13 bytes) del lab de loopback. Si la cabecera fuera la UDP real, `length` sería $8 + 13 = 21$ bytes. El lab arma además una cabecera propia, que viaja como parte de los datos; ver [API de sockets UDP en Python](/topics/lab-sockets-udp-python/api-socket-udp-python).
+
+---
+
+## 5. Errores típicos
+
+- Lanzar el emisor antes que el receptor: el mensaje se pierde sin aviso.
+- Usar puertos ya ocupados (el lab advierte: 53, 67, 123).
+- Capturar en la interfaz equivocada (el loopback no es la WiFi).
+- No dar permiso de firewall a UDP al probar entre dos laptops.

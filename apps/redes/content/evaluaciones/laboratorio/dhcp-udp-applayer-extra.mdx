@@ -1,0 +1,597 @@
+---
+title: "Ejercicios Extra: DHCP, Sockets UDP y Capa de Aplicación"
+category: "laboratorio"
+categoryLabel: "Laboratorios y Ejercicios Extra"
+order: 3
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+# Ejercicios Extra: DHCP, UDP y capa de aplicación (CS4054)
+
+Hoja *Ex-Extra: DHCP - UDP - APP LAYER* (26 de septiembre de 2026), cuatro preguntas. La pregunta 1 es de captura: los valores concretos (IP concedida, lease) son los de **tu** captura, aquí se explica qué buscar y por qué.
+
+---
+
+## Pregunta 1. DHCP y el proceso DORA con Wireshark
+
+Se libera y renueva la dirección (`ipconfig /release` y `/renew` en Windows; `sudo dhclient -r` y `sudo dhclient` en Linux) con el filtro `bootp or dhcp`, y se captura el intercambio **D**iscover, **O**ffer, **R**equest, **A**CK.
+
+<Visualization viz={{ type: 'sequence',
+  title: 'DORA: Discover, Offer, Request, ACK',
+  steps: [
+    {
+      note: 'D (Discover): el cliente aún no tiene IP, por eso origen 0.0.0.0, y no conoce al servidor, por eso destino 255.255.255.255 (broadcast).',
+      actors: [
+        { id: 'c', label: 'Cliente (sin IP)' },
+        { id: 's', label: 'Servidor DHCP' }
+      ],
+      msgs: [
+        {
+          from: 'c',
+          to: 's',
+          label: 'DHCPDISCOVER',
+          flags: 'UDP 68 → 67 · 0.0.0.0 → 255.255.255.255',
+          state: 'active'
+        }
+      ]
+    },
+    {
+      note: 'O (Offer): el servidor ofrece una dirección y parámetros de configuración.',
+      actors: [
+        { id: 'c', label: 'Cliente (sin IP)' },
+        { id: 's', label: 'Servidor DHCP' }
+      ],
+      msgs: [
+        {
+          from: 'c',
+          to: 's',
+          label: 'DHCPDISCOVER',
+          flags: 'UDP 68 → 67 · 0.0.0.0 → 255.255.255.255',
+          state: 'muted'
+        },
+        {
+          from: 's',
+          to: 'c',
+          label: 'DHCPOFFER',
+          flags: 'oferta de IP, máscara, gateway, DNS, lease',
+          state: 'active'
+        }
+      ]
+    },
+    {
+      note: 'R (Request): el cliente solicita la dirección ofrecida.',
+      actors: [
+        { id: 'c', label: 'Cliente (sin IP)' },
+        { id: 's', label: 'Servidor DHCP' }
+      ],
+      msgs: [
+        {
+          from: 'c',
+          to: 's',
+          label: 'DHCPDISCOVER',
+          flags: 'UDP 68 → 67 · 0.0.0.0 → 255.255.255.255',
+          state: 'muted'
+        },
+        {
+          from: 's',
+          to: 'c',
+          label: 'DHCPOFFER',
+          flags: 'oferta de IP, máscara, gateway, DNS, lease',
+          state: 'muted'
+        },
+        { from: 'c', to: 's', label: 'DHCPREQUEST', flags: 'el cliente pide la IP ofrecida', state: 'active' }
+      ]
+    },
+    {
+      note: 'A (ACK): el servidor confirma. El Transaction ID (xid) es el mismo en los cuatro mensajes.',
+      actors: [
+        { id: 'c', label: 'Cliente (sin IP)' },
+        { id: 's', label: 'Servidor DHCP' }
+      ],
+      msgs: [
+        {
+          from: 'c',
+          to: 's',
+          label: 'DHCPDISCOVER',
+          flags: 'UDP 68 → 67 · 0.0.0.0 → 255.255.255.255',
+          state: 'muted'
+        },
+        {
+          from: 's',
+          to: 'c',
+          label: 'DHCPOFFER',
+          flags: 'oferta de IP, máscara, gateway, DNS, lease',
+          state: 'muted'
+        },
+        { from: 'c', to: 's', label: 'DHCPREQUEST', flags: 'el cliente pide la IP ofrecida', state: 'muted' },
+        { from: 's', to: 'c', label: 'DHCPACK', flags: 'confirma la concesión', state: 'active' }
+      ]
+    }
+  ] }} />
+
+**1) Transporte y direccionamiento.** DHCP viaja sobre UDP: el cliente usa el puerto 68 y el servidor el 67 *(valores a confirmar en la columna de puertos de tu captura)*. En el Discover el origen es `0.0.0.0` porque el cliente todavía no tiene dirección IP, y el destino `255.255.255.255` (broadcast) porque no conoce al servidor: lo recibe cada host de la LAN y responde el servidor DHCP.
+
+**2) Transaction ID (xid).** Es el mismo en los cuatro mensajes. Sobre UDP, que no tiene conexión ni estado, sirve para que el cliente relacione cada oferta y confirmación con su propia solicitud y descarte las que son para otros clientes.
+
+**3) Parámetros y lease.** En el Offer y el ACK, en la sección de opciones de DHCP, anota la IP ofrecida (*Your (client) IP address*), el *IP Address Lease Time* y al menos dos parámetros más (máscara de subred, router/gateway, servidores DNS). Los valores dependen de tu red.
+
+**4) Capa 2 frente a capa 3.** Aunque el cliente aún no tiene IP, el Offer le llega por la dirección **MAC**: el servidor conoce la MAC del cliente (viene en el Discover) y la usa como destino Ethernet; revisa en la trama del Offer la MAC y la IP de destino que se usaron.
+
+---
+
+## Pregunta 2. Truncamiento DNS y fallback a TCP (Python)
+
+Una respuesta DNS sobre UDP que supera los 512 bytes se trunca: el servidor pone el bit **TC** en 1. Hay que detectarlo y repetir la consulta por TCP.
+
+<Visualization viz={{ type: 'sequence',
+  title: 'Fallback UDP → TCP cuando la respuesta se trunca',
+  steps: [
+    {
+      note: 'Consulta TXT de google.com por UDP al puerto 53 de 8.8.8.8.',
+      actors: [
+        { id: 'c', label: 'Cliente (Python)' },
+        { id: 's', label: '8.8.8.8:53' }
+      ],
+      msgs: [
+        { from: 'c', to: 's', label: 'consulta TXT google.com', flags: 'UDP', state: 'active' }
+      ]
+    },
+    {
+      note: 'La respuesta no cabe en UDP: el servidor activa el bit TC (Truncated). El cliente lo aísla con operaciones de bits.',
+      actors: [
+        { id: 'c', label: 'Cliente (Python)' },
+        { id: 's', label: '8.8.8.8:53' }
+      ],
+      msgs: [
+        { from: 'c', to: 's', label: 'consulta TXT google.com', flags: 'UDP', state: 'muted' },
+        { from: 's', to: 'c', label: 'respuesta parcial', flags: 'TC = 1', state: 'active' }
+      ]
+    },
+    {
+      note: 'El cliente cierra el socket UDP y abre TCP al mismo puerto: handshake.',
+      actors: [
+        { id: 'c', label: 'Cliente (Python)' },
+        { id: 's', label: '8.8.8.8:53' }
+      ],
+      msgs: [
+        { from: 'c', to: 's', label: 'consulta TXT google.com', flags: 'UDP', state: 'muted' },
+        { from: 's', to: 'c', label: 'respuesta parcial', flags: 'TC = 1', state: 'muted' },
+        { from: 'c', to: 's', label: 'SYN', state: 'active' },
+        { from: 's', to: 'c', label: 'SYN, ACK', state: 'active' },
+        { from: 'c', to: 's', label: 'ACK', state: 'active' }
+      ]
+    },
+    {
+      note: 'Por TCP la consulta lleva un prefijo de 2 bytes con su longitud; la respuesta completa también.',
+      actors: [
+        { id: 'c', label: 'Cliente (Python)' },
+        { id: 's', label: '8.8.8.8:53' }
+      ],
+      msgs: [
+        { from: 'c', to: 's', label: 'consulta TXT google.com', flags: 'UDP', state: 'muted' },
+        { from: 's', to: 'c', label: 'respuesta parcial', flags: 'TC = 1', state: 'muted' },
+        { from: 'c', to: 's', label: 'SYN', state: 'muted' },
+        { from: 's', to: 'c', label: 'SYN, ACK', state: 'muted' },
+        { from: 'c', to: 's', label: 'ACK', state: 'muted' },
+        { from: 'c', to: 's', label: '[2 B longitud] + consulta', flags: 'TCP', state: 'active' },
+        { from: 's', to: 'c', label: '[2 B longitud] + respuesta completa', flags: 'TCP', state: 'answer' }
+      ]
+    }
+  ] }} />
+
+```python
+import socket, struct
+
+def build_query(domain, qtype=16):               # 16 = TXT
+    header = struct.pack('!HHHHHH', 0x1234, 0x0100, 1, 0, 0, 0)  # id, flags (RD=1), 1 pregunta
+    qname = b''.join(bytes([len(p)]) + p.encode() for p in domain.split('.')) + b'\x00'
+    return header + qname + struct.pack('!HH', qtype, 1)          # QCLASS = IN
+
+query = build_query('google.com')
+
+udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+udp.settimeout(2)
+udp.sendto(query, ('8.8.8.8', 53))
+resp, _ = udp.recvfrom(4096)
+flags = struct.unpack('!H', resp[2:4])[0]       # segundo campo de 16 bits de la cabecera DNS
+tc = (flags >> 9) & 1                           # bit TC
+udp.close()
+
+if tc:
+    tcp = socket.create_connection(('8.8.8.8', 53), timeout=5)
+    tcp.sendall(struct.pack('!H', len(query)) + query)   # DNS sobre TCP: prefijo de 2 bytes
+    n = struct.unpack('!H', tcp.recv(2))[0]               # longitud del mensaje de respuesta
+    data = b''
+    while len(data) < n:
+        data += tcp.recv(n - len(data))
+    print('TCP payload size:', len(data))
+    tcp.close()
+```
+
+Puntos del enunciado: usar solo `socket` (sin librerías DNS), aislar el bit TC con operaciones de bits, cambiar a TCP si vale 1, y anteponer / quitar el prefijo de 2 bytes de longitud.
+
+---
+
+## Pregunta 3. Transferencia de archivo confiable sobre UDP con pérdidas (rdt3.0)
+
+Enunciado: transferir un archivo binario (p. ej. una imagen de 2 MB) entre dos laptops en la misma red, con **15 % de pérdida** inyectada en emisor y receptor:
+
+```python
+import random
+if random.random() < 0.15:
+    continue   # descarta el paquete a propósito
+```
+
+- **Emisor:** trozos de 1024 bytes con número de secuencia 0 o 1; espera el ACK específico; si hay timeout (p. ej. 0,5 s), retransmite el trozo actual.
+- **Receptor:** si llega el trozo esperado, lo escribe y responde su ACK; si es un duplicado, descarta los datos **pero reenvía el ACK**.
+- **Prueba:** comparar `md5sum` (o `CertUtil -hashfile`) en ambos equipos.
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'Pregunta 3: rdt3.0 sobre UDP con pérdidas (tiempos ilustrativos)',
+  steps: [
+    {
+      note: 'El emisor envía el trozo 0 (1024 bytes) y arranca un temporizador de 0,5 s.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'El receptor lo escribe a disco y responde ACK 0.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'Trozo 1: el 15 % de pérdida artificial lo descarta (✕).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 41,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1',
+          kind: 'data',
+          state: 'active',
+          lost: true
+        }
+      ],
+      spans: [
+        { column: 'e', tStart: 41, tEnd: 541, label: 'timeout 0,5 s', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Vence el temporizador: el emisor retransmite el trozo actual.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 41,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1',
+          kind: 'data',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 541,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'e', tStart: 41, tEnd: 541, label: 'timeout 0,5 s', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El receptor responde ACK 1, pero esta vez se pierde el ACK (✕).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 41,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1',
+          kind: 'data',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 541,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'muted'
+        },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 562,
+          tTrans: 0,
+          tProp: 20,
+          label: 'ACK 1',
+          kind: 'ack',
+          state: 'active',
+          lost: true
+        }
+      ],
+      spans: [
+        { column: 'e', tStart: 41, tEnd: 541, label: 'timeout 0,5 s', kind: 'timeout' },
+        { column: 'e', tStart: 541, tEnd: 1041, label: 'timeout 0,5 s', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Otro timeout: se retransmite el trozo 1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 41,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1',
+          kind: 'data',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 541,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'muted'
+        },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 562,
+          tTrans: 0,
+          tProp: 20,
+          label: 'ACK 1',
+          kind: 'ack',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 1041,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'e', tStart: 41, tEnd: 541, label: 'timeout 0,5 s', kind: 'timeout' },
+        { column: 'e', tStart: 541, tEnd: 1041, label: 'timeout 0,5 s', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El receptor detecta el duplicado: descarta los datos pero reenvía ACK 1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 41,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1',
+          kind: 'data',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 541,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'muted'
+        },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 562,
+          tTrans: 0,
+          tProp: 20,
+          label: 'ACK 1',
+          kind: 'ack',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 1041,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'muted'
+        },
+        { from: 'r', to: 'e', tStart: 1062, tTrans: 0, tProp: 20, label: 'ACK 1', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 41, tEnd: 541, label: 'timeout 0,5 s', kind: 'timeout' },
+        { column: 'e', tStart: 541, tEnd: 1041, label: 'timeout 0,5 s', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Llega ACK 1 y el emisor pasa al trozo siguiente (secuencia 0).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 1120, ticks: [0, 41, 541, 1041, 1083] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 21, tTrans: 0, tProp: 20, label: 'ACK 0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 41,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1',
+          kind: 'data',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 541,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'muted'
+        },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 562,
+          tTrans: 0,
+          tProp: 20,
+          label: 'ACK 1',
+          kind: 'ack',
+          state: 'muted',
+          lost: true
+        },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 1041,
+          tTrans: 1,
+          tProp: 20,
+          label: 'seq 1 (retx)',
+          kind: 'data',
+          state: 'muted'
+        },
+        { from: 'r', to: 'e', tStart: 1062, tTrans: 0, tProp: 20, label: 'ACK 1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 1083, tTrans: 1, tProp: 20, label: 'seq 0', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 41, tEnd: 541, label: 'timeout 0,5 s', kind: 'timeout' },
+        { column: 'e', tStart: 541, tEnd: 1041, label: 'timeout 0,5 s', kind: 'timeout' }
+      ]
+    }
+  ] }} />
+
+La FSM de rdt3.0 y sus cuatro casos están en [rdt3.0 y temporizadores](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait).
+
+---
+
+## Pregunta 4. Alternating-Bit Protocol sobre RTP (Python)
+
+ABP da comunicación confiable sobre canales no confiables: dos canales (`chan1`, `chan2`) y dos banderas booleanas; el emisor envía pares `<Bool, Paquete>` y el receptor confirma con el booleano. Solo hay datos del emisor A al receptor B, pero B envía ACK.
+
+<Visualization viz={{ type: 'packet',
+  static: true,
+  title: 'Pregunta 4: cabecera RTP de 12 bytes (struct "!BBHII")',
+  steps: [
+    {
+      note: 'create_rtp_packet(): versión 2, payload type 96, número de secuencia 0/1, timestamp int(time.time()), SSRC 1234. El payload empieza en el byte 12.',
+      fields: {
+        width: 32,
+        rows: [
+          [
+            { label: 'V (2)', bits: 2, value: 2 },
+            { label: 'P', bits: 1, value: 0 },
+            { label: 'X', bits: 1, value: 0 },
+            { label: 'CC', bits: 4, value: 0 },
+            { label: 'Payload type', bits: 8, value: 96 },
+            { label: 'Número de secuencia (0 o 1)', bits: 16, state: 'active' }
+          ],
+          [
+            { label: 'Timestamp', bits: 32 }
+          ],
+          [
+            { label: 'SSRC', bits: 32, value: 1234 }
+          ],
+          [
+            { label: 'Payload', bits: 32 }
+          ]
+        ]
+      }
+    }
+  ] }} />
+
+```python
+rtp_header = struct.pack('!BBHII',
+    (version << 6) | (padding << 5) | (extension << 4) | csrc_count,
+    payload_type,            # 96
+    seq_num,                 # alterna 0 y 1
+    int(time.time()),        # timestamp
+    ssrc)                    # 1234
+return rtp_header + payload.encode()
+```
+
+- **Emisor (`rtp_sender`):** socket UDP con `settimeout(2)`; envía a `('127.0.0.1', 5005)`; si llega el ACK con el mismo número de secuencia, lo alterna (`(seq_num + 1) % 2`); si hay `socket.timeout`, reenvía.
+- **Receptor (`rtp_receiver`):** `bind(('127.0.0.1', 5005))`, `expected_seq_num = 0`; lee `seq_num` con `struct.unpack('!H', rtp_packet[2:4])`, y el payload en `rtp_packet[12:]`; si coincide, responde `struct.pack('!H', seq_num)` y alterna el esperado; si no, imprime "out-of-order" y sigue.
+- **Entregables:** ambos archivos, bitácoras con comunicación exitosa, timeouts y retransmisiones, y la captura del loopback en Wireshark. Experimento opcional: `if random.random() < 0.1: continue` en el emisor y distintos `TIMEOUT`.
+
+> **Diferencia entre enunciados.** El receptor de esta pregunta ignora los duplicados sin reenviar el ACK; la pregunta 3 y las FSM de las slides piden reenviarlo. Con ese receptor, un ACK perdido deja al emisor reintentando sin respuesta.

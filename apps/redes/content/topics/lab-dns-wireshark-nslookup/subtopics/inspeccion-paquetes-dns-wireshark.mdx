@@ -1,0 +1,62 @@
+---
+kind: subtopic
+title: "Inspección de paquetes DNS en Wireshark"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Con el filtro `dns`, se abre el paquete de consulta y el de respuesta y se leen: capa de transporte, *Flags* y secciones. El formato del mensaje está en el tema de registros DNS.
+
+---
+
+## 2. Qué mirar
+
+| Pregunta de la guía | Dónde |
+|---|---|
+| ¿TCP o UDP? ¿Puertos? | Capa de transporte: normalmente **UDP**, destino **53**, origen efímero |
+| ¿Está activada "Recursion desired"? | *Flags* de la consulta; pide al servidor que resuelva por el cliente si no conoce la respuesta |
+| ¿La IP de *Answers* coincide con la que usa el navegador? | Compararla con los paquetes TCP/TLS posteriores |
+| ¿Respuesta autoritativa? | *Flags* de la respuesta: "Authoritative answer" |
+| ¿Dónde están las IP de los NS (consulta `-type=NS`)? | Sección *Additional records*: información útil adicional, para no tener que consultar la IP de cada NS |
+| ¿Flag TC? | *Flags*: aparece cuando la respuesta (p. ej. `-type=ANY google.com`) no cabe en UDP |
+
+### Las tres consultas de nslookup
+
+`nslookup www.mit.edu` genera tres consultas y tres respuestas. **Las dos primeras son específicas de la herramienta**; se analiza la **última** consulta/respuesta.
+
+### UDP y TCP
+
+Las consultas pequeñas (`-type=A www.icann.org`, `-type=AAAA www.youtube.com`) van por UDP. Con `-type=ANY google.com` la respuesta puede pasar de 512 bytes: se activa TC y la consulta se repite por TCP. Si un firewall bloqueara TCP 53, fallaría esa consulta.
+
+<Visualization viz={{ type: 'sequence', title: 'Respuesta truncada: UDP y luego TCP', steps: [
+  { note: 'Primero la consulta va por UDP al puerto 53.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor DNS (53)' }],
+    msgs: [{ from: 'c', to: 's', label: 'UDP: consulta ANY google.com', state: 'active' }] },
+  { note: 'La respuesta no cabe en UDP: el servidor responde truncada con TC = 1.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor DNS (53)' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'UDP: consulta ANY google.com', state: 'muted' },
+      { from: 's', to: 'c', label: 'UDP: respuesta TC = 1', state: 'active' }] },
+  { note: 'El cliente repite por TCP: handshake y luego consulta/respuesta completas.',
+    actors: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor DNS (53)' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'UDP: consulta ANY google.com', state: 'muted' },
+      { from: 's', to: 'c', label: 'UDP: respuesta TC = 1', state: 'muted' },
+      { from: 'c', to: 's', label: 'TCP: SYN', state: 'active' },
+      { from: 's', to: 'c', label: 'TCP: SYN/ACK', state: 'active' },
+      { from: 'c', to: 's', label: 'TCP: consulta (con prefijo de longitud)', state: 'active' },
+      { from: 's', to: 'c', label: 'TCP: respuesta completa', state: 'answer' }] },
+]}} />
+
+### Cadena DNS, TCP y HTTP (Ex 1, pregunta 10)
+
+Con el filtro `dns or tcp or http` y la caché DNS limpia, el orden es: **DNS** (obtener la IP) → **handshake TCP** (SYN, SYN/ACK, ACK) → **HTTP GET**. La IP debe conocerse antes de abrir el socket, y la conexión debe existir antes de enviar HTTP. Se miden: tiempo DNS (consulta a respuesta), conexión TCP (SYN a ACK) y tiempo HTTP (GET a primera respuesta); su suma es la espera antes de recibir contenido. Al repetir la visita sin borrar cachés, la fase DNS desaparece (caché del host) y el HTTP puede acortarse por la caché del navegador.
+
+---
+
+## 3. Errores típicos
+
+- Analizar la primera consulta de `nslookup` (es específica de la herramienta).
+- Buscar las IP de los servidores NS en *Answers*: están en *Additional records*.

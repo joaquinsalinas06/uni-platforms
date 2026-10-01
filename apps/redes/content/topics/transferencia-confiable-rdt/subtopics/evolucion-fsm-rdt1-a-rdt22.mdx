@@ -1,0 +1,270 @@
+---
+kind: subtopic
+title: "Evolución de las FSM: de rdt1.0 a rdt2.2"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Cada versión nace de un fallo de la anterior. Aquí están las FSM de las slides, con el emisor y el receptor de cada una (usa los puntos de cada figura para cambiar de lado).
+
+---
+
+## 2. Conceptos
+
+### rdt1.0: canal perfecto
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'rdt1.0: canal perfectamente confiable',
+  steps: [
+    {
+      note: 'Emisor: un solo estado. Cada rdt_send arma el paquete y lo envía; no hay nada más que esperar.',
+      shapes: [
+        { id: 's', kind: 'state', label: 'Esperar llamada de arriba', initial: true }
+      ],
+      arrows: [
+        { from: 's', to: 's', label: 'rdt_send(data)\n/ packet=make_pkt(data); udt_send(packet)' }
+      ]
+    },
+    {
+      note: 'Receptor: un solo estado. Cada paquete que llega se extrae y se entrega a la capa superior.',
+      shapes: [
+        { id: 'r', kind: 'state', label: 'Esperar llamada de abajo', initial: true }
+      ],
+      arrows: [
+        { from: 'r', to: 'r', label: 'rdt_rcv(packet)\n/ extract(packet,data); deliver_data(data)' }
+      ]
+    }
+  ] }} />
+
+Un estado por lado: enviar, y recibir y entregar. Sin errores no hace falta más.
+
+### rdt2.0: errores de bits
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'rdt2.0: canal con errores de bits (ACK / NAK)',
+  steps: [
+    {
+      note: 'Emisor: tras enviar espera un ACK o NAK y no acepta más datos de arriba (stop-and-wait). NAK o ACK corrupto no está contemplado todavía.',
+      shapes: [
+        { id: 'a', kind: 'state', label: 'Esperar llamada de arriba', initial: true },
+        { id: 'b', kind: 'state', label: 'Esperar ACK o NAK' }
+      ],
+      arrows: [
+        { from: 'a', to: 'b', label: 'rdt_send(data)\n/ sndpkt=make_pkt(data,checksum); udt_send(sndpkt)' },
+        { from: 'b', to: 'b', label: 'rdt_rcv(rcvpkt) && isNAK(rcvpkt)\n/ udt_send(sndpkt)' },
+        { from: 'b', to: 'a', label: 'rdt_rcv(rcvpkt) && isACK(rcvpkt)\n/ Λ' }
+      ]
+    },
+    {
+      note: 'Receptor: si el paquete llega corrupto responde NAK; si llega bien, lo entrega y responde ACK.',
+      shapes: [
+        { id: 'r', kind: 'state', label: 'Esperar llamada de abajo', initial: true }
+      ],
+      arrows: [
+        { from: 'r', to: 'r', label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK); udt_send(sndpkt)' },
+        {
+          from: 'r',
+          to: 'r',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK); udt_send(sndpkt)'
+        }
+      ]
+    }
+  ] }} />
+
+El problema que deja abierto (slide): **el ACK o NAK también puede corromperse**. Añadir más bits de checksum sirve para paquetes corruptos, no para perdidos; reenviar un ACK/NAK corrupto introduce **duplicados**, y el receptor no puede saber a priori si un paquete es nuevo o una retransmisión.
+
+### rdt2.1: número de secuencia
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'rdt2.1: números de secuencia 0 y 1',
+  steps: [
+    {
+      note: 'Emisor rdt2.1: numera los paquetes con 0 y 1. Si el ACK/NAK llega corrupto o es NAK, retransmite el mismo paquete.',
+      shapes: [
+        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
+        { id: 's1', kind: 'state', label: 'Esperar ACK o NAK 0' },
+        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
+        { id: 's3', kind: 'state', label: 'Esperar ACK o NAK 1' }
+      ],
+      arrows: [
+        { from: 's0', to: 's1', label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)' },
+        { from: 's1', to: 's1', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))\n/ udt_send(sndpkt)' },
+        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)\n/ Λ' },
+        { from: 's2', to: 's3', label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)' },
+        { from: 's3', to: 's3', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))\n/ udt_send(sndpkt)' },
+        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)\n/ Λ' }
+      ]
+    },
+    {
+      note: 'Receptor rdt2.1: en "Esperar 0" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.',
+      shapes: [
+        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
+        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      ],
+      arrows: [
+        {
+          from: 'r0',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        }
+      ]
+    }
+  ] }} />
+
+Cuatro estados en el emisor (dos por cada número de secuencia: esperar datos, esperar ACK/NAK) y dos en el receptor.
+
+### rdt2.2: protocolo sin NAK
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'rdt2.2: sin NAK (el ACK lleva el número de secuencia)',
+  steps: [
+    {
+      note: 'Emisor rdt2.2: no existe NAK. Un ACK corrupto o con el número del paquete anterior ("ACK 1" mientras espera "ACK 0") hace el papel de NAK: se retransmite.',
+      shapes: [
+        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
+        { id: 's1', kind: 'state', label: 'Esperar ACK 0' },
+        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
+        { id: 's3', kind: 'state', label: 'Esperar ACK 1' }
+      ],
+      arrows: [
+        { from: 's0', to: 's1', label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)' },
+        {
+          from: 's1',
+          to: 's1',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))\n/ udt_send(sndpkt)'
+        },
+        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)\n/ Λ' },
+        { from: 's2', to: 's3', label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)' },
+        {
+          from: 's3',
+          to: 's3',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))\n/ udt_send(sndpkt)'
+        },
+        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)\n/ Λ' }
+      ]
+    },
+    {
+      note: 'Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).',
+      shapes: [
+        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
+        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      ],
+      arrows: [
+        {
+          from: 'r0',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq1(rcvpkt))\n/ sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq0(rcvpkt))\n/ sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)'
+        }
+      ]
+    }
+  ] }} />
+
+Compara con rdt2.1: los mismos estados, pero la respuesta ante problemas es siempre un ACK con un número. Desaparece el tipo de mensaje NAK.
+
+---
+
+## 3. Ejemplo resuelto
+
+**Ejercicios 3, pregunta 1 (también Ejercicios 2, pregunta 5): el receptor de la Figura 1, con el emisor de la Figura 2, se puede bloquear.**
+
+La diferencia con rdt2.1: en la Figura 1, un paquete duplicado (por ejemplo, un `has_seq0` mientras se espera el 1) provoca un **NAK** en lugar de un ACK.
+
+<Visualization viz={{ type: 'sequence',
+  title: 'Bloqueo: receptor de la Figura 1 con el emisor de la Figura 2',
+  steps: [
+    {
+      note: 'El emisor envía pkt0; el receptor lo entrega, responde ACK y pasa a "Esperar 1 de abajo".',
+      actors: [
+        { id: 's', label: 'Emisor (Esperar ACK o NAK 0)' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK', flags: 'receptor ahora espera el 1', state: 'muted' }
+      ]
+    },
+    {
+      note: 'El ACK llega corrupto: el emisor (corrupt || isNAK) retransmite pkt0.',
+      actors: [
+        { id: 's', label: 'Emisor (Esperar ACK o NAK 0)' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK (corrupto)', state: 'active' },
+        { from: 's', to: 'r', label: 'pkt0 (retransmisión)', state: 'active' }
+      ]
+    },
+    {
+      note: 'El receptor espera el 1 y recibe seq0: en la Figura 1 eso es (corrupt || has_seq0) y responde NAK. El emisor lo toma como NAK y retransmite pkt0… y así indefinidamente.',
+      actors: [
+        { id: 's', label: 'Emisor (Esperar ACK o NAK 0)' },
+        { id: 'r', label: 'Receptor (Esperar 1 de abajo)' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK (corrupto)', state: 'muted' },
+        { from: 's', to: 'r', label: 'pkt0 (retransmisión)', state: 'muted' },
+        { from: 'r', to: 's', label: 'NAK', state: 'active' },
+        { divider: true, from: 's', to: 'r', label: 'se repite sin fin' },
+        { from: 's', to: 'r', label: 'pkt0', state: 'active' },
+        { from: 'r', to: 's', label: 'NAK', state: 'active' }
+      ]
+    }
+  ] }} />
+
+Ninguno avanza: el emisor espera un ACK del paquete 0 que no llegará (el receptor ya lo recibió y espera el paquete 1) y el receptor espera un paquete 1 que el emisor nunca enviará. Ese es el estado de **bloqueo** que pide mostrar el ejercicio. La corrección de rdt2.1 es que, ante un duplicado, el receptor responda **ACK** (no NAK): así el emisor avanza.
+
+---
+
+## 4. Errores típicos
+
+- Confundir "esperar 0 de abajo" (qué número espera el receptor) con "esperar llamada 0 de arriba" (el emisor, listo para enviar datos).
+- En rdt2.1, responder NAK a un duplicado correcto.
+- En rdt2.2, olvidar que el ACK ahora **lleva** un número.

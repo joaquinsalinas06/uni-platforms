@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import katex from 'katex';
 import { SceneLayer, EquationPanel } from './CanvasScene.tsx';
 import {
@@ -98,6 +98,9 @@ type Props = {
   /** Escala mínima (0..1) antes de pasar a scroll horizontal: un diagrama
    * ancho (sequence de 6 actores, bloques) no se encoge hasta ser ilegible. */
   minScale?: number;
+  /** Capa SVG propia de la familia (iconos, animaciones): se dibuja encima
+   * de todo, dentro del viewBox, con el índice del paso actual. */
+  render?: (index: number) => ReactNode;
 };
 
 /** Extremo de una arista recortado contra el borde de la caja destino, para
@@ -205,7 +208,7 @@ const SIDE = [
   { row: '@min-[59rem]:flex', main: '@min-[59rem]:flex-1', aside: '@min-[59rem]:w-[19rem] @min-[59rem]:shrink-0 @min-[59rem]:border-t-0 @min-[59rem]:border-l' },
 ];
 
-export default function VisualizationCanvas({ steps, width = 640, height = 260, title, static: isStatic = false, minScale }: Props) {
+export default function VisualizationCanvas({ steps, width = 640, height = 260, title, static: isStatic = false, minScale, render }: Props) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -777,6 +780,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
               </g>
             );
           })}
+          {render?.(Math.min(i, last))}
           </g>
         </svg>
       </div>

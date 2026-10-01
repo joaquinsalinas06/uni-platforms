@@ -2,17 +2,13 @@ id: "capa-transporte-multiplexacion"
 title: "Capa de Transporte: Principios y Demultiplexación"
 type: "concept"
 unit: "s5"
-prerequisites: ["arquitectura-capas-internet"]
-buildsOn: ["arquitectura-capas-internet"]
-usedBy: ["transferencia-confiable-rdt", "protocolo-udp"]
-formulas:
-  - name: "Identificador de socket sin conexión (UDP)"
-    tex: "\\text{Socket}_{\\text{UDP}} = (\\text{IP}_{\\text{dest}}, \\text{Port}_{\\text{dest}})"
-    reasoning: "Tupla de dos valores utilizada por el sistema operativo para dirigir datagramas entrantes a una cola de proceso específica sin considerar el origen."
-  - name: "Identificador de conexión orientada (TCP)"
-    tex: "\\text{Socket}_{\\text{TCP}} = (\\text{IP}_{\\text{src}}, \\text{Port}_{\\text{src}}, \\text{IP}_{\\text{dest}}, \\text{Port}_{\\text{dest}})"
-    reasoning: "Cuaterna obligatoria que permite al receptor demultiplexar tráfico simultáneo hacia sockets dedicados e independientes por cada cliente conectado."
-  - name: "Capacidad del espacio de direccionamiento de puertos"
-    tex: "\\text{Port}_{\\max} = 2^{16} - 1 = 65535"
-    reasoning: "Límite superior del campo de puerto de 16 bits presente en las cabeceras de transporte UDP y TCP para identificar procesos locales."
-hasVisualization: false
+prerequisites:
+  - "arquitectura-capas-internet"
+buildsOn:
+  - "arquitectura-capas-internet"
+usedBy:
+  - "transferencia-confiable-rdt"
+  - "protocolo-udp"
+formulas: []
+hasVisualization: true
+visualizationType: "net-scene"

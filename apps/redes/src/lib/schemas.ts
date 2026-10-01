@@ -14,6 +14,10 @@ export const VISUALIZATION_TYPES = [
   'network-topology',
   'timeline',
   'memory-layout',
+  'net-scene',
+  'spacetime',
+  'window',
+  'packet',
 ] as const;
 
 /** Canal de COLOR SEMÁNTICO, separado de `state` (que sigue siendo el rol del
@@ -199,6 +203,54 @@ const flowArrow = z.object({
   state: state.optional(),
 });
 
+// ─────────── familias de redes (contrato: templates/viz-redes.md) ───────────
+export const DEVICE_KINDS = ['host', 'laptop', 'phone', 'server', 'router', 'switch', 'dns', 'cloud', 'tracker'] as const;
+const netDevice = z.object({
+  id: z.string(),
+  kind: z.enum(DEVICE_KINDS),
+  label: z.string(),
+  sub: z.string().optional(),
+  x: z.number(),
+  y: z.number(),
+  state: state.optional(),
+});
+const netCable = z.object({ from: z.string(), to: z.string(), label: z.string().optional(), rate: z.string().optional(), delay: z.string().optional(), state: state.optional() });
+const netPacket = z.object({ from: z.string(), to: z.string(), label: z.string().default(''), order: z.number().optional(), lost: z.boolean().default(false), state: state.optional() });
+const netZone = z.object({ label: z.string(), devices: z.array(z.string()) });
+
+const stSend = z.object({
+  from: z.string(),
+  to: z.string(),
+  tStart: z.number(),
+  tTrans: z.number().default(0),
+  tProp: z.number(),
+  label: z.string().optional(),
+  kind: z.enum(['data', 'ack', 'ctrl']).default('data'),
+  lost: z.boolean().default(false),
+  state: state.optional(),
+});
+const stSpan = z.object({ column: z.string(), tStart: z.number(), tEnd: z.number(), label: z.string(), kind: z.enum(['rtt', 'timeout', 'trans', 'prop', 'queue']).default('rtt'), state: state.optional() });
+
+export const CELL_STATES = ['acked', 'sent', 'usable', 'unusable', 'buffered', 'expected', 'received'] as const;
+const slidingWindow = z.object({
+  role: z.enum(['sender', 'receiver']),
+  label: z.string(),
+  base: z.number(),
+  size: z.number(),
+  seqSpace: z.number().optional(),
+  cells: z.array(z.object({ n: z.number(), state: z.enum(CELL_STATES) })),
+});
+
+const pktField = z.object({ label: z.string(), bits: z.number().positive(), value: z.union([z.string(), z.number()]).optional(), state: state.optional() });
+const pktLayer = z.object({
+  label: z.string(),
+  header: z.string().optional(),
+  trailer: z.string().optional(),
+  /** Aditivo: texto del bloque de datos más interno (default "M"). Sólo se lee de la primera capa. */
+  payload: z.string().optional(),
+  state: state.optional(),
+});
+
 const step = z.object({
   note: z.string(),
   nodes: z.array(vizNode).default([]),
@@ -231,6 +283,21 @@ const step = z.object({
   dataFlow: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().optional() })).optional(),
   /** `memory-layout` */
   blocks: z.array(z.object({ id: z.string(), label: z.string(), bytes: z.number(), offset: z.number(), state: state.optional() })).optional(),
+  /** `net-scene` */
+  devices: z.array(netDevice).optional(),
+  cables: z.array(netCable).optional(),
+  packets: z.array(netPacket).optional(),
+  zones: z.array(netZone).optional(),
+  /** `spacetime` */
+  columns: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  time: z.object({ unit: z.enum(['ms', 'µs', 'μs', 'us', 'ns', 's']).default('ms'), max: z.number().positive(), ticks: z.array(z.number()).optional() }).optional(),
+  sends: z.array(stSend).optional(),
+  spans: z.array(stSpan).optional(),
+  /** `window` */
+  windows: z.array(slidingWindow).optional(),
+  /** `packet` */
+  fields: z.object({ width: z.number().int().positive().default(32), rows: z.array(z.array(pktField)) }).optional(),
+  layers: z.array(pktLayer).optional(),
   /** Nota acumulada del paso. */
   caption: z.string().optional(),
 });

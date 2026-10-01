@@ -1,0 +1,102 @@
+---
+kind: subtopic
+title: "Conexiones persistentes y no persistentes"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+HTTP corre sobre TCP, y abrir una conexión cuesta un **RTT** (el *handshake* de tres vías). La pregunta es cuántas veces se paga ese costo para descargar una página con varios objetos.
+
+---
+
+## 2. Conceptos
+
+Reglas que usan las guías de ejercicios (RTT$_0$ = RTT entre cliente y servidor web; se ignora el tiempo de transmisión salvo que se indique):
+
+| Modo | Costo por objeto |
+|---|---|
+| **No persistente** | Una conexión TCP **nueva** por objeto: handshake (1 RTT$_0$) + petición/respuesta (1 RTT$_0$) = $2\,\text{RTT}_0$ (+ transmisión) |
+| **Persistente** | Un solo handshake (1 RTT$_0$) para toda la página; cada objeto adicional cuesta $1\,\text{RTT}_0$ (+ transmisión) |
+| **Persistente con pipelining** | Tras el HTML base, todos los objetos se piden en ráfaga en la misma conexión: $1\,\text{RTT}_0$ **en total** para los objetos adicionales |
+
+El navegador puede además abrir **conexiones TCP en paralelo** (por ejemplo, 6) en modo no persistente: cada ronda descarga hasta ese número de objetos a la vez.
+
+### Contar RTT en el tiempo
+
+<Visualization viz={{ type: 'spacetime', static: true, title: 'No persistente: HTML + 1 imagen = 4 RTT', steps: [
+  { note: 'Cada objeto repite handshake (SYN, SYN/ACK) y GET + respuesta: 2 RTT por objeto, 4 RTT en total. RTT = 80 ms.',
+    columns: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor' }],
+    time: { unit: 'ms', max: 330, ticks: [0, 80, 160, 240, 320] },
+    sends: [
+      { from: 'c', to: 's', tStart: 0, tTrans: 0, tProp: 40, label: 'SYN', kind: 'ctrl' },
+      { from: 's', to: 'c', tStart: 40, tTrans: 0, tProp: 40, label: 'SYN/ACK', kind: 'ctrl' },
+      { from: 'c', to: 's', tStart: 80, tTrans: 0, tProp: 40, label: 'GET html', kind: 'ctrl', state: 'active' },
+      { from: 's', to: 'c', tStart: 120, tTrans: 0, tProp: 40, label: 'HTML', kind: 'ack', state: 'active' },
+      { from: 'c', to: 's', tStart: 160, tTrans: 0, tProp: 40, label: 'SYN', kind: 'ctrl' },
+      { from: 's', to: 'c', tStart: 200, tTrans: 0, tProp: 40, label: 'SYN/ACK', kind: 'ctrl' },
+      { from: 'c', to: 's', tStart: 240, tTrans: 0, tProp: 40, label: 'GET img', kind: 'ctrl', state: 'active' },
+      { from: 's', to: 'c', tStart: 280, tTrans: 0, tProp: 40, label: 'imagen', kind: 'ack', state: 'active' } ],
+    spans: [
+      { column: 'c', tStart: 0, tEnd: 80, label: 'RTT handshake', kind: 'rtt' },
+      { column: 'c', tStart: 80, tEnd: 160, label: 'RTT GET html', kind: 'rtt' },
+      { column: 'c', tStart: 160, tEnd: 240, label: 'RTT handshake', kind: 'rtt' },
+      { column: 'c', tStart: 240, tEnd: 320, label: 'RTT GET img', kind: 'rtt' } ] },
+]}} />
+
+<Visualization viz={{ type: 'spacetime', static: true, title: 'Persistente: HTML + 1 imagen = 3 RTT', steps: [
+  { note: 'El handshake se paga una sola vez; la imagen reutiliza la conexión y cuesta 1 RTT. Total 3 RTT en lugar de 4.',
+    columns: [{ id: 'c', label: 'Cliente' }, { id: 's', label: 'Servidor' }],
+    time: { unit: 'ms', max: 250, ticks: [0, 80, 160, 240] },
+    sends: [
+      { from: 'c', to: 's', tStart: 0, tTrans: 0, tProp: 40, label: 'SYN', kind: 'ctrl' },
+      { from: 's', to: 'c', tStart: 40, tTrans: 0, tProp: 40, label: 'SYN/ACK', kind: 'ctrl' },
+      { from: 'c', to: 's', tStart: 80, tTrans: 0, tProp: 40, label: 'GET html', kind: 'ctrl' },
+      { from: 's', to: 'c', tStart: 120, tTrans: 0, tProp: 40, label: 'HTML', kind: 'ack' },
+      { from: 'c', to: 's', tStart: 160, tTrans: 0, tProp: 40, label: 'GET img', kind: 'ctrl', state: 'active' },
+      { from: 's', to: 'c', tStart: 200, tTrans: 0, tProp: 40, label: 'imagen', kind: 'ack', state: 'active' } ],
+    spans: [
+      { column: 'c', tStart: 0, tEnd: 80, label: 'RTT handshake', kind: 'rtt' },
+      { column: 'c', tStart: 80, tEnd: 160, label: 'RTT GET html', kind: 'rtt' },
+      { column: 'c', tStart: 160, tEnd: 240, label: 'RTT GET img', kind: 'rtt', state: 'answer' } ] },
+]}} />
+
+### Fórmulas
+
+Sea $S = \sum_{i=1}^{n}\text{RTT}_i$ el tiempo de resolución DNS (sin caché) y $N$ el número de objetos referenciados por el HTML base:
+
+$$T_{\text{no pers.}} = S + 2\,\text{RTT}_0\,(1+N) \qquad T_{\text{no pers., }k\text{ paralelas}} = S + 2\,\text{RTT}_0 + \left\lceil \tfrac{N}{k} \right\rceil 2\,\text{RTT}_0$$
+
+$$T_{\text{pers.}} = S + 2\,\text{RTT}_0 + N\,\text{RTT}_0 \qquad T_{\text{pers. + pipelining}} = S + 2\,\text{RTT}_0 + \text{RTT}_0$$
+
+Si los objetos no son despreciables se suma el tiempo de transmisión $L/R$ de cada uno (en pipelining, de todos).
+
+---
+
+## 3. Ejemplo resuelto (Ex 3, pregunta 2: $N = 12$, $S = 120$ ms, $\text{RTT}_0 = 80$ ms)
+
+| Caso | Cálculo | Total |
+|---|---|---|
+| No persistente, sin paralelismo | $120 + 160\cdot 13$ | $2200\text{ ms}$ |
+| No persistente, 5 paralelas | $120 + 160 + \lceil 12/5\rceil \cdot 160 = 120 + 160 + 480$ | $760\text{ ms}$ |
+| Persistente con pipelining | $120 + 160 + 80$ | $\boxed{360\text{ ms}}$ |
+
+El más eficiente es persistente con pipelining.
+
+Con la hoja Ex 1 (pregunta 3: $N = 10$, 6 conexiones paralelas, persistente **sin** pipelining) sale: $1880$ ms, $600$ ms y $1080$ ms. Aquí gana el no persistente con 6 paralelas porque la persistente de esa hoja pide los objetos de uno en uno.
+
+### Parcial 2026-I, pregunta 1 (3 imágenes de $S = 2$ Mbits, $R = 10$ Mbps)
+
+Persistente sin pipelining: cada imagen cuesta $\text{RTT}_s + S/R$.
+
+$$T_B = (\text{RTT}_1 + \text{RTT}_2) + 2\,\text{RTT}_s + 3\left(\text{RTT}_s + \frac{S}{R}\right) = 120 + 200 + 3(100 + 200) = \boxed{1220\text{ ms}}$$
+
+---
+
+## 4. Errores típicos
+
+- Contar solo 1 RTT por objeto en el modo no persistente: son 2 (handshake + petición).
+- Olvidar la ronda del HTML base, que siempre va antes de los objetos que referencia.
+- Mezclar "paralelo" (varias conexiones TCP) con "pipelining" (varias peticiones en una conexión).
+- En el ejercicio Ex 1 pregunta 3, el enunciado dice ocho objetos pero los valores numéricos usan $N = 10$: usar el $N$ que da la parte numérica.

@@ -1,0 +1,30 @@
+---
+kind: theory
+title: "Web Caching, Conditional GET y Manejo de Cookies"
+---
+
+## 1. Idea y motivación
+
+Dos consecuencias de que HTTP sea **sin estado**:
+
+- El servidor no recuerda al cliente entre peticiones. Para mantener una sesión (carrito, usuario) se usan **cookies**.
+- Pedir el mismo objeto una y otra vez desperdicia ancho de banda y tiempo. Se evita guardando copias (**caché**) y preguntando al servidor si la copia sigue vigente (**GET condicional**).
+
+---
+
+## 2. Conceptos
+
+| Mecanismo | Quién lo usa | Qué logra |
+|---|---|---|
+| **Cookies** | Navegador y servidor, con una BD en el servidor | Recordar al usuario entre peticiones sin que HTTP guarde estado |
+| **GET condicional** | Navegador (o caché) y servidor, con `If-Modified-Since` / `Last-Modified` | Recibir el objeto solo si cambió |
+| **Caché web** | Una caché instalada en la red institucional | Contestar localmente una fracción de las peticiones |
+
+Las cuatro piezas de las cookies y el intercambio completo están en [Cookies y sesión](/topics/web-caching-cookies/mecanismo-cookies-sesion); el GET condicional y el efecto de una caché en el tiempo de respuesta, en [Proxies y web caching](/topics/web-caching-cookies/proxies-web-caching).
+
+---
+
+## 3. Errores típicos
+
+- Decir que las cookies hacen que HTTP "tenga estado": el estado vive en el navegador (archivo de cookies) y en la BD del sitio.
+- Pensar que un 304 trae el objeto: no trae cuerpo; el cliente reutiliza su copia.

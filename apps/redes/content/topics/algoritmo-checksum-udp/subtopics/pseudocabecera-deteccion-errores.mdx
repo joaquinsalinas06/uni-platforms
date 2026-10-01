@@ -1,0 +1,62 @@
+---
+kind: subtopic
+title: "Qué cubre el checksum y qué errores no detecta"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Qué entra en la suma (incluye las direcciones IP, no solo el segmento) y por qué una protección tan simple se puede engañar.
+
+---
+
+## 2. Conceptos
+
+### Qué entra en el cálculo
+
+Según la slide, el emisor trata como enteros de 16 bits el contenido del segmento UDP, **incluidos los campos de cabecera y las direcciones IP**. La slide no usa el nombre "pseudocabecera" ni detalla sus campos; ese es el nombre del mapa del curso para las direcciones IP que se suman junto al segmento.
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Lo que entra en la suma (según la slide)', steps: [
+  { note: 'Se suman las direcciones IP, los campos de la cabecera UDP y los datos, todos como palabras de 16 bits.',
+    layers: [
+      { label: 'Direcciones IP origen y destino', header: 'IP', state: 'marked' },
+      { label: 'Cabecera UDP: puertos, longitud, checksum', header: 'UDP', state: 'marked' },
+      { label: 'Datos de aplicación', header: 'datos', state: 'marked' } ] },
+]}} />
+
+### Detección
+
+- Receptor: calcula el checksum del segmento recibido y lo compara con el campo. Distinto: error. Igual: sin error detectado.
+- En el laboratorio se observa el campo en Wireshark (valor y estado). En las capturas del parcial 2026-I aparece `[Checksum Status: Unverified]`.
+- En el lab de loopback el emisor arma la cabecera a mano con `struct.pack("!IIII", …)` y fija el valor del checksum (`int("4", 16)`); la función con `zlib.crc32` está comentada.
+
+### Protección débil
+
+Slide *weak protection*: en la primera palabra los dos últimos bits pasan de `10` a `01` y en la segunda de `01` a `10`. Lo que una palabra gana en una posición la otra lo pierde, así que la suma no cambia y el checksum tampoco: el error **no se detecta**.
+
+<Visualization viz={{ type: 'packet', title: 'Dos bits cambian y el checksum no', steps: [
+  { note: 'Original: suma 1011101110111100, checksum 0100010001000011.',
+    fields: { width: 16, rows: [
+      [{ label: 'palabra 1', bits: 16, value: '1110011001100110' }],
+      [{ label: 'palabra 2', bits: 16, value: '1101010101010101' }],
+      [{ label: 'checksum', bits: 16, value: '0100010001000011', state: 'answer' }] ] } },
+  { note: 'Se voltean los dos últimos bits de cada palabra (10 pasa a 01 y 01 pasa a 10). Las palabras cambian pero la suma es la misma.',
+    fields: { width: 16, rows: [
+      [{ label: 'palabra 1 (alterada)', bits: 16, value: '1110011001100101', state: 'active' }],
+      [{ label: 'palabra 2 (alterada)', bits: 16, value: '1101010101010110', state: 'active' }],
+      [{ label: 'checksum recalculado (igual)', bits: 16, value: '0100010001000011', state: 'answer' }] ] } },
+]}} />
+
+---
+
+## 3. Ejemplo resuelto
+
+Ejercicios 3, pregunta 5b: si el receptor calcula el checksum y coincide con el del segmento, ¿puede asegurar que no hubo errores? **No.** La suma en complemento a uno puede dar el mismo valor con palabras distintas (como en la figura), así que solo se puede decir que no se detectó error.
+
+---
+
+## 4. Errores típicos
+
+- Decir que el checksum corrige errores: solo los detecta (y no todos).
+- Pensar que protege solo los datos: también entran los campos de cabecera y las direcciones IP.

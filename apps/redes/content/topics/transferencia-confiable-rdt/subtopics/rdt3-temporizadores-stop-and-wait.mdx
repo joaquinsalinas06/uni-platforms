@@ -1,0 +1,723 @@
+---
+kind: subtopic
+title: "rdt3.0: temporizadores y stop-and-wait"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Si el canal también puede **perder** paquetes o ACK, el emisor necesita saber cuándo desistir de esperar. rdt3.0 agrega un **temporizador**: si vence antes de recibir el ACK, retransmite. La secuencia 0, 1, 0, 1… lo hace el *alternating-bit protocol*.
+
+---
+
+## 2. Conceptos
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  static: true,
+  title: 'rdt3.0 emisor: canal con pérdidas (temporizador)',
+  steps: [
+    {
+      note: 'Se agrega un temporizador: se arranca al enviar, se detiene al llegar el ACK correcto y, si vence (timeout), se retransmite. Los ACK de otro número o corruptos se ignoran (Λ).',
+      shapes: [
+        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
+        { id: 's1', kind: 'state', label: 'Esperar ACK 0' },
+        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
+        { id: 's3', kind: 'state', label: 'Esperar ACK 1' }
+      ],
+      arrows: [
+        {
+          from: 's0',
+          to: 's1',
+          label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt); start_timer'
+        },
+        { from: 's0', to: 's0', label: 'rdt_rcv(rcvpkt)\n/ Λ' },
+        { from: 's1', to: 's1', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))\n/ Λ' },
+        { from: 's1', to: 's1', label: 'timeout\n/ udt_send(sndpkt); start_timer', state: 'active' },
+        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)\n/ stop_timer' },
+        { from: 's2', to: 's2', label: 'rdt_rcv(rcvpkt)\n/ Λ' },
+        {
+          from: 's2',
+          to: 's3',
+          label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt); start_timer'
+        },
+        { from: 's3', to: 's3', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))\n/ Λ' },
+        { from: 's3', to: 's3', label: 'timeout\n/ udt_send(sndpkt); start_timer', state: 'active' },
+        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)\n/ stop_timer' }
+      ]
+    }
+  ] }} />
+
+- Al enviar se arranca el temporizador; al recibir el ACK correcto se detiene.
+- `timeout`: retransmite y rearranca el temporizador.
+- Los paquetes corruptos o con ACK del otro número se ignoran (Λ).
+- Mientras espera un ACK el emisor sigue sin aceptar datos de arriba: sigue siendo **stop-and-wait**.
+
+El receptor de las slides para rdt3.0 no se dibuja aparte; las trazas siguientes son consistentes con el receptor de rdt2.2 (reconoce duplicados y reenvía ACK).
+
+### Los cuatro casos de las slides
+
+*Los tiempos son ilustrativos (la slide no tiene escala): 1 ms de transmisión, 10 ms de propagación.*
+
+**(a) Sin pérdidas**
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'rdt3.0 (a): sin pérdidas',
+  steps: [
+    {
+      note: 'El emisor envía pkt0 y arranca el temporizador. La banda gruesa es la transmisión; la pendiente, la propagación.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 11, 21, 32, 42, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'El receptor recibe pkt0 y responde ACK0.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 11, 21, 32, 42, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'Llega ACK0: el emisor envía pkt1 (alternando el bit).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 11, 21, 32, 42, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'El receptor responde ACK1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 11, 21, 32, 42, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'Llega ACK1: pkt0 otra vez. Cada paquete espera un RTT completo: stop-and-wait.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 11, 21, 32, 42, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 42, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'ACK0 cierra el tercer ciclo.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 11, 21, 32, 42, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 42, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 53, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ]
+    }
+  ] }} />
+
+**(b) Paquete perdido**
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'rdt3.0 (b): paquete perdido',
+  steps: [
+    {
+      note: 'pkt0 se entrega sin problema.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'ACK0 de vuelta.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'El emisor envía pkt1 y arranca el temporizador… pero el paquete se pierde en el canal (✕).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 21,
+          tTrans: 1,
+          tProp: 10,
+          label: 'pkt1',
+          kind: 'data',
+          lost: true,
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Vence el temporizador sin recibir ACK1: el emisor retransmite pkt1 y rearranca el temporizador.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 21,
+          tTrans: 1,
+          tProp: 10,
+          label: 'pkt1',
+          kind: 'data',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El receptor recibe pkt1 (esta vez sí) y responde ACK1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 21,
+          tTrans: 1,
+          tProp: 10,
+          label: 'pkt1',
+          kind: 'data',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 56, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Llega ACK1: se envía pkt0; el protocolo sigue con normalidad.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 21,
+          tTrans: 1,
+          tProp: 10,
+          label: 'pkt1',
+          kind: 'data',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 56, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 66, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'ACK0.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        {
+          from: 'e',
+          to: 'r',
+          tStart: 21,
+          tTrans: 1,
+          tProp: 10,
+          label: 'pkt1',
+          kind: 'data',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 56, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 66, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 77, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    }
+  ] }} />
+
+**(c) ACK perdido**
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'rdt3.0 (c): ACK perdido',
+  steps: [
+    {
+      note: 'pkt0 y ACK0 sin problema (se omite el detalle).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'ACK0 llega al emisor.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'El emisor envía pkt1 y arranca el temporizador.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El receptor recibe pkt1 y envía ACK1… que se pierde (✕).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 32,
+          tTrans: 0,
+          tProp: 10,
+          label: 'ACK1',
+          kind: 'ack',
+          lost: true,
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Vence el temporizador: el emisor retransmite pkt1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 32,
+          tTrans: 0,
+          tProp: 10,
+          label: 'ACK1',
+          kind: 'ack',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El receptor detecta que pkt1 es un duplicado (no lo entrega de nuevo) y reenvía ACK1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 32,
+          tTrans: 0,
+          tProp: 10,
+          label: 'ACK1',
+          kind: 'ack',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 56, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Llega ACK1: el emisor sigue con pkt0.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 32,
+          tTrans: 0,
+          tProp: 10,
+          label: 'ACK1',
+          kind: 'ack',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 56, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 66, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'ACK0.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 90, ticks: [0, 21, 32, 45, 56, 66, 77, 87] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        {
+          from: 'r',
+          to: 'e',
+          tStart: 32,
+          tTrans: 0,
+          tProp: 10,
+          label: 'ACK1',
+          kind: 'ack',
+          lost: true,
+          state: 'muted'
+        },
+        { from: 'e', to: 'r', tStart: 45, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 56, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 66, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 77, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 45, label: 'timeout', kind: 'timeout' }
+      ]
+    }
+  ] }} />
+
+**(d) Timeout prematuro**
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'rdt3.0 (d): timeout prematuro',
+  steps: [
+    {
+      note: 'pkt0 y su ACK0 sin problema.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'ACK0 llega al emisor.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'El emisor envía pkt1; el temporizador es demasiado corto (15 ms, menor que el RTT de 22 ms).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 36, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El receptor recibe pkt1 y envía ACK1; todavía está en camino hacia el emisor.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 36, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Timeout prematuro: el ACK1 aún no llegó y el emisor retransmite pkt1 (ahora hay un duplicado en el canal).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 36, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 36, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'Llega el primer ACK1: el emisor envía pkt0.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 36, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 42, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 36, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'El duplicado de pkt1 llega al receptor: lo reconoce como duplicado (no lo entrega) y reenvía ACK1.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 36, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 42, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 47, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 36, label: 'timeout', kind: 'timeout' }
+      ]
+    },
+    {
+      note: 'pkt0 llega y el receptor responde ACK0. Cuando el segundo ACK1 llegue al emisor (t = 57, esperando ACK0), no hace nada.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 65, ticks: [0, 21, 32, 36, 42, 47, 53, 63] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 11, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 21, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 32, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 36, tTrans: 1, tProp: 10, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 42, tTrans: 1, tProp: 10, label: 'pkt0', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 47, tTrans: 0, tProp: 10, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 53, tTrans: 0, tProp: 10, label: 'ACK0', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'e', tStart: 21, tEnd: 36, label: 'timeout', kind: 'timeout' }
+      ]
+    }
+  ] }} />
+
+En (c) y (d) el receptor ve dos veces pkt1: el número de secuencia le permite detectar el duplicado y responder ACK1 sin entregar los datos de nuevo.
+
+### Por qué stop-and-wait rinde poco
+
+Ejemplo de la slide: enlace de $R = 1\text{ Gbps}$, paquetes de $L = 8000$ bits (1000 bytes) y $\text{RTT} \approx 30\text{ ms}$.
+
+$$d_{\text{trans}} = \frac{L}{R} = \frac{8000}{10^9}\text{ s} = 8\ \mu\text{s} = 0{,}008\text{ ms}$$
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'Stop-and-wait con R = 1 Gbps, L = 8000 bits, RTT = 30 ms',
+  steps: [
+    {
+      note: 'L/R = 8000 bits / 10^9 bps = 8 µs = 0,008 ms. La banda de transmisión es casi invisible frente a los 15 ms de propagación.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'paquete', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'El último bit llega en 15,008 ms y el receptor envía el ACK.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'paquete', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 15.008, tTrans: 0, tProp: 15, label: 'ACK', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'El ACK llega en RTT + L/R = 30,008 ms: recién ahí se puede enviar el siguiente paquete. El emisor estuvo ocupado 0,008 ms de 30,008 ms (≈ 0,027 %).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'paquete', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 15.008, tTrans: 0, tProp: 15, label: 'ACK', kind: 'ack', state: 'muted' }
+      ],
+      spans: [
+        { column: 'e', tStart: 0, tEnd: 30.008, label: 'RTT + L/R', kind: 'rtt', state: 'active' }
+      ]
+    }
+  ] }} />
+
+El siguiente paquete sale en $t = \text{RTT} + L/R = 30{,}008\text{ ms}$. Con eso el emisor transmite durante $0{,}008\text{ ms}$ de cada $30{,}008\text{ ms}$: $\frac{0{,}008}{30{,}008} \approx 0{,}027\,\%$ *(derivado)*. La slide concluye que los protocolos de red pueden limitar las capacidades del hardware. La salida es enviar varios paquetes seguidos: [Protocolos pipeline](/topics/protocolos-pipeline-gbn-sr).
+
+---
+
+## 3. Ejemplo resuelto
+
+Ejercicio extra (Ejercicios Extra, pregunta 3): transferir un archivo de 2 MB entre dos laptops sobre UDP con 15 % de pérdidas artificiales, implementando rdt3.0:
+
+- Emisor: parte el archivo en trozos de 1024 bytes, les pone número de secuencia 0 o 1 y espera el ACK; si hay timeout (p. ej. 0,5 s) retransmite el trozo actual.
+- Receptor: si llega el trozo esperado, lo escribe y envía el ACK correspondiente; si es un duplicado, descarta los datos pero **reenvía el ACK** (el anterior seguramente se perdió).
+
+Comparación de `md5sum` en ambos extremos para comprobar que el archivo es idéntico. El código está en [Laboratorio UDP y RDT](/topics/lab-udp-rdt-simulacion).
+
+---
+
+## 4. Errores típicos
+
+- Poner el temporizador **menor que el RTT**: provoca el caso (d), con duplicados innecesarios.
+- No reenviar el ACK de un duplicado: si el ACK se perdió, el emisor se queda esperando.
+- Pensar que el temporizador evita las pérdidas: solo las repara retransmitiendo.

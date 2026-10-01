@@ -2,17 +2,19 @@ id: "protocolos-pipeline-gbn-sr"
 title: "Protocolos de Tubería: Go-Back-N vs Selective Repeat"
 type: "concept"
 unit: "s5"
-prerequisites: ["transferencia-confiable-rdt"]
-buildsOn: ["transferencia-confiable-rdt"]
-usedBy: ["protocolo-udp", "protocolo-tcp-mecanismos"]
+prerequisites:
+  - "transferencia-confiable-rdt"
+buildsOn:
+  - "transferencia-confiable-rdt"
+usedBy:
+  - "protocolo-udp"
+  - "protocolo-tcp-mecanismos"
 formulas:
-  - name: "Utilización de canal con transmisión en tubería (Pipelining)"
-    tex: "U_{\\text{pipeline}} = \\min\\left(1.0,\\, \\frac{N \\cdot (L / R)}{RTT + L / R}\\right)"
-    reasoning: "Calcula el aprovechamiento del canal cuando se transmiten hasta N paquetes consecutivos sin esperar confirmación individual previa."
-  - name: "Restricción de tamaño de ventana en Selective Repeat"
-    tex: "W_s + W_r \\le 2^k \\implies W \\le 2^{k-1}"
-    reasoning: "Condición estricta sobre el espacio de secuencia de k bits para impedir que el receptor confunda paquetes nuevos con duplicados desfasados."
-  - name: "Ventana óptima para saturación del canal (Bandwidth-Delay Product)"
-    tex: "N_{\\text{opt}} \\ge 1 + \\frac{RTT \\cdot R}{L}"
-    reasoning: "Determina el número mínimo de paquetes en vuelo necesarios para alcanzar una utilización del 100% en un canal con retardo RTT."
-hasVisualization: false
+  - name: "Retardo de transmisión"
+    tex: "d_{\\text{trans}} = \\frac{L}{R}"
+    reasoning: "Tiempo para transmitir un paquete de L bits a la tasa R del enlace; con L = 8000 bits y R = 1 Gbps vale 8 µs."
+  - name: "Instante del siguiente envío en stop-and-wait"
+    tex: "t = \\text{RTT} + \\frac{L}{R}"
+    reasoning: "Sin pipelining el emisor espera el ACK del primer paquete: llega a RTT + L/R, y recién ahí envía el siguiente (slide de pipelining)."
+hasVisualization: true
+visualizationType: "spacetime"

@@ -1,0 +1,135 @@
+---
+kind: subtopic
+title: "Handshake de tres vías y cierre"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+TCP no envía datos hasta que ambos extremos acuerdan la conexión con tres mensajes: **SYN**, **SYN/ACK**, **ACK**. Este intercambio cuesta **1 RTT** antes del primer dato, y es parte del retardo de una descarga HTTP (los ejercicios de la semana 3 lo cuentan como 1 RTT$_0$ por conexión).
+
+---
+
+## 2. Conceptos
+
+### Establecimiento: lo que muestra la traza
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'Handshake de la traza del parcial 2025-II (tiempos de captura del cliente)',
+  steps: [
+    {
+      note: 't = 0: el cliente envía SYN (Seq=0, MSS=1460, WS=64). Tiempo de propagación = RTT/2: derivado.',
+      columns: [
+        { id: 'c', label: 'Cliente 192.168.86.68:55639' },
+        { id: 's', label: 'Servidor 128.119.245.12:80' }
+      ],
+      time: { unit: 'ms', max: 36, ticks: [0, 22.414, 22.505] },
+      sends: [
+        {
+          from: 'c',
+          to: 's',
+          tStart: 0,
+          tTrans: 0,
+          tProp: 11.207,
+          label: 'SYN seq=0',
+          kind: 'ctrl',
+          state: 'active'
+        }
+      ]
+    },
+    {
+      note: 'El SYN,ACK llega al cliente en t = 22,414 ms: este es el RTT del handshake (22,414 ms). Lleva Ack=1: confirma el SYN.',
+      columns: [
+        { id: 'c', label: 'Cliente 192.168.86.68:55639' },
+        { id: 's', label: 'Servidor 128.119.245.12:80' }
+      ],
+      time: { unit: 'ms', max: 36, ticks: [0, 22.414, 22.505] },
+      sends: [
+        { from: 'c', to: 's', tStart: 0, tTrans: 0, tProp: 11.207, label: 'SYN seq=0', kind: 'ctrl', state: 'muted' },
+        {
+          from: 's',
+          to: 'c',
+          tStart: 11.207,
+          tTrans: 0,
+          tProp: 11.207,
+          label: 'SYN,ACK seq=0 ack=1',
+          kind: 'ctrl',
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'c', tStart: 0, tEnd: 22.414, label: '1 RTT', kind: 'rtt' }
+      ]
+    },
+    {
+      note: 't = 22,505 ms: el cliente responde ACK (Seq=1, Ack=1). A partir de aquí puede enviar datos: el primer POST sale en t = 24,047 ms.',
+      columns: [
+        { id: 'c', label: 'Cliente 192.168.86.68:55639' },
+        { id: 's', label: 'Servidor 128.119.245.12:80' }
+      ],
+      time: { unit: 'ms', max: 36, ticks: [0, 22.414, 22.505] },
+      sends: [
+        { from: 'c', to: 's', tStart: 0, tTrans: 0, tProp: 11.207, label: 'SYN seq=0', kind: 'ctrl', state: 'muted' },
+        {
+          from: 's',
+          to: 'c',
+          tStart: 11.207,
+          tTrans: 0,
+          tProp: 11.207,
+          label: 'SYN,ACK seq=0 ack=1',
+          kind: 'ctrl',
+          state: 'muted'
+        },
+        {
+          from: 'c',
+          to: 's',
+          tStart: 22.505,
+          tTrans: 0,
+          tProp: 11.207,
+          label: 'ACK seq=1 ack=1',
+          kind: 'ctrl',
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'c', tStart: 0, tEnd: 22.414, label: '1 RTT', kind: 'rtt' }
+      ]
+    }
+  ] }} />
+
+Qué se ve en la traza real del parcial 2025-II:
+
+| Segmento | Flags | Detalle de la traza |
+|---|---|---|
+| 1 | `[SYN]` | `Seq=0 Win=65535 Len=0 MSS=1460 WS=64` |
+| 2 | `[SYN, ACK]` | `Seq=0 Ack=1 Win=28960 Len=0 MSS=1460 SACK_PERM` |
+| 3 | `[ACK]` | `Seq=1 Ack=1 Win=131712 Len=0` |
+
+`MSS`, `WS` y `SACK_PERM` aparecen como opciones en los segmentos; **el material no las explica**. Sí es observable que el `SYN` y el `SYN,ACK` ocupan el número de secuencia 0 y que el `Ack=1` los confirma.
+
+### Por qué el orden importa (ejercicio de la semana 3 y 7)
+
+En una navegación típica, la consulta DNS ocurre **antes** del handshake (hace falta la IP del servidor para enviar el SYN) y el handshake **antes** del GET de HTTP (la conexión debe existir para enviar datos). La pregunta 13 de los Ejercicios 3 pide medir con las marcas de tiempo: DNS (consulta → respuesta), TCP (SYN → ACK) y HTTP (GET → primer 200 OK). El ejercicio pregunta además qué fase se acelera o desaparece al repetir la visita sin borrar cachés (la de DNS, por la caché; derivado).
+
+### Cierre
+
+El material **no desarrolla** el cierre de la conexión. Lo que sí aparece:
+
+- Los bits **FIN** y **RST** están en la cabecera.
+- En el laboratorio de la semana 5 (UDP vs TCP): al cerrar el receptor con Ctrl+C, en TCP se ven paquetes de cierre (FIN/RST) y la terminal del emisor se corta de inmediato; con UDP no hay ningún paquete de despedida.
+- El parcial 2026-I pregunta si un flujo UDP emite un mensaje FIN/RST al interrumpirse: no, UDP no tiene conexión que cerrar.
+
+---
+
+## 3. Ejemplo resuelto
+
+Tiempo hasta enviar el primer dato en la traza: el SYN sale en $t = 0$, el SYN,ACK llega en $t = 22{,}414\text{ ms}$ y el ACK sale en $22{,}505\text{ ms}$; el primer segmento de datos, en $24{,}047\text{ ms}$. El handshake agregó $\approx 1\text{ RTT}$ ($22{,}4\text{ ms}$) al retardo.
+
+---
+
+## 4. Errores típicos
+
+- Contar el handshake como 2 RTT: el material lo cuenta como 1 RTT.
+- Atribuirle a las slides la explicación de MSS, WS o el cierre en cuatro pasos: no están.
+- Hablar de "conexión" en UDP.

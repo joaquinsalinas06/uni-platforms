@@ -1,0 +1,97 @@
+---
+kind: subtopic
+title: "Comunicación cliente-servidor UDP"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+El servidor se asocia a un puerto fijo; el cliente no hace `bind` y el sistema operativo le asigna un puerto temporal. Con eso se ve en Wireshark cómo los puertos se invierten entre pregunta y respuesta.
+
+---
+
+## 2. Conceptos
+
+### Servidor y cliente de los Ejercicios 2 (pregunta 8)
+
+```python
+# udp_server.py
+import socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.bind(("0.0.0.0", 9999))
+print("UDP server listening on port 9999...")
+while True:
+    data, addr = sock.recvfrom(1024)
+    print(f"Received from {addr}: {data.decode()}")
+    sock.sendto(b"ACK", addr)
+```
+
+```python
+# udp_client.py
+import socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+for i in range(3):
+    msg = f"Message {i+1}".encode()
+    sock.sendto(msg, ("127.0.0.1", 9999))
+    data, _ = sock.recvfrom(1024)
+    print(f"Server reply: {data.decode()}")
+```
+
+<Visualization viz={{ type: 'sequence', title: 'Cliente y servidor UDP (primera vuelta)', steps: [
+  { note: 'El cliente envía a 127.0.0.1:9999 desde un puerto temporal (el número lo elige el SO).',
+    actors: [{ id: 'c', label: 'Cliente (puerto temporal)' }, { id: 's', label: 'Servidor 0.0.0.0:9999' }],
+    msgs: [{ from: 'c', to: 's', label: '"Message 1"', flags: 'origen = temporal · destino = 9999', state: 'active' }] },
+  { note: 'El servidor responde con sendto a la dirección addr que le dio recvfrom: puertos invertidos.',
+    actors: [{ id: 'c', label: 'Cliente (puerto temporal)' }, { id: 's', label: 'Servidor 0.0.0.0:9999' }],
+    msgs: [
+      { from: 'c', to: 's', label: '"Message 1"', flags: 'origen = temporal · destino = 9999', state: 'muted' },
+      { from: 's', to: 'c', label: '"ACK"', flags: 'origen = 9999 · destino = temporal', state: 'active' } ] },
+  { note: 'El mismo patrón se repite para Message 2 y Message 3. Este "ACK" es del programa, no de UDP.',
+    actors: [{ id: 'c', label: 'Cliente (puerto temporal)' }, { id: 's', label: 'Servidor 0.0.0.0:9999' }],
+    msgs: [
+      { from: 'c', to: 's', label: '"Message 1"', state: 'muted' }, { from: 's', to: 'c', label: '"ACK"', state: 'muted' },
+      { from: 'c', to: 's', label: '"Message 2"', state: 'muted' }, { from: 's', to: 'c', label: '"ACK"', state: 'muted' },
+      { from: 'c', to: 's', label: '"Message 3"', state: 'active' }, { from: 's', to: 'c', label: '"ACK"', state: 'active' } ] },
+]}} />
+
+### Qué observar (preguntas de los checkpoints)
+
+- Puerto del servidor: fijo (9999). Puerto del cliente: temporal.
+- La respuesta del servidor va al puerto del cliente (el que muestra `addr`).
+- Dos servidores en el mismo puerto UDP: el segundo falla al hacer `bind` *(derivado)*.
+- Cliente enviando con el servidor apagado: el cliente se queda esperando en `recvfrom` *(derivado)*; el aviso, si aparece, es un ICMP *Port Unreachable* (pregunta 11 del ejercicio).
+- Mensajes más grandes: el lab propone 12 000 bytes; el límite teórico se discute en [Ventajas y segmento UDP](/topics/protocolo-udp/ventajas-y-segmento-udp).
+
+### Broadcast con tres receptores
+
+<Visualization viz={{ type: 'net-scene', title: 'Un solo envío a la dirección de broadcast', steps: [
+  { note: 'El emisor envía un datagrama a 255.255.255.255:5005. Los tres receptores escuchan el puerto 5005.',
+    devices: [
+      { id: 'tx', kind: 'laptop', label: 'Emisor', sub: 'SO_BROADCAST', x: 12, y: 50 },
+      { id: 'sw', kind: 'switch', label: 'LAN', x: 45, y: 50 },
+      { id: 'r1', kind: 'laptop', label: 'Receptor 1', sub: 'puerto 5005', x: 85, y: 18 },
+      { id: 'r2', kind: 'laptop', label: 'Receptor 2', sub: 'puerto 5005', x: 85, y: 50 },
+      { id: 'r3', kind: 'laptop', label: 'Receptor 3', sub: 'puerto 5005', x: 85, y: 80 } ],
+    cables: [{ from: 'tx', to: 'sw' }, { from: 'sw', to: 'r1' }, { from: 'sw', to: 'r2' }, { from: 'sw', to: 'r3' }],
+    packets: [
+      { from: 'tx', to: 'r1', label: 'dest 255.255.255.255:5005', order: 1, state: 'active' },
+      { from: 'tx', to: 'r2', label: '', order: 1, state: 'active' },
+      { from: 'tx', to: 'r3', label: '', order: 1, state: 'active' } ] },
+]}} />
+
+TCP no puede hacerlo porque exige una conexión uno a uno (enunciado del lab, pregunta 4).
+
+---
+
+## 3. Ejemplo resuelto
+
+Las capturas esperadas del loopback: un paquete UDP de ida y otro de vuelta por mensaje. En el de ida $(\text{origen}, \text{destino}) = (\text{temporal}, 9999)$; en el de vuelta $(9999, \text{temporal})$.
+
+---
+
+## 4. Errores típicos
+
+- Esperar que el cliente tenga el mismo puerto en cada ejecución: es temporal.
+- Responder a un puerto fijo en vez de a `addr`.
+- Confundir el "ACK" del programa con un acuse de UDP: el protocolo no confirma nada.

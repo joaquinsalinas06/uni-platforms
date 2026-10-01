@@ -1,0 +1,169 @@
+---
+kind: theory
+title: "Protocolos de Tubería: Go-Back-N vs Selective Repeat"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Alcance del material.** Las slides (deck Sem7) tratan el tema en 4 diapositivas: el cálculo que muestra por qué stop-and-wait es ineficiente, la figura del *pipelining* y una lista de consideraciones. **Go-Back-N** y **Selective Repeat** solo se nombran como los dos enfoques de recuperación de errores; el material no describe su funcionamiento, así que aquí tampoco se inventa.
+
+## 1. Idea y motivación
+
+Con stop-and-wait el emisor envía un paquete y se queda esperando el ACK. Con un RTT largo, el enlace casi no se usa. La solución es el **pipelining**: enviar varios paquetes seguidos sin esperar los ACK.
+
+---
+
+## 2. Conceptos
+
+### Stop-and-wait frente a pipelining (ejemplo de la slide)
+
+Enlace de $R = 1\text{ Gbps}$, paquetes de $L = 8000$ bits (1000 bytes, cabecera incluida) y $\text{RTT} \approx 30\text{ ms}$:
+
+$$d_{\text{trans}} = \frac{L}{R} = \frac{8000}{10^9}\text{ s} = 8\ \mu\text{s}$$
+
+- **Stop-and-wait:** el ACK del primer paquete llega en $t = \text{RTT} + L/R$ y recién entonces sale el siguiente (figura en [rdt3.0](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait)).
+- **Pipelining:** se envían varios (la slide dibuja 3) y, a medida que llegan los ACK, se envían más.
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'Pipelining con 3 paquetes (R = 1 Gbps, L = 8000 bits, RTT = 30 ms)',
+  steps: [
+    {
+      note: 'El emisor envía 3 paquetes seguidos sin esperar ACK. Cada uno ocupa 0,008 ms de transmisión.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'pkt1', kind: 'data', state: 'active' },
+        { from: 'e', to: 'r', tStart: 0.008, tTrans: 0.008, tProp: 15, label: 'pkt2', kind: 'data', state: 'active' },
+        { from: 'e', to: 'r', tStart: 0.016, tTrans: 0.008, tProp: 15, label: 'pkt3', kind: 'data', state: 'active' }
+      ]
+    },
+    {
+      note: 'El receptor responde un ACK por cada paquete cuando llega su último bit (15,008; 15,016 y 15,024 ms).',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 0.008, tTrans: 0.008, tProp: 15, label: 'pkt2', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 0.016, tTrans: 0.008, tProp: 15, label: 'pkt3', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 15.008, tTrans: 0, tProp: 15, label: 'ACK1', kind: 'ack', state: 'active' },
+        { from: 'r', to: 'e', tStart: 15.016, tTrans: 0, tProp: 15, label: 'ACK2', kind: 'ack', state: 'active' },
+        { from: 'r', to: 'e', tStart: 15.024, tTrans: 0, tProp: 15, label: 'ACK3', kind: 'ack', state: 'active' }
+      ]
+    },
+    {
+      note: 'El primer ACK llega en RTT + L/R = 30,008 ms y recién ahí se envían los siguientes paquetes. En el mismo RTT se enviaron 3 en vez de 1: la utilización del emisor se triplica.',
+      columns: [
+        { id: 'e', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      time: { unit: 'ms', max: 32, ticks: [0, 15, 30] },
+      sends: [
+        { from: 'e', to: 'r', tStart: 0, tTrans: 0.008, tProp: 15, label: 'pkt1', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 0.008, tTrans: 0.008, tProp: 15, label: 'pkt2', kind: 'data', state: 'muted' },
+        { from: 'e', to: 'r', tStart: 0.016, tTrans: 0.008, tProp: 15, label: 'pkt3', kind: 'data', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 15.008, tTrans: 0, tProp: 15, label: 'ACK1', kind: 'ack', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 15.016, tTrans: 0, tProp: 15, label: 'ACK2', kind: 'ack', state: 'muted' },
+        { from: 'r', to: 'e', tStart: 15.024, tTrans: 0, tProp: 15, label: 'ACK3', kind: 'ack', state: 'muted' }
+      ],
+      spans: [
+        { column: 'e', tStart: 0, tEnd: 30.008, label: 'RTT + L/R', kind: 'rtt', state: 'active' }
+      ]
+    }
+  ] }} />
+
+Cálculo derivado: en un RTT de 30,008 ms el emisor transmite $3 \cdot 0{,}008 = 0{,}024\text{ ms}$, es decir, $\approx 0{,}08\,\%$ del tiempo, frente a $\approx 0{,}027\,\%$ con un paquete. Para llenar el enlace harían falta unos $30{,}008/0{,}008 \approx 3751$ paquetes por RTT.
+
+### Consideraciones de la slide
+
+1. **Rango de números de secuencia:** debe crecer, porque cada paquete en tránsito (sin contar retransmisiones) necesita un número único y puede haber varios sin ACK.
+2. **Buffers:** el emisor guarda al menos los paquetes transmitidos sin ACK; el receptor puede necesitar guardar paquetes recibidos correctamente.
+3. Ambos requisitos dependen de **cómo responde el protocolo** a paquetes perdidos, corruptos o muy retrasados. Dos enfoques: **Go-Back-N** y **selective repeat**.
+
+---
+
+## 3. Método paso a paso
+
+Para comparar los dos esquemas con números: (1) calcula $L/R$; (2) para stop-and-wait, el ciclo es $\text{RTT} + L/R$; (3) con pipelining, cuenta cuántos paquetes caben en ese ciclo.
+
+---
+
+## 4. Ejemplo resuelto
+
+Los números de la slide: $d_{\text{trans}} = 8\ \mu\text{s}$; ciclo stop-and-wait $= 30{,}008\text{ ms}$. La figura de 3 paquetes como ventana deslizante *(derivado)*:
+
+<Visualization viz={{ type: 'window',
+  title: 'Ventana de 3 paquetes: la figura de pipelining como ventana deslizante',
+  steps: [
+    {
+      note: 'Al inicio, nada enviado. La ventana abarca los 3 números que se pueden tener en tránsito sin ACK.',
+      windows: [
+        {
+          role: 'sender',
+          label: 'Emisor (ventana de 3)',
+          base: 1,
+          size: 3,
+          cells: [
+            { n: 1, state: 'usable' },
+            { n: 2, state: 'usable' },
+            { n: 3, state: 'usable' },
+            { n: 4, state: 'unusable' },
+            { n: 5, state: 'unusable' },
+            { n: 6, state: 'unusable' }
+          ]
+        }
+      ]
+    },
+    {
+      note: 'Se envían los 3 paquetes seguidos: están en tránsito, sin ACK. No se puede enviar el 4 todavía.',
+      windows: [
+        {
+          role: 'sender',
+          label: 'Emisor (ventana de 3)',
+          base: 1,
+          size: 3,
+          cells: [
+            { n: 1, state: 'sent' },
+            { n: 2, state: 'sent' },
+            { n: 3, state: 'sent' },
+            { n: 4, state: 'unusable' },
+            { n: 5, state: 'unusable' },
+            { n: 6, state: 'unusable' }
+          ]
+        }
+      ]
+    },
+    {
+      note: 'Llega el ACK del paquete 1: la ventana se desliza y el paquete 4 pasa a ser utilizable.',
+      windows: [
+        {
+          role: 'sender',
+          label: 'Emisor (ventana de 3)',
+          base: 2,
+          size: 3,
+          cells: [
+            { n: 1, state: 'acked' },
+            { n: 2, state: 'sent' },
+            { n: 3, state: 'sent' },
+            { n: 4, state: 'usable' },
+            { n: 5, state: 'unusable' },
+            { n: 6, state: 'unusable' }
+          ]
+        }
+      ]
+    }
+  ] }} />
+
+Los dos esquemas en detalle: [Go-Back-N](/topics/protocolos-pipeline-gbn-sr/go-back-n-ventanas-acumulativas) y [Selective Repeat](/topics/protocolos-pipeline-gbn-sr/selective-repeat-buffers-regla-ventana).
+
+---
+
+## 5. Errores típicos
+
+- Pensar que pipelining cambia el RTT: lo que cambia es cuántos paquetes se envían por RTT.
+- Olvidar que con varios paquetes en tránsito los números de secuencia 0 y 1 ya no alcanzan.
+- Describir GBN/SR con detalles que el material no da (tamaño de ventana, ACK acumulativo, etc.).

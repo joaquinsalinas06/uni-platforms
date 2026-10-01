@@ -1,0 +1,53 @@
+---
+kind: theory
+title: "Modelo de Capas de Internet y Encapsulación"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+Una red tiene muchas piezas (hosts, routers, enlaces de distintos medios, aplicaciones, protocolos, hardware y software). Para razonar sobre ella se organiza en **capas**:
+
+- La estructura explícita permite identificar cada pieza y su relación con las demás.
+- La modularización facilita el mantenimiento: cambiar cómo una capa implementa su servicio es **transparente** para el resto del sistema.
+
+---
+
+## 2. Conceptos
+
+### 2.1 Las cinco capas de Internet
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Pila de Internet', steps: [
+  { note: 'De arriba hacia abajo: cada capa usa los servicios de la que tiene debajo.',
+    layers: [
+      { label: 'Aplicación — HTTP, IMAP, SMTP, DNS' },
+      { label: 'Transporte — TCP, UDP' },
+      { label: 'Red — IP, protocolos de enrutamiento' },
+      { label: 'Enlace — Ethernet, 802.11 (WiFi), PPP' },
+      { label: 'Física — bits "en el cable"' } ] },
+]}} />
+
+El detalle de cada capa y su comparación con OSI está en [Pila de protocolos de 5 capas](/topics/arquitectura-capas-internet/pila-protocolos-5-capas); cómo viaja un mensaje a través de ellas, en [Encapsulación](/topics/arquitectura-capas-internet/encapsulacion-pdu).
+
+### 2.2 Interfaces de un protocolo
+
+Cada objeto-protocolo tiene dos interfaces:
+
+1. **Interfaz de servicio**: las operaciones que la capa superior puede invocar sobre este protocolo.
+2. **Interfaz entre pares (peer-to-peer)**: los mensajes que intercambia con su protocolo par en el otro sistema.
+
+### 2.3 Principios de la arquitectura de Internet (Cerf y Kahn, 1974)
+
+- Minimalismo y autonomía: para interconectar redes no hace falta cambiar su interior.
+- Servicio *best-effort*.
+- Enrutamiento sin estado (*stateless*).
+- Control descentralizado.
+
+La arquitectura **no exige capas estrictas**: una aplicación puede saltarse el transporte y usar IP directamente. Para incluir un protocolo nuevo en el estándar hacen falta su especificación y al menos una (preferiblemente dos) implementaciones representativas.
+
+---
+
+## 3. Errores típicos
+
+- Decir que IP "es una capa más" cuando la arquitectura la usa como punto focal (ver reloj de arena).
+- Mezclar el nombre de la PDU con la capa: segmento (transporte), datagrama o paquete (red), trama (enlace).

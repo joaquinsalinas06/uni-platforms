@@ -1,0 +1,115 @@
+---
+kind: theory
+title: "Principios de Transferencia Confiable (RDT 1.0 a 3.0)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+Se quiere que la capa de transporte ofrezca un **canal confiable** a la aplicación, aunque debajo haya un canal **no confiable**. La complejidad del protocolo depende (mucho) de lo que el canal pueda hacer mal: perder, corromper o reordenar datos. La clase construye el protocolo por etapas, **rdt1.0 a rdt3.0**, agregando un mecanismo por cada problema.
+
+Una idea clave de la slide: emisor y receptor **no conocen el estado del otro** (por ejemplo, si un mensaje fue recibido), salvo que se lo comuniquen con un mensaje.
+
+---
+
+## 2. Conceptos
+
+### Interfaces del protocolo
+
+| Llamada | Quién la usa |
+|---|---|
+| `rdt_send()` | La aplicación (arriba) entrega datos al lado emisor |
+| `udt_send()` | El protocolo envía un paquete por el canal no confiable |
+| `rdt_rcv()` | Se invoca cuando llega un paquete al lado receptor |
+| `deliver_data()` | El protocolo entrega datos a la capa superior |
+
+### Alcance y notación
+
+- Se considera solo transferencia de datos **unidireccional**, pero la información de control (ACK/NAK) fluye en ambos sentidos.
+- Se asume que el canal **no reordena** paquetes: llegan en el orden en que se enviaron.
+- Se especifica con **máquinas de estados finitos (FSM)**: cada flecha lleva *evento causante* sobre la línea y *acciones* debajo. $\Lambda$ significa "sin acción".
+
+### De rdt1.0 a rdt3.0
+
+| Versión | Canal supuesto | Mecanismo nuevo |
+|---|---|---|
+| rdt1.0 | Perfecto: sin errores de bits ni pérdidas | Ninguno: enviar y entregar |
+| rdt2.0 | Errores de bits | Detección de errores (checksum, bits extra), retroalimentación **ACK/NAK** (1 bit basta) y retransmisión (ARQ). El emisor espera ACK o NAK y no acepta más datos: **stop-and-wait** |
+| rdt2.1 | Los ACK/NAK también pueden corromperse | **Número de secuencia** (0 o 1) en los paquetes de datos, para que el receptor distinga una retransmisión de un dato nuevo |
+| rdt2.2 | Igual que 2.1 | **Sin NAK**: el receptor envía ACK con el número del último paquete bien recibido; un ACK duplicado equivale a un NAK |
+| rdt3.0 | Errores de bits **y pérdidas** | **Temporizador**: si vence, se retransmite. Es el *alternating-bit protocol*, aún stop-and-wait |
+
+Las FSM completas de cada versión están en [Evolución de las FSM](/topics/transferencia-confiable-rdt/evolucion-fsm-rdt1-a-rdt22) y la de rdt3.0, con sus cuatro casos de ejecución, en [rdt3.0 y temporizadores](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait).
+
+<Visualization viz={{ type: 'sequence',
+  title: 'Por qué hace falta el número de secuencia (rdt2.1)',
+  steps: [
+    {
+      note: 'Se envía pkt0 y el receptor lo entrega y responde ACK.',
+      actors: [
+        { id: 's', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt0', flags: 'seq = 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK', flags: 'entregó los datos', state: 'muted' }
+      ]
+    },
+    {
+      note: 'El ACK llega corrupto: el emisor no sabe si pkt0 llegó y retransmite pkt0.',
+      actors: [
+        { id: 's', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt0', flags: 'seq = 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK (corrupto)', state: 'active' },
+        { from: 's', to: 'r', label: 'pkt0 (retransmisión)', flags: 'seq = 0', state: 'active' }
+      ]
+    },
+    {
+      note: 'El receptor ya espera el 1; ve seq = 0 y entiende que es un duplicado: NO lo entrega otra vez, solo reenvía ACK.',
+      actors: [
+        { id: 's', label: 'Emisor' },
+        { id: 'r', label: 'Receptor' }
+      ],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt0', flags: 'seq = 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK (corrupto)', state: 'muted' },
+        { from: 's', to: 'r', label: 'pkt0 (retransmisión)', flags: 'seq = 0', state: 'muted' },
+        { from: 'r', to: 's', label: 'ACK', flags: 'duplicado descartado', state: 'answer' }
+      ]
+    }
+  ] }} />
+
+---
+
+## 3. Método paso a paso
+
+Para resolver un ejercicio de FSM o de traza:
+
+1. Identifica qué puede salir mal en el canal (errores de bits, pérdidas, ambos).
+2. Dibuja los **estados** de cada lado (para 2.1 a 3.0: uno por número de secuencia y por tipo de espera).
+3. Para cada estado lista los **eventos** posibles: llega paquete correcto con el número esperado, correcto con el otro número, corrupto, timeout.
+4. Define la **acción** de cada evento (entregar, ACK/NAK, retransmitir, rearrancar temporizador).
+5. Comprueba con una traza: dato nuevo, duplicado, ACK corrupto, pérdida.
+
+---
+
+## 4. Ejemplo resuelto
+
+Parcial 2025-II, pregunta 3: *¿el receptor de rdt2.1 lida con duplicados? ¿Qué cambia para pasar a rdt2.2?*
+
+- **Sí.** En "Esperar 0 de abajo", un paquete correcto con número 1 es un duplicado: no se entrega, pero se envía otra vez ACK. Lo mismo, con los números cambiados, en "Esperar 1".
+- **A rdt2.2:** se elimina el NAK. Ante un paquete corrupto (o duplicado) el receptor envía ACK con el número del **último** paquete recibido bien; el emisor trata el ACK con número equivocado como un NAK y retransmite.
+
+La solución completa con las FSM está en el [parcial 2025-II](/evaluaciones/parciales/parcial-2025-ii).
+
+---
+
+## 5. Errores típicos
+
+- Olvidar que en rdt2.1 el receptor debe **reenviar el ACK** de un duplicado.
+- Creer que el número de secuencia hace falta solo en rdt3.0: aparece en rdt2.1.
+- Entregar dos veces los mismos datos al reenviarse un paquete.
+- Suponer que rdt3.0 ya es eficiente: sigue siendo stop-and-wait (ver pipelining en [Protocolos pipeline](/topics/protocolos-pipeline-gbn-sr)).

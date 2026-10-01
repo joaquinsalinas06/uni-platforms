@@ -1,0 +1,107 @@
+---
+kind: subtopic
+title: "Proxies, web caching y GET condicional"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Dos formas de no repetir trabajo al pedir objetos web: (1) reutilizar la copia guardada **si no cambió**, validándola con un GET condicional; (2) instalar una **caché** en la red institucional para que parte de las peticiones no salgan a Internet.
+
+---
+
+## 2. Conceptos
+
+### 2.1 GET condicional
+
+El cliente agrega a su petición la cabecera `If-Modified-Since: <fecha>` con la fecha de `Last-Modified` que le dio el servidor.
+
+| Situación | Respuesta del servidor |
+|---|---|
+| Primera petición (sin copia guardada) | `200 OK` con `Last-Modified: <fecha>` y el objeto |
+| Petición con `If-Modified-Since`, objeto **no** modificado | `304 Not Modified`, **sin cuerpo** |
+| Petición con `If-Modified-Since`, objeto modificado | `200 OK` con el objeto nuevo |
+
+<Visualization viz={{ type: 'sequence', title: 'GET condicional', steps: [
+  { note: 'Caché vacía: GET normal, sin If-Modified-Since.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'Servidor' }],
+    msgs: [{ from: 'c', to: 's', label: 'GET /index.html', state: 'active' }] },
+  { note: 'El servidor devuelve el objeto y su fecha de última modificación; el navegador lo guarda con esa fecha.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /index.html', state: 'muted' },
+      { from: 's', to: 'c', label: '200 OK + Last-Modified: F + objeto', store: 'guarda copia (F)', state: 'active' }] },
+  { note: 'Segunda visita: el navegador pregunta con la fecha F de su copia.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /index.html', state: 'muted' },
+      { from: 's', to: 'c', label: '200 OK + Last-Modified: F + objeto', state: 'muted' },
+      { from: 'c', to: 's', label: 'GET + If-Modified-Since: F', state: 'active' }] },
+  { note: 'No cambió: 304 sin cuerpo. El navegador muestra su copia; se ahorró transmitir el objeto.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET /index.html', state: 'muted' },
+      { from: 's', to: 'c', label: '200 OK + Last-Modified: F + objeto', state: 'muted' },
+      { from: 'c', to: 's', label: 'GET + If-Modified-Since: F', state: 'muted' },
+      { from: 's', to: 'c', label: '304 Not Modified (sin cuerpo)', state: 'answer' }] },
+]}} />
+
+**Parcial 2026-I, pregunta 4** (`If-Modified-Since: Thu, 07 May 2026 10:15:00 GMT-5`):
+
+- a) Pedir el recurso solo si cambió después de esa fecha.
+- b) Si no cambió, `304 Not Modified` sin el cuerpo.
+- c) Menos bytes por la red (no se retransmite el objeto) y respuesta más rápida; el servidor solo envía la cabecera.
+
+### 2.2 Caché en la red institucional
+
+<Visualization viz={{ type: 'net-scene', title: 'Caché institucional', steps: [
+  { note: 'Sin caché: toda petición cruza el enlace de acceso hasta los servidores de origen en Internet.',
+    devices: [
+      { id: 'b', kind: 'laptop', label: 'Navegadores', sub: 'red institucional', x: 10, y: 55 },
+      { id: 'r', kind: 'router', label: 'Router institucional', x: 38, y: 55 },
+      { id: 'i', kind: 'cloud', label: 'Internet', x: 66, y: 55 },
+      { id: 'o', kind: 'server', label: 'Servidores de origen', x: 90, y: 55 } ],
+    cables: [
+      { from: 'b', to: 'r', rate: 'LAN' }, { from: 'r', to: 'i', rate: '15 Mbps', label: 'enlace de acceso', state: 'marked' }, { from: 'i', to: 'o' } ],
+    zones: [{ label: 'Red institucional', devices: ['b', 'r'] }],
+    packets: [{ from: 'b', to: 'o', label: 'HTTP request', order: 1, state: 'active' }] },
+  { note: 'Con caché en la LAN: un acierto (60 %) se responde dentro de la red; solo el 40 % (miss rate 0,4) cruza el enlace de acceso.',
+    devices: [
+      { id: 'b', kind: 'laptop', label: 'Navegadores', x: 8, y: 70 },
+      { id: 'c', kind: 'server', label: 'Caché', sub: 'LAN', x: 30, y: 25 },
+      { id: 'r', kind: 'router', label: 'Router institucional', x: 42, y: 70 },
+      { id: 'i', kind: 'cloud', label: 'Internet', x: 68, y: 70 },
+      { id: 'o', kind: 'server', label: 'Servidores de origen', x: 92, y: 70 } ],
+    cables: [
+      { from: 'b', to: 'c', rate: 'LAN' }, { from: 'b', to: 'r', rate: 'LAN' },
+      { from: 'r', to: 'i', rate: '15 Mbps', state: 'marked' }, { from: 'i', to: 'o' } ],
+    zones: [{ label: 'Red institucional', devices: ['b', 'c', 'r'] }],
+    packets: [
+      { from: 'b', to: 'c', label: 'hit: 60 %', order: 1, state: 'answer' },
+      { from: 'b', to: 'o', label: 'miss: 40 %', order: 2, state: 'active' }] },
+]}} />
+
+### 2.3 Tiempo de respuesta con y sin caché (Ex 3, pregunta 4)
+
+Datos: objeto medio $L = 10^6$ bits, $\beta = 16$ peticiones/s, retardo de Internet $= 3$ s, enlace de acceso $R = 15$ Mbps. Modelo: respuesta media = retardo de acceso + retardo de Internet, con retardo de acceso $\Delta/(1-\Delta\beta)$ y $\Delta = L/R$.
+
+$$\Delta = \frac{10^6}{15\times10^6} = 0{,}0667\text{ s} \qquad \Delta\beta = 0{,}0667 \cdot 16 = 1{,}067$$
+
+**a) Sin caché.** $\Delta\beta > 1$: el enlace de acceso está saturado (llegan más bits de los que caben). La fórmula da un valor negativo, que no tiene sentido: la cola crece sin límite. *Nota:* con estos datos el ejercicio no tiene respuesta finita; con objetos de $850\,000$ bits (el valor del ejercicio original) saldría $\Delta\beta = 0{,}907$ y $3{,}61$ s.
+
+**b) Con caché, miss rate $0{,}4$.** Solo los fallos usan el enlace: $\beta' = 0{,}4 \cdot 16 = 6{,}4$ req/s.
+
+$$\Delta\beta' = 0{,}0667 \cdot 6{,}4 = 0{,}427 \qquad \frac{\Delta}{1-\Delta\beta'} = \frac{0{,}0667}{0{,}573} = 0{,}116\text{ s}$$
+
+Un fallo cuesta $0{,}116 + 3 = 3{,}116$ s; un acierto se responde en la LAN (retardo despreciable, *derivado*):
+
+$$T = 0{,}4 \cdot 3{,}116 + 0{,}6 \cdot 0 \approx \boxed{1{,}25\text{ s}}$$
+
+---
+
+## 3. Errores típicos
+
+- Olvidar que el retardo de acceso solo se aplica a las peticiones que cruzan el enlace (los fallos).
+- Aplicar $\Delta/(1-\Delta\beta)$ cuando $\Delta\beta \ge 1$.
+- Creer que el 304 incluye el objeto.

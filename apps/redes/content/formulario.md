@@ -29,14 +29,7 @@ $$d_{\text{end-to-end}} = Q \cdot \left( \frac{L}{R} + \frac{d}{s} \right)$$
 Para la transmisión en tubería de $P$ paquetes seguidos:
 $$T_{\text{total}} = (Q + P - 1) \cdot \frac{L}{R} + Q \cdot \frac{d}{s}$$
 
-### 3. Intensidad de Tráfico en Colas
-$$I = \frac{L \cdot a}{R}$$
-- $a$: Tasa media de llegada de paquetes ($\text{paquetes/segundo}$).
-- Si $I \approx 0$: Retardo de cola despreciable.
-- Si $I \to 1$: El retardo de cola crece asintóticamente hacia el infinito.
-- Si $I > 1$: La tasa de llegada supera la de servicio; la cola crece sin límite y se producen pérdidas de paquetes por desbordamiento de búfer (*packet drop*).
-
-### 4. Tasa de Transferencia Eficaz (Throughput)
+### 3. Tasa de Transferencia Eficaz (Throughput)
 Para una trayectoria con enlaces en serie con tasas $R_1, R_2, \dots, R_k$:
 $$\text{Throughput} = \min\{ R_1, R_2, \dots, R_k \}$$
 El enlace con el menor ancho de banda constituye el **cuello de botella** (*bottleneck link*).
@@ -154,56 +147,9 @@ $$W_s \le 2^k - 1$$
 
 ---
 
-## Semana 7 — Protocolo TCP: RTT, Temporizadores y Control de Congestión
+## Semana 7 — Protocolo TCP: RTT
 
-### 1. Estimación del RTT y Temporizador de Retransmisión (RFC 6298)
-- **Media móvil exponencial ponderada (EWMA) de SampleRTT**:
-  $$\text{EstimatedRTT} = (1 - \alpha) \cdot \text{EstimatedRTT} + \alpha \cdot \text{SampleRTT}$$
-  *(Valor recomendado por el estándar: $\alpha = 0.125 = 1/8$)*.
+### 1. Estimación del RTT (fórmula del parcial 2025-II, pregunta 6)
+$$\text{EstimatedRTT}_n = 0{,}875 \cdot \text{EstimatedRTT}_{n-1} + 0{,}125 \cdot \text{SampleRTT}_n$$
 
-- **Desviación media del RTT ($\text{DevRTT}$)**:
-  $$\text{DevRTT} = (1 - \beta) \cdot \text{DevRTT} + \beta \cdot \left| \text{SampleRTT} - \text{EstimatedRTT} \right|$$
-  *(Valor recomendado por el estándar: $\beta = 0.25 = 1/4$)*.
-
-- **Intervalo de Expiración del Temporizador ($\text{TimeoutInterval}$)**:
-  $$\text{TimeoutInterval} = \text{EstimatedRTT} + 4 \cdot \text{DevRTT}$$
-
-- **Regla de Karn y Respaldo del Temporizador (*Timer Backoff*)**:
-  - No se toma `SampleRTT` de segmentos que hayan sido retransmitidos.
-  - Cada vez que expira el temporizador (*Timeout*), el nuevo valor se duplica:
-    $$\text{TimeoutInterval}_{\text{nuevo}} = 2 \cdot \text{TimeoutInterval}_{\text{actual}}$$
-
-### 2. Control de Flujo TCP
-Para evitar saturar el búfer de recepción del receptor:
-$$\text{rwnd} = \text{RcvBuffer} - \left( \text{LastByteRcvd} - \text{LastByteRead} \right)$$
-El emisor garantiza en todo momento que la cantidad de datos enviados sin confirmar no exceda la ventana advertida:
-$$\text{LastByteSent} - \text{LastByteAcked} \le \text{rwnd}$$
-
-### 3. Dinámica de la Ventana de Congestión (`cwnd`)
-El emisor transmite a una tasa acotada por:
-$$\text{Ventana efectiva} = \min\{ \text{cwnd}, \; \text{rwnd} \}$$
-
-#### Fases del Algoritmo de Congestión (TCP Reno):
-1. **Slow Start (Arranque Lento)**:
-   - Inicialización: $\text{cwnd} = 1\text{ MSS}$.
-   - Por cada ACK recibido: $\text{cwnd} \leftarrow \text{cwnd} + 1\text{ MSS}$.
-   - Crecimiento exponencial: $\text{cwnd}$ se duplica en cada RTT ($1 \to 2 \to 4 \to 8 \dots$).
-   - Termina cuando $\text{cwnd} \ge \text{ssthresh}$ o ante pérdida.
-
-2. **Congestion Avoidance (Prevención de Congestión)**:
-   - Crecimiento lineal: Por cada RTT completo, $\text{cwnd} \leftarrow \text{cwnd} + 1\text{ MSS}$.
-   - Por cada ACK individual: $\text{cwnd} \leftarrow \text{cwnd} + \text{MSS} \cdot \left( \frac{\text{MSS}}{\text{cwnd}} \right)$.
-
-3. **Reacción ante Pérdidas**:
-   - **Ante Timeout (evento grave de congestión)**:
-     $$\text{ssthresh} = \max\left( \frac{\text{cwnd}}{2}, \; 2\text{ MSS} \right), \quad \text{cwnd} = 1\text{ MSS}$$
-     *(Tanto en TCP Tahoe como en TCP Reno se regresa a Slow Start)*.
-   - **Ante 3 ACKs Duplicados (Fast Retransmit / Fast Recovery)**:
-     - **TCP Tahoe**: $\text{ssthresh} = \text{cwnd} / 2$, $\text{cwnd} = 1\text{ MSS}$ (Slow Start).
-     - **TCP Reno**: $\text{ssthresh} = \text{cwnd} / 2$, $\text{cwnd} = \text{ssthresh} + 3\text{ MSS}$ (Fast Recovery, entra directo a Congestion Avoidance tras retransmitir).
-
-### 4. Throughput Promedio de TCP (Modelo de Dientes de Sierra)
-Para un régimen con tasa de pérdida de paquetes $L$:
-$$\text{Throughput}_{\text{promedio}} \approx \frac{1.22 \cdot \text{MSS}}{RTT \cdot \sqrt{L}}$$
-Entre pérdidas con ventana máxima $W$:
-$$\text{Throughput}_{\text{promedio}} = \frac{0.75 \cdot W \cdot \text{MSS}}{RTT}$$
+El material no incluye DevRTT, fórmula de timeout de TCP, control de flujo ni de congestión (ver [Semana 7](/units/s7)).

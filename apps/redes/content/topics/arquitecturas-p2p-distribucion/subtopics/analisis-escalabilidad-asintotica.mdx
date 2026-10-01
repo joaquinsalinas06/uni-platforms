@@ -1,0 +1,56 @@
+---
+kind: subtopic
+title: "Análisis de escalabilidad"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Qué pasa con el tiempo de distribución cuando crece el número de pares $N$. La slide lo grafica; el parcial 2025-II (preg. 2) pide explicar las implicancias para $N$ muy grande.
+
+---
+
+## 2. Conceptos
+
+La slide supone pares con la misma subida $u$, $F/u = 1$ hora, $u_s = 10u$ y $d_{\min} \ge u_s$. Entonces $F/d_{\min} \le F/u_s = 0{,}1$ h y, en horas:
+
+$$D_{cs} = \max\left\{\frac{N}{10},\ 0{,}1\right\} \qquad D_{P2P} = \max\left\{0{,}1,\ \frac{N}{10 + N}\right\}$$
+
+*(Sustitución derivada de las fórmulas de la slide.)*
+
+<Visualization viz={{ type: 'xy-chart', static: true, title: 'Tiempo mínimo de distribución vs N (F/u = 1 h, u_s = 10u)', steps: [
+  { note: 'Cliente-servidor crece linealmente con N. P2P crece cada vez más despacio y se aplana: cada par que llega también aporta subida.',
+    series: [
+      { id: 'cs', label: 'Cliente-servidor', fn: 'max(x/10, 0.1)', domain: [1, 35], kind: 'line' },
+      { id: 'p2p', label: 'P2P', fn: 'max(0.1, x/(10+x))', domain: [1, 35], kind: 'line' } ],
+    x: { label: 'N', min: 0, max: 35 }, y: { label: 'tiempo mínimo (horas)', min: 0, max: 3.5 } },
+]}} />
+
+### Implicancias para $N$ grande *(derivado de las fórmulas)*
+
+- **Cliente-servidor:** $NF/u_s \to \infty$ de forma lineal. El servidor es el cuello de botella.
+- **P2P:** con $u_i = u$, $\frac{NF}{u_s + Nu} \to \frac{F}{u}$. El tiempo se estabiliza en una constante: cada par nuevo demanda datos pero también sube. Eso es lo que se llama **auto-escalable**.
+
+---
+
+## 3. Método paso a paso
+
+Para responder "¿por qué P2P escala?": (1) escribe las dos fórmulas, (2) deja crecer $N$ en el término que contiene $N$, (3) compara: lineal contra constante.
+
+---
+
+## 4. Ejemplo resuelto
+
+Parcial 2026-I, pregunta 3d: con $N = 1000$ (mismos $F$, $u_s$, $d_i$, $u_i$ del [ejemplo de la teoría](/topics/arquitecturas-p2p-distribucion)):
+
+$$D_{cs} = \frac{1000 \cdot 160\,000}{40} = 4\,000\,000\text{ s}\qquad D_{P2P} = \frac{1000 \cdot 160\,000}{40 + 3000} \approx 52\,632\text{ s}$$
+
+El tiempo C/S se multiplicó por $1000/150$; el de P2P pasó de $48\,980$ a $52\,632$ s, casi sin cambio.
+
+---
+
+## 5. Errores típicos
+
+- Decir que P2P "no depende de $N$" sin la condición de que las $u_i$ sean parecidas.
+- Olvidar que $F/u_s$ y $F/d_{\min}$ también acotan por abajo.

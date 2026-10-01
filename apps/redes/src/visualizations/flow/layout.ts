@@ -399,8 +399,11 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
     const A = B(a.from), T = B(a.to);
     const r = A.w / 2;
     if (a.from === a.to) {
-      const p1: Pt = [A.cx - r * 0.5, A.cy - r * 0.87], p2: Pt = [A.cx + r * 0.5, A.cy - r * 0.87];
-      return { d: `M${r1(p1[0])},${r1(p1[1])}C${r1(p1[0] - 22)},${r1(p1[1] - 44)} ${r1(p2[0] + 22)},${r1(p2[1] - 44)} ${r1(p2[0])},${r1(p2[1])}`, label: { x: A.cx, y: A.cy - r - 38, anchor: 'middle' } };
+      // Varios bucles en un estado: el 1.º arriba, el 2.º abajo, el 3.º más arriba…
+      const k = valid.filter((o) => o.from === a.from && o.to === a.from).indexOf(a);
+      const sg = k % 2 ? -1 : 1, h = 44 + 28 * Math.floor(k / 2);
+      const p1: Pt = [A.cx - r * 0.5, A.cy - sg * r * 0.87], p2: Pt = [A.cx + r * 0.5, A.cy - sg * r * 0.87];
+      return { d: `M${r1(p1[0])},${r1(p1[1])}C${r1(p1[0] - 22)},${r1(p1[1] - sg * h)} ${r1(p2[0] + 22)},${r1(p2[1] - sg * h)} ${r1(p2[0])},${r1(p2[1])}`, label: { x: A.cx, y: A.cy - sg * (r + h - 6) + (sg < 0 ? 12 : 0), anchor: 'middle' } };
     }
     const dx = T.cx - A.cx, dy = T.cy - A.cy, L = Math.hypot(dx, dy) || 1;
     const ux = dx / L, uy = dy / L;

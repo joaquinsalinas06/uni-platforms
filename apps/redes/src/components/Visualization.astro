@@ -13,7 +13,7 @@
 // es una cadena de ifs — pero acotada a este único archivo, y sigue siendo
 // el registro quien decide qué familias existen.
 //
-// Las 8 familias están implementadas (ver registry.ts); si se añade una
+// Las 12 familias están implementadas (ver registry.ts); si se añade una
 // nueva, su import + línea de despacho van aquí, siguiendo el patrón de
 // abajo.
 import { VISUALIZATIONS } from '../visualizations/registry';
@@ -28,6 +28,10 @@ import CircuitInteractive from '../visualizations/circuit/CircuitInteractive';
 import CircuitPractice from '../visualizations/circuit/CircuitPractice';
 import SequenceVisualization from '../visualizations/sequence/SequenceVisualization';
 import FlowVisualization from '../visualizations/flow/FlowVisualization';
+import NetSceneVisualization from '../visualizations/net-scene/NetSceneVisualization';
+import SpacetimeVisualization from '../visualizations/spacetime/SpacetimeVisualization';
+import WindowVisualization from '../visualizations/window/WindowVisualization';
+import PacketVisualization from '../visualizations/packet/PacketVisualization';
 
 interface Props {
   viz: { type: keyof typeof VISUALIZATIONS; mode?: string; steps: any[] };
@@ -67,6 +71,10 @@ const notImplemented = VISUALIZATIONS[viz.type] === null;
 {viz.type === 'circuit' && !viz.interactive && viz.practice && <CircuitPractice client:visible steps={steps} practice={viz.practice} title={viz.title} />}
 {viz.type === 'sequence' && <SequenceVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
 {viz.type === 'flow' && <FlowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'net-scene' && <NetSceneVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'spacetime' && <SpacetimeVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'window' && <WindowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+{viz.type === 'packet' && <PacketVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
 
 {
   notImplemented && (

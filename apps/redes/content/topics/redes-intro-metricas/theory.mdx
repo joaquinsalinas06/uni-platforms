@@ -1,0 +1,79 @@
+---
+kind: theory
+title: "Fundamentos de Redes, Conmutación y Retardos Nodales"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+Internet es una **red de redes**: miles de millones de dispositivos conectados que se ponen de acuerdo mediante **protocolos**. Este tema fija el vocabulario (borde, acceso, núcleo, ISP, protocolo) y las dos magnitudes que se usan en casi todos los ejercicios del curso: el **retardo de transmisión** y el **retardo de propagación**.
+
+---
+
+## 2. Conceptos
+
+### 2.1 Qué es la Internet (vista de implementación)
+
+- **Hosts = sistemas terminales**: ejecutan aplicaciones en el *borde* de Internet (clientes y servidores; los servidores suelen estar en centros de datos).
+- **Packet switches**: reenvían paquetes (routers y switches).
+- **Enlaces de comunicación**: fibra, cobre, radio, satélite. Su **tasa de transmisión** $R$ se llama también capacidad o ancho de banda.
+- **Redes**: colección de dispositivos, routers y enlaces administrada por una organización (red doméstica, empresarial, móvil, de centro de datos).
+
+<Visualization viz={{ type: 'net-scene', static: true, title: 'Borde, acceso y núcleo', steps: [
+  { note: 'Borde: hosts. Redes de acceso: enlaces cableados o inalámbricos hacia el primer router. Núcleo: routers interconectados, una red de redes.',
+    devices: [
+      { id: 'h1', kind: 'laptop', label: 'Host', sub: 'borde', x: 8, y: 30 },
+      { id: 'h2', kind: 'phone', label: 'Móvil', sub: 'borde', x: 8, y: 75 },
+      { id: 'ra', kind: 'router', label: 'Router de acceso', x: 34, y: 52 },
+      { id: 'c1', kind: 'router', label: 'ISP regional', x: 56, y: 25 },
+      { id: 'c2', kind: 'router', label: 'ISP nacional', x: 56, y: 78 },
+      { id: 'c3', kind: 'router', label: 'ISP global', x: 78, y: 52 },
+      { id: 's', kind: 'server', label: 'Servidor', sub: 'borde (centro de datos)', x: 94, y: 52 } ],
+    cables: [
+      { from: 'h1', to: 'ra' }, { from: 'h2', to: 'ra' },
+      { from: 'ra', to: 'c1' }, { from: 'ra', to: 'c2' }, { from: 'c1', to: 'c3' }, { from: 'c2', to: 'c3' }, { from: 'c1', to: 'c2' },
+      { from: 'c3', to: 's' } ],
+    zones: [
+      { label: 'Red de acceso', devices: ['h1', 'h2', 'ra'] },
+      { label: 'Núcleo: red de redes', devices: ['c1', 'c2', 'c3'] } ] },
+]}} />
+
+### 2.2 Cómo se conectan millones de redes de acceso
+
+Conectar cada ISP de acceso con todos los demás directamente no escala: son $O(N^2)$ conexiones. La estructura que aparece en las slides:
+
+| Pieza | Papel |
+|---|---|
+| ISP global / **tier-1** (Level 3, Sprint, AT&T, NTT) | Pocas redes muy conectadas en el "centro", cobertura nacional e internacional |
+| **IXP** (punto de intercambio) y enlaces de **peering** | Donde los ISP competidores se interconectan |
+| ISP regional | Conecta redes de acceso con los ISP mayores |
+| Red de proveedor de contenido (Google, Facebook, Microsoft, Akamai) | Red privada que une sus centros de datos con Internet, a menudo sin pasar por tier-1 ni regionales |
+
+### 2.3 Protocolo
+
+Un protocolo define el **formato** y el **orden** de los mensajes enviados y recibidos entre entidades de red, y las **acciones** que se toman al enviarlos o recibirlos. Ejemplo de la slide: pedir la hora a una persona ("Hola" / "Hola" / "¿Qué hora es?" / "2:00") frente a una conexión TCP (solicitud de conexión / respuesta / `GET http://utec.edu.pe` / archivo). Un protocolo se especifica con texto, pseudocódigo o diagramas de estados, y es *interoperable* si dos implementaciones que siguen la misma especificación pueden comunicarse. Los estándares de Internet los publica la IETF como RFC.
+
+### 2.4 Paquetes y los dos retardos básicos
+
+Un host toma un mensaje de aplicación, lo parte en trozos de $L$ bits (**paquetes**) y los transmite hacia la red de acceso a la tasa $R$ del enlace. Dos retardos aparecen siempre; el detalle (con ejemplos y gráficas) está en el subtema [Componentes del retardo nodal](/topics/redes-intro-metricas/retardo-nodal-componentes):
+
+$$d_{\text{trans}} = \frac{L\ \text{(bits)}}{R\ \text{(bits/s)}} \qquad d_{\text{prop}} = \frac{m\ \text{(metros)}}{s\ \text{(m/s)}}$$
+
+El **RTT** es el tiempo que tarda un paquete pequeño en ir del cliente al servidor y volver; incluye propagación, encolamiento en routers/switches y procesamiento. Es la unidad de medida de los ejercicios de HTTP y DNS (semanas 2 y 3).
+
+---
+
+## 3. Qué se pide en un ejercicio
+
+1. Pasar todo a **bits** y **bps** (1 byte = 8 bits; Mbps = $10^6$ bps).
+2. Calcular $d_{\text{trans}} = L/R$ en cada enlace.
+3. Calcular $d_{\text{prop}} = m/s$.
+4. Sumar según el caso (un enlace, varios enlaces, RTT).
+
+---
+
+## 4. Errores típicos
+
+- Confundir $d_{\text{trans}}$ (depende de $L$ y $R$) con $d_{\text{prop}}$ (depende de distancia y medio); aumentar $R$ no reduce $d_{\text{prop}}$.
+- Dejar $L$ en bytes y $R$ en bits por segundo.
+- Tratar el RTT como si fuera un solo retardo de ida.

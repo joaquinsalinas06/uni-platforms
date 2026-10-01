@@ -1,0 +1,120 @@
+---
+kind: subtopic
+title: "Multiplexación orientada y no orientada a conexión"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Dos reglas distintas para elegir el socket receptor: UDP usa solo el puerto destino; TCP usa los cuatro valores (4-tupla).
+
+---
+
+## 2. Conceptos
+
+### Sin conexión (UDP)
+
+- Al crear el socket hay que indicar un puerto local: `DatagramSocket mySocket1 = new DatagramSocket(12534)`.
+- Al crear un datagrama para enviar, se indica **IP destino** y **puerto destino**.
+- Al recibir, el host mira el puerto destino y entrega al socket con ese puerto. Datagramas con el mismo puerto destino pero distinta IP u otro puerto origen van al **mismo** socket.
+
+<Visualization viz={{ type: 'net-scene', title: 'UDP: un solo socket del servidor (6428) atiende a P3 y P4', steps: [
+  { note: 'P3 (puerto 9157) y P4 (puerto 5775) tienen su socket. El servidor tiene un único socket en el puerto 6428.',
+    devices: [
+      { id: 'p3', kind: 'laptop', label: 'P3', sub: 'socket 9157', x: 12, y: 50 },
+      { id: 'srv', kind: 'server', label: 'Servidor P1', sub: 'serverSocket 6428', x: 50, y: 50 },
+      { id: 'p4', kind: 'laptop', label: 'P4', sub: 'socket 5775', x: 88, y: 50 } ] },
+  { note: 'P3 envía: puerto origen 9157, destino 6428.',
+    devices: [
+      { id: 'p3', kind: 'laptop', label: 'P3', sub: 'socket 9157', x: 12, y: 50 },
+      { id: 'srv', kind: 'server', label: 'Servidor P1', sub: 'serverSocket 6428', x: 50, y: 50 },
+      { id: 'p4', kind: 'laptop', label: 'P4', sub: 'socket 5775', x: 88, y: 50 } ],
+    packets: [{ from: 'p3', to: 'srv', label: 'origen 9157 · destino 6428', order: 1, state: 'active' }] },
+  { note: 'P4 envía: puerto origen 5775, destino 6428. Mismo puerto destino, mismo socket del servidor.',
+    devices: [
+      { id: 'p3', kind: 'laptop', label: 'P3', sub: 'socket 9157', x: 12, y: 50 },
+      { id: 'srv', kind: 'server', label: 'Servidor P1', sub: 'serverSocket 6428', x: 50, y: 50 },
+      { id: 'p4', kind: 'laptop', label: 'P4', sub: 'socket 5775', x: 88, y: 50 } ],
+    packets: [
+      { from: 'p3', to: 'srv', label: 'origen 9157 · destino 6428', order: 1, state: 'muted' },
+      { from: 'p4', to: 'srv', label: 'origen 5775 · destino 6428', order: 2, state: 'active' } ] },
+  { note: 'Las respuestas invierten los puertos: 6428 → 9157 hacia P3 y 6428 → 5775 hacia P4.',
+    devices: [
+      { id: 'p3', kind: 'laptop', label: 'P3', sub: 'socket 9157', x: 12, y: 50 },
+      { id: 'srv', kind: 'server', label: 'Servidor P1', sub: 'serverSocket 6428', x: 50, y: 50 },
+      { id: 'p4', kind: 'laptop', label: 'P4', sub: 'socket 5775', x: 88, y: 50 } ],
+    packets: [
+      { from: 'srv', to: 'p3', label: 'origen 6428 · destino 9157', order: 3, state: 'active' },
+      { from: 'srv', to: 'p4', label: 'origen 6428 · destino 5775', order: 4, state: 'active' } ] },
+]}} />
+
+### Orientada a conexión (TCP)
+
+- Un socket TCP se identifica por la **4-tupla**: IP origen, puerto origen, IP destino, puerto destino.
+- El receptor usa los **cuatro** valores para dirigir el segmento al socket.
+- Un servidor puede tener muchos sockets TCP a la vez, cada uno con su 4-tupla y asociado a un cliente distinto.
+
+<Visualization viz={{ type: 'net-scene', title: 'TCP: tres segmentos a B:80 llegan a sockets distintos', steps: [
+  { note: 'Servidor B con proceso HTTP y puerto 80. Hosts A y C; C tiene dos procesos.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Host A', sub: 'A : 9157', x: 10, y: 22 },
+      { id: 'c', kind: 'laptop', label: 'Host C', sub: 'C : 5775  y  C : 9157', x: 10, y: 78 },
+      { id: 's4', kind: 'host', label: 'socket P4', sub: 'B : 80', x: 80, y: 20 },
+      { id: 's5', kind: 'host', label: 'socket P5', sub: 'B : 80', x: 80, y: 50 },
+      { id: 's6', kind: 'host', label: 'socket P6', sub: 'B : 80', x: 80, y: 80 } ],
+    zones: [{ label: 'Servidor, IP B', devices: ['s4', 's5', 's6'] }] },
+  { note: 'A,9157 → B,80: la 4-tupla (A, 9157, B, 80) lo lleva a un socket.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Host A', sub: 'A : 9157', x: 10, y: 22 },
+      { id: 'c', kind: 'laptop', label: 'Host C', sub: 'C : 5775  y  C : 9157', x: 10, y: 78 },
+      { id: 's4', kind: 'host', label: 'socket P4', sub: 'B : 80', x: 80, y: 20 },
+      { id: 's5', kind: 'host', label: 'socket P5', sub: 'B : 80', x: 80, y: 50 },
+      { id: 's6', kind: 'host', label: 'socket P6', sub: 'B : 80', x: 80, y: 80 } ],
+    packets: [{ from: 'a', to: 's4', label: 'A,9157 → B,80', order: 1, state: 'active' }],
+    zones: [{ label: 'Servidor, IP B', devices: ['s4', 's5', 's6'] }] },
+  { note: 'C,5775 → B,80: otra 4-tupla, otro socket.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Host A', sub: 'A : 9157', x: 10, y: 22 },
+      { id: 'c', kind: 'laptop', label: 'Host C', sub: 'C : 5775  y  C : 9157', x: 10, y: 78 },
+      { id: 's4', kind: 'host', label: 'socket P4', sub: 'B : 80', x: 80, y: 20 },
+      { id: 's5', kind: 'host', label: 'socket P5', sub: 'B : 80', x: 80, y: 50 },
+      { id: 's6', kind: 'host', label: 'socket P6', sub: 'B : 80', x: 80, y: 80 } ],
+    packets: [
+      { from: 'a', to: 's4', label: 'A,9157 → B,80', order: 1, state: 'muted' },
+      { from: 'c', to: 's5', label: 'C,5775 → B,80', order: 2, state: 'active' } ],
+    zones: [{ label: 'Servidor, IP B', devices: ['s4', 's5', 's6'] }] },
+  { note: 'C,9157 → B,80: mismo puerto origen que A pero distinta IP origen, así que es un tercer socket.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Host A', sub: 'A : 9157', x: 10, y: 22 },
+      { id: 'c', kind: 'laptop', label: 'Host C', sub: 'C : 5775  y  C : 9157', x: 10, y: 78 },
+      { id: 's4', kind: 'host', label: 'socket P4', sub: 'B : 80', x: 80, y: 20 },
+      { id: 's5', kind: 'host', label: 'socket P5', sub: 'B : 80', x: 80, y: 50 },
+      { id: 's6', kind: 'host', label: 'socket P6', sub: 'B : 80', x: 80, y: 80 } ],
+    packets: [
+      { from: 'a', to: 's4', label: 'A,9157 → B,80', order: 1, state: 'muted' },
+      { from: 'c', to: 's5', label: 'C,5775 → B,80', order: 2, state: 'muted' },
+      { from: 'c', to: 's6', label: 'C,9157 → B,80', order: 3, state: 'active' } ],
+    zones: [{ label: 'Servidor, IP B', devices: ['s4', 's5', 's6'] }] },
+]}} />
+
+---
+
+## 3. Ejemplo resuelto
+
+Ejercicios 3, pregunta 5: servidor web B (puerto 80), host A (puerto origen 26145) y host C con dos conexiones (puertos origen 7532 y 26145). Segmentos **del servidor hacia los clientes** (se invierten los valores del cliente):
+
+| Hacia | Puerto origen | Puerto destino | IP origen | IP destino |
+|---|---|---|---|---|
+| Host A | 80 | 26145 | B | A |
+| Host C (proceso izquierdo) | 80 | 7532 | B | C |
+| Host C (proceso derecho) | 80 | 26145 | B | C |
+
+Aunque A y C usen el puerto 26145, el servidor distingue las conexiones por la IP.
+
+---
+
+## 4. Errores típicos
+
+- Concluir que dos conexiones con el mismo puerto origen colisionan: la 4-tupla incluye la IP.
+- Confundir "servidor con un socket de escucha" con un socket por cliente: en TCP hay uno por conexión.

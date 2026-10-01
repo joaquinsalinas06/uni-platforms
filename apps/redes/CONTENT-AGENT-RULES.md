@@ -3,67 +3,71 @@
 ## Qué leer
 1. `AGENTS.md`.
 2. `content/knowledge-map.json`: tu semana (`units[i]`), sus temas y los `subtopics` EXACTOS.
-3. `raw-materials/text/<deck>.txt` de tus `sourceSlides`. Primero el texto. Después abre
-   con Read SOLO las páginas PNG que necesites (`raw-materials/pages/<deck>/p-NN.png`),
-   sobre todo circuitos, tablas y diagramas. El número de página sale del texto
-   (`\f` separa páginas; `grep -n` ayuda).
-4. `raw-materials/EP-2025II.pdf` y `EP-2026I.pdf` (o sus PNG en `raw-materials/pages/EP-*`):
-   así preguntan. Cada tema termina con preguntas tipo examen en ese estilo.
-5. `templates/`: meta.yaml, theory.mdx, subtopic.mdx y **circuit-examples.mdx** (cómo se
-   escriben los circuitos).
-6. `src/lib/schemas.ts`: el contrato. Si no valida, el build falla.
+3. `raw-materials/text/<deck>.txt` de tus `sourceSlides` (`\f` separa páginas; `grep -n`
+   ayuda). Si una tabla o diagrama no se entiende en texto, abre el PDF en
+   `raw-materials/pdfs/<deck>.pdf` en esa página.
+4. `raw-materials/text/EP-2025II-1.txt` y `EP-2026I-1.txt`: así preguntan. Los ejercicios
+   del curso están en `Sem03_Excercises1`, `Sem06_Excercises2-2`, `Sem07_Excercises3-1` y
+   `CS4054_ExcercisesExtra`.
+5. `templates/`: meta.yaml, theory.mdx, subtopic.mdx, exercise-solution.md, practica.md y
+   **viz-redes.md** (contrato y apariencia de los diagramas: léelo entero).
+6. `src/lib/schemas.ts`: contrato de las familias existentes. Las nuevas (`net-scene`,
+   `spacetime`, `window`, `packet`) se están implementando en paralelo: su contrato es
+   `templates/viz-redes.md`.
 
 ## Dónde escribes
-SOLO `content/topics/<tus-ids>/` y `content/units/<tu-semana>.md`. Prohibido tocar `src/`,
+SOLO `content/topics/<tus-ids>/`, `content/units/<tu-semana>.md` y los archivos de
+`content/evaluaciones/` o `content/practica.mdx` que te asignen. Prohibido tocar `src/`,
 `scripts/`, `templates/`, `knowledge-map.json` y los temas de otras semanas. NO corras
-`pnpm build`. SÍ puedes correr `pnpm check` y `node scripts/validate-viz.mjs <archivo>`
-(valida tus bloques de visualización contra el schema).
+`pnpm build` ni `pnpm sync`. SÍ puedes correr `pnpm check`: el error "meta.yaml dice
+hasVisualization=true, el mapa dice false" es esperado (el verificador corre `pnpm sync` al final); los demás no.
 
 Escribe cada archivo apenas lo termines, sin acumular todo para el final: si te cortan por
 límite, lo escrito queda.
 
-## Estructura de cada página (theory.mdx y cada subtopics/*.mdx)
-Títulos `##` SIN numerar, en este orden (omite una sección solo si de verdad no aplica):
-- `## Idea`: qué problema resuelve, en 3-5 líneas.
-- `## Conceptos`: definiciones, clasificaciones, tablas y fórmulas ($…$ y $$…$$).
-- `## Método paso a paso`: cómo se resuelve un ejercicio de esto, como lo hace el profe.
-- `## Ejemplo resuelto`: los ejemplos de las slides, resueltos completos y con unidades.
-- `## Errores típicos`
-- `## Pregunta tipo examen`: 1-3 `<ExerciseBlock client:visible exercise={{ level, statement,
-  hints: [...], solution }} />` en el estilo de los parciales.
+## Estructura de cada página (theory.md y cada subtopics/*.md)
+Títulos `##` numerados (`## 1. …`), separados por `---`, en este orden (omite una sección
+solo si de verdad no aplica): idea y motivación → conceptos (definiciones, campos de
+cabecera en tablas, fórmulas en $…$ y $$…$$) → método paso a paso → ejemplo resuelto →
+errores típicos.
 
-Usa `###` para subdividir. Un tema CON subtopics usa theory.mdx como panorama corto que
-enlaza a sus subtemas (`/topics/<id>/subtopics/<name>`). Los subtemas llevan
-`kind: subtopic` y `order`.
+Usa `###` para subdividir. Los subtemas llevan `kind: subtopic` y `order`. Los ejercicios
+tipo examen van en `content/practica.mdx` con `ExerciseBlock` (ver
+`templates/exercise-solution.md`).
 
-## Fidelidad
-- Todo como lo enseñó el profe. Lo que falta y es indispensable va como Nota de apoyo.
-- Ejemplos numéricos que no están en el material: márcalos *(derivado)*.
-- Erratas evidentes: corrígelas en silencio.
-- Inconsistencias entre slides (p. ej. dos alcances distintos para Zigbee): muéstralas.
-- No hay código, salvo la semana 4 (Arduino): fragmentos estáticos cortos en bloques ```cpp,
-  solo porque el parcial pidió leer y corregir código.
+## Fidelidad (SOLO material del curso)
+- Fuente única: `raw-materials/text/*.txt` y `raw-materials/pdfs/*.pdf`. Si algo no está ahí,
+  se borra: nada de libro de texto, RFCs, productos (Route 53, Cloudflare…), extensiones no
+  vistas (SYN cookies, ECN, PAWS, Tahoe/Reno, Chord…), ni "Notas de apoyo" fuera de sílabo.
+- El texto actual lo generó otra IA y NO es fuente. Reescribir desde cero está permitido y
+  es preferible si el tema está mal. Lo único fijo: `id` del tema y nombres de `subtopics`
+  del mapa (`pnpm check` debe pasar). Un tema puede quedar corto; si queda vacío, repórtalo.
+- Ejemplos numéricos: los del material. Uno propio solo si hace falta para entender, y
+  marcado *(derivado)*.
+- Erratas evidentes: corrígelas en silencio. Inconsistencias entre slides: muéstralas.
+- Código solo donde el curso lo usa (sockets UDP en Python, `nslookup`/`dig`, filtros de
+  Wireshark): fragmentos cortos en bloques ```python / ```sh, tal como en el lab.
+- Claro y breve: que se entienda, sin relleno ni repeticiones entre theory y subtemas.
 
-## Diagramas: cuántos y cuáles
-Ser generoso: todo lo explicable con una figura lleva figura, a mitad de la prosa y
-justo donde se explica. En circuitos, UN PASO POR IDEA:
-- identificar nodos → marcar un grupo serie (tone series) → fundir → marcar un grupo
-  paralelo (tone parallel) → fundir → … → Req;
-- malla por malla, recorriendo con `kvl: {loop, upto: k}` pieza por pieza;
-- diodos: hipótesis → modelo → resolver → validar → si falla, `answer` + nueva hipótesis.
+## Parciales
+Lee las páginas del PDF (`raw-materials/pdfs/EP-*.pdf`, Read con `pages`) para tener las
+figuras reales: IPs, puertos, trazas de Wireshark, salidas de nslookup. Cada solución usa
+EXACTAMENTE esos datos. Redibuja la figura del enunciado con la librería (`net-scene` para
+topologías, `packet`/tabla para capturas). El archivo pasa a `.mdx`.
 
-El `note` de cada paso dice QUÉ mirar y POR QUÉ. Las etiquetas van cortas ("R1", "E").
-
-**No escribas ecuaciones ni resultados a mano en los circuitos**: pon `expect` con los
-valores que te da el material (o los que calculas); el solver los verifica.
-
-Si el schema no te alcanza para un diagrama, NO lo cambies: escribe lo más cercano y
-reporta en tu respuesta final qué campo faltó.
+## Diagramas
+Ser generoso: todo lo que se explica mejor con una figura lleva figura, inline justo donde
+se explica (`.mdx` + import, ver `templates/viz-redes.md`). Los bloques se escriben según el
+contrato aunque la librería aún se esté implementando: NO pruebes el render. Una idea por
+paso, `note` que diga qué mirar. Al agregar diagramas, en `meta.yaml` pon
+`hasVisualization: true` y `visualizationType: <familia principal>`. Para pasar un archivo a
+`.mdx` usa `git mv`.
 
 ## meta.yaml
 Tiene que coincidir con el mapa en `unit`, `type`, `hasVisualization`, `prerequisites`,
 `buildsOn` y `usedBy`. `formulas[]` lleva todas las fórmulas del tema (name, tex sin $,
-reasoning ≥ 20 caracteres, source "deck#pág"). Pon entre comillas dobles todo string con ": ".
+reasoning ≥ 20 caracteres). Pon entre comillas dobles todo string con ": ".
 
-## Respuesta final (≤ 15 líneas)
-Archivos escritos, diagramas por archivo, campos de schema que faltaron y dudas del material.
+## Respuesta final (≤ 20 líneas)
+Archivos tocados, qué se borró por tema, diagramas por archivo, campos del contrato que
+faltaron y dudas del material.

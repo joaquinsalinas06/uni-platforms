@@ -9,13 +9,14 @@ buildsOn:
 usedBy:
   - "bittorrent-dht"
 formulas:
-  - name: "Cota inferior de distribución Cliente-Servidor"
-    tex: "D_{\\text{cs}} \\ge \\max \\left\\{ \\frac{N \\cdot F}{u_s}, \\frac{F}{d_{\\min}} \\right\\}"
-    reasoning: "Calcula el tiempo mínimo para distribuir un archivo de tamaño F a N receptores en arquitectura cliente-servidor, condicionado por la tasa de subida del servidor y la descarga más lenta."
-  - name: "Cota inferior de distribución Peer-to-Peer"
-    tex: "D_{\\text{P2P}} \\ge \\max \\left\\{ \\frac{F}{u_s}, \\frac{F}{d_{\\min}}, \\frac{N \\cdot F}{u_s + \\sum_{i=1}^N u_i} \\right\\}"
-    reasoning: "Modela el tiempo teórico de distribución en redes P2P donde los pares colaboran redistribuyendo fragmentos aprovechando el ancho de banda agregado de subida."
-  - name: "Escalabilidad asintótica P2P con pares homogéneos"
-    tex: "\\lim_{N \\to \\infty} D_{\\text{P2P}} = \\max \\left\\{ \\frac{F}{u_s}, \\frac{F}{d_{\\min}}, \\frac{F}{u} \\right\\} = \\mathcal{O}(1)"
-    reasoning: "Expresa que cuando los pares poseen capacidades de subida homogéneas (ui = u), el tiempo total de distribución P2P se estabiliza de forma constante O(1) independiente del número de nodos N."
-hasVisualization: false
+  - name: "Tiempo mínimo de distribución cliente-servidor"
+    tex: "D_{cs} \\ge \\max\\left\\{ \\frac{NF}{u_s},\\ \\frac{F}{d_{\\min}} \\right\\}"
+    reasoning: "El servidor sube N copias del archivo (N·F bits a la tasa u_s) y el cliente más lento tarda F/d_min en bajar su copia; el tiempo mínimo es la mayor de las dos cotas."
+  - name: "Tiempo mínimo de distribución P2P"
+    tex: "D_{P2P} \\ge \\max\\left\\{ \\frac{F}{u_s},\\ \\frac{F}{d_{\\min}},\\ \\frac{NF}{u_s + \\sum_{i=1}^{N} u_i} \\right\\}"
+    reasoning: "El servidor sube al menos una copia (F/u_s), el cliente más lento baja F bits (F/d_min) y entre todos hay que mover N·F bits con la capacidad de subida total u_s + Σu_i."
+  - name: "Capacidad de subida total del sistema P2P"
+    tex: "u_{\\text{total}} = u_s + u_1 + \\cdots + u_N"
+    reasoning: "Suma de lo que el servidor y cada par pueden subir; es el denominador de la tercera cota de D_P2P."
+hasVisualization: true
+visualizationType: "xy-chart"

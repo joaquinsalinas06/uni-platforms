@@ -1,0 +1,63 @@
+---
+kind: theory
+title: "Protocolo UDP (User Datagram Protocol)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+UDP es el protocolo de transporte "sin adornos" (*no frills, bare bones*) de Internet: entrega de mejor esfuerzo, sin conexión. Los segmentos pueden perderse o llegar desordenados a la aplicación. La RFC 768 (1980) lo define como un modo de comunicación por datagramas con un mínimo de mecanismo de protocolo; no garantiza entrega ni protección contra duplicados, y para flujos ordenados y confiables recomienda TCP.
+
+---
+
+## 2. Conceptos
+
+### Cabecera UDP
+
+Cuatro campos de 16 bits: 8 bytes en total. `length` es la longitud en bytes del segmento UDP, **cabecera incluida**.
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Segmento UDP', steps: [
+  { note: '8 bytes de cabecera: cuatro campos de 16 bits. El checksum cubre además los datos y las direcciones IP (ver tema de checksum).',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16 }, { label: 'puerto destino', bits: 16 }],
+      [{ label: 'longitud (bytes, con cabecera)', bits: 16 }, { label: 'checksum', bits: 16 }],
+      [{ label: 'datos de aplicación (payload)', bits: 32 }] ] } },
+]}} />
+
+### Acciones del emisor y del receptor (slide, ejemplo SNMP)
+
+| Emisor UDP | Receptor UDP |
+|---|---|
+| Recibe un mensaje de la aplicación | Recibe el segmento de IP |
+| Determina los valores de la cabecera | Comprueba el valor del checksum |
+| Crea el segmento UDP | Extrae el mensaje de aplicación |
+| Lo pasa a IP | Lo demultiplexa hacia la aplicación vía socket |
+
+### Por qué existe UDP
+
+Sin establecimiento de conexión (no suma un RTT), sin estado de conexión en emisor ni receptor, cabecera pequeña, sin control de congestión (puede enviar tan rápido como quiera) y funciona aun con congestión. Detalle: [Ventajas y segmento UDP](/topics/protocolo-udp/ventajas-y-segmento-udp). Usos y costo real: [Aplicaciones y overhead](/topics/protocolo-udp/aplicaciones-streaming-y-overhead).
+
+---
+
+## 3. Método paso a paso
+
+Preguntas típicas sobre la cabecera:
+
+1. **Longitud:** `length` = 8 bytes de cabecera + bytes de datos.
+2. **Máximos:** el campo de longitud y los puertos son de 16 bits, así que el mayor valor es $2^{16} - 1 = 65535$ (puerto o longitud).
+3. **Respuesta:** puertos invertidos respecto de la petición.
+
+---
+
+## 4. Ejemplo resuelto
+
+Parcial 2026-I, pregunta 7, trama con 4096 bytes de datos: `Length: 4104` $= 8 + 4096$. Puertos 36684 → 31337. Ver la figura en [Ventajas y segmento UDP](/topics/protocolo-udp/ventajas-y-segmento-udp).
+
+Pregunta de la slide: *máxima carga útil de UDP*. La respuesta de la slide: $65535 - 8 = 65527$ bytes; *mayor puerto origen:* $2^{16} - 1 = 65535$.
+
+---
+
+## 5. Errores típicos
+
+- Olvidar que `length` incluye los 8 bytes de la cabecera.
+- Creer que UDP avisa pérdidas: no lo hace; si la aplicación lo necesita, agrega la confiabilidad en la capa de aplicación (como HTTP/3 sobre QUIC).

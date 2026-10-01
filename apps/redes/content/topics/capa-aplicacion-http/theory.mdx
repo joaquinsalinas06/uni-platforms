@@ -1,0 +1,107 @@
+---
+kind: theory
+title: "Capa de Aplicación y Protocolo HTTP (1.0 / 1.1 / 2)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+La capa de aplicación es donde viven las aplicaciones de red (web, correo, mensajería, streaming, juegos, P2P). Cada aplicación define un **protocolo de capa de aplicación** y delega el transporte de sus mensajes a TCP o UDP. Este tema presenta la capa en general y dos de sus protocolos: **HTTP** (la web) y **SMTP** (correo).
+
+---
+
+## 2. Conceptos
+
+### 2.1 Arquitecturas de aplicación
+
+- **Cliente-servidor** (la usual): el servidor es un host siempre encendido, con IP permanente y a menudo en centros de datos; los clientes se conectan de forma intermitente, pueden tener IP dinámica y **no se comunican directamente entre sí**.
+- **P2P**: se estudia en la Semana 4.
+
+<Visualization viz={{ type: 'net-scene', static: true, title: 'Cliente-servidor', steps: [
+  { note: 'Los clientes solo hablan con el servidor, nunca entre sí.',
+    devices: [
+      { id: 'c1', kind: 'laptop', label: 'Cliente', sub: 'IP dinámica', x: 12, y: 22 },
+      { id: 'c2', kind: 'phone', label: 'Cliente', sub: 'IP dinámica', x: 12, y: 78 },
+      { id: 's', kind: 'server', label: 'Servidor', sub: 'siempre encendido, IP permanente', x: 80, y: 50 } ],
+    cables: [{ from: 'c1', to: 's' }, { from: 'c2', to: 's' }] },
+]}} />
+
+### 2.2 Procesos y sockets
+
+- **Proceso**: programa en ejecución dentro de un host. Dos procesos del mismo host se comunican por IPC del sistema operativo; en hosts distintos, **intercambian mensajes**.
+- **Proceso cliente**: inicia la comunicación. **Proceso servidor**: espera ser contactado.
+- Un proceso envía y recibe mensajes a través de su **socket**, análogo a una puerta: el emisor empuja el mensaje y confía en la infraestructura de transporte del otro lado para entregarlo al socket receptor.
+
+### 2.3 Qué define un protocolo de aplicación
+
+- Tipos de mensajes (petición, respuesta).
+- Sintaxis (campos y delimitación) y semántica (significado de los campos).
+- Reglas de cuándo y cómo se envían y responden los mensajes.
+
+Pueden ser **abiertos** (HTTP, SMTP, definidos en RFC) o **propietarios** (Skype).
+
+### 2.4 Qué pide una aplicación al transporte
+
+| Aplicación | Pérdida de datos | Throughput | Sensible al tiempo |
+|---|---|---|---|
+| Transferencia de archivos | sin pérdida | elástico | no |
+| Correo | sin pérdida | elástico | no |
+| Documentos web | sin pérdida | elástico | no |
+| Audio/video en tiempo real | tolera pérdida | audio 5 kbps–1 Mbps; video 10 kbps–5 Mbps | sí, cientos de ms |
+| Audio/video almacenado | tolera pérdida | igual | sí, pocos s |
+| Juegos interactivos | tolera pérdida | pocos kbps | sí, cientos de ms |
+| Mensajería de texto | sin pérdida | elástico | sí y no |
+
+El transporte puede ofrecer integridad de datos, seguridad y throughput. Protocolos de aplicación y su transporte: correo (SMTP) y web (HTTP) sobre **TCP**; streaming (HTTP o RTP) sobre TCP o UDP; telefonía por Internet, TCP o UDP.
+
+### 2.5 La web y HTTP
+
+- Una página web tiene un archivo HTML base y varios **objetos** referenciados (imágenes, audio, applets…). Cada objeto se direcciona con un **URL**: `www.someschool.edu/someDept/pic.gif` = nombre de host + ruta.
+- **HTTP** (*HyperText Transfer Protocol*) es el protocolo de la web, modelo cliente-servidor: el navegador pide y muestra objetos, el servidor web los envía.
+- Usa **TCP**: el cliente abre la conexión (crea un socket) hacia el servidor, puerto **80**; el servidor la acepta; se intercambian mensajes HTTP; se cierra la conexión.
+- HTTP es **sin estado** (*stateless*): el servidor no guarda información de peticiones pasadas. Mantener estado es complejo: hay que conservar historia y, si el cliente o servidor falla, sus vistas del estado pueden quedar inconsistentes. Las *cookies* resuelven esto (tema siguiente).
+
+Versiones de HTTP que se identifican en el lab: 1.0, 1.1 y 2 (cuál usan navegador y servidor se lee en el primer renglón de cada mensaje). Las slides solo desarrollan HTTP/1.1; HTTP/3 se menciona como "QUIC sobre UDP" en la Semana 6.
+
+El tiempo de descarga dependiendo de cómo se abren las conexiones está en [Conexiones persistentes vs no persistentes](/topics/capa-aplicacion-http/conexiones-persistentes-vs-no-persistentes), y los formatos en [Formato de mensajes HTTP](/topics/capa-aplicacion-http/formato-mensajes-http).
+
+### 2.6 Correo electrónico y SMTP
+
+Tres componentes: **agentes de usuario** (leer/escribir correo), **servidores de correo** y **SMTP** (*Simple Mail Transfer Protocol*).
+
+- SMTP usa TCP, puerto **25**, con transferencia **directa** del servidor emisor al receptor, y conexiones persistentes.
+- Tres fases: saludo (*handshaking*), transferencia de mensajes y cierre. Interacción comando/respuesta en ASCII (respuesta = código + frase); el mensaje debe estar en ASCII de 7 bits y termina con una línea que solo contiene un punto.
+- Comparado con HTTP: HTTP es *pull* (el cliente tira del objeto), SMTP es *push* (el emisor empuja el mensaje). En HTTP cada objeto va en su respuesta; en SMTP varios objetos viajan en un mensaje multiparte.
+- Acceso al buzón (el receptor lo lee del servidor): **POP** (autorización y descarga), **IMAP** (más funciones, manipula los mensajes guardados en el servidor), o HTTP (Gmail, Hotmail…).
+
+```text
+S: 220 hamburger.edu
+C: HELO crepes.fr
+S: 250 Hello crepes.fr, pleased to meet you
+C: MAIL FROM:<alice@crepes.fr>
+S: 250 Sender ok
+C: RCPT TO:<bob@hamburger.edu>
+S: 250 Recipient ok
+C: DATA
+S: 354 Enter mail, end with "." on a line by itself
+C: From: alice@crepes.fr
+C: To: bob@hamburger.edu
+C: Subject: Food
+C:
+C: Do you like ketchup?
+C: How about pickles?
+C: .
+S: 250 Message accepted for delivery
+C: QUIT
+S: 221 hamburger.edu closing connection
+```
+
+Los comandos `MAIL FROM` y `RCPT TO` (sobre del SMTP) son distintos de las líneas `From:` y `To:` de la cabecera del mensaje (RFC 822).
+
+---
+
+## 3. Errores típicos
+
+- Decir que HTTP guarda la sesión del usuario: es sin estado.
+- Llamar "servidor" al host que inicia la conversación: el cliente es el proceso que **inicia**.
+- Olvidar el RTT del handshake TCP al contar tiempos de descarga.

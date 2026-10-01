@@ -1,0 +1,104 @@
+---
+kind: subtopic
+title: "Cálculo de EstimatedRTT con la traza del parcial"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+El parcial 2025-II (pregunta 6) pide llenar una tabla de RTT para **5 segmentos** a partir de la traza de Wireshark y la fórmula del EstimatedRTT. Aquí está resuelta con los datos de esa traza. (La desviación DevRTT no aparece en el material.)
+
+---
+
+## 2. Conceptos
+
+Datos (cliente 192.168.86.68 envía a 128.119.245.12; los ACK llegan en orden). Se toman los **cinco primeros segmentos de datos**; el enunciado no precisa cuáles, esta es la lectura adoptada:
+
+| Seg. | Trama enviada | Hora de envío (s) | Trama ACK | Hora del ACK (s) | RTT (s) | EstimatedRTT (s) |
+|---|---|---|---|---|---|---|
+| 1 | 4 | 0.024047 | 7 | 0.052671 | 0.028624 | 0.0286240 |
+| 2 | 5 | 0.024048 | 8 | 0.052676 | 0.028628 | 0.0286245 |
+| 3 | 6 | 0.024049 | 13 | 0.053626 | 0.029577 | 0.0287436 |
+| 4 | 9 | 0.052774 | 16 | 0.080768 | 0.027994 | 0.0286499 |
+| 5 | 10 | 0.052775 | 17 | 0.080771 | 0.027996 | 0.0285681 |
+
+Los ACK confirman en orden: `Ack=1449` (seg. 1), `2897` (2), `4345` (3), `5793` (4) y `7241` (5); ver [Segmento TCP](/topics/protocolo-tcp-mecanismos/segmento-tcp-secuencia-ack).
+
+<Visualization viz={{ type: 'xy-chart',
+  title: 'EstimatedRTT frente a SampleRTT (segmentos 1 a 5, parcial 2025-II)',
+  steps: [
+    {
+      note: 'SampleRTT de los cinco segmentos (ms): 28,624; 28,628; 29,577; 27,994; 27,996. El tercero es el más lento.',
+      series: [
+        {
+          id: 's',
+          label: 'SampleRTT (ms)',
+          points: [
+            [1, 28.624],
+            [2, 28.628],
+            [3, 29.577],
+            [4, 27.994],
+            [5, 27.996]
+          ],
+          kind: 'line'
+        }
+      ],
+      x: { label: 'segmento', min: 1, max: 5, ticks: [1, 2, 3, 4, 5] },
+      y: { label: 'ms', min: 27.5, max: 30 }
+    },
+    {
+      note: 'EstimatedRTT con la fórmula del examen: se mueve poco porque cada muestra solo pesa 0,125. Sube con el 3.er segmento y baja con el 4.º y 5.º.',
+      series: [
+        {
+          id: 's',
+          label: 'SampleRTT (ms)',
+          points: [
+            [1, 28.624],
+            [2, 28.628],
+            [3, 29.577],
+            [4, 27.994],
+            [5, 27.996]
+          ],
+          kind: 'line',
+          state: 'muted'
+        },
+        {
+          id: 'e',
+          label: 'EstimatedRTT (ms)',
+          points: [
+            [1, 28.624],
+            [2, 28.6245],
+            [3, 28.7436],
+            [4, 28.6499],
+            [5, 28.5681]
+          ],
+          kind: 'line',
+          state: 'active'
+        }
+      ],
+      x: { label: 'segmento', min: 1, max: 5, ticks: [1, 2, 3, 4, 5] },
+      y: { label: 'ms', min: 27.5, max: 30 }
+    }
+  ] }} />
+
+- El RTT de los segmentos 4 y 5 (≈ 27,99 ms) es menor que el de los tres primeros (≈ 28,6 a 29,6 ms).
+- EstimatedRTT$_1$ se tomó igual a SampleRTT$_1$ *(convención)*.
+- Otra lectura posible del enunciado es contar el handshake (SYN → SYN,ACK = 22,414 ms) como primera muestra; el material no lo aclara.
+
+---
+
+## 3. Ejemplo resuelto
+
+Cálculo de EstimatedRTT$_3$ (segmento 3, tramas 6 y 13):
+
+$$\text{SampleRTT}_3 = 0{,}053626 - 0{,}024049 = 0{,}029577\text{ s}$$
+
+$$\text{EstimatedRTT}_3 = 0{,}875 \cdot 0{,}0286245 + 0{,}125 \cdot 0{,}029577 = \boxed{0{,}0287436\text{ s}}$$
+
+---
+
+## 4. Errores típicos
+
+- Restar con la hora del segmento equivocado (los segmentos 1, 2 y 3 salen casi a la vez pero sus ACK llegan en tiempos distintos).
+- Redondear demasiado pronto: las diferencias están en el tercer decimal de los milisegundos.

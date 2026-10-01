@@ -1,33 +1,30 @@
 ---
 kind: subtopic
+title: "Ventajas de UDP y Estructura del Segmento"
 order: 1
-title: Diodos
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
-import ExerciseBlock from '../../../../src/components/ExerciseBlock';
 
-## Idea
+## 1. Idea
+
 …
 
-## Conceptos
+## 2. Conceptos
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Segmento UDP', steps: [
+  { note: '8 bytes de cabecera: cuatro campos de 16 bits.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16 }, { label: 'puerto destino', bits: 16 }],
+      [{ label: 'longitud', bits: 16 }, { label: 'checksum', bits: 16 }],
+      [{ label: 'datos', bits: 32 }] ] } },
+]}} />
+
 …
 
-<Visualization viz={{ type: 'circuit', static: true, steps: [ /* ver circuit-examples.mdx */ ] }} />
+## 3. Ejemplo resuelto
 
-## Método paso a paso
 …
 
-## Ejemplo resuelto
+## 4. Errores típicos
+
 …
-
-## Errores típicos
-…
-
-## Pregunta tipo examen
-
-<ExerciseBlock client:visible exercise={{
-  level: 3,
-  statement: "En el circuito… (E = 12 V). Halle Ix.",
-  hints: ["Supón D1 ON y D2 OFF.", "Valida: I_D1 > 0 y V_D2 < 0.7 V."],
-  solution: "Ix = 2.3 mA …",
-}} />

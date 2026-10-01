@@ -1,0 +1,58 @@
+---
+kind: subtopic
+title: "Servicios de transporte frente a la capa de red"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+IP lleva datagramas de host a host con servicio de mejor esfuerzo. Encima, el transporte entrega proceso a proceso. Aquí: qué hace el transporte en los extremos y qué ofrece cada protocolo.
+
+---
+
+## 2. Conceptos
+
+### Acciones del transporte (solo en los sistemas terminales)
+
+- **Emisor:** parte los mensajes de aplicación en segmentos y los pasa a la capa de red.
+- **Receptor:** reensambla los segmentos en mensajes y los pasa a la aplicación.
+
+La slide lo ilustra con un mensaje HTTP: el transporte le pone su cabecera $H_t$ y la red le pone la suya $H_n$.
+
+<Visualization viz={{ type: 'packet', title: 'Un mensaje HTTP baja por la pila', steps: [
+  { note: 'Aplicación: el mensaje HTTP.',
+    layers: [{ label: 'Aplicación', payload: 'mensaje HTTP' }, { label: 'Transporte' }, { label: 'Red' }] },
+  { note: 'Transporte agrega su cabecera Ht (aquí van los puertos).',
+    layers: [{ label: 'Aplicación', payload: 'mensaje HTTP' }, { label: 'Transporte', header: 'Ht', state: 'active' }, { label: 'Red' }] },
+  { note: 'Red agrega Hn (aquí van las direcciones IP). Los routers intermedios solo llegan hasta la capa de red.',
+    layers: [{ label: 'Aplicación', payload: 'mensaje HTTP' }, { label: 'Transporte', header: 'Ht' }, { label: 'Red', header: 'Hn', state: 'active' }] },
+]}} />
+
+### Los dos protocolos de transporte de Internet
+
+| TCP | UDP |
+|---|---|
+| Entrega confiable y en orden | Entrega no confiable y sin orden |
+| Control de congestión | Extensión "sin adornos" del mejor esfuerzo de IP |
+| Control de flujo | |
+| Establecimiento de conexión | |
+
+**Servicios que ninguno ofrece:** garantías de retardo y garantías de ancho de banda.
+
+### Demultiplexador simple (UDP)
+
+UDP extiende el servicio host a host en uno proceso a proceso: agrega un nivel de demultiplexación para que varios procesos del host compartan la red. En la slide, los paquetes que llegan se encolan en una cola por puerto y cada proceso lee de la suya.
+
+---
+
+## 3. Ejemplo resuelto
+
+¿Qué cabecera trae el puerto? La de transporte ($H_t$), no la de red. Por eso un router, que solo mira $H_n$, no sabe a qué proceso va el paquete.
+
+---
+
+## 4. Errores típicos
+
+- Atribuir a UDP garantías de retardo o ancho de banda: ningún protocolo de transporte de Internet las da.
+- Confundir "mensaje" (aplicación), "segmento" (transporte) y "datagrama" (red).

@@ -1,0 +1,59 @@
+---
+kind: theory
+title: "Laboratorio: Análisis Avanzado HTTP con Wireshark"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Objetivo
+
+Continuar el lab de HTTP (LAB1A) con tres experimentos más: **GET condicional** (parte 1, sección 2), **objetos incrustados** y **autenticación HTTP** (parte 2, secciones 4 y 5). Antes de cada experimento: **limpiar la caché del navegador**, abrir Wireshark con el filtro `http`, cargar la URL y detener la captura.
+
+---
+
+## 2. Experimentos
+
+| Sección | URL (gaia.cs.umass.edu/wireshark-labs/) | Qué se mira |
+|---|---|---|
+| 2. GET condicional | `HTTP-wireshark-file2.html` (cargarla **dos veces seguidas**) | `If-Modified-Since` y código de la segunda respuesta (subtema 1) |
+| 4. Objetos incrustados | `HTTP-wireshark-file4.html` | Cuántos GET, a qué servidores y si las imágenes se bajan en serie o en paralelo |
+| 5. Autenticación | `protected_pages/HTTP-wireshark-file5.html` | Respuesta que pide credenciales y cabecera de la segunda petición (subtema 2) |
+
+### Objetos incrustados
+
+El HTML base **no contiene** las imágenes: contiene sus URL, y el navegador las busca. En el experimento, el logo de la editorial viene de `gaia.cs.umass.edu` y la portada de la 8.ª edición viene de un servidor en Francia: dos servidores distintos.
+
+<Visualization viz={{ type: 'net-scene', title: 'HTML con dos imágenes', steps: [
+  { note: 'El navegador pide el HTML base a gaia.cs.umass.edu.',
+    devices: [
+      { id: 'n', kind: 'laptop', label: 'Navegador', x: 12, y: 50 },
+      { id: 'g', kind: 'server', label: 'gaia.cs.umass.edu', sub: 'HTML + logo', x: 85, y: 22 },
+      { id: 'f', kind: 'server', label: 'Servidor en Francia', sub: 'portada 8.ª ed.', x: 85, y: 78 } ],
+    packets: [{ from: 'n', to: 'g', label: 'GET HTML', order: 1, state: 'active' }] },
+  { note: 'Con el HTML recibido, el navegador conoce las URL de las dos imágenes.',
+    devices: [
+      { id: 'n', kind: 'laptop', label: 'Navegador', x: 12, y: 50 },
+      { id: 'g', kind: 'server', label: 'gaia.cs.umass.edu', sub: 'HTML + logo', x: 85, y: 22 },
+      { id: 'f', kind: 'server', label: 'Servidor en Francia', sub: 'portada 8.ª ed.', x: 85, y: 78 } ],
+    packets: [
+      { from: 'n', to: 'g', label: 'GET HTML', order: 1, state: 'muted' },
+      { from: 'g', to: 'n', label: '200 OK (HTML)', order: 2, state: 'active' }] },
+  { note: 'Cada imagen se pide a su servidor. Los timestamps de los GET dicen si el segundo salió antes o después de terminar la primera respuesta (paralelo o serie).',
+    devices: [
+      { id: 'n', kind: 'laptop', label: 'Navegador', x: 12, y: 50 },
+      { id: 'g', kind: 'server', label: 'gaia.cs.umass.edu', sub: 'HTML + logo', x: 85, y: 22 },
+      { id: 'f', kind: 'server', label: 'Servidor en Francia', sub: 'portada 8.ª ed.', x: 85, y: 78 } ],
+    packets: [
+      { from: 'n', to: 'g', label: 'GET HTML', order: 1, state: 'muted' },
+      { from: 'g', to: 'n', label: '200 OK (HTML)', order: 2, state: 'muted' },
+      { from: 'n', to: 'g', label: 'GET logo', order: 3, state: 'active' },
+      { from: 'n', to: 'f', label: 'GET portada', order: 4, state: 'active' }] },
+]}} />
+
+Preguntas de la guía: número total de GET y la IP y `Host:` de cada uno; si el GET de la segunda imagen salió antes o después de recibir por completo el `200 OK` de la primera; y, con los números de paquete y timestamps, si se bajaron en serie o en paralelo.
+
+---
+
+## 3. Errores típicos
+
+- No limpiar la caché: el navegador no pide los objetos y la captura sale vacía o con `304`.
+- Concluir "en paralelo" sin comparar el timestamp del segundo GET con el de la respuesta completa del primero.

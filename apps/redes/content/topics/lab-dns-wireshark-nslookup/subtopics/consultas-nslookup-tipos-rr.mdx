@@ -1,0 +1,61 @@
+---
+kind: subtopic
+title: "Consultas nslookup y tipos de RR"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+`nslookup` pregunta al DNS por registros de un tipo. Al arrancar muestra el **servidor por defecto**: un DNS **local** (resolver), normalmente asignado por la red (DHCP) o el proveedor.
+
+---
+
+## 2. Conceptos
+
+### Consultas del lab
+
+| Comando | Qué pide |
+|---|---|
+| `nslookup www.unsplash.com` | Registro A (IP) |
+| `nslookup` luego `set type=mx` y un dominio (`cisco.com`, `google.com`, `utec.edu.pe`, `gmail.com`) | Servidores de correo y su preferencia |
+| `nslookup -type=NS mit.edu` | Servidores de nombres autoritativos del dominio |
+| `nslookup -type=ANY google.com` | Todos los registros disponibles |
+| `nslookup -type=AAAA www.youtube.com` | IPv6 |
+| `nslookup www.aiit.or.kr bitsy.mit.edu` | La misma consulta A pero dirigida a un servidor concreto (`bitsy.mit.edu`) en lugar del DNS local |
+
+<Visualization viz={{ type: 'net-scene', title: 'nslookup: DNS por defecto frente a servidor indicado', steps: [
+  { note: 'nslookup www.mit.edu: la consulta va al DNS local configurado en el host.',
+    devices: [
+      { id: 'h', kind: 'laptop', label: 'Tu host', sub: 'nslookup', x: 10, y: 55 },
+      { id: 'l', kind: 'dns', label: 'DNS por defecto', sub: 'resolver local', x: 50, y: 55 },
+      { id: 'b', kind: 'dns', label: 'bitsy.mit.edu', sub: 'servidor indicado', x: 88, y: 20 } ],
+    packets: [{ from: 'h', to: 'l', label: 'A? www.mit.edu', order: 1, state: 'active' }] },
+  { note: 'nslookup www.aiit.or.kr bitsy.mit.edu: la consulta va directo a bitsy.mit.edu, sin pasar por el DNS local. La IP destino de la consulta cambia.',
+    devices: [
+      { id: 'h', kind: 'laptop', label: 'Tu host', sub: 'nslookup', x: 10, y: 55 },
+      { id: 'l', kind: 'dns', label: 'DNS por defecto', sub: 'resolver local', x: 50, y: 55 },
+      { id: 'b', kind: 'dns', label: 'bitsy.mit.edu', sub: 'servidor indicado', x: 88, y: 20 } ],
+    packets: [
+      { from: 'h', to: 'l', label: 'A? www.mit.edu', order: 1, state: 'muted' },
+      { from: 'h', to: 'b', label: 'A? www.aiit.or.kr', order: 2, state: 'active' }] },
+]}} />
+
+### Cómo interpretar las respuestas
+
+- **"Non-authoritative answer"**: la respuesta no viene del servidor autoritativo del dominio; el DNS local la tenía en su **caché** (o la obtuvo de la jerarquía).
+- **MX**: se contacta primero el servidor con la **menor preferencia**. Tener varios con preferencias distintas da respaldo si el primero está caído. Un `MX` pedido para `www.<dominio>` suele no existir: el servidor de correo se asocia al dominio, no al host `www`.
+- **Consulta inversa**: al escribir una IP, `nslookup` devuelve un nombre que puede ser el de un proveedor de hosting/CDN y no el que se consultó; en el lab se pide justificar por qué una IP puede resolver a un nombre distinto.
+- **Direcciones con "dos puntos"** en la respuesta de `www.google.com`: son IPv6 (registros AAAA).
+- **Consulta dirigida** (`bitsy.mit.edu`): el lab pregunta si el servidor entregó la respuesta o rechazó la consulta; una explicación posible es que un DNS institucional no resuelve nombres externos para usuarios de fuera.
+
+### Servidor DNS público (Ex 1, pregunta 9)
+
+Se cambia el DNS del sistema (ejemplos de la hoja: `8.8.8.8` o `1.1.1.1`) y se compara la latencia y las IP devueltas para `www.cisco.com` con las del DNS original. Un nombre puede devolver varias IP (distribución de carga: servidores web replicados).
+
+---
+
+## 3. Errores típicos
+
+- Llamar autoritativo al servidor por defecto: es un resolver local.
+- Esperar la misma IP en todas las consultas: un nombre con varias IP puede devolver listas distintas.

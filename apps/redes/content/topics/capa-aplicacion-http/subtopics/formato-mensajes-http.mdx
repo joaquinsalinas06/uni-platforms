@@ -1,0 +1,68 @@
+---
+kind: subtopic
+title: "Formato de mensajes HTTP"
+order: 2
+---
+
+## 1. Idea
+
+HTTP tiene dos tipos de mensaje, **petición** y **respuesta**, ambos en ASCII (legibles). Cada línea termina en `\r\n` (retorno de carro + salto de línea) y una línea vacía marca el fin de las cabeceras.
+
+---
+
+## 2. Conceptos
+
+### 2.1 Petición
+
+```text
+GET /index.html HTTP/1.1\r\n
+Host: www-net.cs.umass.edu\r\n
+User-Agent: Firefox/3.6.10\r\n
+Accept: text/html,application/xhtml+xml\r\n
+Accept-Language: en-us,en;q=0.5\r\n
+Accept-Encoding: gzip,deflate\r\n
+Accept-Charset: ISO-8859-1,utf-8;q=0.7\r\n
+Keep-Alive: 115\r\n
+Connection: keep-alive\r\n
+\r\n
+```
+
+- **Línea de petición**: método (`GET`, `POST`, `HEAD`), ruta y versión.
+- **Cabeceras**: `Host` (servidor destino), `User-Agent` (navegador), `Accept-*` (formatos e idiomas aceptados), `Connection: keep-alive` (conexión persistente).
+- Línea en blanco al final.
+
+### 2.2 Respuesta
+
+```text
+HTTP/1.1 200 OK\r\n
+Date: Sun, 26 Sep 2010 20:09:20 GMT\r\n
+Server: Apache/2.0.52 (CentOS)\r\n
+Last-Modified: Tue, 30 Oct 2007 17:00:02 GMT\r\n
+ETag: "17dc6-a5c-bf716880"\r\n
+Accept-Ranges: bytes\r\n
+Content-Length: 2652\r\n
+Keep-Alive: timeout=10, max=100\r\n
+Connection: Keep-Alive\r\n
+Content-Type: text/html; charset=ISO-8859-1\r\n
+\r\n
+data data data data data ...
+```
+
+| Parte | Contenido |
+|---|---|
+| Línea de estado | Versión, **código de estado** y frase (`200 OK`) |
+| Cabeceras | Fecha, servidor, `Last-Modified` (última modificación del objeto), `Content-Length` (bytes del cuerpo), `Content-Type`, `Keep-Alive` (`timeout=10, max=100`: la conexión se mantiene hasta 10 s y hasta 100 peticiones) |
+| Cuerpo | El objeto pedido (por ejemplo el HTML) |
+
+Otro caso del curso: el GET condicional (`If-Modified-Since`), que se practica en el lab de la Semana 1 y aparece en el parcial 2026-I.
+
+### 2.3 Qué lee el lab de Wireshark aquí
+
+Versión HTTP, `Accept-Language`, código de estado, `Last-Modified` y `Content-Length` se leen directamente de estas líneas (ver el laboratorio de la Semana 1).
+
+---
+
+## 3. Errores típicos
+
+- Olvidar que `Content-Length` cuenta solo el **cuerpo**, no las cabeceras.
+- Confundir `Last-Modified` (lo pone el servidor en la respuesta) con `If-Modified-Since` (lo pone el cliente en la petición).

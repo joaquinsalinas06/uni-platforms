@@ -1,0 +1,56 @@
+---
+kind: subtopic
+title: "Pila de protocolos de 5 capas, OSI y reloj de arena"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Las slides presentan la pila de Internet de cinco capas, la comparan con el modelo de referencia OSI de siete y muestran que Internet tiene forma de **reloj de arena** con IP en la cintura.
+
+---
+
+## 2. Conceptos
+
+### 2.1 Las cinco capas
+
+| Capa | Función | Ejemplos |
+|---|---|---|
+| Aplicación | Soportar aplicaciones de red | HTTP, IMAP, SMTP, DNS |
+| Transporte | Transferencia de datos proceso a proceso | TCP, UDP |
+| Red | Enrutar datagramas del origen al destino | IP, protocolos de enrutamiento |
+| Enlace | Transferir datos entre elementos de red vecinos | Ethernet, 802.11 (WiFi), PPP |
+| Física | Bits "en el cable" | — |
+
+### 2.2 OSI
+
+OSI (*Open Systems Interconnection*) es un estándar de **7 capas**: aplicación, presentación, sesión, transporte, red, enlace de datos y física. Frente a la pila de Internet, las capas de presentación y sesión no existen como capas separadas: sus funciones, si hacen falta, las implementa la aplicación.
+
+En la figura de la slide, los **hosts finales** implementan todas las capas; los **nodos dentro de la red** solo implementan hasta la capa de red.
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Internet (5 capas) frente a OSI (7 capas)', steps: [
+  { note: 'Los dos modelos comparten red, enlace y física abajo y transporte arriba; OSI divide la aplicación en tres.',
+    layers: [
+      { label: 'Aplicación  |  OSI: Aplicación, Presentación, Sesión' },
+      { label: 'Transporte  |  OSI: Transporte' },
+      { label: 'Red  |  OSI: Red' },
+      { label: 'Enlace  |  OSI: Enlace de datos' },
+      { label: 'Física  |  OSI: Física' } ] },
+]}} />
+
+### 2.3 Reloj de arena
+
+El grafo de protocolos de Internet es ancho arriba (FTP, HTTP, NV, TFTP), se angosta en el medio (TCP y UDP, y sobre todo **IP**) y se ensancha abajo (NET$_1$ … NET$_n$, redes de enlace distintas).
+
+- **IP es el punto focal**: todo lo de arriba corre sobre IP y IP corre sobre cualquier red de abajo.
+- Una aplicación puede usar TCP o UDP según necesite; HTTP usa TCP.
+
+La slide aclara que la capa "Network" de la vista alternativa (Application / TCP-UDP / IP / Subnetwork) también se llama "subred" o capa de enlace.
+
+---
+
+## 3. Errores típicos
+
+- Contar 7 capas para Internet: el curso usa 5.
+- Creer que los routers procesan transporte o aplicación: en la figura de OSI, los nodos intermedios llegan hasta red.

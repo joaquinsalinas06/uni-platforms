@@ -1,0 +1,61 @@
+---
+kind: subtopic
+title: "Segmento TCP, número de secuencia y ACK"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Qué lleva cada segmento y cómo se numeran los datos. Lo que la clase lista: **puertos, número de secuencia, número de acuse y checksum**.
+
+---
+
+## 2. Conceptos
+
+### Campos de la cabecera (figura de la slide)
+
+| Campo | Qué dice el material |
+|---|---|
+| Source / Dest port | Igual que en UDP: sirven para demultiplexar (en TCP, con la 4-tupla) |
+| Sequence number | Numera los datos; la figura de la slide divide un archivo en segmentos |
+| Acknowledgment number | Número de acuse |
+| Header length, Unused | En la figura |
+| CWR, ECE, URG, ACK, PSH, RST, SYN, FIN | Bits de la figura. Se ven en uso: SYN y ACK en el handshake, FIN y RST en el cierre |
+| Receive window | En la figura (ver [control de flujo](/topics/control-flujo-congestion-tcp/control-flujo-ventana-recepcion)) |
+| Internet checksum | Mismo cálculo que en UDP (suma en complemento a uno) |
+| Urgent data pointer, Options | En la figura; el material no los explica |
+
+### Números sobre bytes: el archivo de la slide
+
+Figura 3.30 de la slide: un archivo de 500 000 bytes (numerados de 0 a 499 999) se divide en segmentos. El primer segmento lleva los bytes 0 a 999 y el segundo los bytes 1000 a 1999. El número de secuencia identifica **bytes**, no segmentos.
+
+### Secuencia y ACK en una traza real
+
+Traza del parcial 2025-II, pregunta 6 (cliente 192.168.86.68:55639, servidor 128.119.245.12:80). Los números son relativos:
+
+| N.º | Evento | Seq | Ack | Datos |
+|---|---|---|---|---|
+| 1 | `[SYN]` | 0 | | 0 |
+| 2 | `[SYN, ACK]` | 0 | 1 | 0 |
+| 3 | `[ACK]` | 1 | 1 | 0 |
+| 4 | `POST` (1.er segmento de datos) | 1 | | 1448 B |
+| 7 | `[ACK]` del servidor | 1 | **1449** | 0 |
+| 8 | `[ACK]` del servidor | 1 | **2897** | 0 |
+| 13 | `[ACK]` del servidor | 1 | **4345** | 0 |
+
+Cada segmento de datos mide 1514 bytes en la trama y lleva 1448 bytes de datos (1514 − 66 de cabeceras *(derivado)*); el acuse siempre vale la suma de lo recibido más 1: $1 + 1448 = 1449$, $1449 + 1448 = 2897$, $2897 + 1448 = 4345$. El acuse apunta al **siguiente byte esperado** *(derivado)*. Un `[ACK]` puede confirmar varios segmentos (el 2.º ACK, 2897, cubre el 2.º segmento y el 1.º).
+
+---
+
+## 3. Ejemplo resuelto
+
+¿A qué segmento corresponde `Ack=5793`? $5793 = 1 + 4 \cdot 1448$: confirma 4 segmentos de 1448 bytes (el cuarto, trama 9, enviado en $t = 0{,}052774\text{ s}$; su ACK es la trama 16 en $t = 0{,}080768\text{ s}$).
+
+---
+
+## 4. Errores típicos
+
+- Confundir `Len` (datos) con la longitud de la trama (1514 = datos + cabeceras).
+- Esperar que el ACK repita el `Seq` del segmento: lleva el siguiente byte esperado.
+- Dar significado a CWR, ECE, URG, PSH y al puntero urgente: el material solo muestra los campos.

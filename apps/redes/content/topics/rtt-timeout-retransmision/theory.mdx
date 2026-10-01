@@ -1,0 +1,51 @@
+---
+kind: theory
+title: "Estimación de RTT, Timeout y Fast Retransmit en TCP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Alcance del material.** De este tema solo está en el curso: (1) el **RTT medido en una traza de Wireshark** y (2) la fórmula del **EstimatedRTT** (parcial 2025-II, pregunta 6). No hay desviación del RTT (DevRTT), fórmula de timeout de TCP ni retransmisión rápida. Lo único sobre temporizadores es el de rdt3.0.
+
+## 1. Idea y motivación
+
+Un emisor que espera un ACK necesita decidir cuánto esperar. En rdt3.0, un temporizador **menor que el RTT** provoca retransmisiones innecesarias (caso del timeout prematuro) y uno muy largo tarda en reparar pérdidas ([rdt3.0](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait)). Medir el RTT es el primer paso para ajustarlo.
+
+---
+
+## 2. Conceptos
+
+- **SampleRTT:** tiempo entre el envío de un segmento y la recepción de su ACK.
+- **EstimatedRTT:** promedio móvil de las muestras, con la fórmula del examen:
+
+$$\text{EstimatedRTT}_n = 0{,}875 \cdot \text{EstimatedRTT}_{n-1} + 0{,}125 \cdot \text{SampleRTT}_n$$
+
+Cada muestra nueva pesa 12,5 %; las anteriores van perdiendo peso de forma exponencial. El primer valor no está definido en el enunciado: se toma $\text{EstimatedRTT}_1 = \text{SampleRTT}_1$ *(convención adoptada)*.
+
+Cálculo completo y gráfica: [EWMA con la traza del parcial](/topics/rtt-timeout-retransmision/calculo-ewma-estimated-rtt-devrtt). Qué hay (y qué no) sobre retransmisión: [Retransmisión](/topics/rtt-timeout-retransmision/retransmision-rapida-tres-acks).
+
+---
+
+## 3. Método paso a paso
+
+1. Empareja cada segmento de datos con el ACK que lo confirma (el `Ack` es el `Seq` del segmento más su longitud).
+2. $\text{SampleRTT} = t_{\text{ACK}} - t_{\text{envío}}$.
+3. Aplica la fórmula en orden, usando el estimado anterior.
+4. Convierte unidades al final (las marcas de Wireshark están en segundos).
+
+---
+
+## 4. Ejemplo resuelto
+
+Primeros dos segmentos de datos de la traza (tramas 4 y 5, ACK en las tramas 7 y 8):
+
+$$\text{SampleRTT}_1 = 0{,}052671 - 0{,}024047 = 0{,}028624\text{ s} \qquad \text{SampleRTT}_2 = 0{,}052676 - 0{,}024048 = 0{,}028628\text{ s}$$
+
+$$\text{EstimatedRTT}_2 = 0{,}875 \cdot 0{,}028624 + 0{,}125 \cdot 0{,}028628 = \boxed{0{,}0286245\text{ s}}$$
+
+---
+
+## 5. Errores típicos
+
+- Emparejar un segmento con cualquier ACK: tiene que ser el que lo confirma (`Ack` = `Seq` + longitud).
+- Usar milisegundos y segundos mezclados.
+- Dar por sentadas fórmulas de DevRTT o de timeout de TCP: no están en el material.

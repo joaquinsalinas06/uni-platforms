@@ -1,0 +1,102 @@
+---
+kind: subtopic
+title: "Componentes del retardo nodal"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Los apuntes del curso definen dos retardos y los usan en la pregunta 1 de la hoja de ejercicios Ex 1:
+
+- **Retardo de transmisión** $d_{\text{trans}}$: tiempo necesario para poner todos los bits de un paquete en el enlace.
+- **Retardo de propagación** $d_{\text{prop}}$: tiempo que tarda un bit en viajar del emisor al receptor.
+
+El RTT agrega además el **encolamiento** en routers y switches y el **procesamiento**. Cuando el enunciado dice "ignore procesamiento y encolamiento" solo quedan $d_{\text{trans}}$ y $d_{\text{prop}}$.
+
+---
+
+## 2. Conceptos
+
+$$d_{\text{trans}} = \frac{L}{R} \qquad d_{\text{prop}} = \frac{m}{s} \qquad d_{\text{extremo a extremo}} = \frac{L}{R} + \frac{m}{s}$$
+
+con $L$ en bits, $R$ en bps, $m$ en metros y $s$ en m/s.
+
+### Dónde está el primer bit en $t = d_{\text{trans}}$
+
+Si A empieza a transmitir en $t = 0$, en $t = d_{\text{trans}}$ el **último bit** acaba de salir de A. El primer bit lleva viajando $d_{\text{trans}}$ segundos:
+
+| Caso | Posición del primer bit en $t = d_{\text{trans}}$ |
+|---|---|
+| $d_{\text{prop}} > d_{\text{trans}}$ | Aún en el enlace, a $s \cdot d_{\text{trans}}$ metros de A, sin llegar a B |
+| $d_{\text{prop}} < d_{\text{trans}}$ | Ya llegó a B; el paquete aún se está transmitiendo |
+| $d_{\text{prop}} = d_{\text{trans}}$ | Justo llegando a B, cuando A termina de transmitir |
+
+<Visualization viz={{ type: 'spacetime', title: 'Transmisión frente a propagación', static: true, steps: [
+  { note: 'Ejemplo del caso d_prop = d_trans (1,2 ms). La banda gruesa es L/R; la pendiente es la propagación. B recibe el último bit en 2,4 ms.',
+    columns: [{ id: 'a', label: 'Host A' }, { id: 'b', label: 'Host B' }],
+    time: { unit: 'ms', max: 2.6, ticks: [0, 0.6, 1.2, 1.8, 2.4] },
+    sends: [{ from: 'a', to: 'b', tStart: 0, tTrans: 1.2, tProp: 1.2, label: 'paquete L = 12 000 bits', kind: 'data', state: 'active' }],
+    spans: [
+      { column: 'a', tStart: 0, tEnd: 1.2, label: 'd_trans = 1,2 ms', kind: 'trans' },
+      { column: 'b', tStart: 0, tEnd: 1.2, label: 'd_prop = 1,2 ms', kind: 'prop' } ] },
+]}} />
+
+---
+
+## 3. Ejemplo resuelto (Ex 1, pregunta 1.7)
+
+$s = 2{,}5 \times 10^8$ m/s, $L = 1500$ bytes, $R = 10$ Mbps. ¿Qué distancia $m$ hace $d_{\text{prop}} = d_{\text{trans}}$?
+
+$$L = 1500 \times 8 = 12\,000\text{ bits} \qquad d_{\text{trans}} = \frac{12\,000}{10 \times 10^6} = 1{,}2\text{ ms}$$
+
+$$m = s \cdot d_{\text{trans}} = 2{,}5 \times 10^8 \cdot 1{,}2 \times 10^{-3} = \boxed{3 \times 10^5\text{ m} = 300\text{ km}}$$
+
+---
+
+## 4. Varios enlaces *(derivado)*
+
+Si el paquete cruza $n$ enlaces y cada router reenvía solo cuando recibió el paquete completo, cada enlace aporta $d_{\text{trans}} + d_{\text{prop}}$ y se suman. Con 3 enlaces iguales de $R = 10$ Mbps, $L = 12\,000$ bits y $d_{\text{prop}} = 0{,}4$ ms por enlace:
+
+$$3\left(1{,}2 + 0{,}4\right) = \boxed{4{,}8\text{ ms}}$$
+
+<Visualization viz={{ type: 'spacetime', title: 'Un paquete por 3 enlaces (derivado)', steps: [
+  { note: 'Primer enlace: A transmite 1,2 ms y el último bit llega al router R1 en 1,6 ms.',
+    columns: [{ id: 'a', label: 'A' }, { id: 'r1', label: 'Router 1' }, { id: 'r2', label: 'Router 2' }, { id: 'b', label: 'B' }],
+    time: { unit: 'ms', max: 5, ticks: [0, 1, 2, 3, 4, 5] },
+    sends: [{ from: 'a', to: 'r1', tStart: 0, tTrans: 1.2, tProp: 0.4, label: 'enlace 1', kind: 'data', state: 'active' }] },
+  { note: 'R1 espera el paquete completo (1,6 ms) y recién entonces lo transmite por el enlace 2.',
+    columns: [{ id: 'a', label: 'A' }, { id: 'r1', label: 'Router 1' }, { id: 'r2', label: 'Router 2' }, { id: 'b', label: 'B' }],
+    time: { unit: 'ms', max: 5, ticks: [0, 1, 2, 3, 4, 5] },
+    sends: [
+      { from: 'a', to: 'r1', tStart: 0, tTrans: 1.2, tProp: 0.4, label: 'enlace 1', kind: 'data', state: 'muted' },
+      { from: 'r1', to: 'r2', tStart: 1.6, tTrans: 1.2, tProp: 0.4, label: 'enlace 2', kind: 'data', state: 'active' }] },
+  { note: 'Mismo patrón en el enlace 3. Llegada total: 3 × (1,2 + 0,4) = 4,8 ms.',
+    columns: [{ id: 'a', label: 'A' }, { id: 'r1', label: 'Router 1' }, { id: 'r2', label: 'Router 2' }, { id: 'b', label: 'B' }],
+    time: { unit: 'ms', max: 5, ticks: [0, 1, 2, 3, 4, 5] },
+    sends: [
+      { from: 'a', to: 'r1', tStart: 0, tTrans: 1.2, tProp: 0.4, label: 'enlace 1', kind: 'data', state: 'muted' },
+      { from: 'r1', to: 'r2', tStart: 1.6, tTrans: 1.2, tProp: 0.4, label: 'enlace 2', kind: 'data', state: 'muted' },
+      { from: 'r2', to: 'b', tStart: 3.2, tTrans: 1.2, tProp: 0.4, label: 'enlace 3', kind: 'data', state: 'answer' }] },
+]}} />
+
+<Visualization viz={{ type: 'net-scene', static: true, title: 'Los mismos enlaces como cables', steps: [
+  { note: 'Cada cable lleva su tasa R y su retardo de propagación.',
+    devices: [
+      { id: 'a', kind: 'host', label: 'A', x: 8, y: 50 },
+      { id: 'r1', kind: 'router', label: 'Router 1', x: 36, y: 50 },
+      { id: 'r2', kind: 'router', label: 'Router 2', x: 64, y: 50 },
+      { id: 'b', kind: 'server', label: 'B', x: 92, y: 50 } ],
+    cables: [
+      { from: 'a', to: 'r1', rate: '10 Mbps', delay: '0,4 ms' },
+      { from: 'r1', to: 'r2', rate: '10 Mbps', delay: '0,4 ms' },
+      { from: 'r2', to: 'b', rate: '10 Mbps', delay: '0,4 ms' } ] },
+]}} />
+
+---
+
+## 5. Errores típicos
+
+- Usar $L$ en bytes con $R$ en bps (falta el factor 8).
+- Sumar solo $d_{\text{prop}}$ una vez en varios enlaces: cada enlace tiene su propio $d_{\text{prop}}$.
+- Creer que el primer bit espera a que termine la transmisión: sale de inmediato y viaja mientras el resto se transmite.

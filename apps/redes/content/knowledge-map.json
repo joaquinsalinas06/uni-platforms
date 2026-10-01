@@ -119,7 +119,8 @@
       "sourceSlides": [
         "Sem1_NetT-Introduction"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "spacetime",
       "status": "generated"
     },
     "arquitectura-capas-internet": {
@@ -143,7 +144,8 @@
       "sourceSlides": [
         "Sem1_NetT-Introduction"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "packet",
       "status": "generated"
     },
     "lab-wireshark-http-intro": {
@@ -167,7 +169,8 @@
         "Sem1_LAB0_Wireshark",
         "Sem01_LAB1_A_HTTP_Part1-1"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "sequence",
       "status": "generated"
     },
     "capa-aplicacion-http": {
@@ -191,7 +194,8 @@
       "sourceSlides": [
         "Sem2_NetT-AppLayer"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "spacetime",
       "status": "generated"
     },
     "web-caching-cookies": {
@@ -214,7 +218,8 @@
       "sourceSlides": [
         "Sem2_NetT-AppLayer"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "sequence",
       "status": "generated"
     },
     "lab-http-cookies-condicional": {
@@ -238,7 +243,8 @@
       "sourceSlides": [
         "Sem02_LAB1_A_HTTP_Part2-1"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "sequence",
       "status": "generated"
     },
     "dns-arquitectura-resolucion": {
@@ -262,7 +268,8 @@
       "sourceSlides": [
         "Sem3_NetT-DNS"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
       "status": "generated"
     },
     "registros-rr-seguridad-dns": {
@@ -285,7 +292,8 @@
       "sourceSlides": [
         "Sem3_NetT-DNS"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "packet",
       "status": "generated"
     },
     "lab-dns-wireshark-nslookup": {
@@ -310,7 +318,8 @@
         "Sem03_LAB1_B_DNS_Part2-2",
         "Sem03_Excercises1"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
       "status": "generated"
     },
     "arquitecturas-p2p-distribucion": {
@@ -333,7 +342,8 @@
       "sourceSlides": [
         "Sem4_NetT-P2P"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
       "status": "generated"
     },
     "bittorrent-dht": {
@@ -356,7 +366,8 @@
       "sourceSlides": [
         "Sem4_NetT-P2P"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
       "status": "generated"
     },
     "lab-sockets-udp-python": {
@@ -380,7 +391,8 @@
         "Sem04_LAB2_UDP_1-2",
         "Sem04_LAB2_UDP_2-1"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "sequence",
       "status": "generated"
     },
     "capa-transporte-multiplexacion": {
@@ -404,7 +416,8 @@
       "sourceSlides": [
         "Sem5_NetT-Transport"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
       "status": "generated"
     },
     "transferencia-confiable-rdt": {
@@ -428,7 +441,8 @@
       "sourceSlides": [
         "Sem5_NetT-Transport"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "flow",
       "status": "generated"
     },
     "protocolos-pipeline-gbn-sr": {
@@ -452,7 +466,8 @@
       "sourceSlides": [
         "Sem5_NetT-Transport"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "spacetime",
       "status": "generated"
     },
     "protocolo-udp": {
@@ -476,7 +491,8 @@
       "sourceSlides": [
         "Sem6_NetT-UDP"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "packet",
       "status": "generated"
     },
     "algoritmo-checksum-udp": {
@@ -499,7 +515,8 @@
       "sourceSlides": [
         "Sem6_NetT-UDP"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "packet",
       "status": "generated"
     },
     "lab-udp-rdt-simulacion": {
@@ -526,7 +543,8 @@
         "Sem06_LAB2_UDP_5-1",
         "Sem06_Excercises2-2"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "sequence",
       "status": "generated"
     },
     "protocolo-tcp-mecanismos": {
@@ -550,7 +568,8 @@
       "sourceSlides": [
         "Sem7_NetT-TCP"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "packet",
       "status": "generated"
     },
     "rtt-timeout-retransmision": {
@@ -574,7 +593,8 @@
         "Sem7_NetT-TCP",
         "Sem07_Excercises3-1"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
       "status": "generated"
     },
     "control-flujo-congestion-tcp": {
@@ -596,7 +616,8 @@
         "Sem7_NetT-TCP",
         "Sem07_Excercises3-1"
       ],
-      "hasVisualization": false,
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
       "status": "generated"
     }
   }

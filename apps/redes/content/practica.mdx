@@ -1,382 +1,412 @@
 ---
 title: "Ejemplos y Ejercicios de Laboratorio — Redes de Computadoras"
 ---
-
 import ExerciseBlock from '../src/components/ExerciseBlock';
+import Visualization from '../src/components/Visualization.astro';
 
-# Práctica y Banco de Ejercicios Resueltos — CS4054 Redes y Comunicaciones
+# Práctica — CS4054 Redes y Comunicaciones
 
-Ejercicios resueltos paso a paso organizados por semanas académicas, extraídos de las diapositivas de clase, laboratorios prácticos y evaluaciones parciales de UTEC. Cada problema incluye pistas progresivas y resolución cuantitativa completa.
+Ejercicios tomados de las hojas del curso (Ex 1, Ex 2, Ex 3), las slides y los parciales, con la solución paso a paso. Las magnitudes y los datos son los del enunciado original.
 
 ---
 
-## Semana 1 — Introducción, Conmutación y Arquitectura de Capas
+## Semana 1 — Introducción y retardos
 
-### Ejercicio 1.1: Descomposición de Retardo Nodal y Comparación Transmisión vs. Propagación
+### Ejercicio 1.1: Retardo de transmisión y de propagación (Ex 1, pregunta 1)
 
 <ExerciseBlock client:visible exercise={{
   level: 1,
-  statement: "Un host emisor transmite un paquete de datos de tamaño $L = 1500\\text{ bytes}$ a través de un enlace de fibra óptica de longitud $d = 2500\\text{ km}$ con una tasa de transmisión $R = 100\\text{ Mbps}$. La velocidad de propagación de la señal en la fibra es $s = 2 \\times 10^8\\text{ m/s}$. El retardo de procesamiento en el router de salida es $d_{\\text{proc}} = 5\\,\\mu\\text{s}$ y el retardo en cola es actualmente $d_{\\text{queue}} = 1.2\\text{ ms}$. Calcule el retardo de transmisión ($d_{\\text{trans}}$), el retardo de propagación ($d_{\\text{prop}}$) y el retardo nodal total ($d_{\\text{nodal}}$).",
+  statement: "Dos hosts A y B están conectados por un enlace de tasa $R$ bps y separados por $m$ metros; la velocidad de propagación es $s$ m/s. A envía un paquete de $L$ bits. (1) Exprese $d_{\\text{prop}}$. (2) Exprese $d_{\\text{trans}}$. (3) Ignorando procesamiento y encolamiento, el retardo extremo a extremo. (4) Si A empieza a transmitir en $t=0$, ¿dónde está el último bit en $t=d_{\\text{trans}}$? (5) Si $d_{\\text{prop}} > d_{\\text{trans}}$, ¿dónde está el primer bit en $t=d_{\\text{trans}}$? (6) ¿Y si $d_{\\text{prop}} < d_{\\text{trans}}$? (7) Con $s = 2{,}5\\times10^8$ m/s, $L = 1500$ bytes y $R = 10$ Mbps, halle $m$ tal que $d_{\\text{prop}} = d_{\\text{trans}}$.",
   hints: [
-    "Recuerde convertir el tamaño del paquete a bits: $1\\text{ byte} = 8\\text{ bits}$, y las distancias a metros: $1\\text{ km} = 1000\\text{ m}$.",
-    "El retardo de transmisión depende de $L/R$ y el de propagación de $d/s$. El retardo nodal total es la suma de los cuatro componentes.",
+    "$d_{\\text{trans}}$ depende del paquete y del enlace; $d_{\\text{prop}}$ de la distancia y del medio.",
+    "En $t = d_{\\text{trans}}$ el primer bit ya viajó $d_{\\text{trans}}$ segundos a velocidad $s$.",
+    "En el punto 7 convierta primero 1500 bytes a bits.",
   ],
 }}>
 
-**1. Conversión de unidades:**
-- $L = 1500 \times 8 = 12{,}000\text{ bits}$
-- $R = 100\text{ Mbps} = 100 \times 10^6\text{ bps}$
-- $d = 2500\text{ km} = 2.5 \times 10^6\text{ m}$
-- $s = 2 \times 10^8\text{ m/s}$
+**1-3. Fórmulas.** Propagación, transmisión y extremo a extremo:
 
-**2. Cálculo del retardo de transmisión ($d_{\text{trans}}$):**
-$$d_{\text{trans}} = \frac{L}{R} = \frac{12{,}000\text{ bits}}{100 \times 10^6\text{ bps}} = 0.00012\text{ s} = 120\,\mu\text{s} = 0.12\text{ ms}$$
+$$d_{\text{prop}} = \frac{m}{s} \qquad d_{\text{trans}} = \frac{L}{R} \qquad d = \frac{L}{R} + \frac{m}{s}$$
 
-**3. Cálculo del retardo de propagación ($d_{\text{prop}}$):**
-$$d_{\text{prop}} = \frac{d}{s} = \frac{2.5 \times 10^6\text{ m}}{2 \times 10^8\text{ m/s}} = 0.0125\text{ s} = 12.5\text{ ms}$$
+**4. Último bit.** En $t = d_{\text{trans}}$ el último bit acaba de salir de A: está al inicio del enlace.
 
-**4. Retardo nodal total:**
-$$d_{\text{nodal}} = d_{\text{proc}} + d_{\text{queue}} + d_{\text{trans}} + d_{\text{prop}}$$
-$$d_{\text{nodal}} = 0.005\text{ ms} + 1.200\text{ ms} + 0.120\text{ ms} + 12.500\text{ ms} = 13.825\text{ ms}$$
+**5. Primer bit si $d_{\text{prop}} > d_{\text{trans}}$.** Ya viajó $d_{\text{trans}}$ segundos: está en el enlace, a $s \cdot d_{\text{trans}}$ metros de A, sin haber llegado a B.
 
-*Conclusión*: En enlaces de larga distancia (WAN), el retardo de propagación domina sobre el retardo de transmisión ($12.5\text{ ms} \gg 0.12\text{ ms}$).
-</ExerciseBlock>
+**6. Primer bit si $d_{\text{prop}} < d_{\text{trans}}$.** Ya llegó a B (el paquete aún se está transmitiendo).
 
-### Ejercicio 1.2: Transmisión Store-and-Forward con Múltiples Conmutadores
+**7. Distancia de igualdad.** Con $L = 1500 \cdot 8 = 12\,000$ bits:
 
-<ExerciseBlock client:visible exercise={{
-  level: 2,
-  statement: "Un archivo de $4\\text{ MB}$ se divide en paquetes de tamaño $L = 10\\text{ KB}$ cada uno. El flujo de paquetes debe atravesar $Q = 3$ enlaces idénticos en serie, separados por $2$ routers intermedios de conmutación de paquetes (store-and-forward). Cada enlace tiene una tasa de transmisión $R = 20\\text{ Mbps}$ y una longitud de $1000\\text{ km}$ ($s = 2 \\times 10^8\\text{ m/s}$). Despreciando el procesamiento y el encolamiento, calcule el tiempo total requerido para que el archivo completo llegue al destino.",
-  hints: [
-    "Calcule primero el número total de paquetes $P = \\text{Tamaño total} / L$.",
-    "En una tubería store-and-forward, el primer paquete tarda $Q \\cdot d_{\\text{trans}}$ en cruzar todos los conmutadores. Cada uno de los $P-1$ paquetes restantes arriba con una separación de $d_{\\text{trans}}$.",
-    "El retardo de propagación total es $Q \\cdot d_{\\text{prop}}$ (la señal debe recorrer físicamente los 3 enlaces).",
-  ],
-}}>
+$$d_{\text{trans}} = \frac{12\,000}{10\times10^6} = 1{,}2\text{ ms} \qquad m = s \cdot d_{\text{trans}} = 2{,}5\times10^8 \cdot 1{,}2\times10^{-3} = \boxed{3\times10^5\text{ m} = 300\text{ km}}$$
 
-**1. Número de paquetes ($P$):**
-$$\text{Archivo} = 4\text{ MB} = 4000\text{ KB}$$
-$$P = \frac{4000\text{ KB}}{10\text{ KB}} = 400\text{ paquetes}$$
+<Visualization viz={{ type: 'spacetime', static: true, title: 'Caso del punto 7: d_prop = d_trans = 1,2 ms', steps: [{"note": "La banda gruesa es la transmisión (1,2 ms); la pendiente es la propagación (1,2 ms). El último bit llega a B en 2,4 ms.", "columns": [{"id": "a", "label": "Host A"}, {"id": "b", "label": "Host B"}], "time": {"unit": "ms", "max": 2.6, "ticks": [0, 0.6, 1.2, 1.8, 2.4]}, "sends": [{"from": "a", "to": "b", "tStart": 0, "tTrans": 1.2, "tProp": 1.2, "label": "paquete L = 12 000 bits", "kind": "data", "state": "active"}], "spans": [{"column": "a", "tStart": 0, "tEnd": 1.2, "label": "d_trans", "kind": "trans"}, {"column": "b", "tStart": 0, "tEnd": 1.2, "label": "d_prop", "kind": "prop"}]}] }} />
 
-**2. Tiempos elementales:**
-- $L = 10\text{ KB} = 80{,}000\text{ bits}$
-- $d_{\text{trans}} = \frac{L}{R} = \frac{80{,}000\text{ bits}}{20 \times 10^6\text{ bps}} = 0.004\text{ s} = 4\text{ ms}$
-- $d_{\text{prop}} = \frac{d}{s} = \frac{10^6\text{ m}}{2 \times 10^8\text{ m/s}} = 0.005\text{ s} = 5\text{ ms}$
-
-**3. Tiempo total en tubería de paquetes:**
-$$T_{\text{total}} = (Q + P - 1) \cdot d_{\text{trans}} + Q \cdot d_{\text{prop}}$$
-$$T_{\text{total}} = (3 + 400 - 1) \cdot 4\text{ ms} + 3 \cdot 5\text{ ms}$$
-$$T_{\text{total}} = 402 \times 4\text{ ms} + 15\text{ ms} = 1608\text{ ms} + 15\text{ ms} = 1623\text{ ms} = 1.623\text{ s}$$
+**Comprobación:** con 300 km, tanto la transmisión como la propagación toman 1,2 ms; para distancias mayores domina la propagación.
 </ExerciseBlock>
 
 ---
 
-## Semana 2 — Capa de Aplicación y Protocolo HTTP
+## Semana 2 — HTTP y web caching
 
-### Ejercicio 2.1: Comparación Cuantitativa de Versiones de HTTP
-
-<ExerciseBlock client:visible exercise={{
-  level: 2,
-  statement: "Un cliente web solicita una página HTML base de tamaño despreciable que referencia a 5 imágenes de $100\\text{ KB}$ cada una ($S_i = 800\\text{ Kbits}$). El RTT entre el cliente y el servidor web es $RTT = 60\\text{ ms}$ y la tasa del enlace es $R = 8\\text{ Mbps}$. Calcule el tiempo total hasta recibir completamente todas las imágenes bajo: a) HTTP No Persistente sin conexiones paralelas, b) HTTP Persistente sin pipelining, c) HTTP Persistente con pipelining.",
-  hints: [
-    "Tiempo de transmisión por imagen: $t_{\\text{trans}} = S_i / R$.",
-    "En HTTP no persistente, cada imagen requiere abrir una conexión TCP nueva ($1\\text{ RTT}$) y solicitar el objeto ($1\\text{ RTT}$), es decir $2\\text{ RTT} + t_{\\text{trans}}$ por imagen.",
-    "En HTTP persistente sin pipelining, la conexión ya está abierta, por lo que cada imagen adicional solo toma $1\\text{ RTT} + t_{\\text{trans}}$.",
-    "En HTTP persistente con pipelining, todos los requests se envían juntos en 1 RTT.",
-  ],
-}}>
-
-**1. Tiempo de transmisión de cada imagen ($t_{\text{trans}}$):**
-$$t_{\text{trans}} = \frac{800 \times 10^3\text{ bits}}{8 \times 10^6\text{ bps}} = 0.1\text{ s} = 100\text{ ms}$$
-Transmisión del HTML base: $t_{\text{base}} \approx 0\text{ ms}$.
-
-**2. Caso a: HTTP No Persistente (secuencial)**
-- HTML base: $2 \cdot RTT + t_{\text{base}} = 2 \times 60 = 120\text{ ms}$
-- Por cada una de las 5 imágenes: $2 \cdot RTT + t_{\text{trans}} = 2 \times 60 + 100 = 220\text{ ms}$
-$$T_a = 120\text{ ms} + 5 \times 220\text{ ms} = 120 + 1100 = 1220\text{ ms} = 1.22\text{ s}$$
-
-**3. Caso b: HTTP Persistente sin Pipelining**
-- Conexión TCP y descarga del HTML base: $2 \cdot RTT = 120\text{ ms}$
-- Por cada una de las 5 imágenes (reutilizando la conexión TCP): $RTT + t_{\text{trans}} = 60 + 100 = 160\text{ ms}$
-$$T_b = 120\text{ ms} + 5 \times 160\text{ ms} = 120 + 800 = 920\text{ ms} = 0.92\text{ s}$$
-
-**4. Caso c: HTTP Persistente con Pipelining**
-- Conexión TCP y descarga del HTML base: $2 \cdot RTT = 120\text{ ms}$
-- Petición conjunta de las 5 imágenes: $1 \cdot RTT$
-- Transmisión encadenada de las 5 imágenes: $5 \times t_{\text{trans}} = 5 \times 100 = 500\text{ ms}$
-$$T_c = 120\text{ ms} + 60\text{ ms} + 500\text{ ms} = 680\text{ ms} = 0.68\text{ s}$$
-</ExerciseBlock>
-
----
-
-## Semana 3 — Sistema de Nombres de Dominio (DNS)
-
-### Ejercicio 3.1: Latencia Acumulada de Resolución DNS y Descarga Web
+### Ejercicio 2.1: HTTP no persistente, paralelo y persistente (Ex 1, pregunta 3)
 
 <ExerciseBlock client:visible exercise={{
   level: 2,
-  statement: "*(Del Examen Parcial)* Un cliente accede por primera vez a un sitio web cuyo nombre de dominio no está en caché. Para resolver la IP, el cliente consulta tres servidores DNS de forma iterativa y secuencial ($RTT_1 = 60\\text{ ms}$ al Root, $RTT_2 = 80\\text{ ms}$ al TLD, $RTT_3 = 100\\text{ ms}$ al Autoritativo). Una vez obtenida la IP, contacta al servidor web ($RTT_s = 70\\text{ ms}$). El archivo principal es un video de tamaño $S = 8\\text{ MB}$ y el enlace cliente-servidor tiene una tasa $R = 4\\text{ Mbps}$. Calcule el tiempo total hasta recibir el video completo bajo HTTP/1.1 persistente.",
+  statement: "Un HTML base referencia $N$ objetos muy pequeños del mismo servidor; se desprecian los tiempos de transmisión. Con $S = \\sum \\text{RTT}_i = 120$ ms (resolución DNS), $\\text{RTT}_0 = 80$ ms y $N = 10$, calcule el tiempo desde el clic hasta el último objeto con: (1) HTTP no persistente sin conexiones paralelas, (2) no persistente con 6 conexiones paralelas, (3) persistente (cada objeto adicional cuesta 1 RTT$_0$), y diga cuál es el más eficiente.",
   hints: [
-    "Sume los RTTs de los tres servidores DNS para obtener la latencia de resolución $T_{\\text{DNS}}$.",
-    "Para el servidor web, se requiere 1 RTT para el handshake TCP y 1 RTT para la petición HTTP.",
-    "Calcule el tiempo de transmisión del video: $S/R$, convirtiendo $8\\text{ MB}$ a bits ($8 \\times 8 \\times 10^6 = 64\\text{ Mbits}$).",
+    "No persistente: cada objeto necesita handshake (1 RTT$_0$) más petición/respuesta (1 RTT$_0$).",
+    "El HTML base siempre va primero y solo después se piden los objetos.",
+    "Con $k$ conexiones paralelas, los $N$ objetos se bajan en $\\lceil N/k \\rceil$ rondas.",
   ],
 }}>
 
-**1. Tiempo de resolución DNS ($T_{\text{DNS}}$):**
-$$T_{\text{DNS}} = RTT_1 + RTT_2 + RTT_3 = 60\text{ ms} + 80\text{ ms} + 100\text{ ms} = 240\text{ ms} = 0.24\text{ s}$$
+*(El enunciado original habla de ocho objetos pero la parte numérica usa $N = 10$; se usa $N = 10$.)*
 
-**2. Handshake TCP y Request HTTP hacia el servidor web:**
-$$T_{\text{HTTP}} = 2 \cdot RTT_s = 2 \times 70\text{ ms} = 140\text{ ms} = 0.14\text{ s}$$
+**1. No persistente, sin paralelismo.** HTML base + $N$ objetos, cada uno con $2\,\text{RTT}_0$:
 
-**3. Tiempo de transmisión del archivo de video:**
-$$S = 8\text{ MB} = 8 \times 8 \times 10^6\text{ bits} = 64 \times 10^6\text{ bits}$$
-$$R = 4\text{ Mbps} = 4 \times 10^6\text{ bps}$$
-$$t_{\text{trans}} = \frac{S}{R} = \frac{64 \times 10^6\text{ bits}}{4 \times 10^6\text{ bps}} = 16.0\text{ s}$$
+$$T_1 = S + 2\,\text{RTT}_0(1 + N) = 120 + 160 \cdot 11 = \boxed{1880\text{ ms}}$$
 
-**4. Tiempo total:**
-$$T_{\text{total}} = T_{\text{DNS}} + T_{\text{HTTP}} + t_{\text{trans}} = 0.24\text{ s} + 0.14\text{ s} + 16.0\text{ s} = 16.38\text{ s}$$
+**2. No persistente, 6 paralelas.** HTML base y luego $\lceil 10/6 \rceil = 2$ rondas de $2\,\text{RTT}_0$:
 
-*Análisis*: La latencia total está absolutamente dominada por el tiempo de transmisión del archivo ($16.0\text{ s}$ de los $16.38\text{ s}$, más del $97\%$). La optimización principal consiste en aumentar el ancho de banda del enlace $R$ o emplear compresión de video adaptativa.
+$$T_2 = S + 2\,\text{RTT}_0 + 2 \cdot 2\,\text{RTT}_0 = 120 + 160 + 320 = \boxed{600\text{ ms}}$$
+
+**3. Persistente.** Un handshake, y cada objeto adicional 1 RTT$_0$:
+
+$$T_3 = S + 2\,\text{RTT}_0 + N\,\text{RTT}_0 = 120 + 160 + 800 = \boxed{1080\text{ ms}}$$
+
+**Comprobación:** el más eficiente aquí es el **no persistente con 6 conexiones paralelas** (600 ms). Con pipelining el persistente bajaría a $S + 3\,\text{RTT}_0 = 360$ ms (ver 2.2).
 </ExerciseBlock>
 
----
+### Ejercicio 2.2: Persistente con pipelining (Ex 3, pregunta 2)
 
-## Semana 4 — Arquitecturas P2P y Distribución de Archivos
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un HTML base referencia $N = 12$ objetos pequeños en el mismo servidor. Con $S = 120$ ms y $\\text{RTT}_0 = 80$ ms, calcule el tiempo total (ignore la transmisión) para: (a) no persistente sin paralelismo, (b) no persistente con 5 conexiones paralelas, (c) persistente con pipelining. ¿Cuál es el más eficiente?",
+  hints: [
+    "Pipelining: tras el HTML base, todos los objetos se piden en ráfaga y cuestan 1 RTT$_0$ en total.",
+    "Con 5 paralelas son $\\lceil 12/5 \\rceil = 3$ rondas.",
+  ],
+}}>
 
-### Ejercicio 4.1: Modelo Analítico de Tiempo de Distribución: Cliente-Servidor vs. P2P
+**a)** $T_a = S + 2\,\text{RTT}_0(1+N) = 120 + 160 \cdot 13 = \boxed{2200\text{ ms}}$
+
+**b)** $T_b = S + 2\,\text{RTT}_0 + \lceil 12/5 \rceil \cdot 2\,\text{RTT}_0 = 120 + 160 + 480 = \boxed{760\text{ ms}}$
+
+**c)** $T_c = S + 2\,\text{RTT}_0 + \text{RTT}_0 = 120 + 160 + 80 = \boxed{360\text{ ms}}$
+
+**Comprobación:** el más eficiente es el persistente con pipelining (360 ms).
+</ExerciseBlock>
+
+### Ejercicio 2.3: Caché institucional (Ex 3, pregunta 4)
 
 <ExerciseBlock client:visible exercise={{
   level: 3,
-  statement: "*(Del Examen Parcial)* Una universidad desea distribuir una imagen de disco virtual de $F = 20\\text{ GB}$ a un grupo de $N = 150$ estudiantes. El servidor institucional tiene una tasa de subida $u_s = 40\\text{ Mbps}$. Cada usuario tiene una tasa de descarga $d_i = 12\\text{ Mbps}$ y una tasa de subida $u_i = 3\\text{ Mbps}$. Asuma $1\\text{ GB} = 8000\\text{ Mb}$.\na) Calcule el tiempo mínimo de distribución bajo el modelo Cliente-Servidor ($D_{\\text{CS}}$).\nb) Identifique el cuello de botella en Cliente-Servidor.\nc) Calcule el tiempo mínimo de distribución bajo el modelo P2P ($D_{\\text{P2P}}$).\nd) Explique la autoescalabilidad si $N$ aumenta a $1000$ usuarios.",
+  statement: "Una red institucional se conecta a Internet por un enlace de acceso de $R = 15$ Mbps. El objeto medio mide $L = 10^6$ bits y las peticiones de los navegadores son $\\beta = 16$ por segundo. El tiempo desde que el router del lado de Internet reenvía una petición hasta recibir la respuesta es 3 s en promedio. Modele la respuesta como retardo de acceso más retardo de Internet, con retardo de acceso $\\Delta/(1-\\Delta\\beta)$ y $\\Delta = L/R$. (a) Halle el tiempo de respuesta medio. (b) Si se instala una caché en la LAN con miss rate $0{,}4$, halle el tiempo de respuesta.",
   hints: [
-    "Convierta el tamaño $F$ a Megabits: $20 \\times 8000 = 160{,}000\\text{ Mb}$.",
-    "Fórmula CS: $D_{\\text{CS}} \\ge \\max\\{N \\cdot F / u_s, \\; F / d_{\\min}\\}$.",
-    "Fórmula P2P: $D_{\\text{P2P}} \\ge \\max\\{F / u_s, \\; F / d_{\\min}, \\; N \\cdot F / (u_s + \\sum u_i)\\}$.",
+    "Calcule $\\Delta = L/R$ y luego $\\Delta\\beta$; la fórmula solo vale si $\\Delta\\beta < 1$.",
+    "Con caché solo los fallos usan el enlace de acceso: la tasa que llega es $0{,}4\\beta$.",
+    "Los aciertos se atienden en la LAN (retardo despreciable).",
   ],
 }}>
 
-**1. Conversión de tamaño del archivo:**
-$$F = 20\text{ GB} = 20 \times 8000\text{ Mb} = 160{,}000\text{ Mb}$$
+<Visualization viz={{ type: 'net-scene', static: true, title: 'Figura 3: caché en la red institucional', steps: [{"note": "Los aciertos (60 %) se atienden en la LAN; solo los fallos (40 %) cruzan el enlace de acceso de 15 Mbps.", "devices": [{"id": "b", "kind": "laptop", "label": "Navegadores", "x": 8, "y": 70}, {"id": "c", "kind": "server", "label": "Caché", "sub": "LAN", "x": 30, "y": 25}, {"id": "r", "kind": "router", "label": "Router institucional", "x": 42, "y": 70}, {"id": "i", "kind": "cloud", "label": "Internet", "x": 68, "y": 70}, {"id": "o", "kind": "server", "label": "Servidores de origen", "x": 92, "y": 70}], "cables": [{"from": "b", "to": "c", "rate": "LAN"}, {"from": "b", "to": "r", "rate": "LAN"}, {"from": "r", "to": "i", "rate": "15 Mbps", "state": "marked"}, {"from": "i", "to": "o"}], "zones": [{"label": "Red institucional", "devices": ["b", "c", "r"]}]}] }} />
 
-**2. Parte a: Modelo Cliente-Servidor ($D_{\text{CS}}$)**
-- Cota del servidor de subida:
-  $$\frac{N \cdot F}{u_s} = \frac{150 \times 160{,}000\text{ Mb}}{40\text{ Mbps}} = \frac{24{,}000{,}000}{40} = 600{,}000\text{ s} \approx 166.67\text{ horas} \approx 6.94\text{ días}$$
-- Cota de descarga del cliente más lento ($d_{\min} = 12\text{ Mbps}$):
-  $$\frac{F}{d_{\min}} = \frac{160{,}000\text{ Mb}}{12\text{ Mbps}} = 13{,}333.33\text{ s} \approx 3.70\text{ horas}$$
-$$D_{\text{CS}} = \max(600{,}000\text{ s}, 13{,}333.33\text{ s}) = 600{,}000\text{ s} \approx 166.7\text{ horas}$$
+**1. Tiempo por objeto en el enlace.**
 
-**3. Parte b: Cuello de botella en Cliente-Servidor**
-El cuello de botella absoluto es la capacidad de subida del servidor institucional ($u_s = 40\text{ Mbps}$), ya que debe replicar secuencialmente $150$ copias completas del archivo ($24\text{ Terabits}$).
+$$\Delta = \frac{L}{R} = \frac{10^6}{15\times10^6} = 0{,}0667\text{ s} \qquad \Delta\beta = 0{,}0667 \cdot 16 = 1{,}067$$
 
-**4. Parte c: Modelo P2P ($D_{\text{P2P}}$)**
-- Subida de al menos una copia por el servidor:
-  $$\frac{F}{u_s} = \frac{160{,}000}{40} = 4000\text{ s}$$
-- Descarga del cliente más lento:
-  $$\frac{F}{d_{\min}} = \frac{160{,}000}{12} = 13{,}333.33\text{ s}$$
-- Capacidad agregada de todo el enjambre:
-  $$\sum_{i=1}^{150} u_i = 150 \times 3\text{ Mbps} = 450\text{ Mbps}$$
-  $$u_s + \sum u_i = 40 + 450 = 490\text{ Mbps}$$
-  $$\frac{N \cdot F}{u_s + \sum u_i} = \frac{24{,}000{,}000\text{ Mb}}{490\text{ Mbps}} = 48{,}979.59\text{ s} \approx 13.61\text{ horas}$$
-$$D_{\text{P2P}} = \max(4000\text{ s}, \; 13{,}333.33\text{ s}, \; 48{,}979.59\text{ s}) = 48{,}979.59\text{ s} \approx 13.61\text{ horas}$$
-*¡El tiempo se reduce de 7 días a solo 13.6 horas!*
+**2. Sin caché.** Como $\Delta\beta > 1$ el enlace de acceso está saturado: llegan más bits por segundo de los que caben y la cola crece sin límite. La fórmula da un valor negativo, que no tiene sentido. **Con estos datos no hay respuesta finita** (con objetos de $850\,000$ bits, que parece ser el enunciado original, saldría $\Delta\beta = 0{,}907$ y $3{,}61$ s).
 
-**5. Parte d: Escalabilidad con $N = 1000$ usuarios**
-- En Cliente-Servidor: $D_{\text{CS}} = \frac{1000 \times 160{,}000}{40} = 4{,}000{,}000\text{ s} \approx 46.3\text{ días}$ (crecimiento lineal $O(N)$ insostenible).
-- En P2P:
-  $$u_s + N \cdot u = 40 + 1000 \times 3 = 3040\text{ Mbps}$$
-  $$\frac{N \cdot F}{u_s + N \cdot u} = \frac{160{,}000{,}000}{3040} = 52{,}631.58\text{ s} \approx 14.62\text{ horas}$$
-*Conclusión*: En P2P, al aumentar los clientes no solo aumenta la demanda sino también la capacidad de servicio, convergiendo a $F/u = 160{,}000/3 \approx 53{,}333\text{ s} \approx 14.8\text{ horas}$ asintóticamente $O(1)$.
+**3. Con caché.** Solo los fallos cruzan el enlace: $\beta' = 0{,}4 \cdot 16 = 6{,}4$ req/s.
+
+$$\Delta\beta' = 0{,}0667 \cdot 6{,}4 = 0{,}427 \qquad \frac{\Delta}{1 - \Delta\beta'} = \frac{0{,}0667}{0{,}573} = 0{,}116\text{ s}$$
+
+**4. Tiempo de respuesta.** Un fallo cuesta $0{,}116 + 3 = 3{,}116$ s; un acierto, casi 0 (*derivado*: se desprecia el retardo de la LAN).
+
+$$T = 0{,}4 \cdot 3{,}116 + 0{,}6 \cdot 0 = \boxed{\approx 1{,}25\text{ s}}$$
+
+**Comprobación:** la caché no solo reduce el tiempo; lo hace posible, al bajar la carga del enlace de $\Delta\beta = 1{,}07$ a $0{,}43$.
 </ExerciseBlock>
 
 ---
 
-## Semana 5 — Capa de Transporte, RDT y Protocolos Pipeline
+## Semana 3 — DNS
 
-### Ejercicio 5.1: Utilización de Canal en Stop-and-Wait vs. Tubería (Pipelining)
+### Ejercicio 3.1: Resolución DNS con y sin caché (Ex 1, pregunta 5)
 
 <ExerciseBlock client:visible exercise={{
-  level: 2,
-  statement: "Considere un enlace transcontinental con tasa de transmisión $R = 1\\text{ Gbps}$ y un $RTT = 30\\text{ ms}$. Se transmiten paquetes de tamaño $L = 1500\\text{ bytes}$ ($12{,}000\\text{ bits}$). Despreciando el tamaño de los ACKs:\na) Calcule la utilización del canal bajo un protocolo Stop-and-Wait (RDT 3.0).\nb) Determine el tamaño de ventana $N$ necesario bajo un protocolo en tubería (Go-Back-N o Selective Repeat) para lograr una utilización del $100\\%$ ($U = 1$).",
+  level: 1,
+  statement: "Un cliente quiere acceder a `www.example.com`; su DNS local no tiene la información en caché y debe consultar secuencialmente a la raíz, al TLD y al autoritativo. El RTT entre el cliente y su DNS local es 20 ms; los RTT de las tres consultas son 40, 30 y 50 ms. Ignore transmisión y procesamiento. (1) Tiempo total de resolución sin caché. (2) Si el DNS local ya conoce los servidores autoritativos de `example.com`, ¿cuál es el nuevo tiempo? (3) ¿Cuánto se ahorra? (4) Explique por qué la caché reduce el retardo aunque la jerarquía no haya cambiado.",
   hints: [
-    "Tiempo de transmisión del paquete: $t_{\\text{trans}} = L/R$.",
-    "Utilización Stop-and-Wait: $U = t_{\\text{trans}} / (RTT + t_{\\text{trans}})$.",
-    "Para $U = 1$, se requiere $N \\cdot t_{\\text{trans}} \\ge RTT + t_{\\text{trans}}$.",
+    "El RTT del cliente al DNS local se paga una sola vez.",
+    "Con los autoritativos en caché se suprimen las consultas a la raíz y al TLD.",
   ],
 }}>
 
-**1. Tiempo de transmisión ($t_{\text{trans}}$):**
-$$t_{\text{trans}} = \frac{12{,}000\text{ bits}}{10^9\text{ bps}} = 1.2 \times 10^{-5}\text{ s} = 12\,\mu\text{s} = 0.012\text{ ms}$$
+<Visualization viz={{ type: 'net-scene', static: true, title: 'RTT de cada tramo', steps: [{"note": "Cada cable lleva el RTT del tramo.", "devices": [{"id": "h", "kind": "laptop", "label": "Cliente", "x": 8, "y": 75}, {"id": "l", "kind": "dns", "label": "DNS local", "x": 36, "y": 75}, {"id": "r", "kind": "dns", "label": "Raíz", "x": 62, "y": 15}, {"id": "t", "kind": "dns", "label": "TLD .com", "x": 90, "y": 45}, {"id": "a", "kind": "dns", "label": "Autoritativo", "x": 88, "y": 85}], "cables": [{"from": "h", "to": "l", "delay": "RTT 20 ms"}, {"from": "l", "to": "r", "delay": "RTT 40 ms"}, {"from": "l", "to": "t", "delay": "RTT 30 ms"}, {"from": "l", "to": "a", "delay": "RTT 50 ms"}]}] }} />
 
-**2. Parte a: Utilización en Stop-and-Wait**
-$$U_{\text{Stop-and-Wait}} = \frac{0.012\text{ ms}}{30\text{ ms} + 0.012\text{ ms}} = \frac{0.012}{30.012} \approx 0.0003998 \approx 0.04\%$$
-Throughput efectivo:
-$$\text{Throughput} = U \cdot R = 0.0004 \times 1\text{ Gbps} = 400\text{ kbps}$$
-*¡El 99.96% del ancho de banda disponible se desperdicia debido a la latencia de ida y vuelta!*
+**1. Sin caché.**
 
-**3. Parte b: Tamaño de ventana $N$ para saturación ($U = 1$)**
-$$N \ge \frac{RTT + t_{\text{trans}}}{t_{\text{trans}}} = \frac{30.012\text{ ms}}{0.012\text{ ms}} = 2501\text{ paquetes}$$
-El emisor debe mantener en vuelo simultáneamente al menos $2501$ paquetes sin confirmar (un búfer de $2501 \times 1500\text{ B} \approx 3.75\text{ MB}$, correspondiente al producto retardo-ancho de banda $BDP = RTT \times R = 30\text{ ms} \times 1\text{ Gbps} = 30\text{ Mbits} = 3.75\text{ MB}$).
+$$T = 20 + 40 + 30 + 50 = \boxed{140\text{ ms}}$$
+
+**2. Autoritativos en caché.** Solo el tramo cliente-DNS local y la consulta al autoritativo:
+
+$$T' = 20 + 50 = \boxed{70\text{ ms}}$$
+
+**3. Ahorro.** $140 - 70 = \boxed{70\text{ ms}}$ (los RTT a la raíz y al TLD).
+
+**4.** El DNS local responde o consulta menos servidores a partir de lo que ya aprendió; se suprimen viajes de ida y vuelta aunque la jerarquía sea la misma.
 </ExerciseBlock>
 
-### Ejercicio 5.2: Restricción del Tamaño de Ventana en Selective Repeat
+### Ejercicio 3.2: Correo: DNS, TCP, SMTP y transmisión (Ex 1, pregunta 6)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Alice, desde el servidor de correo de `utec.edu.pe`, envía un correo a `bob@example.com`. El RTT entre el servidor de correo de UTEC y su resolver DNS es 20 ms; la resolución de `example.com` requiere tres consultas secuenciales con RTT de 40, 30 y 50 ms; el RTT al servidor de correo destino es 80 ms. Establecer la conexión TCP toma 1 RTT y el intercambio SMTP previo al mensaje, 3 RTT adicionales. El mensaje mide 2 MB y se transmite por un enlace de 20 Mbps. (1) ¿Qué tipo de registro DNS se necesita? (2) Tiempo de resolución. (3) Tiempo desde el inicio de TCP hasta que SMTP está listo. (4) Tiempo de transmisión del mensaje. (5) Tiempo total. (6) Tiempo total si la información de `example.com` ya está en caché del resolver. (7) Ahorro.",
+  hints: [
+    "Para saber a qué servidor de correo enviar se consulta el registro MX.",
+    "2 MB $= 16\\times10^6$ bits.",
+    "Con la información en caché desaparecen las tres consultas externas pero se mantiene el RTT al resolver.",
+  ],
+}}>
+
+**1.** Registro **MX** de `example.com`.
+
+**2. Resolución DNS.**
+
+$$T_{\text{DNS}} = 20 + 40 + 30 + 50 = \boxed{140\text{ ms}}$$
+
+**3. TCP + SMTP.** 1 RTT + 3 RTT con el servidor destino:
+
+$$4 \times 80 = \boxed{320\text{ ms}}$$
+
+**4. Transmisión.**
+
+$$d_{\text{trans}} = \frac{2 \times 8\times10^6\text{ bits}}{20\times10^6\text{ bps}} = \boxed{800\text{ ms}}$$
+
+**5. Total.** $140 + 320 + 800 = \boxed{1260\text{ ms}}$
+
+**6. Con caché.** Solo queda el RTT al resolver (20 ms): $20 + 320 + 800 = \boxed{1140\text{ ms}}$
+
+**7. Ahorro.** $1260 - 1140 = \boxed{120\text{ ms}}$ (las tres consultas externas).
+
+**Comprobación:** domina la transmisión del mensaje (800 de 1260 ms).
+</ExerciseBlock>
+
+### Ejercicio 3.3: Descarga de un video con DNS (Parcial 2025-II, pregunta 1)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un cliente accede por primera vez a un sitio cuyo dominio no está en caché y consulta tres servidores DNS secuencialmente ($\\text{RTT}_1 = 60$ ms, $\\text{RTT}_2 = 80$ ms, $\\text{RTT}_3 = 100$ ms) antes de contactar al servidor web ($\\text{RTT}_s = 70$ ms). El archivo es un video de $S = 8$ MB y el enlace tiene $R = 4$ Mbps. (a) Exprese el tiempo total hasta recibir el archivo. (b) Calcule el valor numérico. (c) ¿Qué parte domina la latencia y cómo optimizar?",
+  hints: [
+    "Después del DNS hay un handshake TCP (1 RTT$_s$) y la petición HTTP (1 RTT$_s$).",
+    "8 MB $= 64\\times10^6$ bits.",
+  ],
+}}>
+
+**a) Expresión.**
+
+$$T = \text{RTT}_1 + \text{RTT}_2 + \text{RTT}_3 + 2\,\text{RTT}_s + \frac{S}{R}$$
+
+**b) Valor.**
+
+$$\frac{S}{R} = \frac{64\times10^6}{4\times10^6} = 16\text{ s} \qquad T = 0{,}24 + 0{,}14 + 16 = \boxed{16{,}38\text{ s}}$$
+
+**c)** Domina la transmisión (16 s de 16,38 s). Se optimiza aumentando $R$; los RTT se reducen con caché DNS.
+</ExerciseBlock>
+
+### Ejercicio 3.4: Registros DNS (Ex 1, pregunta 4)
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "Se observan los registros del dominio `example.com`: MX 10 `mail1.example.com`; MX 20 `mail2.example.com`; NS `ns1.example.com`; NS `ns2.example.com`; A de `www.example.com` = 93.184.216.34; AAAA de `example.com` = 2606:2800:220:1:248:1893:25c8:1946. (1) Propósito de A, AAAA, MX y NS. (2) ¿Qué registro se necesita para acceder a `www.example.com` desde una red IPv4? (3) Un servidor de correo envía a `alice@example.com`: ¿qué registro consulta y cómo usa la respuesta? (4) ¿Qué papel juegan los NS si el servidor consultado no es autoritativo? (5) Si `mail1` no está disponible, ¿qué información permite elegir otro servidor?",
+  hints: ["MX lleva una preferencia: el menor valor se contacta primero."],
+}}>
+
+**1.** A: nombre a IPv4. AAAA: nombre a IPv6. MX: servidores de correo del dominio con su preferencia. NS: servidores autoritativos del dominio.
+
+**2.** El registro **A** de `www.example.com`: `93.184.216.34`.
+
+**3.** El **MX** de `example.com`: envía al de menor preferencia (`mail1`, 10), cuya IP obtiene con otra consulta.
+
+**4.** Indican a qué servidores autoritativos dirigir (o derivar) la consulta.
+
+**5.** La preferencia 20 de `mail2.example.com`: es el siguiente servidor a intentar.
+</ExerciseBlock>
+
+---
+
+## Semana 4 — Distribución de archivos: C/S frente a P2P
+
+### Ejercicio 4.1: Tabla de tiempos mínimos de distribución (Ex 2, pregunta 1)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Se distribuye un archivo de $F = 20$ Gbits a $N$ peers. El servidor sube a $u_s = 30$ Mbps y cada peer descarga a $d_i = 2$ Mbps y sube a $u$. Para $N = 10, 100, 1000$ y $u = 300$ kbps, $700$ kbps, $2$ Mbps, prepare una tabla del tiempo mínimo de distribución en cliente-servidor y en P2P.",
+  hints: [
+    "$D_{cs} = \\max(NF/u_s,\\ F/d_{\\min})$.",
+    "$D_{P2P} = \\max(F/u_s,\\ F/d_{\\min},\\ NF/(u_s + Nu))$.",
+    "Use $F = 20\\,000$ Mbits y las tasas en Mbps.",
+  ],
+}}>
+
+**1. Constantes.** $F/d_{\min} = 20\,000/2 = 10\,000$ s y $F/u_s = 20\,000/30 = 666{,}7$ s.
+
+**2. Cliente-servidor.** $D_{cs} = \max(N \cdot 666{,}7,\ 10\,000)$:
+
+| $N$ | $D_{cs}$ (s) |
+|---|---|
+| 10 | 10 000 |
+| 100 | 66 667 |
+| 1000 | 666 667 |
+
+**3. P2P.** $D_{P2P} = \max\left(666{,}7,\ 10\,000,\ \dfrac{N \cdot 20\,000}{30 + N u}\right)$ (s):
+
+| $N$ | $u = 300$ kbps | $u = 700$ kbps | $u = 2$ Mbps |
+|---|---|---|---|
+| 10 | 10 000 | 10 000 | 10 000 |
+| 100 | 33 333 | 20 000 | 10 000 |
+| 1000 | 60 606 | 27 397 | 10 000 |
+
+**Comprobación:** en C/S el tiempo crece linealmente con $N$; en P2P se estabiliza al tender a $F/u$ (por ejemplo $20\,000/0{,}3 = 66\,667$ s para $u = 300$ kbps), y cuando $u$ es grande lo limita la descarga $F/d_{\min}$.
+</ExerciseBlock>
+
+### Ejercicio 4.2: Esquema C/S de tiempo mínimo (Ex 2, pregunta 2)
 
 <ExerciseBlock client:visible exercise={{
   level: 3,
-  statement: "Un protocolo de transferencia confiable utiliza un campo de número de secuencia de $k = 4\\text{ bits}$ en su cabecera. Se implementa un esquema Selective Repeat (SR) simétrico donde $W_{\\text{sender}} = W_{\\text{receiver}} = W$.\na) ¿Cuál es el tamaño máximo de ventana $W_{\\text{max}}$ permitido para garantizar que no ocurra ambigüedad en la recepción de paquetes?\nb) Demuestre qué falla si se configura una ventana excesiva $W = 10$.",
-  hints: [
-    "Con $k = 4$ bits, el espacio de números de secuencia es $2^k = 16$ (valores $0$ al $15$).",
-    "La regla de oro de Selective Repeat exige $W_{\\text{sender}} + W_{\\text{receiver}} \\le 2^k$.",
-    "Analice el escenario donde se pierde una ráfaga entera de ACKs.",
-  ],
+  statement: "En un modelo de fluido, el servidor puede transmitir a varios peers a distintas tasas mientras la suma no supere $u_s$. (a) Si $u_s/N \\le d_{\\min}$, especifique un esquema con tiempo $NF/u_s$. (b) Si $u_s/N \\ge d_{\\min}$, uno con tiempo $F/d_{\\min}$. (c) Concluya que el mínimo general es $\\max(NF/u_s, F/d_{\\min})$.",
+  hints: ["Reparta la capacidad $u_s$ entre los $N$ peers.", "Un peer no puede recibir más rápido que $d_{\\min}$."],
 }}>
 
-**1. Parte a: Tamaño máximo de ventana**
-$$W_s + W_r \le 2^k \implies 2W \le 2^4 = 16 \implies W_{\text{max}} = 8$$
+**a)** El servidor envía a cada peer a tasa $u_s/N$ (≤ $d_{\min}$, por lo que los peers la soportan). Cada uno recibe $F$ bits en $F/(u_s/N) = NF/u_s$.
 
-**2. Parte b: Demostración de falla con $W = 10$ ($W > 2^{k-1}$)**
-Supongamos que el emisor transmite los primeros 10 paquetes:
-$$\text{Paquetes enviados: } 0, 1, 2, 3, 4, 5, 6, 7, 8, 9$$
-- El receptor recibe correctamente los 10 paquetes y su ventana avanza hacia los siguientes 10 números de secuencia esperados:
-  $$\text{Ventana del receptor: } [10, 11, 12, 13, 14, 15, 0, 1, 2, 3]$$
-- El receptor emite los acuses de recibo $ACK_0, ACK_1, \dots, ACK_9$.
-- **Suponga que todos los ACKs se pierden en la red.**
-- El emisor sufre un *timeout* para el paquete $0$ y lo retransmite:
-  $$\text{Paquete retransmitido: Seq } 0$$
-- **Ambigüedad catastrófica en el receptor**:
-  El receptor inspecciona su ventana actual $[10 \dots 15, \mathbf{0}, 1, 2, 3]$. ¡El número $0$ cae dentro de su ventana de recepción válida!
-  El receptor cree erróneamente que se trata de un **paquete nuevo** (el paquete número 16 de la sesión) y acepta datos viejos duplicados corrompiendo el archivo final.
+**b)** El servidor envía a cada peer a tasa $d_{\min}$; la suma $N d_{\min} \le u_s$ cabe en su capacidad. Cada peer termina en $F/d_{\min}$.
 
-Al mantener $W \le 2^{k-1} = 8$, los paquetes retransmitidos nunca coincidirán con la nueva ventana del receptor.
+**c)** Ningún esquema puede ser más rápido que ninguna de las dos cotas (el servidor debe enviar $NF$ bits y cada peer recibe a lo sumo a $d_{\min}$), de modo que el óptimo es el mayor de ambos:
+
+$$D_{cs} = \max\left(\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right)$$
 </ExerciseBlock>
 
 ---
 
-## Semana 6 — Protocolo UDP y Checksum de Internet
+## Semana 5 — Transporte
 
-### Ejercicio 6.1: Cálculo Manual de Checksum de Internet (RFC 1071)
-
-<ExerciseBlock client:visible exercise={{
-  level: 2,
-  statement: "Calcule el checksum de Internet de 16 bits para un datagrama UDP cuya carga útil consiste en los siguientes 6 bytes hexadecimales (representados en 3 palabras de 16 bits):\n- Palabra 1: `0x6665`\n- Palabra 2: `0x5555`\n- Palabra 3: `0x8F0C`\n\nMuestre la suma binaria, la resolución de acarreos circulares (*end-around carry*) y la inversión final. Demuestre cómo el receptor valida que no hubo errores.",
-  hints: [
-    "Sume las tres palabras de 16 bits en binario o hexadecimal.",
-    "Si la suma excede 16 bits (mayor que `0xFFFF`), sume el acarreo (*carry out*) al resultado de 16 bits inferiores.",
-    "El checksum es el complemento a 1 (invertir todos los bits 0 a 1 y 1 a 0).",
-  ],
-}}>
-
-**1. Suma de las dos primeras palabras:**
-```text
-    0110 0110 0110 0101   (0x6665)
-  + 0101 0101 0101 0101   (0x5555)
-  ---------------------
-    1011 1011 1011 1010   (0xBBBA)  (Sin acarreo)
-```
-
-**2. Suma de la tercera palabra:**
-```text
-    1011 1011 1011 1010   (0xBBBA)
-  + 1000 1111 0000 1100   (0x8F0C)
-  ---------------------
-  1 0100 1010 1100 0110   (0x14AC6) -> ¡Se produce acarreo de 1 bit!
-```
-
-**3. Acarreo circular (End-around carry):**
-Tomamos el bit de acarreo `1` y lo sumamos a los 16 bits menos significativos:
-```text
-    0100 1010 1100 0110   (0x4AC6)
-  +                   1   (Acarreo)
-  ---------------------
-    0100 1010 1100 0111   (0x4AC7)
-```
-
-**4. Complemento a 1 (Inversión bit a bit):**
-$$\sim (0100\ 1010\ 1100\ 0111) = 1011\ 0101\ 0011\ 1000 = \text{0xB538}$$
-$$\text{Checksum emitido} = \text{0xB538}$$
-
-**5. Verificación en el receptor:**
-El receptor suma las 3 palabras originales más el checksum recibido:
-$$\text{0x4AC7} + \text{0xB538} = \text{0xFFFF} = 1111\ 1111\ 1111\ 1111_2$$
-Al aplicar la inversión:
-$$\sim \text{0xFFFF} = \text{0x0000}$$
-El receptor confirma unívocamente que los datos se recibieron sin errores de transmisión.
-</ExerciseBlock>
-
----
-
-## Semana 7 — Protocolo TCP: RTT, Temporizadores y Congestión
-
-### Ejercicio 7.1: Cálculo de EWMA para Estimación de RTT y Timeout en TCP
-
-<ExerciseBlock client:visible exercise={{
-  level: 2,
-  statement: "*(Del Examen Parcial)* Llene los valores de la tabla de estimación de RTT de TCP para 4 segmentos consecutivos utilizando los parámetros estándar del RFC 6298: $\\alpha = 0.125$, $\\beta = 0.25$.\nValores iniciales: $\\text{EstimatedRTT}_0 = 100\\text{ ms}$, $\\text{DevRTT}_0 = 5\\text{ ms}$.\nLos valores medidos de $\\text{SampleRTT}$ para los siguientes segmentos son:\n- Segmento 1: $\\text{SampleRTT}_1 = 106\\text{ ms}$\n- Segmento 2: $\\text{SampleRTT}_2 = 120\\text{ ms}$\n- Segmento 3: $\\text{SampleRTT}_3 = 140\\text{ ms}$",
-  hints: [
-    "Fórmula 1: $\\text{EstimatedRTT}_k = 0.875 \\cdot \\text{EstimatedRTT}_{k-1} + 0.125 \\cdot \\text{SampleRTT}_k$.",
-    "Fórmula 2: $\\text{DevRTT}_k = 0.75 \\cdot \\text{DevRTT}_{k-1} + 0.25 \\cdot |\\text{SampleRTT}_k - \\text{EstimatedRTT}_k|$.",
-    "Fórmula 3: $\\text{TimeoutInterval}_k = \\text{EstimatedRTT}_k + 4 \\cdot \\text{DevRTT}_k$.",
-  ],
-}}>
-
-**Paso 1: Segmento 1 ($\text{SampleRTT}_1 = 106\text{ ms}$)**
-- $\text{EstimatedRTT}_1 = 0.875(100) + 0.125(106) = 87.5 + 13.25 = 100.75\text{ ms}$
-- Diferencia: $|106 - 100.75| = 5.25\text{ ms}$
-- $\text{DevRTT}_1 = 0.75(5) + 0.25(5.25) = 3.75 + 1.3125 = 5.0625\text{ ms}$
-- $\text{TimeoutInterval}_1 = 100.75 + 4(5.0625) = 100.75 + 20.25 = 121.0\text{ ms}$
-
-**Paso 2: Segmento 2 ($\text{SampleRTT}_2 = 120\text{ ms}$)**
-- $\text{EstimatedRTT}_2 = 0.875(100.75) + 0.125(120) = 88.156 + 15.0 = 103.156\text{ ms}$
-- Diferencia: $|120 - 103.156| = 16.844\text{ ms}$
-- $\text{DevRTT}_2 = 0.75(5.0625) + 0.25(16.844) = 3.797 + 4.211 = 8.008\text{ ms}$
-- $\text{TimeoutInterval}_2 = 103.156 + 4(8.008) = 103.156 + 32.032 = 135.188\text{ ms}$
-
-**Paso 3: Segmento 3 ($\text{SampleRTT}_3 = 140\text{ ms}$)**
-- $\text{EstimatedRTT}_3 = 0.875(103.156) + 0.125(140) = 90.262 + 17.5 = 107.762\text{ ms}$
-- Diferencia: $|140 - 107.762| = 32.238\text{ ms}$
-- $\text{DevRTT}_3 = 0.75(8.008) + 0.25(32.238) = 6.006 + 8.060 = 14.066\text{ ms}$
-- $\text{TimeoutInterval}_3 = 107.762 + 4(14.066) = 107.762 + 56.264 = 164.026\text{ ms}$
-
-| Muestra | $\text{SampleRTT}$ | $\text{EstimatedRTT}$ | $\text{DevRTT}$ | $\text{TimeoutInterval}$ |
-| :---: | :---: | :---: | :---: | :---: |
-| Inicial | — | $100.00\text{ ms}$ | $5.00\text{ ms}$ | $120.00\text{ ms}$ |
-| Seg 1 | $106\text{ ms}$ | $100.75\text{ ms}$ | $5.06\text{ ms}$ | $121.00\text{ ms}$ |
-| Seg 2 | $120\text{ ms}$ | $103.16\text{ ms}$ | $8.01\text{ ms}$ | $135.19\text{ ms}$ |
-| Seg 3 | $140\text{ ms}$ | $107.76\text{ ms}$ | $14.07\text{ ms}$ | $164.03\text{ ms}$ |
-</ExerciseBlock>
-
-### Ejercicio 7.2: Dinámica de Congestión en TCP Tahoe vs. Reno
+### Ejercicio 5.1: Interbloqueo en rdt 2.1 (Ex 3, pregunta 1)
 
 <ExerciseBlock client:visible exercise={{
   level: 3,
-  statement: "Una conexión TCP tiene un umbral de inicio lento inicial $\\text{ssthresh} = 16\\text{ MSS}$ y parte con $\\text{cwnd} = 1\\text{ MSS}$. Asuma que no ocurren errores hasta la ronda de transmisión número 6 (RTT 6), donde $\\text{cwnd} = 32\\text{ MSS}$. En ese momento se detecta un evento de pérdida:\na) Caso 1: La pérdida es detectada por la llegada de 3 ACKs duplicados.\nb) Caso 2: La pérdida es detectada por expiración del temporizador (Timeout).\nDetermine para cada caso el nuevo valor de $\\text{ssthresh}$ y el valor de $\\text{cwnd}$ en los siguientes 2 RTTs bajo TCP Tahoe y bajo TCP Reno.",
+  statement: "Con el receptor (Figura 1) y el emisor (Figura 2) de rdt 2.1, muestre un escenario en el que ambos quedan esperando un evento que nunca ocurrirá.",
   hints: [
-    "En ambos algoritmos, ante pérdida se actualiza $\\text{ssthresh} = \\text{cwnd} / 2 = 32 / 2 = 16\\text{ MSS}$.",
-    "TCP Tahoe siempre reinicia a $\\text{cwnd} = 1\\text{ MSS}$ en Slow Start ante cualquier tipo de pérdida.",
-    "TCP Reno ante 3 ACKs duplicados entra a Fast Recovery estableciendo $\\text{cwnd} = \\text{ssthresh} + 3\\text{ MSS}$, y al confirmar la retransmisión pasa a Congestion Avoidance con $\\text{cwnd} = \\text{ssthresh}$.",
+    "Mire qué hace el receptor cuando recibe un paquete duplicado (número de secuencia que ya entregó).",
+    "El emisor retransmite si el ACK o NAK llega corrupto.",
   ],
 }}>
 
-**1. Caso 1: Pérdida detectada por 3 ACKs duplicados ($\text{cwnd}_{\text{pérdida}} = 32$)**
-- Nuevo umbral: $\text{ssthresh} = 32 / 2 = 16\text{ MSS}$.
+<Visualization viz={{ type: 'flow', mode: 'fsm', title: 'Figura 1: receptor rdt 2.1', static: true, steps: [{"note": "El receptor responde NAK a todo paquete corrupto o con el número de secuencia equivocado, incluidos los duplicados.", "shapes": [{"id": "w0", "kind": "state", "label": "Esperar 0 de abajo", "initial": true}, {"id": "w1", "kind": "state", "label": "Esperar 1 de abajo"}], "arrows": [{"from": "w0", "to": "w1", "label": "recibe ok, seq 0\n/ entregar datos, enviar ACK"}, {"from": "w1", "to": "w0", "label": "recibe ok, seq 1\n/ entregar datos, enviar ACK"}, {"from": "w0", "to": "w0", "label": "corrupto o seq 1\n/ enviar NAK"}, {"from": "w1", "to": "w1", "label": "corrupto o seq 0\n/ enviar NAK"}]}] }} />
 
-- **Bajo TCP Tahoe**:
-  - Inmediatamente: $\text{cwnd} = 1\text{ MSS}$ (Slow Start).
-  - RTT siguiente (RTT 7): $\text{cwnd} = 2\text{ MSS}$ (crecimiento exponencial).
-  - RTT subsiguiente (RTT 8): $\text{cwnd} = 4\text{ MSS}$.
+<Visualization viz={{ type: 'flow', mode: 'fsm', title: 'Figura 2: emisor rdt 2.1', static: true, steps: [{"note": "El emisor solo avanza al recibir un ACK correcto; ante un ACK/NAK corrupto o un NAK, retransmite.", "shapes": [{"id": "s0", "kind": "state", "label": "Esperar llamada 0", "initial": true}, {"id": "a0", "kind": "state", "label": "Esperar ACK/NAK 0"}, {"id": "s1", "kind": "state", "label": "Esperar llamada 1"}, {"id": "a1", "kind": "state", "label": "Esperar ACK/NAK 1"}], "arrows": [{"from": "s0", "to": "a0", "label": "rdt_send\n/ enviar paquete 0"}, {"from": "a0", "to": "a0", "label": "corrupto o NAK\n/ reenviar paquete 0"}, {"from": "a0", "to": "s1", "label": "ACK correcto"}, {"from": "s1", "to": "a1", "label": "rdt_send\n/ enviar paquete 1"}, {"from": "a1", "to": "a1", "label": "corrupto o NAK\n/ reenviar paquete 1"}, {"from": "a1", "to": "s0", "label": "ACK correcto"}]}] }} />
 
-- **Bajo TCP Reno (Fast Retransmit & Fast Recovery)**:
-  - Inmediatamente: $\text{cwnd} = \text{ssthresh} + 3 = 19\text{ MSS}$.
-  - Tras confirmarse el paquete retransmitido, entra a Congestion Avoidance: $\text{cwnd} = \text{ssthresh} = 16\text{ MSS}$.
-  - RTT siguiente (RTT 7): $\text{cwnd} = 17\text{ MSS}$ (crecimiento lineal $+1$).
-  - RTT subsiguiente (RTT 8): $\text{cwnd} = 18\text{ MSS}$ (crecimiento lineal $+1$).
+**1. Entrega correcta.** El emisor envía el paquete 0; el receptor lo entrega y responde ACK, pasando a "Esperar 1".
 
-**2. Caso 2: Pérdida detectada por Timeout ($\text{cwnd}_{\text{pérdida}} = 32$)**
-- Nuevo umbral: $\text{ssthresh} = 32 / 2 = 16\text{ MSS}$.
-- El timeout indica congestión severa en la red.
-- **Tanto TCP Tahoe como TCP Reno reaccionan de manera idéntica**:
-  - Inmediatamente: $\text{cwnd} = 1\text{ MSS}$ (Regreso forzado a Slow Start).
-  - RTT siguiente (RTT 7): $\text{cwnd} = 2\text{ MSS}$.
-  - RTT subsiguiente (RTT 8): $\text{cwnd} = 4\text{ MSS}$.
-  - Continuará duplicando en cada RTT ($8 \to 16$) hasta alcanzar el nuevo $\text{ssthresh} = 16$, momento en el cual transicionará a crecimiento lineal (Congestion Avoidance).
+**2. Falla.** El ACK llega **corrupto** al emisor.
+
+**3. Retransmisión.** Por su FSM, el emisor reenvía el paquete 0 (ante un ACK/NAK corrupto).
+
+**4. Duplicado.** El receptor, en "Esperar 1", recibe un paquete con secuencia 0: la figura solo prevé responder **NAK** (no hay transición que reenvíe el ACK de un duplicado).
+
+**5. Bloqueo.** El emisor, con cada NAK, retransmite el paquete 0, y el receptor responde NAK de nuevo. El receptor espera el paquete 1, que el emisor nunca enviará porque espera un ACK del paquete 0 que el receptor no producirá.
+
+**Comprobación:** la corrección es que el receptor, ante un duplicado no corrupto, responda ACK (rdt 2.1 completo).
+</ExerciseBlock>
+
+### Ejercicio 5.2: Demultiplexación (Ex 3, pregunta 5a)
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "En la Figura 4, el servidor web B atiende al host A (puerto de origen 26145, destino 80) y al host C, que tiene dos conexiones simultáneas (puertos de origen 7532 y 26145, destino 80). Para los segmentos que van del servidor a los clientes, indique puertos e IP de origen y destino de cada conexión.",
+  hints: ["En la respuesta se intercambian origen y destino del segmento del cliente."],
+}}>
+
+<Visualization viz={{ type: 'net-scene', static: true, title: 'Figura 4: tres conexiones al puerto 80', steps: [{"note": "Los puertos de origen de los clientes (efímeros) distinguen las conexiones; C usa 26145 igual que A, pero con distinta IP.", "devices": [{"id": "a", "kind": "laptop", "label": "Host A", "x": 10, "y": 25}, {"id": "c", "kind": "laptop", "label": "Host C", "x": 10, "y": 75}, {"id": "b", "kind": "server", "label": "Servidor B", "sub": "puerto 80", "x": 85, "y": 50}], "packets": [{"from": "a", "to": "b", "label": "26145 → 80", "order": 1}, {"from": "c", "to": "b", "label": "7532 → 80", "order": 2}, {"from": "c", "to": "b", "label": "26145 → 80", "order": 3}]}] }} />
+
+| Destino | Puerto origen | Puerto destino | IP origen | IP destino |
+|---|---|---|---|---|
+| Host A | 80 | 26145 | B | A |
+| Host C (proceso izquierdo) | 80 | 7532 | B | C |
+| Host C (proceso derecho) | 80 | 26145 | B | C |
+
+**Comprobación:** cada tupla (IP, puerto) de origen del cliente es distinta, aunque dos conexiones usen el puerto 26145.
+</ExerciseBlock>
+
+---
+
+## Semana 6 — UDP y checksum
+
+### Ejercicio 6.1: Checksum de 8 bits (Ex 2, pregunta 4)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "UDP y TCP usan el complemento a uno para el checksum. Dados los bytes $01010011$, $01100110$ y $01110100$, ¿cuál es el complemento a uno de su suma (con sumas de 8 bits)? Muestre el procedimiento. ¿Por qué UDP toma el complemento de la suma? ¿Cómo detecta errores el receptor? ¿Puede quedar sin detectar un error de 1 bit? ¿Y de 2 bits?",
+  hints: [
+    "Si hay acarreo fuera del bit más significativo, se suma al resultado (*wrap-around*).",
+    "El receptor suma todas las palabras más el checksum.",
+  ],
+}}>
+
+**1. Primera suma.**
+
+$$01010011 + 01100110 = 10111001$$
+
+**2. Segunda suma.**
+
+$$10111001 + 01110100 = 1\,00101101$$
+
+Hay acarreo (el noveno bit).
+
+**3. Wrap-around.**
+
+$$00101101 + 1 = 00101110$$
+
+**4. Complemento a uno.**
+
+$$\overline{00101110} = \boxed{11010001}$$
+
+**5. Verificación.** Suma de los tres bytes y el checksum: $00101110 + 11010001 = 11111111$ (todos unos).
+
+**6. Preguntas conceptuales.**
+- Se toma el complemento para que el receptor, al sumar datos y checksum, obtenga **todos unos** si no hubo errores; cualquier otro resultado indica error.
+- Un error de **1 bit** siempre se detecta (cambia la suma).
+- Un error de **2 bits** puede no detectarse: si un bit pasa de 0 a 1 en una palabra y otro, en la misma posición de otra palabra, pasa de 1 a 0, la suma no cambia (la slide lo muestra como "weak protection").
+</ExerciseBlock>
+
+---
+
+## Semana 7 — TCP
+
+### Ejercicio 7.1: Stop-and-wait frente a pipelining (slides)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Dos sistemas terminales están conectados por un canal de $R = 1$ Gbps con $\\text{RTT} \\approx 30$ ms; los paquetes son de $L = 1000$ bytes ($8000$ bits). (a) Tiempo para transmitir un paquete al enlace. (b) En stop-and-wait, ¿en qué instante se puede enviar el siguiente paquete? (c) ¿Qué fracción del tiempo está ocupado el emisor? (d) ¿Y si se envían 3 paquetes seguidos antes de esperar el ACK (pipelining)?",
+  hints: [
+    "En stop-and-wait el siguiente paquete sale en $t = \\text{RTT} + L/R$.",
+    "Fracción ocupada = tiempo de transmisión / ciclo completo.",
+  ],
+}}>
+
+**1. Transmisión.**
+
+$$d_{\text{trans}} = \frac{L}{R} = \frac{8000}{10^9} = \boxed{8\ \mu\text{s} = 0{,}008\text{ ms}}$$
+
+**2. Stop-and-wait.** El ACK llega y se envía el siguiente paquete en $t = \text{RTT} + L/R = 30{,}008$ ms.
+
+<Visualization viz={{ type: 'spacetime', static: true, title: 'Stop-and-wait con un paquete', steps: [{"note": "L/R = 0,008 ms de transmisión; RTT = 30 ms. El emisor está ocupado 0,008 de cada 30,008 ms.", "columns": [{"id": "e", "label": "Emisor"}, {"id": "r", "label": "Receptor"}], "time": {"unit": "ms", "max": 32, "ticks": [0, 15, 30]}, "sends": [{"from": "e", "to": "r", "tStart": 0, "tTrans": 0.008, "tProp": 15, "label": "paquete", "kind": "data", "state": "active"}, {"from": "r", "to": "e", "tStart": 15.008, "tTrans": 0, "tProp": 15, "label": "ACK", "kind": "ack"}], "spans": [{"column": "e", "tStart": 0, "tEnd": 30.008, "label": "RTT + L/R", "kind": "rtt"}]}] }} />
+
+**3. Ocupación del emisor *(derivado de la figura)*.**
+
+$$U = \frac{L/R}{\text{RTT} + L/R} = \frac{0{,}008}{30{,}008} = \boxed{0{,}027\,\%}$$
+
+**4. Pipelining con 3 paquetes.** Se envían 3 paquetes en el mismo ciclo, así que el emisor trabaja $3 \cdot 0{,}008$ ms de cada $30{,}024$ ms: la utilización se triplica, $\approx 0{,}08\,\%$.
+
+**Comprobación:** el protocolo limita lo que la red ofrece: un enlace de 1 Gbps queda casi ocioso con stop-and-wait; por eso se usan protocolos con ventana (Go-Back-N y selective repeat).
 </ExerciseBlock>

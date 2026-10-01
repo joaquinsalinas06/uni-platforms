@@ -1,13 +1,8 @@
-# Plantilla de Curso - uni-platforms
+# Redes y Comunicaciones (CS4054, UTEC)
 
-Esta plantilla te permite instanciar un curso completo en segundos.
+Plataforma de estudio del curso. Ver `CLAUDE.md` para estructura y reglas.
 
-## Para crear un curso nuevo (ej. Big Data):
 ```bash
-cp -R apps/template apps/big-data
-```
-Cambia el `"name": "big-data-platform"` en `apps/big-data/package.json` y ejecuta:
-```bash
-pnpm install
-pnpm --filter big-data-platform dev
+pnpm --filter redes-platform dev
+pnpm --filter redes-platform build
 ```

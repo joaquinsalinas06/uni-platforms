@@ -1,0 +1,177 @@
+---
+title: "Examen Parcial 2026-I"
+category: "parciales"
+categoryLabel: "Exámenes Parciales"
+order: 2
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Instrucciones
+
+- **Curso**: CS4054 Redes y Comunicaciones. **Fecha**: 4 de junio de 2026. Individual; se califica el procedimiento y las unidades.
+- Las preguntas 2 y 3 corresponden a temas de las semanas 4 y 5 (RDT y P2P); se resuelven aquí con las fórmulas de los ejercicios del curso.
+
+---
+
+## Pregunta 1: Protocolos de aplicación y HTTP (2 puntos)
+
+Una página HTML con **3 imágenes pequeñas**. El nombre de dominio no está en caché y se consultan **dos servidores DNS de forma iterativa** ($\text{RTT}_1$, $\text{RTT}_2$); luego se accede al servidor web ($\text{RTT}_s$). El HTML base tiene tamaño despreciable; cada imagen tiene $S$ bits; la tasa del enlace es $R$ bps.
+
+### a) Caso A, HTTP no persistente (conexiones TCP secuenciales) (1 pt)
+
+- DNS: $\text{RTT}_1 + \text{RTT}_2$.
+- HTML base: handshake ($\text{RTT}_s$) + GET ($\text{RTT}_s$) = $2\,\text{RTT}_s$.
+- Cada imagen, con conexión nueva: $2\,\text{RTT}_s + S/R$.
+
+$$T_A = (\text{RTT}_1 + \text{RTT}_2) + 2\,\text{RTT}_s + 3\left(2\,\text{RTT}_s + \frac{S}{R}\right) = \boxed{\text{RTT}_1 + \text{RTT}_2 + 8\,\text{RTT}_s + \frac{3S}{R}}$$
+
+### b) Caso B, HTTP persistente sin pipelining (0,5 pt)
+
+La conexión se abre una sola vez; cada imagen cuesta $\text{RTT}_s + S/R$.
+
+$$T_B = (\text{RTT}_1 + \text{RTT}_2) + 2\,\text{RTT}_s + 3\left(\text{RTT}_s + \frac{S}{R}\right) = \boxed{\text{RTT}_1 + \text{RTT}_2 + 5\,\text{RTT}_s + \frac{3S}{R}}$$
+
+### c) Cálculo numérico del caso B (0,5 pt)
+
+$\text{RTT}_1 = 50$ ms, $\text{RTT}_2 = 70$ ms, $\text{RTT}_s = 100$ ms, $S = 2$ Mbits, $R = 10$ Mbps.
+
+$$\frac{S}{R} = \frac{2\times10^6}{10\times10^6} = 0{,}2\text{ s} \qquad T_B = 0{,}120 + 5(0{,}100) + 3(0{,}2) = 0{,}120 + 0{,}500 + 0{,}600 = \boxed{1{,}220\text{ s}}$$
+
+(Para el caso A con los mismos datos: $0{,}120 + 0{,}800 + 0{,}600 = 1{,}520$ s.)
+
+<Visualization viz={{ type: 'spacetime', static: true, title: 'Caso B: HTTP persistente sin pipelining', steps: [{"note": "Caso B con los datos del enunciado (ms): DNS 120, handshake 100, HTML 100 y 3 imágenes de 300 cada una (RTT 100 + S/R 200). Total 1220 ms.", "columns": [{"id": "c", "label": "Cliente"}, {"id": "d1", "label": "DNS 1"}, {"id": "d2", "label": "DNS 2"}, {"id": "s", "label": "Servidor web"}], "time": {"unit": "ms", "max": 1240, "ticks": [0, 120, 220, 320, 620, 920, 1220]}, "sends": [{"from": "c", "to": "d1", "tStart": 0, "tTrans": 0, "tProp": 25, "label": "A?", "kind": "ctrl"}, {"from": "d1", "to": "c", "tStart": 25, "tTrans": 0, "tProp": 25, "label": "resp", "kind": "ack"}, {"from": "c", "to": "d2", "tStart": 50, "tTrans": 0, "tProp": 35, "label": "A?", "kind": "ctrl"}, {"from": "d2", "to": "c", "tStart": 85, "tTrans": 0, "tProp": 35, "label": "IP", "kind": "ack"}, {"from": "c", "to": "s", "tStart": 120, "tTrans": 0, "tProp": 50, "label": "SYN", "kind": "ctrl"}, {"from": "s", "to": "c", "tStart": 170, "tTrans": 0, "tProp": 50, "label": "SYN/ACK", "kind": "ack"}, {"from": "c", "to": "s", "tStart": 220, "tTrans": 0, "tProp": 50, "label": "GET html", "kind": "ctrl"}, {"from": "s", "to": "c", "tStart": 270, "tTrans": 0, "tProp": 50, "label": "HTML", "kind": "ack"}, {"from": "c", "to": "s", "tStart": 320, "tTrans": 0, "tProp": 50, "label": "GET img1", "kind": "ctrl"}, {"from": "s", "to": "c", "tStart": 370, "tTrans": 200, "tProp": 50, "label": "img 1", "kind": "data", "state": "active"}, {"from": "c", "to": "s", "tStart": 620, "tTrans": 0, "tProp": 50, "label": "GET img2", "kind": "ctrl"}, {"from": "s", "to": "c", "tStart": 670, "tTrans": 200, "tProp": 50, "label": "img 2", "kind": "data", "state": "active"}, {"from": "c", "to": "s", "tStart": 920, "tTrans": 0, "tProp": 50, "label": "GET img3", "kind": "ctrl"}, {"from": "s", "to": "c", "tStart": 970, "tTrans": 200, "tProp": 50, "label": "img 3", "kind": "data", "state": "active"}], "spans": [{"column": "c", "tStart": 0, "tEnd": 120, "label": "DNS", "kind": "rtt"}, {"column": "c", "tStart": 120, "tEnd": 220, "label": "TCP", "kind": "rtt"}, {"column": "c", "tStart": 220, "tEnd": 320, "label": "HTML", "kind": "rtt"}, {"column": "c", "tStart": 320, "tEnd": 620, "label": "img 1", "kind": "rtt"}, {"column": "c", "tStart": 620, "tEnd": 920, "label": "img 2", "kind": "rtt"}, {"column": "c", "tStart": 920, "tEnd": 1220, "label": "img 3", "kind": "rtt"}]}] }} />
+
+---
+
+## Pregunta 2: Protocolos RDT (4,5 puntos)
+
+Transferencia confiable basada en el modelo **rdt 2.0** (el receptor responde ACK si el paquete llegó bien y NAK si llegó corrupto) con un **temporizador** para manejar pérdidas.
+
+**a) Solo mensajes ACK (1 pt).** El receptor confirma cada paquete recibido bien; si el emisor no recibe el ACK (paquete perdido o corrupto) no avanza y, al vencer el temporizador, retransmite. *Desventaja*: no hay aviso temprano; toda falla se detecta solo por timeout, que debe ser lo bastante largo para no retransmitir de más. Cada paquete genera un mensaje de retorno.
+
+**b) Solo mensajes NAK (1 pt).** El receptor calla mientras todo llega bien y envía un NAK cuando detecta un paquete corrupto o un hueco en la secuencia (para lo cual necesita **números de secuencia**). *Desventajas*: el emisor nunca recibe confirmación positiva, y una pérdida solo se detecta cuando llega un paquete posterior; el NAK mismo puede perderse.
+
+**c) Último paquete en NAK-only (0,5 pt).** Si se pierde el último paquete, no llega ninguno posterior que revele el hueco y el receptor nunca envía NAK. Propuesta: que el emisor arme un temporizador tras el último paquete y lo marque como final; el receptor responde con una confirmación (ACK) solo a ese último paquete, y el emisor retransmite si no la recibe.
+
+**d) Emisor que envía con poca frecuencia (1 pt).** *No* conviene NAK: un hueco solo se detecta cuando llega el siguiente paquete, y si pasa mucho tiempo entre envíos, la pérdida queda sin corregir durante ese lapso. Con ACK y timeout el emisor retransmite poco después de la pérdida.
+
+**e) Alto volumen de datos y canal con pocas pérdidas (1 pt).** *Sí* conviene NAK: casi todos los paquetes llegan bien, así que con NAK el receptor casi no envía mensajes de retorno (con ACK habría uno por paquete). Como siempre hay tráfico, el siguiente paquete revela rápido cualquier hueco.
+
+---
+
+## Pregunta 3: Distribución de contenidos, C/S frente a P2P (3,5 puntos)
+
+$F = 20$ GB $= 160\,000$ Mb (con 1 GB $= 8000$ Mb), $N = 150$, $u_s = 40$ Mbps, $d_i = 12$ Mbps ($d_{\min} = 12$), $u_i = 3$ Mbps.
+
+**a) Cliente-servidor (1 pt).**
+
+$$D_{cs} = \max\left(\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right) = \max\left(\frac{150\cdot160\,000}{40},\ \frac{160\,000}{12}\right) = \max(600\,000\text{ s},\ 13\,333\text{ s}) = \boxed{600\,000\text{ s}}$$
+
+(166,7 horas, casi 7 días).
+
+**b) Cuello de botella (0,5 pt).** La **capacidad de subida del servidor** $u_s = 40$ Mbps: debe enviar $N$ copias completas.
+
+**c) P2P (1 pt).**
+
+$$D_{P2P} = \max\left(\frac{F}{u_s},\ \frac{F}{d_{\min}},\ \frac{NF}{u_s + \sum u_i}\right) = \max\left(4000,\ 13\,333,\ \frac{24\,000\,000}{40 + 450}\right)\text{ s}$$
+
+$$D_{P2P} = \max(4000,\ 13\,333,\ 48\,980)\text{ s} = \boxed{\approx 48\,980\text{ s}}\quad(\approx 13{,}6\text{ h})$$
+
+**d) $N = 1000$ (1 pt).**
+
+$$D_{cs} = \frac{1000\cdot160\,000}{40} = 4\,000\,000\text{ s} \qquad D_{P2P} = \frac{1000\cdot160\,000}{40 + 3000} \approx 52\,632\text{ s}$$
+
+Con $N$ de 150 a 1000, C/S crece **linealmente** con $N$ (de 6,9 a 46 días) mientras P2P apenas pasa de 13,6 h a 14,6 h: cada peer nuevo aporta su capacidad de subida $u_i$ al denominador, de modo que la capacidad de servicio crece con la demanda. Por eso P2P es **auto-escalable**.
+
+---
+
+## Pregunta 4: HTTP (1,5 puntos)
+
+```text
+GET /index.html HTTP/1.1
+Host: www.somosciclo262.com
+If-Modified-Since: Thu, 07 May 2026 10:15:00 GMT-5
+```
+
+**a)** Es un **GET condicional**: el navegador pide `/index.html` solo si cambió después de esa fecha (la de su copia guardada).
+
+**b)** Si no cambió, el servidor responde **`304 Not Modified`** sin cuerpo; el navegador usa su copia.
+
+**c)** Ahorra ancho de banda (solo viaja la cabecera, no el objeto) y tiempo de respuesta (no se transmite el objeto, $L/R$).
+
+---
+
+## Pregunta 5: Caché DNS (1,5 puntos)
+
+Se puede **inspeccionar la caché** del DNS local: un servidor web externo cuyo nombre aparece en la caché fue consultado hace menos que su TTL. Se prueba con una lista de sitios candidatos y se repite el volcado a lo largo del tiempo: los nombres que **reaparecen** (con TTL renovado) cada vez que expiran son pedidos con frecuencia por varios usuarios del departamento. Es una estimación aproximada, porque la caché solo dice que alguien lo pidió, no cuántas veces.
+
+---
+
+## Pregunta 6: UDP (4 puntos)
+
+MTU = 1500 bytes.
+
+<Visualization viz={{ type: 'net-scene', title: 'Figura 1: topología de las dos viviendas', steps: [{"note": "Topología del enunciado (Packet Tracer): cada dispositivo con IP:puerto.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 10, "y": 80}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 10, "y": 28}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 36, "y": 12}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 36, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 64, "y": 28}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 90, "y": 28}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 78, "y": 70}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}]}, {"note": "a) PC-PT envía 1000 bytes de datos a Laptop-PT de la misma vivienda: no sale de la LAN.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 10, "y": 80}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 10, "y": 28}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 36, "y": 12}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 36, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 64, "y": 28}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 90, "y": 28}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 78, "y": 70}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "pc", "to": "lp", "label": "UDP 5324 → 5340", "order": 1, "state": "active"}]}, {"note": "d) Smartphone envía a un puerto cerrado de la Laptop local: la Laptop contesta con ICMP port unreachable.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 10, "y": 80}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 10, "y": 28}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 36, "y": 12}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 36, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 64, "y": 28}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 90, "y": 28}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 78, "y": 70}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "sp", "to": "l2", "label": "UDP → 9999", "order": 1, "state": "muted"}, {"from": "l2", "to": "sp", "label": "ICMP port unreachable", "order": 2, "state": "active"}]}, {"note": "f) Destino 192.168.101.20 es una dirección privada de la Vivienda 1: no es enrutable desde la Vivienda 2 por Internet.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 10, "y": 80}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 10, "y": 28}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 36, "y": 12}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 36, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 64, "y": 28}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 90, "y": 28}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 78, "y": 70}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "l2", "to": "r2", "label": "UDP → 192.168.101.20", "order": 1, "state": "active"}, {"from": "r2", "to": "r1", "label": "no se entrega", "order": 2, "lost": true, "state": "active"}]}] }} />
+
+**a) Datagrama de 1000 bytes de PC-PT a Laptop-PT, Vivienda 1 (0,5 pt).**
+
+| Campo | Valor |
+|---|---|
+| IP origen : puerto origen | 192.168.101.20 : 5324 |
+| IP destino : puerto destino | 192.168.101.2 : 5340 |
+| Longitud UDP | $8 + 1000 = 1008$ bytes |
+| Longitud IP | $20 + 1008 = 1028$ bytes (menor que el MTU: sin fragmentación) |
+
+**b) 5000 bytes de Laptop-PT (V1) a Smartphone (V2) (1 pt).** Origen 192.168.101.2:5340, destino 10.0.10.100:8765. El datagrama UDP mide $5000 + 8 = 5008$ bytes; con IP sería de 5028 bytes, mayor que el MTU de 1500. Ocurre **fragmentación en la capa de red (IP)**: cada fragmento lleva 20 bytes de cabecera IP y como máximo $1500 - 20 = 1480$ bytes de carga (múltiplo de 8).
+
+| Fragmento | Desplazamiento (bytes) | Carga (bytes) | Más fragmentos |
+|---|---|---|---|
+| 1 | 0 | 1480 (incluye la cabecera UDP) | sí |
+| 2 | 1480 | 1480 | sí |
+| 3 | 2960 | 1480 | sí |
+| 4 | 4440 | 568 | no |
+
+Solo el primer fragmento lleva la cabecera UDP (puertos). El destino reensambla los 4 fragmentos antes de entregar a UDP.
+
+**c) PC-PT a Printer-PT (0,5 pt).** **No** hay fase de sincronización: UDP es **sin conexión** (no hay handshake); el emisor envía el datagrama directamente.
+
+**d) Puerto 9999 cerrado (1 pt).** Lo notifica **ICMP**; en Wireshark se observa un mensaje ICMP *Destination unreachable (Port unreachable)* dirigido al origen del datagrama (Smartphone).
+
+**e) Voz UDP interrumpida (0,5 pt).** **No**: FIN/RST son de TCP. UDP no mantiene estado de conexión, así que la capa de transporte del emisor no detecta la interrupción; si hace falta saberlo, lo debe detectar la aplicación.
+
+**f) `ncat` UDP de Laptop (V2) a 192.168.101.20 (0,5 pt).** **No** es posible por Internet: 192.168.101.20 es una dirección **privada** de la red local de la Vivienda 1 (igual que 10.0.10.x en la Vivienda 2), que no se enruta en Internet. Solo sería alcanzable desde dentro de esa LAN.
+
+---
+
+## Pregunta 7: Prueba de UDP con NCAT (4 puntos)
+
+Captura tomada en 10.0.2.15 hacia 192.168.101.1 (interfaz enp0s3):
+
+| No. | Origen → destino | Longitud del frame | Info |
+|---|---|---|---|
+| 28 | 10.0.2.15 → 192.168.101.1 | 1514 | Fragmento IP (UDP 17, off = 0, ID = d0fb) |
+| 29 | 10.0.2.15 → 192.168.101.1 | 1514 | Fragmento IP (off = 1480, ID = d0fb) |
+| 30 | 10.0.2.15 → 192.168.101.1 | 1178 | 36684 → 31337, Len = 4096 (reensamblado) |
+| 46 | 10.0.2.15 → 192.168.101.1 | 1514 | Fragmento IP (off = 0, ID = fa87) |
+| 47 | 10.0.2.15 → 192.168.101.1 | 1514 | Fragmento IP (off = 1480, ID = fa87) |
+| 48 | 10.0.2.15 → 192.168.101.1 | 1178 | Unknown operation (12) 0x6161 [Malformed Packet] |
+
+**a) Datagramas UDP (1 pt).**
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Datagrama UDP 1 (frame 30)', steps: [{"note": "Cabecera UDP de 8 bytes + 4096 bytes de datos = 4104. Es el reensamblado de los frames 28, 29 y 30.", "fields": {"width": 32, "rows": [[{"label": "puerto origen", "bits": 16, "value": "36684", "state": "active"}, {"label": "puerto destino", "bits": 16, "value": "31337", "state": "active"}], [{"label": "longitud", "bits": 16, "value": "4104"}, {"label": "checksum", "bits": 16, "value": "0x99bb [unverified]"}], [{"label": "datos: 4096 bytes (0x61 = \"a\")", "bits": 32}]]}}] }} />
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Datagrama UDP 2 (frame 48)', steps: [{"note": "Mismo tamaño, pero el puerto destino es 53: Wireshark lo interpreta como DNS.", "fields": {"width": 32, "rows": [[{"label": "puerto origen", "bits": 16, "value": "45339", "state": "active"}, {"label": "puerto destino", "bits": 16, "value": "53", "state": "active"}], [{"label": "longitud", "bits": 16, "value": "4104"}, {"label": "checksum", "bits": 16, "value": "0xf220 [unverified]"}], [{"label": "datos: 4096 bytes (0x61 = \"a\")", "bits": 32}]]}}] }} />
+
+**b) ¿Por qué el checksum de UDP difiere del de IP? (0,5 pt)** Son checksums distintos sobre datos distintos: el de IP cubre solo la **cabecera IP**; el de UDP cubre la **pseudocabecera** (IP origen/destino, protocolo, longitud), la cabecera UDP y los **datos**. Además, el de UDP se calcula sobre el datagrama completo, no por fragmento.
+
+**c) ¿Por qué "unverified"? (0,5 pt)** Wireshark no lo pudo validar: la captura se hizo en el propio emisor (10.0.2.15) y el sistema operativo delega el cálculo del checksum a la tarjeta de red (*checksum offloading*), así que el valor que se ve aún no es el definitivo.
+
+**d) ¿Hubo fragmentación? Offset del No. 30 (0,5 pt).** **Sí**: los frames 28 y 29 son fragmentos de un mismo datagrama (ID d0fb, "Reassembled in #30"). El datagrama UDP mide 4104 bytes y cada fragmento lleva 1480 bytes de carga, de modo que el frame 30 es el último fragmento:
+
+$$\text{offset} = 2 \times 1480 = \boxed{2960\text{ bytes}}$$
+
+(en la cabecera IP del frame 30, el campo vale 0x0172 = 370 unidades de 8 bytes = 2960 bytes; su carga son los $4104 - 2960 = 1144$ bytes restantes, que con 20 de cabecera IP y 14 de Ethernet dan los 1178 bytes del frame).
+
+**e) MTU (0,5 pt).** **1500 bytes**: los fragmentos de 1514 bytes en el cable son 1500 de IP más 14 de la cabecera Ethernet.
+
+**f) ¿Por qué "Malformed Packet" en el segundo frame? (1 pt)** El puerto de destino es **53**, así que Wireshark decodifica la carga como un mensaje **DNS**. La carga es una repetición de bytes 0x61 ("aaaa…"): la identificación vale 0x6161, el campo de flags 0x6161 (el código de operación sale como 12, "Unknown operation") y los contadores de preguntas y respuestas también 0x6161, valores imposibles para el mensaje que sigue. El mensaje no cumple el formato DNS, de ahí *Malformed Packet*. El primer mensaje (puerto 31337) no tiene un protocolo asociado y se muestra como datos.

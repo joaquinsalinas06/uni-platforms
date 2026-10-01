@@ -1,0 +1,40 @@
+---
+kind: subtopic
+title: "Filtros de captura y visualización"
+order: 1
+---
+
+## 1. Idea
+
+Una captura contiene todo el tráfico de la interfaz. Para estudiar un protocolo se **filtra** lo que se ve. Las guías del curso usan solo **filtros de visualización** escritos en la barra de Wireshark (en la guía de ejercicios también se menciona poner `http` como filtro de captura).
+
+---
+
+## 2. Conceptos
+
+### 2.1 Primeros pasos
+
+1. Ejecutar Wireshark.
+2. Elegir la interfaz de red: cableada (Ethernet, `eth`/`en`) o inalámbrica (`w`/`en`). Si el tráfico no aparece, cambiar de interfaz.
+3. Iniciar la captura, generar tráfico (por ejemplo abrir `https://www.cisco.com/` en la prueba de la slide) y detenerla.
+
+### 2.2 Filtros usados en el curso
+
+| Filtro | Para qué | Dónde aparece |
+|---|---|---|
+| `http` | Solo mensajes HTTP | Lab 1A, ejercicios de Semana 3 y 7 |
+| `dns` | Solo mensajes DNS | Lab 1B, ejercicios de nslookup |
+| `dns or tcp or http` | Ver DNS, handshake TCP y HTTP juntos | Ejercicio de DNS + TCP + HTTP |
+| `udp` | Datagramas UDP | Ejercicio de sockets UDP |
+| `bootp or dhcp` | Intercambio DHCP | Ejercicio extra de DHCP |
+
+### 2.3 Capturar en el momento justo
+
+La guía pide **empezar con el filtro puesto pero sin capturar**, esperar un poco más de un minuto, iniciar la captura, cargar la página y detenerla. Para repetir un experimento hay que **limpiar la caché del navegador** (y, en DNS, la caché de resoluciones del sistema) antes de capturar.
+
+---
+
+## 3. Errores típicos
+
+- Filtrar `http` y buscar el handshake TCP o el DNS: no aparecen; usar `dns or tcp or http`.
+- Usar `https`: los mensajes HTTP no son visibles.

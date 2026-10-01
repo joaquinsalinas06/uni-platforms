@@ -47,7 +47,8 @@ const everything = [
 ];
 
 test('ningún tramo va en diagonal (galería, plantillas y todo el contenido)', () => {
-  assert.ok(everything.length > parsed.length + 50, `sólo ${everything.length} circuitos`);
+  // Redes no tiene circuitos en content/ (la plantilla heredada de IoT ya no está): basta la galería.
+  assert.ok(everything.length >= parsed.length, `sólo ${everything.length} circuitos`);
   const bad: string[] = [];
   for (const { id, out } of everything)
     out.layouts.forEach((lay, i) => {

@@ -1,0 +1,130 @@
+---
+kind: theory
+title: "Protocolo TCP: Estructura del Segmento y Gestión de Conexión"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Alcance del material.** La clase de TCP (deck Sem7) llega solo hasta la **estructura del segmento**: una slide de supuestos (sockets, buffers, pipelining) y una con la cabecera. El handshake aparece en los ejercicios y en una traza de Wireshark del parcial; el cierre solo se menciona (FIN/RST). No hay más en las slides.
+
+## 1. Idea y motivación
+
+TCP es el protocolo de transporte **orientado a conexión**: antes de enviar datos establece una conexión, y ofrece entrega confiable y en orden. Reúne las ideas anteriores: números de secuencia y ACK ([rdt](/topics/transferencia-confiable-rdt)) con varios segmentos en tránsito ([pipelining](/topics/protocolos-pipeline-gbn-sr)).
+
+---
+
+## 2. Conceptos
+
+### Qué ofrece TCP (frente a UDP)
+
+| TCP | UDP |
+|---|---|
+| Entrega confiable y en orden | Entrega no confiable y sin orden |
+| Control de congestión | Sin control de congestión |
+| Control de flujo | Sin control de flujo |
+| Establecimiento de conexión | Sin conexión |
+
+Ninguno de los dos da garantías de retardo ni de ancho de banda.
+
+### Sockets y buffers
+
+<Visualization viz={{ type: 'flow',
+  static: true,
+  title: 'Sockets y buffers de TCP (slide Assumptions)',
+  steps: [
+    {
+      note: 'Un proceso escribe en su socket; los datos pasan por el buffer de envío, viajan en segmentos (varios en tránsito: pipelining) y se acumulan en el buffer de recepción hasta que el otro proceso los lee.',
+      shapes: [
+        { id: 'p1', kind: 'block', label: 'Proceso escribe datos' },
+        { id: 's1', kind: 'block', label: 'Socket' },
+        { id: 'b1', kind: 'block', label: 'Buffer de envío TCP' },
+        { id: 'net', kind: 'block', label: 'Segmentos en tránsito' },
+        { id: 'b2', kind: 'block', label: 'Buffer de recepción TCP' },
+        { id: 's2', kind: 'block', label: 'Socket' },
+        { id: 'p2', kind: 'block', label: 'Proceso lee datos' }
+      ],
+      arrows: [
+        { from: 'p1', to: 's1' },
+        { from: 's1', to: 'b1' },
+        { from: 'b1', to: 'net' },
+        { from: 'net', to: 'b2' },
+        { from: 'b2', to: 's2' },
+        { from: 's2', to: 'p2' }
+      ]
+    }
+  ] }} />
+
+### Estructura del segmento
+
+<Visualization viz={{ type: 'packet',
+  static: true,
+  title: 'Segmento TCP (figura de la slide)',
+  steps: [
+    {
+      note: 'Cabecera TCP según la slide. Los puertos, el número de secuencia, el de acuse (ack) y el checksum son los campos que lista la clase; el resto aparece en la figura.',
+      fields: {
+        width: 32,
+        rows: [
+          [
+            { label: 'puerto origen', bits: 16 },
+            { label: 'puerto destino', bits: 16 }
+          ],
+          [
+            { label: 'número de secuencia', bits: 32, state: 'active' }
+          ],
+          [
+            { label: 'número de acuse (acknowledgment)', bits: 32, state: 'active' }
+          ],
+          [
+            { label: 'Header length', bits: 4 },
+            { label: 'Unused', bits: 4 },
+            { label: 'CWR', bits: 1 },
+            { label: 'ECE', bits: 1 },
+            { label: 'URG', bits: 1 },
+            { label: 'ACK', bits: 1, state: 'marked' },
+            { label: 'PSH', bits: 1 },
+            { label: 'RST', bits: 1, state: 'marked' },
+            { label: 'SYN', bits: 1, state: 'marked' },
+            { label: 'FIN', bits: 1, state: 'marked' },
+            { label: 'Receive window', bits: 16 }
+          ],
+          [
+            { label: 'Internet checksum', bits: 16 },
+            { label: 'Urgent data pointer', bits: 16 }
+          ],
+          [
+            { label: 'Options', bits: 32 }
+          ],
+          [
+            { label: 'Data', bits: 32 }
+          ]
+        ]
+      }
+    }
+  ] }} />
+
+Detalle de los campos y de cómo se numeran los bytes: [Segmento TCP](/topics/protocolo-tcp-mecanismos/segmento-tcp-secuencia-ack). Establecimiento de la conexión: [Handshake y cierre](/topics/protocolo-tcp-mecanismos/handshake-tres-vias-y-cierre).
+
+---
+
+## 3. Método paso a paso
+
+Para leer una traza TCP de Wireshark:
+
+1. Busca los tres primeros segmentos: `[SYN]`, `[SYN, ACK]`, `[ACK]` (handshake).
+2. Identifica los segmentos de datos (`Len` > 0) y sus longitudes.
+3. Empareja cada segmento con el ACK cuyo `Ack` es su `Seq` + longitud.
+4. Para el RTT de cada segmento, resta la hora de envío a la hora del ACK correspondiente ([tema de RTT](/topics/rtt-timeout-retransmision)).
+
+---
+
+## 4. Ejemplo resuelto
+
+La traza del parcial 2025-II (pregunta 6) se analiza en los subtemas: el handshake de los tres primeros segmentos y los acuses 1449, 2897, 4345….
+
+---
+
+## 5. Errores típicos
+
+- Pensar que TCP numera segmentos: numera **bytes**.
+- Confundir el flag `ACK` (bit de la cabecera) con el número de acuse (campo de 32 bits).
+- Atribuir a las slides mecanismos que no están (cierre en detalle, congestión): ver el tema de [control de flujo y congestión](/topics/control-flujo-congestion-tcp).

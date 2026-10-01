@@ -1,0 +1,69 @@
+---
+kind: theory
+title: "Arquitectura Jerárquica y Resolución DNS"
+---
+
+## 1. Idea y motivación
+
+Las personas usan nombres (`cs.umass.edu`); los datagramas usan **direcciones IP** (32 bits). El **DNS** (*Domain Name System*) traduce entre ambos:
+
+- Es una **base de datos distribuida** implementada como una jerarquía de muchos servidores de nombres.
+- Es también un **protocolo de capa de aplicación**: hosts y servidores DNS se comunican para resolver nombres.
+
+**¿Por qué no centralizarlo?** Un solo servidor sería un punto único de falla, soportaría un volumen de tráfico enorme, estaría lejos de muchos usuarios y sería difícil de mantener: *no escala*.
+
+---
+
+## 2. Conceptos
+
+### 2.1 Servicios del DNS
+
+- Traducción de nombre de host a IP.
+- **Alias de host**: nombre canónico y nombres alias.
+- **Alias de servidor de correo**.
+- **Distribución de carga**: servidores web replicados, con muchas IP para un mismo nombre.
+
+### 2.2 Tipos de servidor
+
+| Servidor | Papel | Detalle en |
+|---|---|---|
+| Raíz | Contacto de última instancia para los servidores que no pueden resolver un nombre | Jerarquía de servidores |
+| TLD (*Top-Level Domain*) | Dominios `.com`, `.org`, `.edu` y de países (`.pe`, `.uk`…) | Jerarquía de servidores |
+| Autoritativo | Los servidores de la propia organización, con los mapeos oficiales de sus hosts | Jerarquía de servidores |
+| DNS local | Primer servidor al que consulta el host; responde de su caché o consulta a la jerarquía. No pertenece estrictamente a la jerarquía, pero es central | Resolución |
+
+### 2.3 Caché
+
+Cuando un servidor aprende un mapeo, lo **guarda en caché** y lo devuelve de inmediato a las consultas siguientes:
+
+- Mejora el tiempo de respuesta.
+- Las entradas **expiran** (TTL) y la caché puede estar desactualizada.
+- Los servidores TLD suelen estar en caché de los DNS locales, así que la raíz casi no se consulta.
+
+Para borrar la caché del host (no hay riesgo: solo obliga a repetir la consulta distribuida): macOS `sudo killall -HUP mDNSResponder`; Windows `ipconfig /flushdns`; Ubuntu `sudo systemd-resolve --flush-caches`.
+
+### 2.4 Tiempos
+
+Con $S = \sum_{i=1}^{n} \text{RTT}_i$ la suma de los RTT de los servidores visitados (consultas secuenciales):
+
+$$T_{\text{DNS}} = \text{RTT}_{\text{local}} + \sum_{i=1}^{n} \text{RTT}_i$$
+
+Ejemplo de Ex 1 (pregunta 5): RTT al DNS local 20 ms; raíz, TLD y autoritativo 40, 30 y 50 ms.
+
+| Caso | Cálculo | Tiempo |
+|---|---|---|
+| Sin nada en caché | $20 + 40 + 30 + 50$ | $\boxed{140\text{ ms}}$ |
+| El DNS local ya conoce los autoritativos | $20 + 50$ | $70\text{ ms}$ |
+| Ahorro | $140 - 70$ | $70\text{ ms}$ |
+
+La caché reduce la espera sin cambiar la jerarquía: se suprimen viajes de ida y vuelta a la raíz y al TLD.
+
+Detalle: [Jerarquía de servidores DNS](/topics/dns-arquitectura-resolucion/jerarquia-servidores-dns) y [Resolución iterativa vs recursiva](/topics/dns-arquitectura-resolucion/resolucion-iterativa-vs-recursiva).
+
+---
+
+## 3. Errores típicos
+
+- Sumar el RTT del host al DNS local una vez por servidor visitado: se paga **una vez**.
+- Olvidar que con caché de autoritativos se suprimen raíz **y** TLD.
+- Creer que el DNS local forma parte de la jerarquía de raíz, TLD y autoritativos.

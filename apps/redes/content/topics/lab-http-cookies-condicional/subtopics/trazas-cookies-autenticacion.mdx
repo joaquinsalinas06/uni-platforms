@@ -1,0 +1,43 @@
+---
+kind: subtopic
+title: "Trazas de autenticación HTTP"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+La página `protected_pages/HTTP-wireshark-file5.html` está protegida con usuario `wireshark-students` y contraseña `network`. Se captura el intercambio y se observa cómo viajan las credenciales. (Las cookies de este tema se tratan en [Cookies y sesión](/topics/web-caching-cookies/mecanismo-cookies-sesion); la guía no incluye un experimento de cookies, solo la pregunta de por qué no hay que volver a escribir la contraseña.)
+
+---
+
+## 2. Conceptos
+
+<Visualization viz={{ type: 'sequence', static: true, title: 'Autenticación HTTP Basic', steps: [
+  { note: 'El primer GET no trae credenciales; el servidor responde pidiéndolas. La segunda petición ya lleva Authorization.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET file5.html' },
+      { from: 's', to: 'c', label: 'respuesta: autenticación requerida (código + cabecera de desafío)' },
+      { divider: true, from: 'c', to: 's', label: '— el usuario escribe usuario y contraseña —' },
+      { from: 'c', to: 's', label: 'GET file5.html + Authorization: Basic d2lyZX…', state: 'active' },
+      { from: 's', to: 'c', label: '200 OK' } ] },
+]}} />
+
+| Pregunta de la guía | Qué buscar |
+|---|---|
+| Respuesta al primer GET | Código y frase de estado, y el nombre/valor de la cabecera que pide autenticación |
+| Cabecera nueva en el segundo GET | `Authorization` |
+| Esquema de autenticación | La palabra antes de la cadena codificada: `Basic` |
+| Credencial decodificada | Wireshark decodifica la cadena: `wireshark-students:network` (la cadena es `d2lyZXNoYXJrLXN0dWRlbnRzOm5ldHdvcms=`) |
+
+**Seguridad.** La cadena está **codificada, no cifrada**: cualquiera que capture el tráfico la decodifica (como hace Wireshark). Con HTTP sin cifrar en una red pública, las credenciales quedan expuestas.
+
+**Estado.** HTTP no recuerda el login entre peticiones. Para no teclear la contraseña en cada objeto del mismo sitio, el navegador reenvía la cabecera de credenciales en las peticiones siguientes.
+
+---
+
+## 3. Errores típicos
+
+- Llamar "cifrado" a Basic: es solo una codificación.
+- Buscar `Authorization` en el primer GET: aparece solo después de que el usuario escribe las credenciales.

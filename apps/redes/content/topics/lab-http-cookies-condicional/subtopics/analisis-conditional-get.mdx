@@ -1,0 +1,37 @@
+---
+kind: subtopic
+title: "Análisis del GET condicional"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Se carga dos veces seguidas la misma URL con la caché vacía para comparar el primer GET con el segundo. El servidor de gaia.cs.umass.edu mantiene la fecha de modificación de este archivo al minuto actual: **si se espera más de un minuto entre cargas, el navegador recibe una copia "nueva"** y no un 304.
+
+---
+
+## 2. Qué mirar
+
+| Pregunta de la guía | Primer GET | Segundo GET |
+|---|---|---|
+| ¿Hay línea `If-Modified-Since`? | No | Sí; la fecha que sigue es la de `Last-Modified` de la primera respuesta |
+| Código de la respuesta | `200 OK` | `304 Not Modified` |
+| ¿El servidor devolvió el contenido del archivo? | Sí (cuerpo del HTML, visible en *Line-based text data*) | No: el 304 no trae cuerpo, el navegador usa su copia |
+
+<Visualization viz={{ type: 'sequence', static: true, title: 'Lo que se ve en la captura', steps: [
+  { note: 'Los cuatro mensajes de la captura: dos GET y dos respuestas.',
+    actors: [{ id: 'c', label: 'Navegador' }, { id: 's', label: 'gaia.cs.umass.edu' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET file2.html (sin If-Modified-Since)' },
+      { from: 's', to: 'c', label: '200 OK + Last-Modified + HTML' },
+      { from: 'c', to: 's', label: 'GET file2.html + If-Modified-Since: <Last-Modified>' },
+      { from: 's', to: 'c', label: '304 Not Modified', state: 'answer' } ] },
+]}} />
+
+---
+
+## 3. Errores típicos
+
+- Esperar un 304 después de más de un minuto: la fecha del archivo ya cambió y recibirás `200`.
+- Buscar el HTML en la respuesta 304: no hay.

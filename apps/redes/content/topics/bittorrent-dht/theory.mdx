@@ -1,0 +1,52 @@
+---
+kind: theory
+title: "BitTorrent, Churn y Tablas Hash Distribuidas (DHT)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+Un sistema P2P hace dos cosas **sin una autoridad central**: *encontrar* el objeto que se busca y *descargarlo*, y aun así escala a millones de nodos (slide *Summary*). Para eso forma una **red superpuesta** (*overlay*). Este tema ve cómo la slide presenta esa idea, el vocabulario de BitTorrent y la DHT con anillo.
+
+> El material de la semana 4 es breve: BitTorrent aparece como una lista de términos y un diagrama de swarm; la DHT como un anillo con un ejemplo de búsqueda. No hay más detalle en las slides.
+
+---
+
+## 2. Conceptos
+
+### Red superpuesta (*overlay network*)
+
+- Una red lógica construida sobre otra red subyacente. Según la slide, Internet empezó como un overlay sobre los enlaces de la red telefónica.
+- Cada nodo del overlay también existe en la red subyacente y procesa y reenvía paquetes de forma específica de la aplicación.
+- Los enlaces entre nodos del overlay son **túneles** a través de la red subyacente.
+- Ejemplo de la slide: multicast como overlay sobre una red física.
+
+### De Gnutella a los overlays estructurados
+
+- A inicios de los 2000 aparecen aplicaciones P2P de intercambio de archivos (Kazaa, eMule, Napster, entre otras de la slide). **Gnutella** se dibuja como un grafo de nodos con enlaces arbitrarios.
+- La respuesta de la academia: **estructurar** el overlay, es decir, asignar identificadores con una función hash, $hash(x) \to n$, y organizar los nodos según ese identificador (*structured overlays*). La slide los dibuja como un anillo: ver [DHT circular](/topics/bittorrent-dht/dht-circular-enrutamiento).
+
+### BitTorrent
+
+Vocabulario que lista la slide (Torrent, chunk de 256 Kb, swarm, trackers, peer finder, *bad peer*, choking) y el diagrama del swarm: [Mecanismos de BitTorrent](/topics/bittorrent-dht/protocolo-bittorrent-mecanismos).
+
+Cierre de la slide: P2P es la base de blockchain.
+
+---
+
+## 3. Método paso a paso
+
+Para "seguir" una búsqueda en la DHT del ejemplo: ubica el identificador buscado en el anillo, lee la ruta de nodos que recorre la consulta y detente en el nodo que queda junto al identificador. Ver el ejemplo en el subtema.
+
+---
+
+## 4. Ejemplo resuelto
+
+El ejemplo del material es `locate(d46a1c)` iniciado en el nodo `65a1fc`; su recorrido está en [DHT circular](/topics/bittorrent-dht/dht-circular-enrutamiento).
+
+---
+
+## 5. Errores típicos
+
+- Confundir *overlay* con red física: un enlace del overlay es un túnel que puede cruzar muchos routers.
+- Atribuir a BitTorrent mecanismos que la slide no describe (solo se nombran los términos de la lista).

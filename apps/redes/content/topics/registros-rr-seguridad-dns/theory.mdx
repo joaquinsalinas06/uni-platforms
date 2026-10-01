@@ -1,0 +1,25 @@
+---
+kind: theory
+title: "Registros de Recursos (RR), Mensaje DNS y Seguridad"
+---
+
+## 1. Idea y motivación
+
+La base de datos distribuida del DNS almacena **registros de recursos** (RR). Para consultar y responder, los servidores intercambian **mensajes DNS**, con el mismo formato para consulta y respuesta. Este tema explica qué guarda un RR y cómo viaja un mensaje; la seguridad del material se reduce a **DNSSEC** (autenticación e integridad de mensajes en la raíz).
+
+---
+
+## 2. Resumen
+
+| Pregunta | Respuesta | Subtema |
+|---|---|---|
+| ¿Qué guarda el DNS? | Registros $(\text{name}, \text{value}, \text{type}, \text{ttl})$: A, AAAA, CNAME, NS, MX | Tipos de registros de recursos |
+| ¿Cómo viaja? | Mensaje con cabecera de 12 bytes y cuatro secciones; consulta y respuesta tienen el mismo formato | Formato del mensaje y seguridad |
+| ¿Sobre qué transporte? | Normalmente UDP, puerto 53; si la respuesta es demasiado grande, se pasa a TCP | Formato del mensaje y seguridad |
+
+---
+
+## 3. Errores típicos
+
+- Confundir `NS` (servidor de nombres autoritativo del dominio) con `MX` (servidor de correo).
+- Pedir el `A` del dominio base para enviar correo: se pide el `MX`.

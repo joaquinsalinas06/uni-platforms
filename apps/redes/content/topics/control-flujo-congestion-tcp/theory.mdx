@@ -1,0 +1,54 @@
+---
+kind: theory
+title: "Control de Flujo (rwnd) y Control de Congestión en TCP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Alcance del material.** El curso solo **nombra** el control de flujo y el de congestión como servicios de TCP, muestra el campo *Receive window* en la cabecera y el buffer de recepción, y los contrasta con UDP (que no los tiene) en el laboratorio. **No hay** `cwnd`, slow start, AIMD, Tahoe ni Reno, ni fórmulas de ventana: este tema queda corto a propósito.
+
+## 1. Idea y motivación
+
+Dos problemas distintos que TCP resuelve y UDP no:
+
+- **Control de flujo:** que el emisor no desborde el *buffer* del receptor.
+- **Control de congestión:** que el emisor no sature la red.
+
+La prueba de estrés del laboratorio de UDP (3 emisores × 10 000 paquetes hacia un receptor) muestra qué pasa sin ellos: paquetes descartados en silencio y ningún mensaje de vuelta pidiendo que se baje el ritmo.
+
+---
+
+## 2. Conceptos
+
+| | TCP | UDP |
+|---|---|---|
+| Control de flujo | Sí | No |
+| Control de congestión | Sí | No (puede "enviar tan rápido como quiera") |
+| Aviso al emisor si el receptor se satura | Mediante la ventana (campo *Receive window* de la cabecera) | Ninguno |
+
+- El **buffer de recepción** de TCP (slide de supuestos) es donde se acumulan los datos hasta que el proceso los lee.
+- Cuando se necesita confiabilidad y control de congestión sobre UDP (caso HTTP/3 con QUIC), la aplicación los agrega por su cuenta.
+
+Detalle: [Control de flujo y ventana de recepción](/topics/control-flujo-congestion-tcp/control-flujo-ventana-recepcion) y [Congestión: qué cubre el material](/topics/control-flujo-congestion-tcp/fases-congestion-aimd-tahoe-reno).
+
+---
+
+## 3. Método paso a paso
+
+Para las preguntas del laboratorio sobre este tema:
+
+1. Identifica si el receptor puede perder datos por desborde (UDP) o si el protocolo le avisa al emisor (TCP).
+2. Para TCP, la respuesta es el control de flujo con el tamaño de ventana.
+3. Para UDP, justifica que la aplicación debe resolverlo.
+
+---
+
+## 4. Ejemplo resuelto
+
+Lab de la semana 5, pregunta 4 de la prueba de estrés: *si fuera TCP, ¿qué mecanismo evitaría que el receptor descarte miles de paquetes por desborde del buffer?* — El **control de flujo** (tamaño de ventana de TCP). El enunciado lo deja como investigación; el material no desarrolla el mecanismo.
+
+---
+
+## 5. Errores típicos
+
+- Confundir control de flujo (emisor vs receptor) con control de congestión (emisor vs red).
+- Responder con AIMD o `cwnd`: no se ven en el curso.

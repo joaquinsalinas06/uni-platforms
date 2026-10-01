@@ -488,3 +488,22 @@ a:hover {
 .cz-out { animation: cz-out 350ms ease-in both; }
 .cz-ghost-move { animation: cz-ghost-move 850ms cubic-bezier(0.5, 0, 0.3, 1) both; }
 .cz-ghost { animation: cz-ghost 850ms cubic-bezier(0.5, 0, 0.3, 1) both; }
+
+/* ── Familias de redes (net-scene, window, packet): animaciones al entrar al
+   paso. El estado FINAL es el estilo base del elemento; la animación sólo
+   parte del inicial. La regla prefers-reduced-motion de arriba las apaga y
+   todo aparece ya en destino. */
+@keyframes net-travel { from { transform: translate(var(--x0), var(--y0)); } }
+@keyframes net-draw { from { stroke-dashoffset: 1; } }
+@keyframes net-fade { from { opacity: 0; } }
+@keyframes net-ping { from { transform: scale(1); opacity: 0.9; } to { transform: scale(1.7); opacity: 0; } }
+@keyframes net-slide { from { opacity: 0; transform: translateX(-16px); } }
+.net-travel { animation: net-travel var(--dur, 900ms) cubic-bezier(.45,.05,.35,1) both; }
+.net-draw { animation: net-draw var(--dur, 900ms) cubic-bezier(.45,.05,.35,1) both; }
+.net-in { animation: net-fade 400ms ease-out 200ms both; }
+.net-late { animation: net-fade 200ms ease-out var(--delay, 900ms) both; }
+.net-ping { transform-box: fill-box; transform-origin: center; animation: net-ping 700ms ease-out var(--delay, 900ms) both; }
+.net-slide { animation: net-slide 450ms cubic-bezier(.2,.7,.3,1) both; }
+
+/* inline code largo (URLs/hosts) no debe desbordar en móvil */
+.prose :not(pre) > code { overflow-wrap: anywhere; }

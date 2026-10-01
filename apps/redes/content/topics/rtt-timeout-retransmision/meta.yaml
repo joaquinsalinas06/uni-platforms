@@ -9,13 +9,11 @@ buildsOn:
 usedBy:
   - "control-flujo-congestion-tcp"
 formulas:
-  - name: "Media Móvil Ponderada Exponencial (EstimatedRTT)"
-    tex: "\\text{EstimatedRTT} = (1 - \\alpha) \\cdot \\text{EstimatedRTT} + \\alpha \\cdot \\text{SampleRTT}"
-    reasoning: "Actualiza el tiempo de ida y vuelta promedio ponderando el historial con el nuevo valor medido usando típicamente alfa = 0.125."
-  - name: "Desviación Media de RTT (DevRTT)"
-    tex: "\\text{DevRTT} = (1 - \\beta) \\cdot \\text{DevRTT} + \\beta \\cdot |\\text{SampleRTT} - \\text{EstimatedRTT}|"
-    reasoning: "Estima la variabilidad y fluctuación estadística del RTT muestral respecto a la media estimada usando típicamente beta = 0.25."
-  - name: "Intervalo de Temporización de Retransmisión (TimeoutInterval)"
-    tex: "\\text{TimeoutInterval} = \\text{EstimatedRTT} + 4 \\cdot \\text{DevRTT}"
-    reasoning: "Calcula el temporizador de retransmisión seguro añadiendo un margen de cuatro desviaciones para evitar retransmisiones prematuras."
-hasVisualization: false
+  - name: "SampleRTT"
+    tex: "\\text{SampleRTT} = t_{\\text{ACK recibido}} - t_{\\text{segmento enviado}}"
+    reasoning: "El RTT de un segmento es el tiempo entre que se envía y que llega el ACK que lo confirma; en el parcial se lee de las marcas de tiempo de Wireshark."
+  - name: "EstimatedRTT (media móvil exponencial)"
+    tex: "\\text{EstimatedRTT}_n = 0{,}875 \\cdot \\text{EstimatedRTT}_{n-1} + 0{,}125 \\cdot \\text{SampleRTT}_n"
+    reasoning: "Suaviza las mediciones: el 87,5 % del valor viene del estimado anterior y solo el 12,5 % de la última muestra (fórmula dada en el parcial 2025-II, pregunta 6)."
+hasVisualization: true
+visualizationType: "xy-chart"

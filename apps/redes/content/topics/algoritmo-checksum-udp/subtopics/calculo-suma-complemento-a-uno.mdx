@@ -1,0 +1,61 @@
+---
+kind: subtopic
+title: "Suma en complemento a uno"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Ejercicio estándar del curso (Ejercicios 2, pregunta 4, y Ejercicios 3, pregunta 7): sumar bytes de 8 bits en complemento a uno y obtener el checksum. (En la práctica UDP/TCP usan palabras de 16 bits; el enunciado pide 8 bits solo para el ejercicio.)
+
+---
+
+## 2. Conceptos
+
+Datos: tres bytes $01010011$, $01100110$, $01110100$.
+
+| Paso | Operación | Resultado |
+|---|---|---|
+| 1 | $01010011 + 01100110$ | $10111001$ |
+| 2 | $10111001 + 01110100$ | $1\,00101101$ (9 bits: hay acarreo) |
+| 3 | Wraparound: $00101101 + 1$ | $00101110$ |
+| 4 | Complemento a uno | $11010001$ |
+
+<Visualization viz={{ type: 'packet', title: 'Checksum de 3 bytes', steps: [
+  { note: 'Primera suma parcial: 83 + 102 = 185.',
+    fields: { width: 8, rows: [
+      [{ label: 'byte 1', bits: 8, value: '01010011' }],
+      [{ label: 'byte 2', bits: 8, value: '01100110' }],
+      [{ label: 'suma parcial', bits: 8, value: '10111001', state: 'active' }] ] } },
+  { note: 'Se suma el byte 3: 185 + 116 = 301, que no cabe en 8 bits (9 bits: 1 0010 1101).',
+    fields: { width: 8, rows: [
+      [{ label: 'suma parcial', bits: 8, value: '10111001', state: 'muted' }],
+      [{ label: 'byte 3', bits: 8, value: '01110100' }],
+      [{ label: 'suma (acarreo 1 + 00101101)', bits: 8, value: '1 00101101', state: 'active' }] ] } },
+  { note: 'Wraparound: 00101101 + 1 = 00101110.',
+    fields: { width: 8, rows: [
+      [{ label: 'sin acarreo', bits: 8, value: '00101101', state: 'muted' }],
+      [{ label: '+ acarreo', bits: 8, value: '00101110', state: 'active' }] ] } },
+  { note: 'Complemento: 11010001 es el checksum.',
+    fields: { width: 8, rows: [
+      [{ label: 'suma', bits: 8, value: '00101110', state: 'muted' }],
+      [{ label: 'checksum', bits: 8, value: '11010001', state: 'answer' }] ] } },
+]}} />
+
+**Verificación del receptor:** suma los tres bytes más el checksum: $00101110 + 11010001 = 11111111$. Todo unos significa que no se detectó error *(derivado; equivale a recalcular y comparar, como dice la slide)*.
+
+---
+
+## 3. Preguntas del enunciado
+
+- **¿Por qué el complemento y no la suma?** El material no lo responde. Con el complemento, el receptor puede sumar *todo, checksum incluido*, y mirar si sale todo unos *(derivado)*.
+- **¿Un error de 1 bit pasa sin detectarse?** No: cambiar un solo bit cambia la suma en una potencia de 2, así que el resultado ya no coincide *(derivado)*.
+- **¿Y uno de 2 bits?** Sí puede pasar: si un bit sube de 0 a 1 en una palabra y otro baja de 1 a 0 en la misma posición de otra palabra, la suma no cambia *(derivado)*. La slide *weak protection* muestra un caso así (con 4 bits). Ver [límites](/topics/algoritmo-checksum-udp/pseudocabecera-deteccion-errores).
+
+---
+
+## 4. Errores típicos
+
+- Sumar $01010011 + 01100110 + 01110100$ en decimal $= 301$ y dejarlo así: hay que plegar el acarreo ($301 \to 46$).
+- Complementar antes del wraparound.

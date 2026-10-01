@@ -1,0 +1,63 @@
+---
+kind: subtopic
+title: "Encapsulación: mensaje, segmento, datagrama y trama"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Un mensaje de aplicación no viaja solo: cada capa le añade su **cabecera** antes de entregarlo a la capa de abajo. El lab de Wireshark lo resume así: el mensaje HTTP viaja dentro de un **segmento TCP**, que va dentro de un **datagrama IP**, que va dentro de una **trama Ethernet**.
+
+---
+
+## 2. Conceptos
+
+| Capa | Unidad (PDU) | Qué añade |
+|---|---|---|
+| Aplicación | Mensaje | Su propio formato (por ejemplo, la petición HTTP) |
+| Transporte | Segmento | Cabecera de transporte (puertos; en UDP, longitud y checksum) |
+| Red | Datagrama / paquete | Cabecera IP (direcciones IP) |
+| Enlace | Trama (*frame*) | Cabecera Ethernet (direcciones MAC) |
+| Física | Bits | — |
+
+Wireshark usa estos nombres: **paquete** es la unidad de la capa de red y **trama** la de la capa de enlace; por eso muestra, de arriba abajo, *Frame*, *Ethernet*, *IP*, *TCP* y *HTTP*.
+
+<Visualization viz={{ type: 'packet', title: 'Encapsulación de una petición HTTP', steps: [
+  { note: 'Aplicación: el mensaje HTTP, sin cabeceras de red.',
+    layers: [{ label: 'Aplicación: mensaje HTTP' }] },
+  { note: 'Transporte: TCP agrega su cabecera. El conjunto es un segmento.',
+    layers: [
+      { label: 'Aplicación: mensaje HTTP' },
+      { label: 'Transporte: segmento', header: 'Cabecera TCP', state: 'active' }] },
+  { note: 'Red: IP agrega su cabecera. El conjunto es un datagrama (paquete).',
+    layers: [
+      { label: 'Aplicación: mensaje HTTP' },
+      { label: 'Transporte: segmento', header: 'Cabecera TCP' },
+      { label: 'Red: datagrama', header: 'Cabecera IP', state: 'active' }] },
+  { note: 'Enlace: Ethernet agrega su cabecera. El conjunto es una trama, que la capa física envía como bits.',
+    layers: [
+      { label: 'Aplicación: mensaje HTTP' },
+      { label: 'Transporte: segmento', header: 'Cabecera TCP' },
+      { label: 'Red: datagrama', header: 'Cabecera IP' },
+      { label: 'Enlace: trama', header: 'Cabecera Ethernet', state: 'active' }] },
+]}} />
+
+### Notación de las slides
+
+Las slides del transporte escriben el mensaje como $M$ y las cabeceras como $H_t$ (transporte) y $H_n$ (red): el cliente HTTP forma $M$, la capa de transporte lo convierte en $H_t\,M$ y la de red en $H_n\,H_t\,M$. Por analogía, la capa de enlace agrega su cabecera $H_l$ (en Wireshark, la cabecera Ethernet) *(derivado)*.
+
+### Del lado receptor
+
+El proceso es el inverso (desencapsulación): cada capa lee y quita su cabecera y entrega el resto hacia arriba, hasta que la aplicación recibe el mensaje.
+
+### Dónde se ve en un ejercicio
+
+En el parcial 2026-I (pregunta 7) una captura muestra los campos de cada capa.
+
+---
+
+## 3. Errores típicos
+
+- Llamar "paquete" a todo: en Wireshark paquete = red, trama = enlace.
+- Olvidar que la cabecera de la capa de arriba pasa a ser **datos** para la capa de abajo.

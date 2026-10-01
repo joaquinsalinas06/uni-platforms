@@ -31,8 +31,8 @@ content/
   units/s1..s7.md           ← Portada y resumen ejecutivo de cada semana
   topics/<id>/
     meta.yaml               ← id, title, type, unit, prereqs, formulas[]
-    theory.md               ← Exposición teórica profunda con secciones ##
-    subtopics/<name>.md     ← Subtema individual con order entero
+    theory.md|mdx           ← Exposición teórica con secciones ## (mdx si lleva diagramas)
+    subtopics/<name>.md|mdx ← Subtema individual con order entero
   evaluaciones/
     parciales/*.md          ← Exámenes parciales resueltos paso a paso
     laboratorio/*.md        ← Laboratorios y ejercicios extra
@@ -42,5 +42,6 @@ content/
 
 ## Restricciones Estrictas
 - **No inventar temas ni fórmulas**: Todo concepto debe basarse en el material oficial del curso.
-- **Sin diagramas manuales o mermaid decorativos**: El usuario solicitó expresamente no generar diagramas sintéticos; el foco es prosa técnica exhaustiva, fórmulas en KaTeX y código estructurado.
+- **Solo material del curso**: Si algo no está en `raw-materials/text/` o en los PDFs de `raw-materials/pdfs/` (slides, labs, ejercicios, parciales), no va. Nada de contenido de libro de texto ni relleno (RFCs, productos, extensiones no vistas).
+- **Diagramas con la librería de Redes**: `net-scene`, `spacetime`, `window`, `packet` (+ `xy-chart`, `flow`, `sequence`). Contrato y apariencia en `templates/viz-redes.md`. Se usan inline en archivos `.mdx`; nada de mermaid ni imágenes sintéticas.
 - **Fórmulas documentadas**: Todo objeto en `formulas[]` de `meta.yaml` debe incluir `name`, `tex` y un `reasoning` explicativo de al menos 20 caracteres.

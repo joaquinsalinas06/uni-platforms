@@ -1,0 +1,62 @@
+---
+kind: theory
+title: "Capa de Transporte: Principios y Demultiplexación"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+La red (IP) entrega paquetes de **host a host**. Una aplicación necesita hablar con **otro proceso**, no con otra máquina. La capa de transporte convierte el servicio host a host en un canal **proceso a proceso** (problema planteado en la slide de la semana 5). Lo hace con dos ideas: **multiplexar/demultiplexar** con números de puerto, y (según el protocolo) entrega confiable.
+
+---
+
+## 2. Conceptos
+
+- **Datagrama** (*data + telegram*): unidad básica de transferencia en una red de conmutación de paquetes; tiene cabecera y carga útil (*payload*).
+- **Socket:** punto donde un proceso local se conecta a la red; es la interfaz entre la aplicación y la red. La aplicación lo crea; permite crearlo, conectarlo a la red, enviar y recibir mensajes y cerrarlo.
+- **Servicio de transporte:** comunicación lógica entre procesos de aplicación en hosts distintos. El emisor parte los mensajes en **segmentos** y los pasa a la capa de red; el receptor reensambla los segmentos en mensajes y los pasa a la aplicación. En Internet hay dos protocolos: **TCP** y **UDP**.
+
+### Multiplexación y demultiplexación
+
+- **Multiplexar (emisor):** toma datos de varios sockets y agrega la cabecera de transporte (que luego se usa para demultiplexar).
+- **Demultiplexar (receptor):** usa los campos de la cabecera para entregar cada segmento al socket correcto.
+- El host recibe datagramas IP; cada uno trae IP origen/destino y un segmento con **puerto origen y puerto destino**. El host usa IP y puertos para dirigir el segmento al socket.
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Campos que usa el demultiplexor (formato de segmento TCP/UDP)', steps: [
+  { note: 'Los dos primeros campos de 16 bits de cualquier segmento TCP o UDP son los puertos; el resto de la cabecera depende del protocolo.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16, state: 'active' }, { label: 'puerto destino', bits: 16, state: 'active' }],
+      [{ label: 'otros campos de la cabecera', bits: 32 }],
+      [{ label: 'datos de aplicación (payload)', bits: 32 }] ] } },
+]}} />
+
+| | UDP (sin conexión) | TCP (orientado a conexión) |
+|---|---|---|
+| Qué identifica al socket receptor | Puerto destino (solo) | 4-tupla: IP origen, puerto origen, IP destino, puerto destino |
+| Resultado | Segmentos con mismo puerto destino van al **mismo** socket, vengan de donde vengan | Cada cliente conectado tiene su **propio** socket en el servidor |
+
+Detalle y figuras: [Multiplexación orientada y no orientada a conexión](/topics/capa-transporte-multiplexacion/multiplexacion-orientada-y-no-orientada). Qué ofrecen TCP y UDP: [Servicios de transporte vs red](/topics/capa-transporte-multiplexacion/servicios-transporte-vs-red).
+
+---
+
+## 3. Método paso a paso
+
+Para decir a qué socket llega un segmento:
+
+1. Lee el protocolo (UDP o TCP).
+2. UDP: mira el **puerto destino**. TCP: mira los **cuatro** valores.
+3. Al responder, se invierten origen y destino: el puerto origen de la respuesta es el puerto destino de la pregunta.
+
+---
+
+## 4. Ejemplo resuelto
+
+Slide de demultiplexación sin conexión. Un servidor con `DatagramSocket(6428)`; un cliente P3 con puerto 9157 y otro P4 con 5775. P3 envía con `source port: 9157, dest port: 6428`; la respuesta va con `source port: 6428, dest port: 9157`. Los `?` de la slide para P4 se completan igual: `source 5775, dest 6428` y la respuesta `source 6428, dest 5775`. Figura en el subtema.
+
+---
+
+## 5. Errores típicos
+
+- Pensar que en UDP la IP origen elige el socket: solo cuenta el puerto destino.
+- Pensar que TCP usa solo el puerto destino: dos conexiones al puerto 80 del servidor son sockets distintos porque cambia la 4-tupla.
+- No invertir origen y destino en la respuesta.

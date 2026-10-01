@@ -1,0 +1,38 @@
+---
+kind: subtopic
+title: "Conmutación de paquetes"
+order: 2
+---
+
+## 1. Idea
+
+Las slides de la Semana 1 describen Internet como una red de **conmutación de paquetes**. La **conmutación de circuitos** (FDM/TDM, reserva de capacidad) **no aparece en el material del curso**; por eso este subtema cubre solo lo que sí se ve.
+
+---
+
+## 2. Conceptos
+
+### Qué hace un host
+
+1. Toma el mensaje de la aplicación.
+2. Lo divide en trozos de $L$ bits llamados **paquetes** (en la slide, dos paquetes numerados 1 y 2).
+3. Los transmite a la red de acceso a la tasa $R$ del enlace; cada uno tarda $L/R$.
+
+### Qué hacen los conmutadores
+
+Los **packet switches** (routers y switches) **reenvían** paquetes entre enlaces. Cada paquete se maneja de forma independiente; un **datagrama** es la unidad básica de transferencia en una red de paquetes.
+
+### Garantías
+
+Los principios de interconexión de Cerf y Kahn (1974) incluyen **servicio best-effort**: un paquete puede perderse o llegar fuera de orden, y la red no mantiene estado por conexión (enrutamiento *stateless*). La confiabilidad, si hace falta, la agrega la capa de transporte o la aplicación (ver UDP y TCP en las semanas 5 a 7).
+
+### Por qué una red de redes
+
+Un enlace directo entre cada par de redes de acceso crece como $O(N^2)$; por eso aparecen los ISP intermedios, los IXP y los proveedores de contenido (ver la teoría de este tema).
+
+---
+
+## 3. Errores típicos
+
+- Atribuir al curso comparaciones de FDM/TDM o de probabilidad de congestión: no están en el material.
+- Pensar que "best-effort" garantiza entrega: solo significa que la red lo intenta.

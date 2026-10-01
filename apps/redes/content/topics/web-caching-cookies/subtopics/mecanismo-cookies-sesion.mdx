@@ -1,0 +1,68 @@
+---
+kind: subtopic
+title: "Mecanismo de cookies y manejo de sesión"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+HTTP es sin estado: el servidor no guarda información de peticiones anteriores. Muchos sitios usan **cookies** para identificar al usuario.
+
+---
+
+## 2. Conceptos
+
+### Las cuatro piezas
+
+1. Una línea de cabecera `Set-Cookie` en la **respuesta** HTTP.
+2. Una línea de cabecera `Cookie` en la **petición** siguiente.
+3. Un **archivo de cookies** en el host del usuario, gestionado por el navegador.
+4. Una **base de datos de respaldo** (*back-end*) en el sitio web.
+
+### Ejemplo de la slide
+
+Susan siempre accede a Internet desde su PC y visita por primera vez un sitio de comercio electrónico. Cuando llega la primera petición, el sitio crea un **ID único** (1678) y una **entrada en su BD** para ese ID.
+
+<Visualization viz={{ type: 'sequence', title: 'Cookies: Set-Cookie y Cookie', steps: [
+  { note: 'Primera visita: petición HTTP normal, sin cookie. El archivo de cookies del navegador solo tiene la de otro sitio (ebay 8734).',
+    actors: [{ id: 'c', label: 'Navegador (cookies: ebay 8734)' }, { id: 's', label: 'Servidor Amazon' }, { id: 'd', label: 'BD back-end' }],
+    msgs: [{ from: 'c', to: 's', label: 'GET (petición normal)', state: 'active' }] },
+  { note: 'El servidor crea el ID 1678 para el usuario y una entrada en su base de datos.',
+    actors: [{ id: 'c', label: 'Navegador (cookies: ebay 8734)' }, { id: 's', label: 'Servidor Amazon' }, { id: 'd', label: 'BD back-end' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET (petición normal)', state: 'muted' },
+      { from: 's', to: 'd', label: 'crear entrada ID 1678', state: 'active' }] },
+  { note: 'La respuesta lleva Set-Cookie: 1678. El navegador lo agrega a su archivo: ahora tiene ebay 8734 y amazon 1678.',
+    actors: [{ id: 'c', label: 'Navegador (cookies: ebay 8734)' }, { id: 's', label: 'Servidor Amazon' }, { id: 'd', label: 'BD back-end' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET (petición normal)', state: 'muted' },
+      { from: 's', to: 'd', label: 'crear entrada ID 1678', state: 'muted' },
+      { from: 's', to: 'c', label: 'respuesta + Set-Cookie: 1678', store: 'guarda amazon 1678', state: 'active' }] },
+  { note: 'Siguientes peticiones: el navegador agrega Cookie: 1678 y el servidor consulta la BD para hacer la acción propia de ese usuario.',
+    actors: [{ id: 'c', label: 'Navegador (ebay 8734, amazon 1678)' }, { id: 's', label: 'Servidor Amazon' }, { id: 'd', label: 'BD back-end' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET + Cookie: 1678', state: 'active' },
+      { from: 's', to: 'd', label: 'acceso: acción específica del ID 1678' },
+      { from: 's', to: 'c', label: 'respuesta normal' }] },
+  { note: 'Una semana después: el archivo de cookies sigue guardado, el navegador vuelve a enviar Cookie: 1678 y el sitio reconoce al usuario.',
+    actors: [{ id: 'c', label: 'Navegador (ebay 8734, amazon 1678)' }, { id: 's', label: 'Servidor Amazon' }, { id: 'd', label: 'BD back-end' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'GET + Cookie: 1678', state: 'muted' },
+      { from: 's', to: 'c', label: 'respuesta normal', state: 'muted' },
+      { divider: true, from: 'c', to: 's', label: '— una semana después —' },
+      { from: 'c', to: 's', label: 'GET + Cookie: 1678', state: 'active' },
+      { from: 's', to: 'd', label: 'acceso: acción específica', state: 'answer' },
+      { from: 's', to: 'c', label: 'respuesta normal', state: 'answer' }] },
+]}} />
+
+### Relación con la autenticación del lab
+
+En el lab de HTTP, la página protegida con usuario y contraseña obliga al navegador a repetir las credenciales en **cada** GET (el servidor no recuerda el login); el navegador las reenvía automáticamente para no pedirlas cada vez. Es el mismo problema de estado que resuelven las cookies.
+
+---
+
+## 3. Errores típicos
+
+- Creer que la cookie contiene todos los datos del usuario: lleva un identificador; los datos están en la BD del sitio.
+- Olvidar que la cabecera de ida es `Set-Cookie` (respuesta) y la de vuelta es `Cookie` (petición).

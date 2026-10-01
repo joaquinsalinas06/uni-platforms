@@ -2,17 +2,15 @@ id: "algoritmo-checksum-udp"
 title: "Checksum de Internet (RFC 1071) y Pseudocabecera"
 type: "concept"
 unit: "s6"
-prerequisites: ["protocolo-udp"]
-buildsOn: ["protocolo-udp"]
-usedBy: ["lab-udp-rdt-simulacion"]
+prerequisites:
+  - "protocolo-udp"
+buildsOn:
+  - "protocolo-udp"
+usedBy:
+  - "lab-udp-rdt-simulacion"
 formulas:
-  - name: "Suma en complemento a uno con acarreo circular"
-    tex: "\\text{Sum}_{1\\text{'s}} = (A + B + \\text{carry}) \\pmod{2^{16} - 1}"
-    reasoning: "Regla aritmética que añade cualquier acarreo desbordado del bit 16 directamente a la posición menos significativa del resultado."
-  - name: "Cálculo del Checksum de Internet (RFC 1071)"
-    tex: "\\text{Checksum} = \\sim \\left(\\sum_{i=1}^{M} W_i\\right)_{1\\text{'s}}"
-    reasoning: "Operación de negación bit a bit aplicada sobre la suma acumulada de las palabras de 16 bits del segmento y de la pseudocabecera."
-  - name: "Condición de integridad en el receptor"
-    tex: "\\left(\\sum_{i=1}^{M} W_i + \\text{Checksum}\\right)_{1\\text{'s}} = \\text{0xFFFF}"
-    reasoning: "Criterio matemático de validación en el receptor: si no hubo alteraciones en tránsito, la suma total produce un patrón de 16 unos binarios."
-hasVisualization: false
+  - name: "Checksum de Internet"
+    tex: "\\text{checksum} = \\overline{w_1 + w_2 + \\cdots + w_k}"
+    reasoning: "Se suman las palabras de 16 bits con acarreo circular (el acarreo del bit más significativo se suma de vuelta, wraparound) y se toma el complemento a uno del resultado."
+hasVisualization: true
+visualizationType: "packet"

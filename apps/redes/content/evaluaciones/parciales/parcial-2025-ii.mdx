@@ -1,0 +1,481 @@
+---
+title: "Examen Parcial 2025-II"
+category: "parciales"
+categoryLabel: "Exámenes Parciales"
+order: 1
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Instrucciones
+
+- **Curso**: CS4055 (SEC 2). **Fecha**: 9 de octubre de 2025. Individual; se califica el procedimiento, no solo la respuesta final.
+- Sección teórica: 10 puntos (preguntas 1 a 4). Sección práctica: 10 puntos (preguntas 5 a 9).
+- Los datos de cada solución son los del PDF del examen (`EP-2025II-1.pdf`).
+
+---
+
+## Sección teórica
+
+### Pregunta 1: DNS y descarga de un archivo (2 pt)
+
+Un cliente accede por primera vez a un sitio cuyo dominio no está en caché. Consulta **tres** servidores DNS en secuencia ($\text{RTT}_1$, $\text{RTT}_2$, $\text{RTT}_3$) y luego se conecta al servidor web ($\text{RTT}_s$). El archivo es un video de $S$ bits (el tiempo de transmisión no es despreciable) y el enlace tiene tasa $R$ bps.
+
+**a) Tiempo total.** DNS son tres RTT sumados; luego handshake TCP ($\text{RTT}_s$), el GET con su respuesta ($\text{RTT}_s$) y la transmisión del archivo:
+
+$$T = \text{RTT}_1 + \text{RTT}_2 + \text{RTT}_3 + 2\,\text{RTT}_s + \frac{S}{R}$$
+
+**b) Datos.** $\text{RTT}_1 = 60$ ms, $\text{RTT}_2 = 80$ ms, $\text{RTT}_3 = 100$ ms, $\text{RTT}_s = 70$ ms, $S = 8$ MB, $R = 4$ Mbps.
+
+- Conversión (1 MB = 8 Mb): $S = 64$ Mb, así que $S/R = 64/4 = 16$ s.
+- DNS: $60 + 80 + 100 = 240$ ms. Web: $2 \times 70 = 140$ ms.
+
+$$T = 0{,}240 + 0{,}140 + 16 = \boxed{16{,}38\text{ s}}$$
+
+*(Con $1\text{ MB} = 2^{20}$ bytes, $S/R \approx 16{,}78$ s: por eso el enunciado pide un tiempo "aproximado".)*
+
+<Visualization viz={{ type: 'spacetime',
+  title: 'Pregunta 1: línea de tiempo (escala real)',
+  steps: [
+    {
+      note: 'Resolución DNS: tres consultas secuenciales, 60 + 80 + 100 = 240 ms.',
+      columns: [
+        { id: 'c', label: 'Cliente' },
+        { id: 'd1', label: 'DNS 1' },
+        { id: 'd2', label: 'DNS 2' },
+        { id: 'd3', label: 'DNS 3' },
+        { id: 's', label: 'Servidor web' }
+      ],
+      time: { unit: 'ms', max: 400, ticks: [0, 240, 310, 380] },
+      sends: [
+        { from: 'c', to: 'd1', tStart: 0, tTrans: 0, tProp: 30, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd1', to: 'c', tStart: 30, tTrans: 0, tProp: 30, label: 'resp', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 'd2', tStart: 60, tTrans: 0, tProp: 40, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd2', to: 'c', tStart: 100, tTrans: 0, tProp: 40, label: 'resp', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 'd3', tStart: 140, tTrans: 0, tProp: 50, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd3', to: 'c', tStart: 190, tTrans: 0, tProp: 50, label: 'IP', kind: 'ack', state: 'active' }
+      ],
+      spans: [
+        { column: 'c', tStart: 0, tEnd: 240, label: 'DNS: 60+80+100 = 240 ms', kind: 'rtt' }
+      ]
+    },
+    {
+      note: 'Handshake TCP (1 RTTs = 70 ms) y GET con el primer bit de respuesta (otro RTTs = 70 ms).',
+      columns: [
+        { id: 'c', label: 'Cliente' },
+        { id: 'd1', label: 'DNS 1' },
+        { id: 'd2', label: 'DNS 2' },
+        { id: 'd3', label: 'DNS 3' },
+        { id: 's', label: 'Servidor web' }
+      ],
+      time: { unit: 'ms', max: 400, ticks: [0, 240, 310, 380] },
+      sends: [
+        { from: 'c', to: 'd1', tStart: 0, tTrans: 0, tProp: 30, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd1', to: 'c', tStart: 30, tTrans: 0, tProp: 30, label: 'resp', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 'd2', tStart: 60, tTrans: 0, tProp: 40, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd2', to: 'c', tStart: 100, tTrans: 0, tProp: 40, label: 'resp', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 'd3', tStart: 140, tTrans: 0, tProp: 50, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd3', to: 'c', tStart: 190, tTrans: 0, tProp: 50, label: 'IP', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 's', tStart: 240, tTrans: 0, tProp: 35, label: 'SYN', kind: 'ctrl', state: 'muted' },
+        { from: 's', to: 'c', tStart: 275, tTrans: 0, tProp: 35, label: 'SYN/ACK', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 's', tStart: 310, tTrans: 0, tProp: 35, label: 'GET', kind: 'ctrl', state: 'active' }
+      ],
+      spans: [
+        { column: 'c', tStart: 0, tEnd: 240, label: 'DNS: 60+80+100 = 240 ms', kind: 'rtt' },
+        { column: 'c', tStart: 240, tEnd: 380, label: 'handshake + GET: 2·RTTs = 140 ms', kind: 'rtt' }
+      ]
+    },
+    {
+      note: 'Transmisión del archivo: S/R = 16 s domina frente a los 380 ms anteriores. Total 16 380 ms.',
+      columns: [
+        { id: 'c', label: 'Cliente' },
+        { id: 'd1', label: 'DNS 1' },
+        { id: 'd2', label: 'DNS 2' },
+        { id: 'd3', label: 'DNS 3' },
+        { id: 's', label: 'Servidor web' }
+      ],
+      time: { unit: 'ms', max: 16400, ticks: [0, 240, 310, 380, 16380] },
+      sends: [
+        { from: 'c', to: 'd1', tStart: 0, tTrans: 0, tProp: 30, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd1', to: 'c', tStart: 30, tTrans: 0, tProp: 30, label: 'resp', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 'd2', tStart: 60, tTrans: 0, tProp: 40, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd2', to: 'c', tStart: 100, tTrans: 0, tProp: 40, label: 'resp', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 'd3', tStart: 140, tTrans: 0, tProp: 50, label: 'A?', kind: 'ctrl', state: 'muted' },
+        { from: 'd3', to: 'c', tStart: 190, tTrans: 0, tProp: 50, label: 'IP', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 's', tStart: 240, tTrans: 0, tProp: 35, label: 'SYN', kind: 'ctrl', state: 'muted' },
+        { from: 's', to: 'c', tStart: 275, tTrans: 0, tProp: 35, label: 'SYN/ACK', kind: 'ack', state: 'muted' },
+        { from: 'c', to: 's', tStart: 310, tTrans: 0, tProp: 35, label: 'GET', kind: 'ctrl', state: 'muted' },
+        {
+          from: 's',
+          to: 'c',
+          tStart: 345,
+          tTrans: 16000,
+          tProp: 35,
+          label: 'archivo (S/R)',
+          kind: 'data',
+          state: 'active'
+        }
+      ],
+      spans: [
+        { column: 'c', tStart: 0, tEnd: 240, label: 'DNS: 60+80+100 = 240 ms', kind: 'rtt' },
+        { column: 'c', tStart: 240, tEnd: 380, label: 'handshake + GET: 2·RTTs = 140 ms', kind: 'rtt' },
+        { column: 'c', tStart: 380, tEnd: 16380, label: 'S/R = 16 000 ms', kind: 'trans' }
+      ]
+    }
+  ] }} />
+
+**c) Qué domina.** La transmisión: $16/16{,}38 \approx 97{,}7\,\%$ del total; la latencia de red (DNS más conexión) son $0{,}38$ s. Se reduce con mayor $R$ o archivo más pequeño. La caché DNS elimina los 240 ms en visitas siguientes, y una conexión persistente evita repetir el handshake para más objetos.
+
+---
+
+### Pregunta 2: Distribución cliente-servidor frente a P2P (2 pt)
+
+Archivo de $F$ bits, $N$ pares, servidor con subida $u_s$, par $i$ con bajada $d_i$ y subida $u_i$, $d_{\min} = \min\{d_1, \dots, d_N\}$. Se piden las dos cotas del enunciado:
+
+$$D_{cs} \ge \max\left\{\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right\} \qquad D_{P2P} \ge \max\left\{\frac{F}{u_s},\ \frac{F}{d_{\min}},\ \frac{NF}{u_s + \sum_{i=1}^{N} u_i}\right\}$$
+
+**Cliente-servidor.** El servidor envía $N$ copias de forma secuencial: una copia tarda $F/u_s$, las $N$ copias $NF/u_s$. Cada cliente baja una copia; el más lento tarda $F/d_{\min}$. Ambas cotas se cumplen a la vez, y el tiempo es el máximo.
+
+**P2P.** El servidor debe subir al menos una copia ($F/u_s$); el cliente más lento tarda $F/d_{\min}$; y entre todos hay que bajar $NF$ bits, con capacidad máxima de subida $u_{\text{total}} = u_s + u_1 + \dots + u_N$, de donde $NF/u_{\text{total}}$.
+
+**Implicancias con $N$ muy grande.** En cliente-servidor $NF/u_s$ crece **linealmente** con $N$. En P2P, con pares de subida parecida $u$, $\frac{NF}{u_s + Nu} \to \frac{F}{u}$ *(derivado)*: el tiempo se estabiliza, porque cada par que llega también aporta subida. Gráfica y detalle: [escalabilidad](/topics/arquitecturas-p2p-distribucion/analisis-escalabilidad-asintotica).
+
+---
+
+### Pregunta 3: FSM del receptor de rdt2.1 y paso a rdt2.2 (3 pt)
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'Pregunta 3: receptor de rdt2.1 y de rdt2.2',
+  steps: [
+    {
+      note: 'Receptor rdt2.1: en "Esperar 0" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.',
+      shapes: [
+        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
+        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      ],
+      arrows: [
+        {
+          from: 'r0',
+          to: 'r1',
+          label: 'ok, seq 0\n/ entregar datos, ACK'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'corrupto\n/ enviar NAK'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'ok, seq 1 (duplicado)\n/ enviar ACK'
+        },
+        {
+          from: 'r1',
+          to: 'r0',
+          label: 'ok, seq 1\n/ entregar datos, ACK'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'corrupto\n/ enviar NAK'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'ok, seq 0 (duplicado)\n/ enviar ACK'
+        }
+      ]
+    },
+    {
+      note: 'Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).',
+      shapes: [
+        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
+        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      ],
+      arrows: [
+        {
+          from: 'r0',
+          to: 'r1',
+          label: 'ok, seq 0\n/ entregar datos, ACK 0'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'corrupto o seq 1\n/ enviar ACK 1'
+        },
+        {
+          from: 'r1',
+          to: 'r0',
+          label: 'ok, seq 1\n/ entregar datos, ACK 1'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'corrupto o seq 0\n/ enviar ACK 0'
+        }
+      ]
+    }
+  ] }} />
+
+**Cómo funciona (rdt2.1, receptor).** Dos estados: *Esperar 0 de abajo* y *Esperar 1 de abajo*. En *Esperar 0*:
+
+- Paquete **corrupto**: responde NAK y se queda.
+- Paquete correcto con número **0**: lo entrega a la capa superior, responde ACK y pasa a *Esperar 1*.
+- Paquete correcto con número **1**: es un **duplicado** (el emisor no recibió el ACK anterior). No se entrega otra vez, pero se **reenvía el ACK** y se queda en el mismo estado.
+
+En *Esperar 1* es simétrico.
+
+**¿Lida con duplicados?** Sí: el número de secuencia (0 o 1) permite distinguir un dato nuevo de una retransmisión; el duplicado se descarta y se vuelve a confirmar.
+
+**Cambio para pasar a rdt2.2.** Se elimina el NAK: el ACK ahora **lleva el número de secuencia** del último paquete recibido bien. Ante un paquete corrupto o un duplicado, el receptor responde con el ACK del último paquete correcto (en *Esperar 0*: `ACK 1`; en *Esperar 1*: `ACK 0`). El emisor trata un ACK con el número equivocado como un NAK y retransmite.
+
+---
+
+### Pregunta 4: protocolo solo con NAK (3 pt)
+
+Modelo con errores de bits y pérdida de paquetes; protocolo que usa solo NAK.
+
+**a) ¿Cómo se entera de un error o una pérdida?**
+
+- *Error de bits:* el receptor detecta el paquete corrupto con el checksum y envía NAK.
+- *Pérdida:* el receptor no ve nada. Solo se entera cuando llega un paquete **posterior** y nota un hueco en los números de secuencia (hacen falta números crecientes; con 0 y 1 no alcanza). Si lo que se pierde es el último paquete, nunca llega uno posterior: la pérdida no se detecta.
+
+**b) Emisor con poca frecuencia: ¿NAK o ACK?** Es preferible el protocolo con **ACK**. Con envíos espaciados, un hueco no se descubre hasta el siguiente paquete, que puede tardar mucho. Con ACK y temporizador (rdt3.0), el emisor retransmite poco después de la pérdida.
+
+---
+
+## Sección práctica
+
+### Pregunta 5: registros MX (1 pt)
+
+Salida de `nslookup` con `set type=mx` para `riotgames.com` (servidor 8.8.8.8, respuesta no autoritativa):
+
+| Preference | Mail exchanger |
+|---|---|
+| 30 | aspmx2.googlemail.com |
+| 20 | alt2.aspmx.l.google.com |
+| **10** | **aspmx.l.google.com** |
+| 30 | aspmx3.googlemail.com |
+| 20 | alt1.aspmx.l.google.com |
+
+**Se contacta primero `aspmx.l.google.com`**, porque el servidor de correo con el **menor valor de preferencia** (10) es el que se contacta primero (así lo indica el laboratorio de DNS). Los de 20 y 30 son alternativas si ese falla.
+
+---
+
+### Pregunta 6: tiempos RTT y EstimatedRTT (2,5 pt)
+
+$$\text{EstimatedRTT}_n = 0{,}875 \cdot \text{EstimatedRTT}_{n-1} + 0{,}125 \cdot \text{SampleRTT}_n$$
+
+Traza de Wireshark (cliente 192.168.86.68 ↔ servidor 128.119.245.12; extracto):
+
+| N.º | Hora (s) | Sentido | Info |
+|---|---|---|---|
+| 1 | 0.000000 | cliente → servidor | `[SYN] Seq=0 Win=65535 Len=0 MSS=1460 WS=64` |
+| 2 | 0.022414 | servidor → cliente | `[SYN, ACK] Seq=0 Ack=1 Win=28960 Len=0 MSS=1460 SACK_PERM` |
+| 3 | 0.022505 | cliente → servidor | `[ACK] Seq=1 Ack=1 Win=131712 Len=0` |
+| 4, 5, 6 | 0.024047 / .024048 / .024049 | cliente → servidor | `POST /wireshark-labs/lab3-1-reply.htm` y 2 `Continuation` (1514 B) |
+| 7 | 0.052671 | servidor → cliente | `[ACK] Ack=1449 Win=31872` |
+| 8 | 0.052676 | servidor → cliente | `[ACK] Ack=2897 Win=34816` |
+| 9, 10 | 0.052774 / .052775 | cliente → servidor | `Continuation` (1514 B) |
+| 13 | 0.053626 | servidor → cliente | `[ACK] Ack=4345 Win=37760` |
+| 16 | 0.080768 | servidor → cliente | `[ACK] Ack=5793 Win=40576` |
+| 17 | 0.080771 | servidor → cliente | `[ACK] Ack=7241 Win=43520` |
+
+Cada segmento de datos lleva 1448 bytes, así que `Ack = 1 + 1448 k` confirma el segmento $k$: 1449, 2897, 4345, 5793, 7241 son los segmentos 1 a 5. *(Lectura adoptada: los cinco primeros segmentos de datos; el enunciado no lo precisa.)*
+
+| Seg. | Trama | Envío (s) | Trama ACK | ACK (s) | RTT (s) | EstimatedRTT (s) |
+|---|---|---|---|---|---|---|
+| 1 | 4 | 0.024047 | 7 | 0.052671 | 0.028624 | 0.0286240 |
+| 2 | 5 | 0.024048 | 8 | 0.052676 | 0.028628 | 0.0286245 |
+| 3 | 6 | 0.024049 | 13 | 0.053626 | 0.029577 | 0.0287436 |
+| 4 | 9 | 0.052774 | 16 | 0.080768 | 0.027994 | 0.0286499 |
+| 5 | 10 | 0.052775 | 17 | 0.080771 | 0.027996 | 0.0285681 |
+
+Ejemplo del cálculo: $\text{EstimatedRTT}_2 = 0{,}875(0{,}028624) + 0{,}125(0{,}028628) = 0{,}0286245$ s. Para el primer valor se toma $\text{EstimatedRTT}_1 = \text{SampleRTT}_1$ *(convención: el enunciado no da el valor inicial)*.
+
+<Visualization viz={{ type: 'xy-chart',
+  title: 'Pregunta 6: SampleRTT y EstimatedRTT de los 5 segmentos',
+  steps: [
+    {
+      note: 'SampleRTT (ms). El tercer segmento es el más lento; el cuarto y quinto, los más rápidos.',
+      series: [
+        {
+          id: 's',
+          label: 'SampleRTT (ms)',
+          points: [
+            [1, 28.624],
+            [2, 28.628],
+            [3, 29.577],
+            [4, 27.994],
+            [5, 27.996]
+          ],
+          kind: 'line'
+        }
+      ],
+      x: { label: 'segmento', min: 1, max: 5, ticks: [1, 2, 3, 4, 5] },
+      y: { label: 'ms', min: 27.5, max: 30 }
+    },
+    {
+      note: 'EstimatedRTT: la media móvil se mueve poco porque cada muestra pesa solo 0,125.',
+      series: [
+        {
+          id: 's',
+          label: 'SampleRTT (ms)',
+          points: [
+            [1, 28.624],
+            [2, 28.628],
+            [3, 29.577],
+            [4, 27.994],
+            [5, 27.996]
+          ],
+          kind: 'line',
+          state: 'muted'
+        },
+        {
+          id: 'e',
+          label: 'EstimatedRTT (ms)',
+          points: [
+            [1, 28.624],
+            [2, 28.6245],
+            [3, 28.7436],
+            [4, 28.6499],
+            [5, 28.5681]
+          ],
+          kind: 'line',
+          state: 'active'
+        }
+      ],
+      x: { label: 'segmento', min: 1, max: 5, ticks: [1, 2, 3, 4, 5] },
+      y: { label: 'ms', min: 27.5, max: 30 }
+    }
+  ] }} />
+
+
+
+---
+
+### Pregunta 7: popularidad de sitios con la caché DNS (1,5 pt)
+
+Sí. Un servidor DNS guarda en su caché cada nombre que resuelve y esa entrada desaparece pasado su TTL. Si se pueden consultar las cachés de los DNS locales del departamento, se listan los nombres externos presentes y se repite la consulta a lo largo del día: los sitios que aparecen una y otra vez (o cuyo registro se renueva apenas expira) los están pidiendo muchos usuarios. Es una aproximación: un TTL largo mantiene un nombre en caché aunque lo haya pedido un solo usuario.
+
+---
+
+### Pregunta 8: respuesta HTTP en Wireshark (2 pt)
+
+Extracto de la respuesta (`gaia.cs.umass.edu/wireshark-labs/lab3-1-reply.htm`):
+
+```
+HTTP/1.1 200 OK
+Date: Thu, 02 Oct 2025 23:34:47 GMT
+Server: Apache/2.4.6 (CentOS) OpenSSL/1.0.2k-fips PHP/7.4.33 mod_perl/2.0.11
+Last-Modified: Sat, 06 Feb 2021 18:23:47 GMT
+ETag: "1a2-5baaf09abd7a9"
+Accept-Ranges: bytes
+Content-Length: 418
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+File Data: 418 bytes
+```
+
+- **a) Código:** `200 OK`; la petición se atendió con éxito y el objeto viene en el cuerpo.
+- **b) Versión:** HTTP/1.1.
+- **c) Tamaño:** **418 bytes** (`Content-Length: 418`, `File Data: 418 bytes`).
+- **d) Keep-Alive:** `timeout=5, max=100`. La conexión TCP se mantiene abierta (conexión persistente, `Connection: Keep-Alive`) para más solicitudes: el servidor la cierra tras 5 s de inactividad o después de 100 solicitudes *(lectura estándar del encabezado; las slides solo lo muestran como ejemplo)*.
+
+---
+
+### Pregunta 9: comunicación P2P sobre UDP con dos casas (3 pt)
+
+<Visualization viz={{ type: 'net-scene',
+  title: 'Pregunta 9: esquema de las dos casas',
+  steps: [
+    {
+      note: 'Esquema del examen: cada laptop con IP : puerto. La figura no dibuja ningún enlace entre los dos routers.',
+      devices: [
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25 },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48 },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70 },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30 }
+      ],
+      cables: [
+        { from: 'a', to: 'r1' },
+        { from: 'b', to: 'r1' },
+        { from: 'c', to: 'r2' }
+      ],
+      zones: [
+        { label: 'Casa 1', devices: ['a', 'b', 'r1'] },
+        { label: 'Casa 2', devices: ['r2', 'c'] }
+      ]
+    },
+    {
+      note: 'a) y b) El gateway de cada laptop es la IP de su router: A usa 192.168.10.1 y C usa 192.170.10.1.',
+      devices: [
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25, state: 'marked' },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48, state: 'marked' },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70, state: 'marked' },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30, state: 'marked' }
+      ],
+      cables: [
+        { from: 'a', to: 'r1' },
+        { from: 'b', to: 'r1' },
+        { from: 'c', to: 'r2' }
+      ],
+      zones: [
+        { label: 'Casa 1', devices: ['a', 'b', 'r1'] },
+        { label: 'Casa 2', devices: ['r2', 'c'] }
+      ]
+    },
+    {
+      note: 'c) Datagrama de A a B: origen 192.168.10.5 : 12256, destino 192.168.10.12 : 12270. Ambas están en la LAN de Casa 1.',
+      devices: [
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25 },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48 },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70 },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30 }
+      ],
+      cables: [
+        { from: 'a', to: 'r1' },
+        { from: 'b', to: 'r1' },
+        { from: 'c', to: 'r2' }
+      ],
+      zones: [
+        { label: 'Casa 1', devices: ['a', 'b', 'r1'] },
+        { label: 'Casa 2', devices: ['r2', 'c'] }
+      ],
+      packets: [
+        { from: 'a', to: 'b', label: 'UDP 12256 → 12270', order: 1, state: 'active' }
+      ]
+    },
+    {
+      note: 'e) C envía a 192.168.10.101: ningún equipo del esquema tiene esa IP (A es .5, B es .12), así que no hay quien reciba.',
+      devices: [
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25 },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48 },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70 },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30 }
+      ],
+      cables: [
+        { from: 'a', to: 'r1' },
+        { from: 'b', to: 'r1' },
+        { from: 'c', to: 'r2' }
+      ],
+      zones: [
+        { label: 'Casa 1', devices: ['a', 'b', 'r1'] },
+        { label: 'Casa 2', devices: ['r2', 'c'] }
+      ],
+      packets: [
+        { from: 'c', to: 'a', label: 'UDP → 192.168.10.101', order: 1, lost: true, state: 'active' }
+      ]
+    }
+  ] }} />
+
+- **a) Gateway de A:** `192.168.10.1` (el Router Casa 1).
+- **b) Gateway de C:** `192.170.10.1` (el router de la Casa 2).
+- **c) Datagrama de A a B** (la misma LAN): puerto origen **12256**, puerto destino **12270**; en el paquete IP, origen `192.168.10.5` y destino `192.168.10.12`. El campo `length` vale $8 + $ los bytes del mensaje, y el checksum lo calcula UDP.
+- **d) C escucha y envía en el puerto 12345:** es el puerto que el esquema le asigna a C (`192.170.10.101 : 12345`), así que un único socket UDP con `bind` a ese puerto sirve para ambos: recibe lo que llegue a 12345 y envía con ese puerto de origen. Si otro proceso de C ya lo usara, el segundo `bind` fallaría. La figura no muestra cómo llegan los paquetes de una casa a la otra; el material no lo resuelve.
+- **e) C envía a `192.168.10.101`:** **no se recibirán**. En el esquema no hay ningún equipo con esa IP (A es `.5` y B es `.12` en la red 192.168.10.0; C es `192.170.10.101`: no confundir `192.168.10.101` con `192.170.10.101`). UDP no avisa de esa falta.

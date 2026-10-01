@@ -2,17 +2,19 @@ id: "protocolo-udp"
 title: "Protocolo UDP (User Datagram Protocol)"
 type: "concept"
 unit: "s6"
-prerequisites: ["capa-transporte-multiplexacion"]
-buildsOn: ["capa-transporte-multiplexacion"]
-usedBy: ["algoritmo-checksum-udp", "protocolo-tcp-mecanismos"]
+prerequisites:
+  - "capa-transporte-multiplexacion"
+buildsOn:
+  - "capa-transporte-multiplexacion"
+usedBy:
+  - "algoritmo-checksum-udp"
+  - "protocolo-tcp-mecanismos"
 formulas:
-  - name: "Carga útil máxima de transporte UDP"
-    tex: "\\text{Payload}_{\\max, \\text{UDP}} = 2^{16} - 1 - 8 = 65527\\text{ bytes}"
-    reasoning: "Límite teórico determinado por el campo de longitud de 16 bits de la cabecera UDP descontando sus 8 bytes de cabecera obligatoria."
-  - name: "Carga útil máxima práctica sobre IPv4"
-    tex: "\\text{Payload}_{\\max, \\text{IPv4}} = 65535 - 20 - 8 = 65507\\text{ bytes}"
-    reasoning: "Capacidad máxima útil de datos de aplicación transmitibles en un datagrama UDP encapsulado en un paquete IPv4 sin opciones."
-  - name: "Sobrecarga relativa de cabecera UDP"
-    tex: "\\text{Overhead}_{\\text{UDP}} = \\frac{8}{8 + L_{\\text{data}}} \\times 100\\%"
-    reasoning: "Porcentaje de sobrecarga introducido por los 8 bytes fijos del encabezado UDP respecto al tamaño total del segmento transmitido."
-hasVisualization: false
+  - name: "Carga útil máxima de un segmento UDP"
+    tex: "2^{16} - 1 - 8 = 65535 - 8 = 65527\\text{ bytes}"
+    reasoning: "La slide parte del campo de longitud de 16 bits (máximo 65535 bytes, cabecera incluida) y descuenta los 8 bytes de la cabecera UDP."
+  - name: "Carga útil máxima si el datagrama va en IPv4 sin opciones"
+    tex: "65535 - 20 - 8 = 65507\\text{ bytes}"
+    reasoning: "Los ejercicios (Ejercicios 2, pregunta 8) citan 65 507 bytes como límite teórico del payload UDP; sale de descontar también los 20 bytes de la cabecera IP (cálculo derivado)."
+hasVisualization: true
+visualizationType: "packet"

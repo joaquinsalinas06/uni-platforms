@@ -1,15 +1,12 @@
-id: diodes
-title: Diodos
-type: method            # concept | method | lab  (igual que el mapa)
-unit: s2
-prerequisites: [basic-circuits]
-buildsOn: []
-usedBy: []
-hasVisualization: true
-visualizationType: circuit
-placeholder: false
+id: "protocolo-udp"
+title: "Protocolo UDP (User Datagram Protocol)"
+type: "concept"            # concept | method | lab  (igual que el mapa)
+unit: "s6"
+prerequisites: ["capa-transporte-multiplexacion"]
+buildsOn: ["capa-transporte-multiplexacion"]
+usedBy: ["algoritmo-checksum-udp", "protocolo-tcp-mecanismos"]
 formulas:
-  - name: Caída de un diodo de silicio en conducción
-    tex: "V_{D} = 0.7\\,\\text{V}"
-    reasoning: "Modelo de caída constante: en directa y conduciendo, el diodo Si se reemplaza por una fuente de 0.7 V."
-    source: "Sem02_WheatstoneYDiodos#22"
+  - name: "Carga útil máxima práctica sobre IPv4"
+    tex: "\\text{Payload}_{\\max, \\text{IPv4}} = 65535 - 20 - 8 = 65507\\text{ bytes}"
+    reasoning: "Capacidad útil de un datagrama UDP encapsulado en IPv4 sin opciones: se descuentan 20 B de cabecera IP y 8 B de UDP."
+hasVisualization: false
