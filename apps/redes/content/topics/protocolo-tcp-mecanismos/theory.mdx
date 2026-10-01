@@ -34,13 +34,13 @@ Ninguno de los dos da garantías de retardo ni de ancho de banda.
     {
       note: 'Un proceso escribe en su socket; los datos pasan por el buffer de envío, viajan en segmentos (varios en tránsito: pipelining) y se acumulan en el buffer de recepción hasta que el otro proceso los lee.',
       shapes: [
-        { id: 'p1', kind: 'block', label: 'Proceso escribe datos' },
-        { id: 's1', kind: 'block', label: 'Socket' },
-        { id: 'b1', kind: 'block', label: 'Buffer de envío TCP' },
-        { id: 'net', kind: 'block', label: 'Segmentos en tránsito' },
-        { id: 'b2', kind: 'block', label: 'Buffer de recepción TCP' },
-        { id: 's2', kind: 'block', label: 'Socket' },
-        { id: 'p2', kind: 'block', label: 'Proceso lee datos' }
+        { id: 'p1', kind: 'block', label: 'Proceso escribe datos', x: 0, y: 0 },
+        { id: 's1', kind: 'block', label: 'Socket', x: 1, y: 0 },
+        { id: 'b1', kind: 'block', label: 'Buffer de envío TCP', x: 2, y: 0 },
+        { id: 'net', kind: 'block', label: 'Segmentos en tránsito', x: 3, y: 0.5 },
+        { id: 'b2', kind: 'block', label: 'Buffer de recepción TCP', x: 2, y: 1 },
+        { id: 's2', kind: 'block', label: 'Socket', x: 1, y: 1 },
+        { id: 'p2', kind: 'block', label: 'Proceso lee datos', x: 0, y: 1 }
       ],
       arrows: [
         { from: 'p1', to: 's1' },

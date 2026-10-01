@@ -22,13 +22,13 @@ Internet es una **red de redes**: miles de millones de dispositivos conectados q
 <Visualization viz={{ type: 'net-scene', static: true, title: 'Borde, acceso y núcleo', steps: [
   { note: 'Borde: hosts. Redes de acceso: enlaces cableados o inalámbricos hacia el primer router. Núcleo: routers interconectados, una red de redes.',
     devices: [
-      { id: 'h1', kind: 'laptop', label: 'Host', sub: 'borde', x: 8, y: 30 },
-      { id: 'h2', kind: 'phone', label: 'Móvil', sub: 'borde', x: 8, y: 75 },
-      { id: 'ra', kind: 'router', label: 'Router de acceso', x: 34, y: 52 },
-      { id: 'c1', kind: 'router', label: 'ISP regional', x: 56, y: 25 },
-      { id: 'c2', kind: 'router', label: 'ISP nacional', x: 56, y: 78 },
-      { id: 'c3', kind: 'router', label: 'ISP global', x: 78, y: 52 },
-      { id: 's', kind: 'server', label: 'Servidor', sub: 'borde (centro de datos)', x: 94, y: 52 } ],
+      { id: 'h1', kind: 'laptop', label: 'Host', sub: 'borde', x: 0, y: 30 },
+      { id: 'h2', kind: 'phone', label: 'Móvil', sub: 'borde', x: 0, y: 75 },
+      { id: 'ra', kind: 'router', label: 'Router de acceso', x: 27, y: 52 },
+      { id: 'c1', kind: 'router', label: 'ISP regional', x: 54, y: 12 },
+      { id: 'c2', kind: 'router', label: 'ISP nacional', x: 54, y: 92 },
+      { id: 'c3', kind: 'router', label: 'ISP global', x: 72, y: 52 },
+      { id: 's', kind: 'server', label: 'Servidor', sub: 'borde (centro de datos)', x: 100, y: 52 } ],
     cables: [
       { from: 'h1', to: 'ra' }, { from: 'h2', to: 'ra' },
       { from: 'ra', to: 'c1' }, { from: 'ra', to: 'c2' }, { from: 'c1', to: 'c3' }, { from: 'c2', to: 'c3' }, { from: 'c1', to: 'c2' },

@@ -58,21 +58,21 @@ El cliente agrega a su petición la cabecera `If-Modified-Since: <fecha>` con la
 <Visualization viz={{ type: 'net-scene', title: 'Caché institucional', steps: [
   { note: 'Sin caché: toda petición cruza el enlace de acceso hasta los servidores de origen en Internet.',
     devices: [
-      { id: 'b', kind: 'laptop', label: 'Navegadores', sub: 'red institucional', x: 10, y: 55 },
-      { id: 'r', kind: 'router', label: 'Router institucional', x: 38, y: 55 },
+      { id: 'b', kind: 'laptop', label: 'Navegadores', sub: 'red institucional', x: 0, y: 55 },
+      { id: 'r', kind: 'router', label: 'Router institucional', x: 32, y: 55 },
       { id: 'i', kind: 'cloud', label: 'Internet', x: 66, y: 55 },
-      { id: 'o', kind: 'server', label: 'Servidores de origen', x: 90, y: 55 } ],
+      { id: 'o', kind: 'server', label: 'Servidores de origen', x: 100, y: 55 } ],
     cables: [
       { from: 'b', to: 'r', rate: 'LAN' }, { from: 'r', to: 'i', rate: '15 Mbps', label: 'enlace de acceso', state: 'marked' }, { from: 'i', to: 'o' } ],
     zones: [{ label: 'Red institucional', devices: ['b', 'r'] }],
     packets: [{ from: 'b', to: 'o', label: 'HTTP request', order: 1, state: 'active' }] },
   { note: 'Con caché en la LAN: un acierto (60 %) se responde dentro de la red; solo el 40 % (miss rate 0,4) cruza el enlace de acceso.',
     devices: [
-      { id: 'b', kind: 'laptop', label: 'Navegadores', x: 8, y: 70 },
+      { id: 'b', kind: 'laptop', label: 'Navegadores', x: 0, y: 55 },
       { id: 'c', kind: 'server', label: 'Caché', sub: 'LAN', x: 30, y: 25 },
-      { id: 'r', kind: 'router', label: 'Router institucional', x: 42, y: 70 },
-      { id: 'i', kind: 'cloud', label: 'Internet', x: 68, y: 70 },
-      { id: 'o', kind: 'server', label: 'Servidores de origen', x: 92, y: 70 } ],
+      { id: 'r', kind: 'router', label: 'Router institucional', x: 32, y: 55 },
+      { id: 'i', kind: 'cloud', label: 'Internet', x: 66, y: 55 },
+      { id: 'o', kind: 'server', label: 'Servidores de origen', x: 100, y: 55 } ],
     cables: [
       { from: 'b', to: 'c', rate: 'LAN' }, { from: 'b', to: 'r', rate: 'LAN' },
       { from: 'r', to: 'i', rate: '15 Mbps', state: 'marked' }, { from: 'i', to: 'o' } ],

@@ -5,21 +5,36 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import VisualizationCanvas from '../components/VisualizationCanvas.tsx';
 
-function Layer({ i, width, draw }: { i: number; width: number; draw: (i: number, k: number) => ReactNode }) {
+/** El paso anterior (para que una familia desvanezca lo que ya no está). */
+function usePrevious(i: number): number | undefined {
+  const cur = useRef(i), prev = useRef<number | undefined>(undefined);
+  if (cur.current !== i) { prev.current = cur.current; cur.current = i; }
+  return prev.current;
+}
+
+export const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Tope del agrandado de texto en móvil. El auditor de solapes revisa también este tamaño. */
+export const MAX_BOOST = 1.25;
+
+type Draw = (i: number, k: number, prev?: number) => ReactNode;
+
+function Layer({ i, width, draw }: { i: number; width: number; draw: Draw }) {
   const ref = useRef<SVGGElement>(null);
   const [k, setK] = useState(1);
+  const prev = usePrevious(i);
   useLayoutEffect(() => {
     const svg = ref.current?.ownerSVGElement;
     if (!svg) return;
     const ro = new ResizeObserver(() => {
       const scale = svg.getBoundingClientRect().width / width;
-      // ≥ 0.8 px por unidad: tamaño real. Más chico: compensa hasta 1.4×.
-      setK(scale > 0 && scale < 0.8 ? Math.min(1.4, 0.8 / scale) : 1);
+      // ≥ 0.8 px por unidad: tamaño real. Más chico: compensa hasta MAX_BOOST.
+      setK(scale > 0 && scale < 0.8 ? Math.min(MAX_BOOST, 0.8 / scale) : 1);
     });
     ro.observe(svg);
     return () => ro.disconnect();
   }, [width]);
-  return <g ref={ref}>{draw(i, k)}</g>;
+  return <g ref={ref} className="net-layer">{draw(i, k, prev)}</g>;
 }
 
 export default function NetFigure({ notes, width, height, title, static: isStatic, draw }: {
@@ -28,7 +43,7 @@ export default function NetFigure({ notes, width, height, title, static: isStati
   height: number;
   title?: string;
   static?: boolean;
-  draw: (i: number, k: number) => ReactNode;
+  draw: Draw;
 }) {
   const steps = notes.map((note) => ({ note, nodes: [], edges: [], highlight: [] }));
   return (

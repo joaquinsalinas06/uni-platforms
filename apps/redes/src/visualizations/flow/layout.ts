@@ -133,6 +133,18 @@ function assignFsm(shapes: FlowShapeIn[], arrows: FlowArrowIn[]): Map<string, Ce
       }
     }
   }
+  // Cadena/ciclo de > 3 estados (rdt2.1, rdt3.0): en serpiente de 2 filas, como en
+  // las slides: la ida arriba (izq→der) y la vuelta abajo (der→izq).
+  const byDepth = new Map<number, number>();
+  for (const d of depth.values()) byDepth.set(d, (byDepth.get(d) ?? 0) + 1);
+  const n = byDepth.size;
+  if (n > 3 && [...byDepth.values()].every((c) => c === 1) && [...byDepth.keys()].every((d) => d < n)) {
+    const half = Math.ceil(n / 2);
+    return new Map(shapes.map((s) => {
+      const d = depth.get(s.id)!;
+      return [s.id, d < half ? { col: d, row: 0 } : { col: n - 1 - d, row: 1 }];
+    }));
+  }
   return centerColumns(shapes, depth);
 }
 
@@ -237,7 +249,26 @@ const left = (b: Box, y = b.cy): Pt => [b.cx - b.w / 2 + inset(b), y];
 const r1 = (v: number) => Math.round(v * 10) / 10;
 const poly = (p: Pt[]) => p.map(([x, y], i) => `${i ? 'L' : 'M'}${r1(x)},${r1(y)}`).join('');
 
-type Route = { pts?: Pt[]; d?: string; label?: { x: number; y: number; anchor: 'start' | 'middle' | 'end' } };
+type Route = { pts?: Pt[]; d?: string; label?: { x: number; y: number; anchor: 'start' | 'middle' | 'end'; grow?: 'up' | 'down' | 'center' } };
+
+/** Rótulo de flecha en líneas: respeta '\n' y parte lo largo (evento && guarda / acción; acción) en ≤ 32 caracteres. */
+const ARROW_WRAP = 32;
+export function arrowLines(label: string): string[] {
+  const out: string[] = [];
+  for (const raw of label.split('\n')) {
+    // "/ acción": la barra nunca queda sola en su línea.
+    const piece = raw.replace(/^\/ /, '/\u00a0');
+    let cur = '';
+    // Cortes preferidos después de '; ', ' && ', ' || ', y si no, en cualquier espacio.
+    for (const tok of piece.split(/(?<=; |&& |\|\| | )/)) {
+      if (cur && (cur + tok).trimEnd().length > ARROW_WRAP) { out.push(cur.trimEnd()); cur = tok; } else cur += tok;
+    }
+    if (cur.trim()) out.push(cur.trimEnd());
+  }
+  return out.length ? out : [label];
+}
+const LABEL_LH = 13;
+const labelW = (label: string) => Math.max(...arrowLines(label).map((l) => tw(l, LABEL)));
 
 /** Rótulo en el tramo más largo de una ruta ortogonal. */
 function midLabel(pts: Pt[], outerX?: number): Route['label'] {
@@ -247,10 +278,10 @@ function midLabel(pts: Pt[], outerX?: number): Route['label'] {
     if (L > best) { best = L; bi = i; }
   }
   const [a, b] = [pts[bi - 1], pts[bi]];
-  if (Math.abs(a[1] - b[1]) < 1) return { x: (a[0] + b[0]) / 2, y: a[1] - 5, anchor: 'middle' };
+  if (Math.abs(a[1] - b[1]) < 1) return { x: (a[0] + b[0]) / 2, y: a[1] - 5, anchor: 'middle', grow: 'up' };
   // Tramo vertical: el rótulo va del lado de afuera (lejos de las formas).
   const out = outerX !== undefined && a[0] < outerX;
-  return { x: a[0] + (out ? -6 : 6), y: (a[1] + b[1]) / 2 + 4, anchor: out ? 'end' : 'start' };
+  return { x: a[0] + (out ? -6 : 6), y: (a[1] + b[1]) / 2 + 4, anchor: out ? 'end' : 'start', grow: 'center' };
 }
 
 export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: { mode?: string; highlight?: string[] } = {}): Frame {
@@ -284,7 +315,7 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
       const pw = Math.max(...[...boxes.values()].filter((b) => b.col === prev).map((b) => b.w));
       const need = Math.max(0, ...valid
         .filter((a) => a.label && [B(a.from).col, B(a.to).col].sort((p, q) => p - q).join() === [prev, c].join())
-        .map((a) => tw(a.label!, LABEL) + (mode === 'fsm' ? 40 : 28)));
+        .map((a) => labelW(a.label!) + (mode === 'fsm' ? 40 : 28)));
       x += pw / 2 + Math.max(baseGapX, need) + w / 2;
     }
     colX.set(c, x);
@@ -401,9 +432,23 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
     if (a.from === a.to) {
       // Varios bucles en un estado: el 1.º arriba, el 2.º abajo, el 3.º más arriba…
       const k = valid.filter((o) => o.from === a.from && o.to === a.from).indexOf(a);
-      const sg = k % 2 ? -1 : 1, h = 44 + 28 * Math.floor(k / 2);
+      // El primer bucle apunta hacia afuera del diagrama: arriba en la fila de arriba, abajo en la de abajo.
+      const midY = (Math.min(...all.map((b) => b.cy)) + Math.max(...all.map((b) => b.cy))) / 2;
+      const away = A.cy > midY + 1 ? -1 : 1;
+      // 1.º afuera en vertical, 2.º hacia el costado de afuera, 3.º y 4.º los opuestos.
+      const outX = A.cx < (extent.l + extent.r) / 2 - 1 ? -1 : 1;
+      const slot = k % 4;
+      if (slot === 1 || slot === 3) {
+        const sx = slot === 1 ? outX : -outX, h = 44 + 28 * Math.floor(k / 4);
+        const p1: Pt = [A.cx + sx * r * 0.87, A.cy - r * 0.5], p2: Pt = [A.cx + sx * r * 0.87, A.cy + r * 0.5];
+        return {
+          d: `M${r1(p1[0])},${r1(p1[1])}C${r1(p1[0] + sx * h)},${r1(p1[1] - 22)} ${r1(p2[0] + sx * h)},${r1(p2[1] + 22)} ${r1(p2[0])},${r1(p2[1])}`,
+          label: { x: A.cx + sx * (r * 0.87 + h * 0.75 + 8), y: A.cy + 4, anchor: sx > 0 ? 'start' : 'end', grow: 'center' },
+        };
+      }
+      const sg = (slot === 2 ? -1 : 1) * away, h = 44 + 28 * Math.floor(k / 4);
       const p1: Pt = [A.cx - r * 0.5, A.cy - sg * r * 0.87], p2: Pt = [A.cx + r * 0.5, A.cy - sg * r * 0.87];
-      return { d: `M${r1(p1[0])},${r1(p1[1])}C${r1(p1[0] - 22)},${r1(p1[1] - sg * h)} ${r1(p2[0] + 22)},${r1(p2[1] - sg * h)} ${r1(p2[0])},${r1(p2[1])}`, label: { x: A.cx, y: A.cy - sg * (r + h - 6) + (sg < 0 ? 12 : 0), anchor: 'middle' } };
+      return { d: `M${r1(p1[0])},${r1(p1[1])}C${r1(p1[0] - 22)},${r1(p1[1] - sg * h)} ${r1(p2[0] + 22)},${r1(p2[1] - sg * h)} ${r1(p2[0])},${r1(p2[1])}`, label: { x: A.cx, y: A.cy - sg * (r + h - 6) + (sg < 0 ? 12 : 0), anchor: 'middle', grow: sg > 0 ? 'up' : 'down' } };
     }
     const dx = T.cx - A.cx, dy = T.cy - A.cy, L = Math.hypot(dx, dy) || 1;
     const ux = dx / L, uy = dy / L;
@@ -415,10 +460,12 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
       const horiz = Math.abs(uy) < 0.35;
       // Par ida/vuelta: cada flecha se corre hacia su normal (-uy, ux) y su
       // rótulo va de ESE lado, así ninguno pisa la otra flecha.
-      const nx = off ? -uy : horiz ? 0 : 1, ny = off ? ux : -1;
+      // Sin par: el rótulo de un tramo vertical va hacia AFUERA del diagrama.
+      const outward = (A.cx + T.cx) / 2 < (extent.l + extent.r) / 2 ? -1 : 1;
+      const nx = off ? -uy : horiz ? 0 : outward, ny = off ? ux : -1;
       return {
         pts: [p, q],
-        label: horiz ? { x: mx, y: ny > 0 ? my + 15 : my - 7, anchor: 'middle' } : { x: mx + (nx > 0 ? 8 : -8), y: my + 4, anchor: nx > 0 ? 'start' : 'end' },
+        label: horiz ? { x: mx, y: ny > 0 ? my + 15 : my - 7, anchor: 'middle', grow: ny > 0 ? 'down' : 'up' } : { x: mx + (nx > 0 ? 8 : -8), y: my + 4, anchor: nx > 0 ? 'start' : 'end', grow: 'center' },
       };
     }
     // Arco por debajo (o por arriba si va hacia la derecha) sin cruzar estados.
@@ -430,7 +477,7 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
     const cy = (downward ? Math.max(A.cy + A.h / 2, T.cy + T.h / 2) : Math.min(A.cy - A.h / 2, T.cy - T.h / 2)) + sgn * depth * 2 - sgn * 0.87 * r;
     const cx = (p[0] + q[0]) / 2;
     const apex = 0.25 * p[1] + 0.5 * cy + 0.25 * q[1];
-    return { d: `M${r1(p[0])},${r1(p[1])}Q${r1(cx)},${r1(cy)} ${r1(q[0])},${r1(q[1])}`, label: { x: cx, y: downward ? apex + 14 : apex - 6, anchor: 'middle' } };
+    return { d: `M${r1(p[0])},${r1(p[1])}Q${r1(cx)},${r1(cy)} ${r1(q[0])},${r1(q[1])}`, label: { x: cx, y: downward ? apex + 14 : apex - 6, anchor: 'middle', grow: downward ? 'down' : 'up' } };
   };
 
   const routeBlocks = (a: FlowArrowIn): Route => {
@@ -467,13 +514,18 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
     if (route.pts) pts.push(...route.pts);
     if (a.label && route.label) {
       const l = route.label;
-      annotations.push({
-        id: `al-${a.from}-${a.to}-${k}`, text: a.label, x: l.x, y: l.y, anchor: l.anchor, size: LABEL, weight: 600, bg: true,
-        color: state === 'active' ? 'var(--accent)' : state === 'muted' ? 'var(--faint)' : 'var(--ink)',
+      const lines = arrowLines(a.label);
+      const n = lines.length;
+      lines.forEach((text, j) => {
+        const y = l.grow === 'down' ? l.y + j * LABEL_LH : l.grow === 'center' ? l.y + (j - (n - 1) / 2) * LABEL_LH : l.y - (n - 1 - j) * LABEL_LH;
+        annotations.push({
+          id: `al-${a.from}-${a.to}-${k}${j ? `-${j}` : ''}`, text, x: l.x, y, anchor: l.anchor, size: LABEL, weight: 600, bg: true,
+          color: state === 'active' ? 'var(--accent)' : state === 'muted' ? 'var(--faint)' : 'var(--ink)',
+        });
+        const w = tw(text, LABEL);
+        const x0 = l.anchor === 'middle' ? l.x - w / 2 : l.anchor === 'end' ? l.x - w : l.x;
+        pts.push([x0 - 4, y - 12], [x0 + w + 4, y + 4]);
       });
-      const w = tw(a.label, LABEL);
-      const x0 = l.anchor === 'middle' ? l.x - w / 2 : l.anchor === 'end' ? l.x - w : l.x;
-      pts.push([x0 - 4, l.y - 12], [x0 + w + 4, l.y + 4]);
     }
   });
 
@@ -520,4 +572,35 @@ export function flowLayout(shapes: FlowShapeIn[], arrows: FlowArrowIn[], opts: {
     id: b.id, label: b.lines.join('\n'), lines: b.lines, shape: SHAPE[b.kind], x: b.cx, y: b.cy, w: b.w, h: b.h, state: b.state,
   }));
   return { nodes, edges: [], groups: [], paths, annotations, width, height };
+}
+/** Lo que aún choca, por paso: rótulos de flecha entre sí, sobre formas, o un diagrama
+ * tan ancho que en una columna de lectura (~720 px) el texto quedaría ilegible. */
+export function flowIssues(steps: { shapes?: FlowShapeIn[]; arrows?: FlowArrowIn[]; mode?: string; highlight?: string[] }[]): string[][] {
+  return steps.map((st) => {
+    const f = flowLayout(st.shapes ?? [], st.arrows ?? [], { mode: st.mode, highlight: st.highlight });
+    const out: string[] = [];
+    const box = (a: CanvasText) => {
+      const w = tw(a.text, a.size ?? 12);
+      const x0 = a.anchor === 'middle' ? a.x - w / 2 : a.anchor === 'end' ? a.x - w : a.x;
+      return { x: x0, y: a.y - (a.size ?? 12) * 0.8, w, h: (a.size ?? 12) * 1.05 };
+    };
+    const labs = f.annotations.filter((a) => a.id.startsWith('al-')).map((a) => ({ a, r: box(a) }));
+    const hit = (p: { x: number; y: number; w: number; h: number }, q: { x: number; y: number; w: number; h: number }) => {
+      const w = Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x), h = Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y);
+      return w > 1 && h > 1;
+    };
+    labs.forEach((l, i) => {
+      for (const o of labs.slice(i + 1)) if (hit(l.r, o.r)) out.push(`rótulo «${l.a.text}» pisa «${o.a.text}»`);
+      for (const n of f.nodes) {
+        const w = n.w ?? 40, h = n.h ?? 30;
+        // Estados (círculos): distancia del rectángulo del rótulo al centro.
+        if (n.shape === 'circle') {
+          const cx = Math.max(l.r.x, Math.min(n.x, l.r.x + l.r.w)), cy = Math.max(l.r.y, Math.min(n.y, l.r.y + l.r.h));
+          if (Math.hypot(cx - n.x, cy - n.y) < w / 2 - 1) out.push(`rótulo «${l.a.text}» pisa el estado «${n.label.replace(/\n/g, ' ')}»`);
+        } else if (hit(l.r, { x: n.x - w / 2, y: n.y - h / 2, w, h })) out.push(`rótulo «${l.a.text}» pisa «${n.label.replace(/\n/g, ' ')}»`);
+      }
+    });
+    if ((f.width ?? 0) > 1100) out.push(`diagrama de ${f.width} px de ancho: en pantalla el texto queda diminuto`);
+    return out;
+  });
 }

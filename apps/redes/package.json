@@ -13,9 +13,10 @@
     "sync": "node scripts/sync-visualization-flags.mjs",
     "shot": "node scripts/shot.mjs",
     "audit-continuity": "node scripts/audit-node-continuity.mjs",
-    "test": "node --test 'src/**/*.test.ts' && node scripts/verify-expect.mjs templates src/pages/lab",
+    "test": "node --test 'src/**/*.test.ts' && node scripts/verify-expect.mjs templates src/pages/lab && node scripts/audit-viz-overlap.mjs",
     "astro": "astro",
-    "verify": "node scripts/verify-expect.mjs content"
+    "verify": "node scripts/verify-expect.mjs content",
+    "audit-overlap": "node scripts/audit-viz-overlap.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.3.1",

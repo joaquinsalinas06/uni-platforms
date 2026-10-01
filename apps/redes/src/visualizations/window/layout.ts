@@ -1,6 +1,9 @@
 // Layout puro de `window`: filas de números de secuencia con un marco que
 // cubre [base, base+size). La posición x de una celda depende sólo de su
 // número `n` (con origen común a todos los pasos): así el marco se DESLIZA.
+import { textW } from '../net-style.ts';
+import { overlapArea, type Rect } from '../geom.ts';
+
 export type CellState = 'acked' | 'sent' | 'usable' | 'unusable' | 'buffered' | 'expected' | 'received';
 export type SlidingWindow = { role: 'sender' | 'receiver'; label: string; base: number; size: number; seqSpace?: number; cells: { n: number; state: CellState }[] };
 export type WindowStep = { windows?: SlidingWindow[] };
@@ -73,4 +76,25 @@ export function windowLayouts(steps: WindowStep[]): WindowFrame[] {
       };
     }),
   }));
+}
+/** Lo que aún choca, por paso: rótulos de fila, marcadores base=/esperado= y leyenda. */
+export function windowIssues(steps: WindowStep[]): string[][] {
+  return windowLayouts(steps).map((f) => {
+    const out: string[] = [];
+    const boxes: { r: Rect; what: string }[] = [];
+    for (const r of f.rows) {
+      boxes.push({ r: { x: 16, y: r.y, w: textW(r.label, 12.5, false), h: 15 }, what: `rótulo «${r.label}»` });
+      if (r.marker) {
+        const w = textW(r.marker.text, 10.5);
+        const right = r.marker.x > f.width - 90;
+        boxes.push({ r: { x: right ? r.marker.x + r.frame.w - w : r.marker.x, y: r.frame.y + r.frame.h + 3, w, h: 12 }, what: `marcador «${r.marker.text}»` });
+      }
+      for (const c of r.cells) boxes.push({ r: { x: c.x, y: c.y, w: CELL, h: CELL }, what: `celda ${c.text} de «${r.label}»` });
+    }
+    boxes.forEach((a, i) => {
+      if (a.r.x < 0 || a.r.x + a.r.w > f.width) out.push(`${a.what} se sale del lienzo`);
+      for (const b of boxes.slice(i + 1)) if (!(a.what.startsWith('celda') && b.what.startsWith('celda')) && overlapArea(a.r, b.r) > 2) out.push(`${a.what} pisa ${b.what}`);
+    });
+    return out;
+  });
 }

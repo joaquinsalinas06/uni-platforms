@@ -393,11 +393,11 @@ File Data: 418 bytes
     {
       note: 'Esquema del examen: cada laptop con IP : puerto. La figura no dibuja ningún enlace entre los dos routers.',
       devices: [
-        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25 },
-        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
-        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48 },
-        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70 },
-        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30 }
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 4, y: 20 },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 4, y: 80 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 50 },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 70, y: 70 },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 96, y: 28 }
       ],
       cables: [
         { from: 'a', to: 'r1' },
@@ -412,11 +412,11 @@ File Data: 418 bytes
     {
       note: 'a) y b) El gateway de cada laptop es la IP de su router: A usa 192.168.10.1 y C usa 192.170.10.1.',
       devices: [
-        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25, state: 'marked' },
-        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
-        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48, state: 'marked' },
-        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70, state: 'marked' },
-        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30, state: 'marked' }
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 4, y: 20, state: 'marked' },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 4, y: 80 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 50, state: 'marked' },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 70, y: 70, state: 'marked' },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 96, y: 28, state: 'marked' }
       ],
       cables: [
         { from: 'a', to: 'r1' },
@@ -431,11 +431,11 @@ File Data: 418 bytes
     {
       note: 'c) Datagrama de A a B: origen 192.168.10.5 : 12256, destino 192.168.10.12 : 12270. Ambas están en la LAN de Casa 1.',
       devices: [
-        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25 },
-        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
-        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48 },
-        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70 },
-        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30 }
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 4, y: 20 },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 4, y: 80 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 50 },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 70, y: 70 },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 96, y: 28 }
       ],
       cables: [
         { from: 'a', to: 'r1' },
@@ -453,11 +453,11 @@ File Data: 418 bytes
     {
       note: 'e) C envía a 192.168.10.101: ningún equipo del esquema tiene esa IP (A es .5, B es .12), así que no hay quien reciba.',
       devices: [
-        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 8, y: 25 },
-        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 8, y: 70 },
-        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 48 },
-        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 66, y: 70 },
-        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 90, y: 30 }
+        { id: 'a', kind: 'laptop', label: 'Laptop A', sub: '192.168.10.5 : 12256', x: 4, y: 20 },
+        { id: 'b', kind: 'laptop', label: 'Laptop B', sub: '192.168.10.12 : 12270', x: 4, y: 80 },
+        { id: 'r1', kind: 'router', label: 'Router Casa 1', sub: '192.168.10.1', x: 40, y: 50 },
+        { id: 'r2', kind: 'router', label: 'Router Casa 2', sub: '192.170.10.1', x: 70, y: 70 },
+        { id: 'c', kind: 'laptop', label: 'Laptop C', sub: '192.170.10.101 : 12345', x: 96, y: 28 }
       ],
       cables: [
         { from: 'a', to: 'r1' },

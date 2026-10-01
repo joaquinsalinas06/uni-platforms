@@ -507,3 +507,15 @@ a:hover {
 
 /* inline code largo (URLs/hosts) no debe desbordar en móvil */
 .prose :not(pre) > code { overflow-wrap: anywhere; }
+/* Entre pasos: los cambios de estado se interpolan (los elementos conservan su
+   clave entre pasos); lo nuevo entra, lo que se va se desvanece. */
+.net-layer :is(rect, path, circle, ellipse, polygon, text) { transition: fill 350ms, stroke 350ms, opacity 350ms, stroke-width 350ms, fill-opacity 350ms; }
+@keyframes net-out { to { opacity: 0; } }
+@keyframes net-pop { from { opacity: 0; transform: scale(0.85); } }
+.net-out { animation: net-out 320ms ease-in both; pointer-events: none; }
+.net-draw-once { animation: net-draw var(--dur, 900ms) cubic-bezier(.45,.05,.35,1) both; }
+.net-pop-in { transform-box: fill-box; transform-origin: center; animation: net-pop 380ms cubic-bezier(.2,.7,.3,1) both; }
+@media (prefers-reduced-motion: reduce) { .net-out { display: none; } }
+
+/* Un dominio en `código` dentro de un título no empuja la página en móvil. */
+.prose :is(h1, h2, h3, h4) code { white-space: normal; }

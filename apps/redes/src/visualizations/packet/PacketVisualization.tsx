@@ -1,6 +1,6 @@
 // `packet`: cabeceras en rejilla de bits y encapsulamiento por capas.
 import NetFigure from '../net-kit.tsx';
-import { inkOf, wash } from '../net-style.ts';
+import { inkOf, textW, wash } from '../net-style.ts';
 import { packetLayouts, W, type Box, type PacketStep } from './layout.ts';
 
 type Step = PacketStep & { note: string };
@@ -20,15 +20,24 @@ function look(b: Box): { fill: string; stroke: string; text: string; width: numb
 }
 
 function BoxView({ b, k, anim }: { b: Box; k: number; anim?: string }) {
+  // Un campo de pie no se agranda en móvil: ya ocupa todo su ancho.
+  if (b.vertical) k = 1;
   const l = look(b);
-  const fs = b.fs * Math.min(k, 1.3);
+  // El agrandado de móvil nunca saca el rótulo de su caja.
+  const lw = Math.max(...b.lines.map((t) => textW(t, b.fs, b.kind === 'header' || b.kind === 'trailer')));
+  const fs = b.fs * Math.max(1, Math.min(k, 1.3, (b.w - 6) / lw));
   const lh = fs * 1.2;
   const block = b.lines.length * lh + (b.value ? 15 : 0);
   const y0 = b.y + b.h / 2 - block / 2 + lh / 2;
   return (
     <g className={anim} opacity={l.opacity}>
       <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={b.kind === 'field' ? 0 : 4} fill={l.fill} stroke={l.stroke} strokeWidth={l.width} style={{ transition: 'fill 300ms, stroke 300ms' }} />
-      {b.lines.map((line, j) => (
+      {b.vertical && (
+        <text transform={`translate(${b.x + b.w / 2},${b.y + b.h / 2}) rotate(-90)`} textAnchor="middle" dominantBaseline="central" fontSize={b.fs} fontWeight={500} fontFamily="var(--font-sans)" fill={l.text}>
+          {b.lines[0]}
+        </text>
+      )}
+      {!b.vertical && b.lines.map((line, j) => (
         <text key={j} x={b.x + b.w / 2} y={y0 + j * lh} textAnchor="middle" dominantBaseline="central" fontSize={fs} fontWeight={b.kind === 'field' ? 500 : 650} fontFamily={b.kind === 'header' || b.kind === 'trailer' ? 'var(--font-mono)' : 'var(--font-sans)'} fill={l.text}>
           {line}
         </text>
@@ -56,8 +65,10 @@ export default function PacketVisualization({ steps, title, static: isStatic }: 
       height={frames[0].height}
       title={title}
       static={isStatic}
-      draw={(i, k) => {
+      draw={(i, k, prev) => {
         const f = frames[i];
+        const keys = new Set(f.boxes.map((b) => b.key));
+        const ghosts = prev !== undefined && prev !== i ? frames[prev].boxes.filter((b) => !keys.has(b.key)) : [];
         return (
           <>
             {f.ticks && <path d={f.ticks} stroke="var(--muted)" strokeWidth={1} />}
@@ -66,6 +77,7 @@ export default function PacketVisualization({ steps, title, static: isStatic }: 
                 {t.text}
               </text>
             ))}
+            {ghosts.map((b) => <BoxView key={`ghost-${b.key}-${i}`} b={b} k={k} anim="net-out" />)}
             {f.boxes.map((b) => {
               // Al aparecer una capa nueva su cabecera entra deslizándose; el resto de la fila, con fundido.
               const [j, row] = b.key.slice(b.kind === 'trailer' ? 2 : 1).split('-');
