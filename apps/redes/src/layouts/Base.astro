@@ -46,7 +46,16 @@ const searchIndex = await buildSearchIndex();
           crumb && (
             <>
               <span class="text-[var(--rule)]">/</span>
-              <span class="tag truncate">{crumb}</span>
+              <span class="tag truncate">
+                {/^s\d+\//.test(crumb) ? (
+                  <>
+                    <a href={`/units/${crumb.split('/')[0]}`} class="no-underline hover:text-[var(--accent)]">{crumb.split('/')[0]}</a>
+                    /{crumb.split('/').slice(1).join('/')}
+                  </>
+                ) : (
+                  crumb
+                )}
+              </span>
             </>
           )
         }

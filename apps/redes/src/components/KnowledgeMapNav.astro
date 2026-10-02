@@ -7,8 +7,10 @@ const current = Astro.url.pathname;
 // La unidad que contiene el tema activo se abre siempre, sin importar lo que
 // diga localStorage — no tiene sentido navegar a un tema y que su propia
 // unidad aparezca colapsada.
-const activeUnit = knowledgeMap.units.find((unit) =>
-  unit.topics.some((id) => current === `/topics/${id}` || current.startsWith(`/topics/${id}/`)),
+const activeUnit = knowledgeMap.units.find(
+  (unit) =>
+    current === `/units/${unit.id}` ||
+    unit.topics.some((id) => current === `/topics/${id}` || current.startsWith(`/topics/${id}/`)),
 )?.id;
 ---
 
@@ -39,49 +41,98 @@ const activeUnit = knowledgeMap.units.find((unit) =>
   <div class="stagger">
     {
       knowledgeMap.units.map((unit) => (
-        <details class="group mb-7 [&_summary::-webkit-details-marker]:hidden" data-unit={unit.id} open={unit.id === activeUnit || undefined}>
-          <summary class="mb-2 flex cursor-pointer list-none items-center gap-1.5 no-underline hover:text-[var(--accent)]">
-            <svg
-              viewBox="0 0 10 10"
-              class="h-2.5 w-2.5 shrink-0 fill-[var(--faint)] transition-transform duration-200 group-open:rotate-90"
-              aria-hidden="true"
+        <section class="mb-3" data-unit={unit.id} data-open={unit.id === activeUnit ? 'true' : 'false'}>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              data-unit-toggle
+              aria-expanded={unit.id === activeUnit ? 'true' : 'false'}
+              aria-controls={`unit-panel-${unit.id}`}
+              class="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 py-1 text-left hover:text-[var(--accent)]"
             >
-              <path d="M2 1 L8 5 L2 9 Z" />
-            </svg>
-            <span class="tag truncate">{unit.title.replace(/^Semana (\d+) — /, 'Semana $1 · ')}</span>
-          </summary>
+              <svg viewBox="0 0 10 10" class="chev h-2.5 w-2.5 shrink-0 fill-[var(--faint)]" aria-hidden="true">
+                <path d="M2 1 L8 5 L2 9 Z" />
+              </svg>
+              <span class="tag truncate">{unit.title.replace(/^Semana (\d+) — /, 'Semana $1 · ')}</span>
+            </button>
+            <a
+              href={`/units/${unit.id}`}
+              data-nav-link
+              class:list={['nav-link tag shrink-0 rounded px-1.5 py-0.5 no-underline', current === `/units/${unit.id}` && 'is-active']}
+              aria-label={`Portada de ${unit.title.split(' — ')[0]}`}
+            >
+              portada
+            </a>
+          </div>
 
-          <ul class="space-y-px pl-4">
-            {unit.topics.map((id) => {
-              const t = knowledgeMap.topics[id];
-              const href = `/topics/${id}`;
-              const active = current === href || current.startsWith(`${href}/`);
-              const ready = t?.status === 'generated';
-              return (
-                <li>
-                  {ready ? (
-                    <a href={href} data-nav-link class:list={['nav-link relative block rounded-r py-1.5 pl-3.5 pr-2 text-[0.8125rem] leading-snug no-underline', active && 'is-active']}>
-                      <span data-nav-bar class="absolute inset-y-0 left-0 w-[2px] rounded" />
-                      {t?.title ?? id}
-                    </a>
-                  ) : (
-                    <span class="relative block py-1.5 pl-3.5 pr-2 text-[0.8125rem] leading-snug text-[var(--faint)]">
-                      <span class="absolute inset-y-0 left-0 w-[2px] rounded bg-[var(--rule)]" />
-                      {t?.title ?? id}
-                      <span class="tag ml-1.5">pendiente</span>
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </details>
+          <div class="unit-panel" id={`unit-panel-${unit.id}`}>
+            <ul class="unit-inner space-y-px pl-4">
+              {unit.topics.map((id) => {
+                const t = knowledgeMap.topics[id];
+                const href = `/topics/${id}`;
+                const active = current === href || current.startsWith(`${href}/`);
+                const ready = t?.status === 'generated';
+                return (
+                  <li>
+                    {ready ? (
+                      <a href={href} data-nav-link class:list={['nav-link relative block rounded-r py-1.5 pl-3.5 pr-2 text-[0.8125rem] leading-snug no-underline', active && 'is-active']}>
+                        <span data-nav-bar class="absolute inset-y-0 left-0 w-[2px] rounded" />
+                        {t?.title ?? id}
+                      </a>
+                    ) : (
+                      <span class="relative block py-1.5 pl-3.5 pr-2 text-[0.8125rem] leading-snug text-[var(--faint)]">
+                        <span class="absolute inset-y-0 left-0 w-[2px] rounded bg-[var(--rule)]" />
+                        {t?.title ?? id}
+                        <span class="tag ml-1.5">pendiente</span>
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </section>
       ))
     }
   </div>
 </nav>
 
 <style>
+  /* Acordeón animado: la altura pasa de 0fr a 1fr (sin medir en JS). El
+     panel cerrado queda `visibility: hidden` para que sus enlaces no reciban
+     foco; la visibilidad se retrasa al cerrar para no cortar la animación. */
+  .unit-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-rows 0.28s ease,
+      visibility 0s linear 0.28s;
+  }
+  [data-open='true'] > .unit-panel {
+    grid-template-rows: 1fr;
+    visibility: visible;
+    transition:
+      grid-template-rows 0.28s ease,
+      visibility 0s;
+  }
+  .unit-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .chev {
+    transition: transform 0.2s;
+  }
+  [data-open='true'] .chev {
+    transform: rotate(90deg);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .unit-panel,
+    [data-open='true'] > .unit-panel,
+    .chev {
+      transition: none;
+    }
+  }
   /* Un solo atributo maneja el estado activo — el mismo en el primer render
      del servidor y en cada recálculo del cliente tras una navegación. */
   .nav-link {
@@ -113,64 +164,72 @@ const activeUnit = knowledgeMap.units.find((unit) =>
 </style>
 
 <script>
-  // Recuerda qué unidads dejó abiertas o cerradas cada quien, por unidad, y
-  // recalcula qué enlace está activo. La nav está `transition:persist`ida:
-  // este script corre UNA vez (el nodo nunca se remonta), así que registra
-  // sus listeners en `document`, que sí sobrevive a cada navegación.
-  const KEY = (id: string) => `nav:unit:${id}`;
+  // Acordeón: una sola unidad abierta a la vez. Recuerda cuál dejó abierta
+  // cada quien y recalcula qué enlace está activo. La nav está
+  // `transition:persist`ida: este script corre UNA vez (el nodo nunca se
+  // remonta), así que registra sus listeners en `document`, que sí sobrevive
+  // a cada navegación.
+  const KEY = 'nav:open-unit';
+  const units = () => document.querySelectorAll<HTMLElement>('[data-unit]');
+
+  function setOpen(el: HTMLElement, open: boolean) {
+    el.dataset.open = open ? 'true' : 'false';
+    el.querySelector('[data-unit-toggle]')?.setAttribute('aria-expanded', String(open));
+  }
+
+  // Abre `id` y cierra el resto; `id` vacío cierra todo.
+  function openOnly(id: string) {
+    for (const el of units()) setOpen(el, el.dataset.unit === id);
+  }
+
+  function remember(id: string) {
+    try {
+      localStorage.setItem(KEY, id);
+    } catch {
+      // per-viewer, no crítico si no persiste
+    }
+  }
 
   function syncActive() {
     const path = location.pathname;
-    let activeUnit: HTMLDetailsElement | null = null;
+    let activeUnit: HTMLElement | null = null;
 
     for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-nav-link]')) {
       const href = a.getAttribute('href')!;
       const active = href === '/practica' || href === '/formulario' ? path === href : path === href || path.startsWith(`${href}/`);
-      // evaluaciones y sus sub-rutas (/evaluaciones/pd1/2026-i) usan el mismo prefijo que ya cubre el `path.startsWith` de arriba.
       a.classList.toggle('is-active', active);
-      if (active) activeUnit = a.closest('details[data-unit]');
+      if (active) activeUnit = a.closest<HTMLElement>('[data-unit]') ?? activeUnit;
     }
 
-    // La unidad del tema activo manda: se abre pase lo que diga localStorage.
-    if (activeUnit) activeUnit.open = true;
+    // La unidad del tema (o de la portada) activo manda sobre lo guardado.
+    if (activeUnit) openOnly(activeUnit.dataset.unit!);
+    return !!activeUnit;
   }
 
-  function restoreCollapsedUnits() {
-    for (const el of document.querySelectorAll<HTMLDetailsElement>('details[data-unit]')) {
-      if (el.open) continue; // ya la forzó syncActive() por ser la unidad activa
-      try {
-        const saved = localStorage.getItem(KEY(el.dataset.unit!));
-        if (saved !== null) el.open = saved === '1';
-      } catch {
-        // localStorage puede fallar (ventana privada, cuota); se queda
-        // abierta — el estado por defecto.
-      }
+  if (!syncActive()) {
+    try {
+      const saved = localStorage.getItem(KEY);
+      if (saved) openOnly(saved);
+    } catch {
+      // sin localStorage: queda todo cerrado
     }
   }
 
-  // Corre una vez, al cargar esta nav (persistida: no se repite en cada
-  // navegación posterior)...
-  syncActive();
-  restoreCollapsedUnits();
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-unit-toggle]');
+    if (!btn) return;
+    const el = btn.closest<HTMLElement>('[data-unit]')!;
+    const willOpen = el.dataset.open !== 'true';
+    openOnly(willOpen ? el.dataset.unit! : '');
+    remember(willOpen ? el.dataset.unit! : '');
+  });
 
-  for (const el of document.querySelectorAll<HTMLDetailsElement>('details[data-unit]')) {
-    el.addEventListener('toggle', () => {
-      try {
-        localStorage.setItem(KEY(el.dataset.unit!), el.open ? '1' : '0');
-      } catch {
-        // per-viewer, no crítico si no persiste
-      }
-    });
-  }
-
-  // ...y de nuevo tras cada navegación con el router de Astro, porque la nav
-  // persistida no se re-renderiza: sin esto, "activo" se quedaría congelado
-  // en la página donde se montó por primera vez.
+  // La nav persistida no se re-renderiza: sin esto "activo" se quedaría
+  // congelado en la página donde se montó por primera vez.
   document.addEventListener('astro:after-swap', syncActive);
 
-  // Igual que la barra de pestañas: aunque el nodo esté persistido, el swap
-  // de Astro puede resetear su scroll vertical al desmontarlo/remontarlo.
-  // Se guarda antes del swap y se restaura después.
+  // Aunque el nodo esté persistido, el swap de Astro puede resetear su scroll
+  // vertical. Se guarda antes del swap y se restaura después.
   let savedNavScroll = 0;
   document.addEventListener('astro:before-swap', () => {
     const nav = document.querySelector<HTMLElement>('[aria-label="Mapa del curso"]');
