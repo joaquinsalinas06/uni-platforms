@@ -164,12 +164,12 @@ const activeUnit = knowledgeMap.units.find(
 </style>
 
 <script>
-  // Acordeón: una sola unidad abierta a la vez. Recuerda cuál dejó abierta
-  // cada quien y recalcula qué enlace está activo. La nav está
-  // `transition:persist`ida: este script corre UNA vez (el nodo nunca se
-  // remonta), así que registra sus listeners en `document`, que sí sobrevive
-  // a cada navegación.
-  const KEY = 'nav:open-unit';
+  // Cada unidad se abre y cierra por su cuenta (pueden quedar varias abiertas).
+  // Recuerda cuáles dejó abiertas cada quien y recalcula qué enlace está
+  // activo. La nav está `transition:persist`ida: este script corre UNA vez
+  // (el nodo nunca se remonta), así que registra sus listeners en `document`,
+  // que sí sobrevive a cada navegación.
+  const KEY = 'nav:open-units';
   const units = () => document.querySelectorAll<HTMLElement>('[data-unit]');
 
   function setOpen(el: HTMLElement, open: boolean) {
@@ -177,14 +177,10 @@ const activeUnit = knowledgeMap.units.find(
     el.querySelector('[data-unit-toggle]')?.setAttribute('aria-expanded', String(open));
   }
 
-  // Abre `id` y cierra el resto; `id` vacío cierra todo.
-  function openOnly(id: string) {
-    for (const el of units()) setOpen(el, el.dataset.unit === id);
-  }
-
-  function remember(id: string) {
+  function remember() {
     try {
-      localStorage.setItem(KEY, id);
+      const open = [...units()].filter((el) => el.dataset.open === 'true').map((el) => el.dataset.unit);
+      localStorage.setItem(KEY, JSON.stringify(open));
     } catch {
       // per-viewer, no crítico si no persiste
     }
@@ -201,27 +197,24 @@ const activeUnit = knowledgeMap.units.find(
       if (active) activeUnit = a.closest<HTMLElement>('[data-unit]') ?? activeUnit;
     }
 
-    // La unidad del tema (o de la portada) activo manda sobre lo guardado.
-    if (activeUnit) openOnly(activeUnit.dataset.unit!);
-    return !!activeUnit;
+    // La unidad del tema (o de la portada) activo se abre; las demás no se tocan.
+    if (activeUnit) setOpen(activeUnit, true);
   }
 
-  if (!syncActive()) {
-    try {
-      const saved = localStorage.getItem(KEY);
-      if (saved) openOnly(saved);
-    } catch {
-      // sin localStorage: queda todo cerrado
-    }
+  try {
+    const saved: string[] = JSON.parse(localStorage.getItem(KEY) ?? '[]');
+    for (const el of units()) if (saved.includes(el.dataset.unit!)) setOpen(el, true);
+  } catch {
+    // sin localStorage: solo queda abierta la unidad activa
   }
+  syncActive();
 
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-unit-toggle]');
     if (!btn) return;
     const el = btn.closest<HTMLElement>('[data-unit]')!;
-    const willOpen = el.dataset.open !== 'true';
-    openOnly(willOpen ? el.dataset.unit! : '');
-    remember(willOpen ? el.dataset.unit! : '');
+    setOpen(el, el.dataset.open !== 'true');
+    remember();
   });
 
   // La nav persistida no se re-renderiza: sin esto "activo" se quedaría
