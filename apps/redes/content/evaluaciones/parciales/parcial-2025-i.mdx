@@ -1,0 +1,500 @@
+---
+title: "Examen Parcial 2025-I"
+category: "parciales"
+categoryLabel: "Exámenes Parciales"
+order: 0
+pdf: "/evaluaciones/parciales/2025-i.pdf"
+source: "Examen Parcial CS4054 Redes y Comunicaciones, 2025-I (23 de mayo de 2025)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExamStatement from '../../../src/components/ExamStatement.astro';
+
+## Instrucciones
+
+- **Curso**: CS4054 Redes y Comunicaciones. **Fecha**: 23 de mayo de 2025. Sección teórica (11 pts) y práctica (9 pts). Individual; se califica el procedimiento y la redacción.
+- El PDF de descarga es el examen recompuesto en LaTeX a partir de una copia impresa: mismo enunciado, mismas figuras transcritas. En la Figura 2 la fila 16 es ilegible en la copia y no se usa.
+
+---
+
+## Sección teórica
+
+### Pregunta 1: TCP frente a UDP (1,5 pt)
+
+<ExamStatement>
+
+**(1.5 pt)** Explique usted las diferencias entre TCP y UDP (mencione y explique tres diferencias). Luego, supongamos que quiere establecer comunicación desde un cliente remoto a un servidor lo más rápido posible. ¿Lo más adecuado sería utilizar UDP o TCP? ¿Por qué?
+
+</ExamStatement>
+
+**Solución.**
+
+| | TCP | UDP |
+|---|---|---|
+| **Conexión** | Orientado a conexión: *handshake* antes de enviar datos; el socket se identifica con la 4-tupla (IP y puerto de origen y destino). | Sin conexión: no hay *handshake*; cada segmento se trata de forma independiente y el socket se identifica por IP y puerto destino. |
+| **Confiabilidad** | Entrega confiable y en orden (números de secuencia, ACK, retransmisión). | *Best effort*: los segmentos se pueden perder o llegar desordenados; si se necesita confiabilidad, la agrega la aplicación. |
+| **Control de flujo y congestión** | Sí: regula la tasa de envío. | No: el emisor envía tan rápido como quiera. |
+| **Cabecera** | Más grande y con más campos. | 8 bytes: puertos, longitud y checksum. |
+
+**¿Lo más rápido?** **UDP.** No hay *handshake*, así que el primer dato sale de inmediato (TCP gasta un RTT en establecer la conexión antes de enviar), y no hay control de congestión que frene el envío. El costo es que la aplicación debe tolerar pérdidas o resolverlas ella misma. Detalle: [protocolo UDP](/topics/protocolo-udp).
+
+---
+
+### Pregunta 2: Distribución cliente-servidor frente a P2P (3 pt)
+
+<ExamStatement>
+
+**(3.0 pt)** Considere un archivo de tamaño $F$ y $N$ peers. Un servidor con velocidad de subida $u_s$ intenta transmitir el archivo hacia los $N$ peers, cada uno con su velocidad de descarga $d_n$ y velocidad de subida $u_n$. Además $d_{min} = \min\{d_1, d_2, \dots, d_N\}$ es la velocidad de descarga mínima entre los peers. Explique cómo se obtienen las siguientes expresiones del tiempo de distribución total para las arquitecturas cliente-servidor y P2P e indique las implicancias cuando el número de peers es muy alto
+
+$$D_{cs} \ge \max\left\{\frac{NF}{u_s}, \frac{F}{d_{\min}}\right\} \qquad D_{P2P} \ge \max\left\{\frac{F}{u_s}, \frac{F}{d_{\min}}, \frac{NF}{u_s + \sum_{i=1}^{N} u_i}\right\}$$
+
+</ExamStatement>
+
+**Solución.**
+
+**Cliente-servidor.** El servidor envía $N$ copias de forma secuencial: una copia tarda $F/u_s$, las $N$ copias $NF/u_s$. Cada cliente baja una copia; el más lento tarda $F/d_{\min}$. Ambas cotas se cumplen a la vez, y el tiempo es el máximo.
+
+**P2P.** El servidor debe subir al menos una copia ($F/u_s$); el cliente más lento tarda $F/d_{\min}$; y entre todos hay que bajar $NF$ bits, con capacidad máxima de subida $u_{\text{total}} = u_s + u_1 + \dots + u_N$, de donde $NF/u_{\text{total}}$.
+
+**Implicancias con $N$ muy grande.** En cliente-servidor $NF/u_s$ crece **linealmente** con $N$. En P2P, con pares de subida parecida $u$, $\frac{NF}{u_s + Nu} \to \frac{F}{u}$ *(derivado)*: el tiempo se estabiliza, porque cada par que llega también aporta subida. Gráfica y detalle: [escalabilidad](/topics/arquitecturas-p2p-distribucion/analisis-escalabilidad-asintotica).
+
+---
+
+### Pregunta 3: protocolos de transporte de aplicaciones populares (2,5 pt)
+
+<ExamStatement>
+
+**(2.5 pt)** (Capa de Transporte) Identifique y justifique el uso de los protocolos de transporte utilizados por algunas aplicaciones populares de Internet. **(Llenar EN SU CUADERNILLO)**
+
+| Aplicación | Protocolo de aplicación | Protocolo de transporte | Justificación de protocolo de transporte |
+|---|---|---|---|
+| Email | SMTP | | |
+| Acceso terminal remoto | Telnet | | |
+| Web | HTTP 1.1 | | |
+| Transferencia de archivos | FTP | | |
+| Transmisión multimedia | HTTP, DASH | | |
+| DNS | DNS | | |
+
+</ExamStatement>
+
+**Solución.** Según la tabla de la semana 2 (aplicaciones y sus protocolos) y la de usos de UDP de la semana 6:
+
+| Aplicación | Protocolo de aplicación | Transporte | Justificación |
+|---|---|---|---|
+| Email | SMTP | **TCP** | Un correo no puede llegar incompleto: necesita entrega confiable y en orden. |
+| Acceso terminal remoto | Telnet | **TCP** | Cada tecla y cada respuesta deben llegar todas y en orden dentro de una sesión. |
+| Web | HTTP 1.1 | **TCP** | Las páginas y objetos deben llegar completos; HTTP 1.1 reutiliza la conexión TCP (persistente). |
+| Transferencia de archivos | FTP | **TCP** | Un archivo con bytes perdidos queda corrupto: confiabilidad obligatoria. |
+| Transmisión multimedia | HTTP, DASH | **TCP** | DASH pide los trozos de video por HTTP, que va sobre TCP. (La slide indica "TCP o UDP" para multimedia en general; con HTTP/DASH es TCP.) |
+| DNS | DNS | **UDP** | Consultas y respuestas cortas: sin *handshake* la resolución es más rápida; si falta la respuesta, el cliente reintenta. |
+
+---
+
+### Pregunta 4: FSM de rdt2.1 (2 pt)
+
+<ExamStatement>
+
+**(2.0 pt)** Resolver el **FSM de un RDT 2.1** (reliable data transfer). Acompañe su respuesta con una explicación de cómo funciona.
+
+</ExamStatement>
+
+**Solución.** Paso 1: emisor. Paso 2: receptor.
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'rdt2.1: números de secuencia 0 y 1',
+  steps: [
+    {
+      note: 'Emisor rdt2.1: numera los paquetes con 0 y 1. Si el ACK/NAK llega corrupto o es NAK, retransmite el mismo paquete.',
+      shapes: [
+        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
+        { id: 's1', kind: 'state', label: 'Esperar ACK o NAK 0' },
+        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
+        { id: 's3', kind: 'state', label: 'Esperar ACK o NAK 1' }
+      ],
+      arrows: [
+        { from: 's0', to: 's1', label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)' },
+        { from: 's1', to: 's1', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))\n/ udt_send(sndpkt)' },
+        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)\n/ Λ' },
+        { from: 's2', to: 's3', label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)' },
+        { from: 's3', to: 's3', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))\n/ udt_send(sndpkt)' },
+        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)\n/ Λ' }
+      ]
+    },
+    {
+      note: 'Receptor rdt2.1: en "Esperar 0" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.',
+      shapes: [
+        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
+        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      ],
+      arrows: [
+        {
+          from: 'r0',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+        }
+      ]
+    }
+  ] }} />
+
+**Emisor.** Numera los paquetes alternando **0** y **1**. Tras enviar el paquete 0 espera un ACK/NAK; si llega corrupto o es NAK, **retransmite** el mismo paquete; con un ACK correcto pasa a esperar el siguiente dato, que irá con número 1. Son cuatro estados porque se duplican los de rdt2.0 para cada número de secuencia.
+
+**Receptor.** Dos estados: *Esperar 0* y *Esperar 1*. Con un paquete corrupto responde **NAK**. Con el número esperado, entrega los datos, responde **ACK** y cambia de estado. Con el número contrario, es un **duplicado** (el ACK anterior llegó corrupto al emisor): no lo entrega otra vez, pero **reenvía el ACK**.
+
+**Por qué hace falta el número de secuencia.** En rdt2.0, si el ACK/NAK se corrompe, el emisor retransmite y el receptor no puede saber si es un dato nuevo o repetido. Con un bit de secuencia (0/1) se distingue.
+
+---
+
+### Pregunta 5: de rdt2.1 a rdt2.2 (2 pt)
+
+<ExamStatement>
+
+**(2.0 pt)** Explicar el cambio que haría para poder pasar de **RDT 2.1** a **RDT 2.2**.
+
+</ExamStatement>
+
+**Solución.** rdt2.2 **elimina el NAK**. El ACK pasa a **llevar el número de secuencia** del último paquete recibido correctamente:
+
+- Receptor: ante un paquete corrupto o duplicado, en vez de NAK envía el ACK del último paquete bueno (en *Esperar 0*: `ACK 1`; en *Esperar 1*: `ACK 0`).
+- Emisor: además de `isACK`, revisa **qué número** confirma. Un ACK duplicado (con el número del paquete anterior) equivale a un NAK y provoca la retransmisión.
+
+<Visualization viz={{ type: 'flow',
+  mode: 'fsm',
+  title: 'rdt2.2: sin NAK (el ACK lleva el número de secuencia)',
+  steps: [
+    {
+      note: 'Emisor rdt2.2: no existe NAK. Un ACK corrupto o con el número del paquete anterior ("ACK 1" mientras espera "ACK 0") hace el papel de NAK: se retransmite.',
+      shapes: [
+        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
+        { id: 's1', kind: 'state', label: 'Esperar ACK 0' },
+        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
+        { id: 's3', kind: 'state', label: 'Esperar ACK 1' }
+      ],
+      arrows: [
+        { from: 's0', to: 's1', label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)' },
+        {
+          from: 's1',
+          to: 's1',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))\n/ udt_send(sndpkt)'
+        },
+        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)\n/ Λ' },
+        { from: 's2', to: 's3', label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)' },
+        {
+          from: 's3',
+          to: 's3',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))\n/ udt_send(sndpkt)'
+        },
+        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)\n/ Λ' }
+      ]
+    },
+    {
+      note: 'Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).',
+      shapes: [
+        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
+        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      ],
+      arrows: [
+        {
+          from: 'r0',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r0',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq1(rcvpkt))\n/ sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r0',
+          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)'
+        },
+        {
+          from: 'r1',
+          to: 'r1',
+          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq0(rcvpkt))\n/ sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)'
+        }
+      ]
+    }
+  ] }} />
+
+---
+
+## Sección práctica
+
+### Pregunta 6: registros MX de netflix.com (1 pt)
+
+<ExamStatement>
+
+**(1 pt.)** Se muestra el siguiente resultado de ejecución del comando nslookup con el filtrado del tipo: **"set type=mx"**. ¿Qué servidor se contactará primero cuando se envíe correo electrónico a la dirección propuesta? ¿Por qué?
+
+```text
+> netflix.com
+Server:  UnKnown
+Address:  192.168.107.95
+
+Non-authoritative answer:
+netflix.com     MX preference = 1, mail exchanger = aspmx.l.google.com
+netflix.com     MX preference = 10, mail exchanger = aspmx2.googlemail.com
+netflix.com     MX preference = 10, mail exchanger = aspmx3.googlemail.com
+netflix.com     MX preference = 5, mail exchanger = alt1.aspmx.l.google.com
+netflix.com     MX preference = 5, mail exchanger = alt2.aspmx.l.google.com
+```
+
+</ExamStatement>
+
+**Solución.** Primero se contacta **`aspmx.l.google.com`**: en los registros MX gana el **menor** valor de *preference*, y el suyo es **1**. Si no responde, siguen `alt1` y `alt2` (preference 5) y al final `aspmx2` y `aspmx3` (preference 10). La respuesta es *no autoritativa* porque viene de la caché del servidor DNS local (192.168.107.95), no del servidor autoritativo de netflix.com.
+
+---
+
+### Pregunta 7: tiempos RTT y EstimatedRTT (3 pt)
+
+<ExamStatement>
+
+**(3.0 pts)** **Llene la siguiente tabla en su cuadernillo para 5 segmentos**, referente a los tiempos RTT (vista en el laboratorio), empleando los datos de los traces de las **Figura 1 y figura 2.**
+
+Emplee la fórmula: $\text{EstimatedRTT} = 0.875 \cdot \text{EstimatedRTT} + 0.125 \cdot \text{SampleRTT}$
+
+```text
+No. Time      Source          Destination     Protocol Info
+ 1  0.000000  192.168.1.102   128.119.245.12  TCP   1161 > http [SYN] Seq=0 Ack=0 Win=16384 Len=0 MSS=1460
+ 2  0.023172  128.119.245.12  192.168.1.102   TCP   http > 1161 [SYN, ACK] Seq=0 Ack=1 Win=5840 Len=0 MSS=1460
+ 3  0.023265  192.168.1.102   128.119.245.12  TCP   1161 > http [ACK] Seq=1 Ack=1 Win=17520 Len=0
+ 4  0.026477  192.168.1.102   128.119.245.12  HTTP  POST /ethereal-labs/lab3-1-reply.htm HTTP/1.1
+ 5  0.041737  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+ 6  0.053937  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=566 Win=6780 Len=0
+ 7  0.054026  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+ 8  0.054690  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+ 9  0.077294  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=2026 Win=8760 Len=0
+10  0.077405  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+11  0.078157  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+12  0.124085  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=3486 Win=11680 Len=0
+13  0.124185  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+```
+
+*Figura 1. POST y Continuations.*
+
+```text
+No. Time      Source          Destination     Protocol Info
+ 5  0.041737  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+ 6  0.053937  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=566 Win=6780 Len=0
+ 7  0.054026  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+ 8  0.054690  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+ 9  0.077294  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=2026 Win=8760 Len=0
+10  0.077405  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+11  0.078157  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+12  0.124085  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=3486 Win=11680 Len=0
+13  0.124185  192.168.1.102   128.119.245.12  HTTP  Continuation or non-HTTP traffic
+14  0.169118  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=4946 Win=14600 Len=0
+15  0.217299  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=6406 Win=17520 Len=0
+16  (fila ilegible en la copia)
+17  0.304807  128.119.245.12  192.168.1.102   TCP   http > 1161 [ACK] Seq=1 Ack=9013 Win=23360 Len=0
+```
+
+*Figura 2. Acknowledgments correspondientes.*
+
+| N° | Sent time | ACK Received time | RTT (seconds) | EstimatedRTT |
+|---|---|---|---|---|
+| Seg1 … | | | | |
+
+</ExamStatement>
+
+**Solución.**
+
+**1. Emparejar cada segmento con su ACK.** El ACK de TCP es acumulativo y lleva el número del **siguiente byte esperado**. El POST (frame 4) lleva los bytes 1 a 565, así que lo confirma `Ack=566`. Cada *Continuation* lleva 1460 bytes (el MSS), y cada ACK suma 1460: $566 \to 2026 \to 3486 \to 4946 \to 6406$.
+
+| Segmento | Frame enviado | Bytes | ACK (frame) |
+|---|---|---|---|
+| 1 | 4 (POST) | 1–565 | `Ack=566` (6) |
+| 2 | 5 | 566–2025 | `Ack=2026` (9) |
+| 3 | 7 | 2026–3485 | `Ack=3486` (12) |
+| 4 | 8 | 3486–4945 | `Ack=4946` (14) |
+| 5 | 10 | 4946–6405 | `Ack=6406` (15) |
+
+**2. SampleRTT = tiempo del ACK − tiempo de envío**, y **EstimatedRTT** con la fórmula del enunciado, tomando $\text{EstimatedRTT}_1 = \text{SampleRTT}_1$ (no hay estimación previa):
+
+$$\text{EstimatedRTT}_2 = 0{,}875(0{,}027460) + 0{,}125(0{,}035557) = 0{,}028472\text{ s}$$
+
+| N° | Sent time (s) | ACK Received time (s) | RTT (s) | EstimatedRTT (s) |
+|---|---|---|---|---|
+| Seg1 | 0,026477 | 0,053937 | 0,027460 | 0,027460 |
+| Seg2 | 0,041737 | 0,077294 | 0,035557 | 0,028472 |
+| Seg3 | 0,054026 | 0,124085 | 0,070059 | 0,033670 |
+| Seg4 | 0,054690 | 0,169118 | 0,114428 | 0,043765 |
+| Seg5 | 0,077405 | 0,217299 | 0,139894 | **0,055781** |
+
+<Visualization viz={{ type: 'xy-chart', static: true, title: 'SampleRTT frente a EstimatedRTT', steps: [
+  { note: 'El SampleRTT sube rápido (de 27 a 140 ms); el EstimatedRTT lo sigue suavizado, porque cada muestra nueva pesa solo 12,5 %.',
+    series: [
+      { id: 's', label: 'SampleRTT', kind: 'line', points: [[1, 27.46], [2, 35.557], [3, 70.059], [4, 114.428], [5, 139.894]] },
+      { id: 'e', label: 'EstimatedRTT', kind: 'line', points: [[1, 27.46], [2, 28.472], [3, 33.67], [4, 43.765], [5, 55.781]] },
+    ],
+    x: { label: 'segmento', min: 1, max: 5 },
+    y: { label: 'ms', min: 0, max: 150 } },
+]}} />
+
+---
+
+### Pregunta 8: comunicación UDP con Python (2,5 pt)
+
+<ExamStatement>
+
+Basado en el siguiente diagrama de dispositivos, con sus diferentes direcciones IP asignadas. Suponga que quiere realizar una comunicación UDP utilizando Python.
+
+Alumno A: **192.168.1.4** → Alumno C: **192.168.1.10**; Alumno B: **192.168.1.3** → Alumno C (las tres son Laptop-PT).
+
+a) **(1 pt.)** Si se quiere enviar un mensaje del alumno A a la computadora C, qué datos necesita indicar en el datagrama UDP de su función `sender.py`.
+
+b) **(1 pt.)** Si se quiere recibir al mismo tiempo, los mensajes del alumno B en la laptop C, ¿cuál es la configuración que se debe realizar? ¿Qué consideraciones se deben tener en cuenta?
+
+c) **(0.5 pt.)** Cuál es el tamaño máximo de puerto en UDP.
+
+</ExamStatement>
+
+**Solución.**
+
+<Visualization viz={{ type: 'net-scene', title: 'Esquema de la pregunta 8', steps: [
+  { note: 'A (192.168.1.4) y B (192.168.1.3) envían datagramas UDP a C (192.168.1.10), en la misma red 192.168.1.0/24.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Alumno A', sub: '192.168.1.4', x: 12, y: 72 },
+      { id: 'b', kind: 'laptop', label: 'Alumno B', sub: '192.168.1.3', x: 50, y: 14 },
+      { id: 'c', kind: 'laptop', label: 'Alumno C', sub: '192.168.1.10', x: 88, y: 72 },
+    ] },
+  { note: 'a) A arma el datagrama hacia la IP y el puerto en el que escucha C.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Alumno A', sub: '192.168.1.4', x: 12, y: 72, state: 'active' },
+      { id: 'b', kind: 'laptop', label: 'Alumno B', sub: '192.168.1.3', x: 50, y: 14 },
+      { id: 'c', kind: 'laptop', label: 'Alumno C', sub: '192.168.1.10', x: 88, y: 72 },
+    ],
+    packets: [{ from: 'a', to: 'c', label: 'UDP → 192.168.1.10:PUERTO', order: 1, state: 'active' }] },
+  { note: 'b) B envía al MISMO puerto de C: UDP demultiplexa solo por IP y puerto destino, así que un único socket de C recibe a los dos; recvfrom() dice quién envió.',
+    devices: [
+      { id: 'a', kind: 'laptop', label: 'Alumno A', sub: '192.168.1.4', x: 12, y: 72 },
+      { id: 'b', kind: 'laptop', label: 'Alumno B', sub: '192.168.1.3', x: 50, y: 14, state: 'active' },
+      { id: 'c', kind: 'laptop', label: 'Alumno C', sub: '192.168.1.10', x: 88, y: 72, state: 'answer' },
+    ],
+    packets: [
+      { from: 'a', to: 'c', label: 'desde A', order: 1, state: 'muted' },
+      { from: 'b', to: 'c', label: 'desde B, mismo puerto', order: 2, state: 'active' } ] },
+]}} />
+
+**a) Datos del envío.** En `sendto()` se indica el destino: **IP 192.168.1.10** y el **puerto** en el que escucha el receptor de C. Con eso UDP arma la cabecera:
+
+| Campo | Valor |
+|---|---|
+| Puerto origen | el del socket de A (lo asigna el sistema si no se hace `bind`) |
+| Puerto destino | el puerto del receptor de C |
+| Longitud | $8 + $ bytes del mensaje |
+| Checksum | lo calcula UDP |
+
+La IP de origen (192.168.1.4) y la de destino van en la cabecera IP, debajo.
+
+```python
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.sendto(mensaje, ("192.168.1.10", PUERTO))
+```
+
+**b) Recibir también a B.** No hace falta otro socket: UDP demultiplexa **solo por IP y puerto destino**, así que si A y B envían al mismo puerto de C, el mismo socket recibe a los dos. Configuración en C: `sock.bind(("0.0.0.0", PUERTO))` (o la IP 192.168.1.10; no `127.0.0.1`, que solo acepta tráfico local) y un bucle con `recvfrom()`, que devuelve los datos y la dirección `(ip, puerto)` del emisor para distinguir a A de B. Consideraciones:
+- No hay conexión ni orden: los mensajes de A y B llegan intercalados y alguno se puede perder; si importa, lo resuelve la aplicación.
+- El puerto no puede estar ocupado por otro proceso (el `bind` falla).
+- Los tres equipos están en la misma red (192.168.1.0/24) y el firewall de C debe permitir ese puerto UDP.
+
+**c) Puerto máximo.** El campo de puerto tiene **16 bits**: $2^{16} - 1 = \boxed{65\,535}$.
+
+---
+
+### Pregunta 9: frame UDP en Wireshark (2,5 pt)
+
+<ExamStatement>
+
+Basado en los siguientes datos obtenidos de un frame de comunicación en Wireshark. Responda:
+
+```text
+v Internet Protocol Version 4, Src: 192.168.107.95, Dst: 192.168.107.165
+    0100 .... = Version: 4
+    .... 0101 = Header Length: 20 bytes (5)
+  > Differentiated Services Field: 0x00 (DSCP: CS0, ECN: Not-ECT)
+    Total Length: 152
+    Identification: 0x97fb (38907)
+  > 010. .... = Flags: 0x2, Don't fragment
+    ...0 0000 0000 0000 = Fragment Offset: 0
+    Time to Live: 64
+    Protocol: UDP (17)
+    Header Checksum: 0x4a04 [validation disabled]
+    [Header checksum status: Unverified]
+    Source Address: 192.168.107.95
+    Destination Address: 192.168.107.165
+    [Stream index: 8]
+v User Datagram Protocol, Src Port: 53, Dst Port: 59270
+    Source Port: 53
+    Destination Port: 59270
+    Length: 132
+    Checksum: 0x41a2 [unverified]
+    [Checksum Status: Unverified]
+    [Stream index: 1]
+    [Stream Packet Number: 2]
+  > [Timestamps]
+    UDP payload (124 bytes)
+v Domain Name System (response)
+    Transaction ID: 0x000c
+  > Flags: 0x8180 Standard query response, No error
+    Questions: 1
+    Answer RRs: 6
+    Authority RRs: 0
+    Additional RRs: 0
+  > Queries
+  > Answers
+    [Time: 0.021096000 seconds]
+```
+
+a) **(0.5 pt.)** ¿Cuáles son las direcciones IP de origen y destino?
+
+b) **(0.5 pt.)** ¿Cuál es la longitud del payload (en bytes)?
+
+c) **(0.5 pt.)** ¿Qué implicaciones tiene que el checksum aparezca como "unverified"?
+
+d) **(1 pt.)** Brinde el datagrama UDP correspondiente.
+
+</ExamStatement>
+
+**Solución.**
+
+**a)** Origen **192.168.107.95** (el servidor DNS, puerto 53) y destino **192.168.107.165** (el cliente, puerto 59270). Es la **respuesta** DNS a una consulta del cliente.
+
+**b)** El campo *Length* de UDP (132) incluye los 8 bytes de cabecera: $132 - 8 = \boxed{124\text{ bytes}}$, que coincide con "UDP payload (124 bytes)". Comprobación con IP: $152 - 20 - 8 = 124$.
+
+**c)** Wireshark **no comprobó** el checksum (la validación está desactivada), no dice que esté mal. Lo habitual es que la tarjeta de red calcule o verifique el checksum por hardware (*checksum offloading*), así que la captura no lo puede validar. El paquete se procesó normalmente: no es un error.
+
+**d) Datagrama UDP.**
+
+<Visualization viz={{ type: 'packet', static: true, title: 'Datagrama UDP del frame', steps: [
+  { note: 'Cabecera de 8 bytes con los valores de la captura + 124 bytes de datos (respuesta DNS).',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16, value: '53' }, { label: 'puerto destino', bits: 16, value: '59270' }],
+      [{ label: 'longitud', bits: 16, value: '132', state: 'active' }, { label: 'checksum', bits: 16, value: '0x41a2' }],
+      [{ label: 'datos: respuesta DNS (124 bytes)', bits: 32 }] ] } },
+]}} />
