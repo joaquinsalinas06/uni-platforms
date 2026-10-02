@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import katex from 'katex';
 import { SceneLayer, EquationPanel } from './CanvasScene.tsx';
+import { StepControls } from './StepControls.tsx';
 import {
   NODE_W,
   NODE_H,
@@ -35,48 +36,6 @@ export type { CanvasNode, CanvasEdge, CanvasGroup, CanvasText, CanvasStep };
  * del sitio usa remark-math/rehype-katex, pero `step.note` no pasa por el
  * pipeline de markdown, así que hay que invocar KaTeX a mano acá. */
 
-function IconChevronLeft({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
-  );
-}
-
-function IconChevronRight({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  );
-}
-
-function IconPlay({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <polygon points="6 4 20 12 6 20 6 4" />
-    </svg>
-  );
-}
-
-function IconPause({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <rect x="6" y="4" width="4" height="16" rx="1.5" />
-      <rect x="14" y="4" width="4" height="16" rx="1.5" />
-    </svg>
-  );
-}
-
-function IconRepeat({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-      <polyline points="3 3 3 8 8 8" />
-    </svg>
-  );
-}
-
 function renderInlineMath(text: string): string {
   return text.replace(/\$([^$]+)\$/g, (_, formula) => {
     try {
@@ -85,6 +44,14 @@ function renderInlineMath(text: string): string {
       return `$${formula}$`;
     }
   });
+}
+
+/** Una nota de una cláusula y una de tres oraciones no merecen el mismo
+ * tiempo en pantalla — 900ms de piso más ~45ms por palabra, acotado para que
+ * un paso larguísimo no estanque el autoplay. */
+function autoplayDelay(note?: string): number {
+  const words = (note ?? '').trim().split(/\s+/).filter(Boolean).length;
+  return Math.min(3200, Math.max(900, 900 + words * 45));
 }
 
 type Props = {
@@ -276,9 +243,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
     // Una nota de una cláusula y una de tres oraciones no merecen el mismo
     // tiempo en pantalla — 900ms de piso más ~45ms por palabra, acotado para
     // que un paso larguísimo no estanque el autoplay.
-    const words = (step.note ?? '').trim().split(/\s+/).filter(Boolean).length;
-    const delay = Math.min(3200, Math.max(900, 900 + words * 45));
-    const t = setTimeout(() => setI((p) => p + 1), delay);
+    const t = setTimeout(() => setI((p) => p + 1), autoplayDelay(step.note));
     return () => clearTimeout(t);
   }, [playing, i, last, step.note]);
 
@@ -287,11 +252,14 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
     if (e.key === 'Home') { e.preventDefault(); setPlaying(false); setI(0); }
     if (e.key === 'End') { e.preventDefault(); setPlaying(false); setI(last); }
-    if (e.key === ' ' || e.key === 'Spacebar') { e.preventDefault(); setPlaying((p) => !p); }
+    // Espacio sobre un botón ya lo activa el navegador: no alternar dos veces.
+    if ((e.key === ' ' || e.key === 'Spacebar') && !(e.target instanceof HTMLButtonElement)) {
+      e.preventDefault();
+      if (i >= last && !playing) { setI(0); setPlaying(true); } else setPlaying((p) => !p);
+    }
   };
 
   const pos = new Map(step.nodes.map((n) => [n.id, n]));
-  const progress = steps.length > 1 ? (i / last) * 100 : 100;
   const groups = step.groups ?? [];
   const annotations = step.annotations ?? [];
   // Un paso con menos contenido que el más grande (p.ej. un registro de nodo
@@ -327,15 +295,6 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
       className={`@container ${isStatic ? 'my-8' : 'my-12'} overflow-hidden rounded-lg border border-[var(--rule)] focus:outline-none focus-visible:border-[var(--accent)]`}
       aria-label="Visualización paso a paso. Usa las flechas izquierda y derecha."
     >
-      {/* Barra de progreso: el primer indicio de que esto se mueve. */}
-      {!isStatic && (
-        <div className="h-0.5 w-full bg-[var(--sunken)]">
-          <div
-            className="h-full bg-[var(--accent)] transition-[width] duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      )}
       {title && <div className="tag border-b border-[var(--rule)] px-4 py-2">{title}</div>}
 
       <div className={panelSide ? side.row : undefined}>
@@ -829,87 +788,25 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
           style={{
             minHeight: minNoteHeight > 0 ? `${Math.min(minNoteHeight, 92)}px` : '3.5rem',
           }}
-          className="flex flex-col justify-center px-5 py-3 text-[0.9375rem] leading-relaxed transition-opacity duration-200"
+          className="flex flex-col justify-center px-5 py-3 text-[0.9375rem] leading-relaxed"
           aria-live="polite"
-          dangerouslySetInnerHTML={{
-            __html: renderInlineMath(step.note ?? ''),
-          }}
-        />
+        >
+          {/* Remontada por paso: entra con un fundido corto (ver StepControls). */}
+          <div key={i} className={isStatic ? undefined : 'vc-note-in'} dangerouslySetInnerHTML={{ __html: renderInlineMath(step.note ?? '') }} />
+        </div>
 
         {!isStatic && (
-          <div className="flex items-center gap-2 border-t border-[var(--rule)] bg-[var(--fill)] px-3.5 py-2">
-            {/* Botón Anterior */}
-            <button
-              onClick={() => { setPlaying(false); go(-1); }}
-              disabled={i === 0}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--sunken)] disabled:opacity-20 disabled:hover:bg-transparent"
-              aria-label="Paso anterior"
-              title="Paso anterior (←)"
-            >
-              <IconChevronLeft className="h-4 w-4" />
-            </button>
-
-            {/* Botón Play / Pausa / Repetir con icono SVG limpio y circular */}
-            <button
-              onClick={() => {
-                if (i >= last) {
-                  setI(0);
-                  setPlaying(true);
-                } else {
-                  setPlaying((p) => !p);
-                }
-              }}
-              className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                playing
-                  ? 'bg-[var(--accent)] text-white hover:opacity-90'
-                  : 'text-[var(--ink)] hover:bg-[var(--sunken)]'
-              }`}
-              aria-label={playing ? 'Pausar' : i >= last ? 'Repetir' : 'Reproducir'}
-              title={playing ? 'Pausar (Espacio)' : i >= last ? 'Repetir' : 'Reproducir (Espacio)'}
-            >
-              {playing ? (
-                <IconPause className="h-4 w-4" />
-              ) : i >= last ? (
-                <IconRepeat className="h-4 w-4" />
-              ) : (
-                <IconPlay className="h-4 w-4 ml-0.5" />
-              )}
-            </button>
-
-            {/* Botón Siguiente */}
-            <button
-              onClick={() => { setPlaying(false); go(1); }}
-              disabled={i === last}
-              className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--ink)] transition-colors hover:bg-[var(--sunken)] disabled:opacity-20 disabled:hover:bg-transparent"
-              aria-label="Paso siguiente"
-              title="Paso siguiente (→)"
-            >
-              <IconChevronRight className="h-4 w-4" />
-            </button>
-
-            {/* Botones de cada paso (1, 2, 3... claros y clickeables) */}
-            <div className="flex items-center gap-1 overflow-x-auto px-2">
-              {steps.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => { setPlaying(false); setI(idx); }}
-                  aria-label={`Ir al paso ${idx + 1}`}
-                  className={`flex h-6 min-w-6 items-center justify-center rounded px-1.5 font-mono text-xs font-medium transition-all ${
-                    idx === i
-                      ? 'bg-[var(--accent)] text-white shadow-sm'
-                      : 'border border-[var(--rule)] bg-[var(--paper)] text-[var(--muted)] hover:border-[var(--accent)] hover:text-[var(--ink)]'
-                  }`}
-                >
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
-
-            {/* Contador de paso perfectamente alineado */}
-            <div className="ml-auto flex items-center pr-1 font-mono text-xs tracking-wider text-[var(--muted)] uppercase whitespace-nowrap">
-              <span>paso {i + 1} / {steps.length}</span>
-            </div>
-          </div>
+          <StepControls
+            i={Math.min(i, last)}
+            n={steps.length}
+            playing={playing}
+            delay={autoplayDelay(step.note)}
+            onGo={(d) => { setPlaying(false); go(d); }}
+            onSet={(k) => { setPlaying(false); setI(k); }}
+            onToggle={() => {
+              if (i >= last) { setI(0); setPlaying(true); } else setPlaying((p) => !p);
+            }}
+          />
         )}
       </figcaption>
     </figure>
