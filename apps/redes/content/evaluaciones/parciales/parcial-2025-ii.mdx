@@ -3,8 +3,16 @@ title: "Examen Parcial 2025-II"
 category: "parciales"
 categoryLabel: "Exámenes Parciales"
 order: 1
+pdf: "/evaluaciones/parciales/2025-ii.pdf"
+source: "Examen Parcial CS4055 Networks and communications, Sec. 2 (9 de octubre de 2025)"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
+import ExamStatement from '../../../src/components/ExamStatement.astro';
+import ExamFigure from '../../../src/components/ExamFigure.astro';
+import figMx from './2025-ii/p2-nslookup-mx.png';
+import figTrace from './2025-ii/p2-wireshark-rtt.png';
+import figHttp from './2025-ii/p2-http-frame.png';
+import figTopo from './2025-ii/p2-topologia-p2p.png';
 
 ## Instrucciones
 
@@ -18,7 +26,21 @@ import Visualization from '../../../src/components/Visualization.astro';
 
 ### Pregunta 1: DNS y descarga de un archivo (2 pt)
 
-Un cliente accede por primera vez a un sitio cuyo dominio no está en caché. Consulta **tres** servidores DNS en secuencia ($\text{RTT}_1$, $\text{RTT}_2$, $\text{RTT}_3$) y luego se conecta al servidor web ($\text{RTT}_s$). El archivo es un video de $S$ bits (el tiempo de transmisión no es despreciable) y el enlace tiene tasa $R$ bps.
+<ExamStatement>
+
+**(2 pt)** Un cliente accede por primera vez a un sitio web cuyo nombre de dominio no está en caché. Debe consultar **tres servidores DNS** secuencialmente ($RTT_1, RTT_2, RTT_3$) antes de establecer conexión con el servidor web ($RTT_s$).
+
+El archivo principal es un video corto de tamaño significativo (no despreciable), por lo que **el tiempo de transmisión debe considerarse**. El enlace cliente-servidor tiene una tasa de transmisión de $R$ bps y el tamaño del archivo es $S$ bits.
+
+a) Exprese el tiempo total hasta recibir completamente el archivo, considerando tanto la resolución DNS como la descarga.
+
+b) Si $RTT_1 = 60$ ms, $RTT_2 = 80$ ms, $RTT_3 = 100$ ms, $RTT_s = 70$ ms, $S = 8$ MB, y $R = 4$ Mbps, calcule el tiempo total aproximado de descarga.
+
+c) Analice qué parte del proceso domina la latencia total y cómo podría optimizarse.
+
+</ExamStatement>
+
+**Solución.**
 
 **a) Tiempo total.** DNS son tres RTT sumados; luego handshake TCP ($\text{RTT}_s$), el GET con su respuesta ($\text{RTT}_s$) y la transmisión del archivo:
 
@@ -129,6 +151,16 @@ $$T = 0{,}240 + 0{,}140 + 16 = \boxed{16{,}38\text{ s}}$$
 
 ### Pregunta 2: Distribución cliente-servidor frente a P2P (2 pt)
 
+<ExamStatement>
+
+**(2.0 pt)** Considere un archivo de tamaño $F$ y $N$ peers. Un servidor con velocidad de subida $u_s$ intenta transmitir el archivo hacia los $N$ peers, cada uno con su velocidad de descarga $d_n$ y velocidad de subida $u_n$. Además $d_{min} = \min\{d_1, d_2, \dots, d_N\}$ es la velocidad de descarga mínima entre los peers. Explique cómo se obtienen las siguientes expresiones del tiempo de distribución total para las arquitecturas cliente-servidor y P2P e indique las implicancias cuando el número de peers es muy alto
+
+$$D_{CS} \ge \max\left\{\frac{NF}{u_s}, \frac{F}{d_{\min}}\right\} \qquad D_{P2P} \ge \max\left\{\frac{F}{u_s}, \frac{F}{d_{\min}}, \frac{NF}{u_s + \sum_{i=1}^{N} u_i}\right\}$$
+
+</ExamStatement>
+
+**Solución.**
+
 Archivo de $F$ bits, $N$ pares, servidor con subida $u_s$, par $i$ con bajada $d_i$ y subida $u_i$, $d_{\min} = \min\{d_1, \dots, d_N\}$. Se piden las dos cotas del enunciado:
 
 $$D_{cs} \ge \max\left\{\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right\} \qquad D_{P2P} \ge \max\left\{\frac{F}{u_s},\ \frac{F}{d_{\min}},\ \frac{NF}{u_s + \sum_{i=1}^{N} u_i}\right\}$$
@@ -142,6 +174,14 @@ $$D_{cs} \ge \max\left\{\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right\} \qquad D_{P2
 ---
 
 ### Pregunta 3: FSM del receptor de rdt2.1 y paso a rdt2.2 (3 pt)
+
+<ExamStatement>
+
+**(3.0 pt)** Resolver el **FSM de un RDT 2.1 - receiver** (reliable data transfer). Acompañe su respuesta con una explicación de cómo funciona. ¿El receiver lidia con problemas de duplicados? Explicar el cambio que haría para poder pasar de **RDT 2.1** a **RDT 2.2**.
+
+</ExamStatement>
+
+**Solución.**
 
 <Visualization viz={{ type: 'flow',
   mode: 'fsm',
@@ -233,7 +273,17 @@ En *Esperar 1* es simétrico.
 
 ### Pregunta 4: protocolo solo con NAK (3 pt)
 
-Modelo con errores de bits y pérdida de paquetes; protocolo que usa solo NAK.
+<ExamStatement>
+
+**(3.0 pt)** Considere un modelo que admite errores en los bits y pérdida de paquetes. Dado un protocolo de transferencia de datos confiable que usa solo *negative acknowledgments* (NAKs):
+
+a) ¿Cómo se daría cuenta el sistema de que ocurrió un error o una pérdida?
+
+b) Suponga que el emisor envía datos solo con poca frecuencia. ¿Sería preferible un protocolo que use solo NAKs en lugar de uno que use ACKs? Justifique.
+
+</ExamStatement>
+
+**Solución.**
 
 **a) ¿Cómo se entera de un error o una pérdida?**
 
@@ -247,6 +297,16 @@ Modelo con errores de bits y pérdida de paquetes; protocolo que usa solo NAK.
 ## Sección práctica
 
 ### Pregunta 5: registros MX (1 pt)
+
+<ExamStatement>
+
+**(1.0 P)** Se muestra el siguiente resultado de ejecución del comando nslookup con el filtrado del tipo: **"set type=mx"**. ¿Qué servidor se contactará primero cuando se envíe correo electrónico a la dirección propuesta? ¿Por qué?
+
+<ExamFigure src={figMx} alt="Salida de nslookup: Default Server dns.google, Address 8.8.8.8; set type=mx; riotgames.com. Respuesta no autoritativa: MX preference 30 aspmx2.googlemail.com, 20 alt2.aspmx.l.google.com, 10 aspmx.l.google.com, 30 aspmx3.googlemail.com, 20 alt1.aspmx.l.google.com." caption="Salida de nslookup del enunciado" />
+
+</ExamStatement>
+
+**Solución.**
 
 Salida de `nslookup` con `set type=mx` para `riotgames.com` (servidor 8.8.8.8, respuesta no autoritativa):
 
@@ -263,6 +323,22 @@ Salida de `nslookup` con `set type=mx` para `riotgames.com` (servidor 8.8.8.8, r
 ---
 
 ### Pregunta 6: tiempos RTT y EstimatedRTT (2,5 pt)
+
+<ExamStatement>
+
+**(2.5 P)** Llene la siguiente tabla en su cuadernillo **para 5 segmentos**, referente a los tiempos RTT (vista en el laboratorio), empleando los datos de los traces mostrados en la figura (considere que todos paquetes enviados tienen sus respectivos ACK en orden).
+
+Emplee la fórmula: $\text{EstimatedRTT}_n = 0.875 \cdot \text{EstimatedRTT}_{n-1} + 0.125 \cdot \text{SampleRTT}_n$
+
+| N° | Sent time | ACK Received time | RTT (seconds) | EstimatedRTT |
+|---|---|---|---|---|
+| Seg1 … | | | | |
+
+<ExamFigure src={figTrace} alt="Traza de Wireshark entre 192.168.86.68 y 128.119.245.12: handshake TCP (frames 1 a 3), POST /wireshark-labs/lab3-1-reply.htm en el frame 4 y continuaciones de 1514 bytes, con los ACK del servidor en los frames 7, 8, 13, 16, 17, 18 y 19 (Ack=1449, 2897, 4345, 5793, 7241, 8689, 10137)." caption="Traza de Wireshark del enunciado" />
+
+</ExamStatement>
+
+**Solución.**
 
 $$\text{EstimatedRTT}_n = 0{,}875 \cdot \text{EstimatedRTT}_{n-1} + 0{,}125 \cdot \text{SampleRTT}_n$$
 
@@ -356,11 +432,37 @@ Ejemplo del cálculo: $\text{EstimatedRTT}_2 = 0{,}875(0{,}028624) + 0{,}125(0{,
 
 ### Pregunta 7: popularidad de sitios con la caché DNS (1,5 pt)
 
+<ExamStatement>
+
+**(1.5 P)** Supongamos que puedes acceder y ejecutar comandos sobre las **cachés de los servidores DNS** locales de tu departamento. ¿Puedes proponer una forma de determinar aproximadamente cuáles son los servidores web (externos a tu departamento) más populares entre los usuarios de tu departamento? Explica tu respuesta.
+
+</ExamStatement>
+
+**Solución.**
+
 Sí. Un servidor DNS guarda en su caché cada nombre que resuelve y esa entrada desaparece pasado su TTL. Si se pueden consultar las cachés de los DNS locales del departamento, se listan los nombres externos presentes y se repite la consulta a lo largo del día: los sitios que aparecen una y otra vez (o cuyo registro se renueva apenas expira) los están pidiendo muchos usuarios. Es una aproximación: un TTL largo mantiene un nombre en caché aunque lo haya pedido un solo usuario.
 
 ---
 
 ### Pregunta 8: respuesta HTTP en Wireshark (2 pt)
+
+<ExamStatement>
+
+**(2.0 P)** A continuación se le muestra un **extracto de un frame de captura de Wireshark**. Se le pide responder las siguientes preguntas:
+
+<ExamFigure src={figHttp} alt="Extracto Hypertext Transfer Protocol: HTTP/1.1 200 OK; Date Thu, 02 Oct 2025 23:34:47 GMT; Server Apache/2.4.6 (CentOS); Last-Modified Sat, 06 Feb 2021 18:23:47 GMT; ETag 1a2-5baaf09abd7a9; Content-Length 418; Keep-Alive timeout=5, max=100; Connection Keep-Alive; Content-Type text/html; charset=UTF-8; Full request URI http://gaia.cs.umass.edu/wireshark-labs/lab3-1-reply.htm; File Data 418 bytes." caption="Extracto del frame de Wireshark" />
+
+a) **(0.5 P)** ¿Qué código de estado devuelve el servidor y qué significa?
+
+b) **(0.5 P)** ¿Qué versión de HTTP se está utilizando?
+
+c) **(0.5 P)** ¿Cuál es el tamaño de la información recibida?
+
+d) **(0.5 P)** ¿Qué significa el encabezado Keep-Alive y cuál es su valor?
+
+</ExamStatement>
+
+**Solución.**
 
 Extracto de la respuesta (`gaia.cs.umass.edu/wireshark-labs/lab3-1-reply.htm`):
 
@@ -386,6 +488,26 @@ File Data: 418 bytes
 ---
 
 ### Pregunta 9: comunicación P2P sobre UDP con dos casas (3 pt)
+
+<ExamStatement>
+
+**(3.0 P)** En caso desee hacer una implementación de comunicación P2P basándose en su implementación con UDP del laboratorio, según el esquema mostrado, donde **los routers se encuentran en diferentes casas**. Responda.
+
+<ExamFigure src={figTopo} alt="Esquema Packet Tracer: Router Casa 1 (192.168.10.1) con LaptopA 192.168.10.5 puerto 12256 y LaptopB 192.168.10.12 puerto 12270; Router Casa 2 (192.170.10.1) con LaptopC 192.170.10.101 puerto 12345." caption="Esquema del enunciado" />
+
+a) **(0.5 P)** ¿Cuál es el Default Gateway de la Laptop A?
+
+b) **(0.5 P)** ¿Cuál es el Default Gateway de la Laptop C?
+
+c) **(1.0 P)** ¿Cuáles serían los datos del datagrama UDP del paquete que sale de la Laptop A a la Laptop B?
+
+d) **(0.5 P)** ¿Qué sucede si la laptop C quiere escuchar y enviar mensajes UDP en el puerto 12345?
+
+e) **(0.5 P)** Suponga que la laptop C envía paquetes UDP a la IP 192.168.10.101. ¿Se recibirán los paquetes?
+
+</ExamStatement>
+
+**Solución.**
 
 <Visualization viz={{ type: 'net-scene',
   title: 'Pregunta 9: esquema de las dos casas',

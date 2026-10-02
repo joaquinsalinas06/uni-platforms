@@ -52,8 +52,14 @@ tipo examen van en `content/practica.mdx` con `ExerciseBlock` (ver
 ## Parciales
 Lee las páginas del PDF (`raw-materials/pdfs/EP-*.pdf`, Read con `pages`) para tener las
 figuras reales: IPs, puertos, trazas de Wireshark, salidas de nslookup. Cada solución usa
-EXACTAMENTE esos datos. Redibuja la figura del enunciado con la librería (`net-scene` para
-topologías, `packet`/tabla para capturas). El archivo pasa a `.mdx`.
+EXACTAMENTE esos datos. El archivo es `.mdx` y sigue `templates/examen.mdx` de
+`apps/template`:
+- `pdf:` en el frontmatter (PDF copiado a `public/evaluaciones/...`): botón de descarga.
+- Cada pregunta abre con `<ExamStatement>`: enunciado transcrito tal cual (KaTeX).
+- Figuras del examen (capturas, topologías, gráficas): recorte REAL del PDF con
+  `pdftoppm -x -y -W -H` junto al `.mdx`, mostrado con `<ExamFigure>` (optimizado,
+  con skeleton). No se redibujan como sustituto; un diagrama propio con la librería
+  (`net-scene`, `packet`…) puede ir además, dentro de la solución.
 
 ## Diagramas
 Ser generoso: todo lo que se explica mejor con una figura lleva figura, inline justo donde

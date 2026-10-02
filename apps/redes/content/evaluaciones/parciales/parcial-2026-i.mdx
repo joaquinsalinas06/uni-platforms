@@ -3,8 +3,15 @@ title: "Examen Parcial 2026-I"
 category: "parciales"
 categoryLabel: "Exámenes Parciales"
 order: 2
+pdf: "/evaluaciones/parciales/2026-i.pdf"
+source: "Examen Parcial CS4054 Redes y Comunicaciones, 2026-I (4 de junio de 2026)"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
+import ExamStatement from '../../../src/components/ExamStatement.astro';
+import ExamFigure from '../../../src/components/ExamFigure.astro';
+import figTopo from './2026-i/p2-topologia-viviendas.png';
+import figUdp1 from './2026-i/p3-frame-udp-1.png';
+import figUdp2 from './2026-i/p3-frame-udp-2.png';
 
 ## Instrucciones
 
@@ -15,7 +22,19 @@ import Visualization from '../../../src/components/Visualization.astro';
 
 ## Pregunta 1: Protocolos de aplicación y HTTP (2 puntos)
 
-Una página HTML con **3 imágenes pequeñas**. El nombre de dominio no está en caché y se consultan **dos servidores DNS de forma iterativa** ($\text{RTT}_1$, $\text{RTT}_2$); luego se accede al servidor web ($\text{RTT}_s$). El HTML base tiene tamaño despreciable; cada imagen tiene $S$ bits; la tasa del enlace es $R$ bps.
+<ExamStatement>
+
+Un usuario desea descargar una página HTML que contiene 3 imágenes pequeñas. El nombre de dominio no está en caché y requiere consultar dos servidores DNS de forma iterativa ($RTT_1$ y $RTT_2$). Una vez obtenida la IP, se accede al servidor web ($RTT_s$). El archivo HTML base tiene un tamaño despreciable, pero cada una de las 3 imágenes tiene un tamaño de $S$ bits. La tasa de transmisión del enlace es $R$ bps.
+
+a) **Caso A (HTTP No Persistente):** Exprese el tiempo total desde que el usuario hace clic hasta que se reciben las 3 imágenes. Asuma que las conexiones TCP para las imágenes se realizan de forma secuencial. *(1 pt)*
+
+b) **Caso B (HTTP Persistente sin pipelining):** Exprese el tiempo total para el mismo proceso. *(0.5 pt)*
+
+c) **Cálculo Numérico:** Si $RTT_1 = 50$ ms, $RTT_2 = 70$ ms, $RTT_s = 100$ ms, $S = 2$ Mbits (cada imagen) y $R = 10$ Mbps, calcule el tiempo total para el **Caso B**. *(0.5 pts)*
+
+</ExamStatement>
+
+**Solución.**
 
 ### a) Caso A, HTTP no persistente (conexiones TCP secuenciales) (1 pt)
 
@@ -45,7 +64,23 @@ $$\frac{S}{R} = \frac{2\times10^6}{10\times10^6} = 0{,}2\text{ s} \qquad T_B = 0
 
 ## Pregunta 2: Protocolos RDT (4,5 puntos)
 
-Transferencia confiable basada en el modelo **rdt 2.0** (el receptor responde ACK si el paquete llegó bien y NAK si llegó corrupto) con un **temporizador** para manejar pérdidas.
+<ExamStatement>
+
+Considere una transferencia de datos confiable (RDT) basada en el modelo 2.0 pero que incorpora un *timeout* para gestionar la pérdida de paquetes.
+
+a) ¿Qué pasaría si el protocolo solo pudiera enviar mensajes **ACK**? Describa cómo funcionaría y cuáles serían sus desventajas. *(1 pt)*
+
+b) ¿Qué pasaría si el protocolo solo pudiera enviar mensajes **NACK**? Describa cómo funcionaría y cuáles serían sus desventajas. *(1 pt)*
+
+c) ¿Cómo gestionaría el envío de los paquetes en un sistema **NACK-only**? Plantee una propuesta de diseño para asegurar la confiabilidad del último paquete. *(0.5 pts)*
+
+d) Considere un sistema que envía mensajes de manera **poco frecuente**. ¿Sería el protocolo NAK preferible frente al ACK? Justifique. *(1 pt)*
+
+e) Considere un sistema con **alto volumen de datos** y un canal con **muy pocas pérdidas**. ¿Sería el protocolo NAK preferible frente al ACK? Justifique. *(1 pt)*
+
+</ExamStatement>
+
+**Solución.**
 
 **a) Solo mensajes ACK (1 pt).** El receptor confirma cada paquete recibido bien; si el emisor no recibe el ACK (paquete perdido o corrupto) no avanza y, al vencer el temporizador, retransmite. *Desventaja*: no hay aviso temprano; toda falla se detecta solo por timeout, que debe ser lo bastante largo para no retransmitir de más. Cada paquete genera un mensaje de retorno.
 
@@ -60,6 +95,22 @@ Transferencia confiable basada en el modelo **rdt 2.0** (el receptor responde AC
 ---
 
 ## Pregunta 3: Distribución de contenidos, C/S frente a P2P (3,5 puntos)
+
+<ExamStatement>
+
+Una universidad desea distribuir una imagen de disco de un laboratorio virtual de $F = 20$ GB a un grupo de $N = 150$ usuarios. El servidor central tiene una capacidad de subida $u_s = 40$ Mbps. Cada usuario tiene una capacidad de descarga $d_i = 12$ Mbps y una capacidad de subida $u_i = 3$ Mbps. (Considere 1 GB = 8000 Mb).
+
+a) Calcule el tiempo mínimo de distribución ($D_{cs}$) necesario para que todos los usuarios obtengan el archivo bajo el modelo **Cliente-Servidor**. *(1 pt)*
+
+b) Identifique cuál es el **factor limitante** (cuello de botella) en el modelo Cliente-Servidor para este escenario. *(0.5 pt)*
+
+c) Calcule el tiempo mínimo de distribución ($D_{p2p}$) asumiendo que los usuarios colaboran entre sí (**P2P**) para redistribuir las piezas del archivo. *(1 pt)*
+
+d) Si el número de usuarios aumenta a $N = 1000$, explique por qué el modelo P2P se considera "auto-escalable" comparado con el modelo Cliente-Servidor. *(1 pt)*
+
+</ExamStatement>
+
+**Solución.**
 
 $F = 20$ GB $= 160\,000$ Mb (con 1 GB $= 8000$ Mb), $N = 150$, $u_s = 40$ Mbps, $d_i = 12$ Mbps ($d_{\min} = 12$), $u_i = 3$ Mbps.
 
@@ -87,11 +138,26 @@ Con $N$ de 150 a 1000, C/S crece **linealmente** con $N$ (de 6,9 a 46 días) mie
 
 ## Pregunta 4: HTTP (1,5 puntos)
 
+<ExamStatement>
+
+Un navegador realiza la siguiente petición HTTP:
+
 ```text
 GET /index.html HTTP/1.1
 Host: www.somosciclo262.com
 If-Modified-Since: Thu, 07 May 2026 10:15:00 GMT-5
 ```
+
+a) ¿Cuál es la finalidad del encabezado If-Modified-Since en esta petición? *(0.5 pt)*
+
+b) ¿Qué responderá el servidor si el recurso no ha sido modificado desde la fecha indicada? *(0.5 pt)*
+
+c) ¿Qué ventajas en términos de ancho de banda y rendimiento ofrece este comportamiento condicional? *(0.5 pt)*
+
+</ExamStatement>
+
+**Solución.**
+
 
 **a)** Es un **GET condicional**: el navegador pide `/index.html` solo si cambió después de esa fecha (la de su copia guardada).
 
@@ -103,15 +169,43 @@ If-Modified-Since: Thu, 07 May 2026 10:15:00 GMT-5
 
 ## Pregunta 5: Caché DNS (1,5 puntos)
 
+<ExamStatement>
+
+Supongamos que puedes acceder y ejecutar comandos sobre las cachés de los servidores DNS locales de tu departamento. ¿Puedes proponer una forma de determinar aproximadamente cuáles son los servidores web (externos a tu departamento) más populares entre los usuarios de tu departamento? Explica tu respuesta.
+
+</ExamStatement>
+
+**Solución.**
+
 Se puede **inspeccionar la caché** del DNS local: un servidor web externo cuyo nombre aparece en la caché fue consultado hace menos que su TTL. Se prueba con una lista de sitios candidatos y se repite el volcado a lo largo del tiempo: los nombres que **reaparecen** (con TTL renovado) cada vez que expiran son pedidos con frecuencia por varios usuarios del departamento. Es una estimación aproximada, porque la caché solo dice que alguien lo pidió, no cuántas veces.
 
 ---
 
 ## Pregunta 6: UDP (4 puntos)
 
-MTU = 1500 bytes.
+<ExamStatement>
 
-<Visualization viz={{ type: 'net-scene', title: 'Figura 1: topología de las dos viviendas', steps: [{"note": "Topología del enunciado (Packet Tracer): cada dispositivo con IP:puerto.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}]}, {"note": "a) PC-PT envía 1000 bytes de datos a Laptop-PT de la misma vivienda: no sale de la LAN.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "pc", "to": "lp", "label": "UDP 5324 → 5340", "order": 1, "state": "active"}]}, {"note": "d) Smartphone envía a un puerto cerrado de la Laptop local: la Laptop contesta con ICMP port unreachable.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "sp", "to": "l2", "label": "UDP → 9999", "order": 1, "state": "muted"}, {"from": "l2", "to": "sp", "label": "ICMP port unreachable", "order": 2, "state": "active"}]}, {"note": "f) Destino 192.168.101.20 es una dirección privada de la Vivienda 1: no es enrutable desde la Vivienda 2 por Internet.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "l2", "to": "r2", "label": "UDP → 192.168.101.20", "order": 1, "state": "active"}, {"from": "r2", "to": "r1", "label": "no se entrega", "order": 2, "lost": true, "state": "active"}]}] }} />
+Basado en el diagrama de red proporcionado, donde se observan dos redes locales independientes (VIVIENDA 1 y VIVIENDA 2) con sus respectivas asignaciones de direcciones IP y puertos. Suponga que desea implementar comunicaciones utilizando mensajes UDP considerando que el MTU de la red es de 1500 bytes.
+
+<ExamFigure src={figTopo} alt="Topología Packet Tracer. Vivienda 1: Laptop-PT 192.168.101.2:5340, Printer-PT 192.168.101.4:3474, PC-PT 192.168.101.20:5324 y HomeRouter-PT-AC 192.168.101.1:6478. Vivienda 2: SMARTPHONE-PT 10.0.10.100:8765, Laptop-PT 10.0.10.67:4678 y HomeRouter-PT-AC 10.0.10.1:3333." caption="Figura 1. Distribución" />
+
+a) Realice el datagrama UDP para un envío de 1000 bytes de datos desde la PC-PT hacia la Laptop-PT de la Vivienda 1, detallando IPs y puertos de origen/destino. *(0.5 pt)*
+
+b) Analice el proceso de encapsulamiento de un datagrama de 5000 bytes desde la Laptop-PT (Vivienda 1) hacia el Smartphone (Vivienda 2). ¿Qué fenómeno ocurre en la capa de red debido al tamaño de los datos? *(1.0 pt)*
+
+c) Al enviar un mensaje UDP desde la PC-PT a la Printer-PT: ¿Existe una fase de sincronización previa? Justifique su respuesta basada en la naturaleza del protocolo. *(0.5 pt)*
+
+d) El SMARTPHONE-PT envía un datagrama a la Laptop-PT local al puerto 9999 (cerrado). ¿Qué protocolo notificará el error y qué mensaje específico se observará en Wireshark? *(1.0 pt)*
+
+e) Durante un flujo de voz (UDP) de Laptop-PT a PC-PT, se interrumpe la recepción en el destino. ¿Emitirá la PC-PT un mensaje de cierre (tipo FIN/RST)? ¿Cómo detecta la capa de transporte del emisor esta pérdida? *(0.5 pt)*
+
+f) Si la Laptop-PT (Vivienda 2) intenta un ncat UDP directo hacia la IP 192.168.101.20: ¿Es posible la entrega del paquete a través de Internet? Justifique según el direccionamiento IP mostrado. *(0.5 pt)*
+
+</ExamStatement>
+
+**Solución.**
+
+<Visualization viz={{ type: 'net-scene', title: 'Topología del enunciado, paso a paso', steps: [{"note": "Topología del enunciado (Packet Tracer): cada dispositivo con IP:puerto.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}]}, {"note": "a) PC-PT envía 1000 bytes de datos a Laptop-PT de la misma vivienda: no sale de la LAN.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "pc", "to": "lp", "label": "UDP 5324 → 5340", "order": 1, "state": "active"}]}, {"note": "d) Smartphone envía a un puerto cerrado de la Laptop local: la Laptop contesta con ICMP port unreachable.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "sp", "to": "l2", "label": "UDP → 9999", "order": 1, "state": "muted"}, {"from": "l2", "to": "sp", "label": "ICMP port unreachable", "order": 2, "state": "active"}]}, {"note": "f) Destino 192.168.101.20 es una dirección privada de la Vivienda 1: no es enrutable desde la Vivienda 2 por Internet.", "devices": [{"id": "pc", "kind": "host", "label": "PC-PT", "sub": "192.168.101.20:5324", "x": 6, "y": 85}, {"id": "lp", "kind": "laptop", "label": "Laptop-PT", "sub": "192.168.101.2:5340", "x": 6, "y": 30}, {"id": "pr", "kind": "host", "label": "Printer-PT", "sub": "192.168.101.4:3474", "x": 32, "y": 6}, {"id": "r1", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "192.168.101.1:6478", "x": 32, "y": 58}, {"id": "sp", "kind": "phone", "label": "Smartphone-PT", "sub": "10.0.10.100:8765", "x": 66, "y": 22}, {"id": "l2", "kind": "laptop", "label": "Laptop-PT", "sub": "10.0.10.67:4678", "x": 96, "y": 22}, {"id": "r2", "kind": "router", "label": "HomeRouter-PT-AC", "sub": "10.0.10.1:3333", "x": 76, "y": 84}], "cables": [{"from": "pc", "to": "r1"}, {"from": "lp", "to": "r1"}, {"from": "pr", "to": "r1"}, {"from": "sp", "to": "r2"}, {"from": "l2", "to": "r2"}], "zones": [{"label": "Vivienda 1", "devices": ["pc", "lp", "pr", "r1"]}, {"label": "Vivienda 2", "devices": ["sp", "l2", "r2"]}], "packets": [{"from": "l2", "to": "r2", "label": "UDP → 192.168.101.20", "order": 1, "state": "active"}, {"from": "r2", "to": "r1", "label": "no se entrega", "order": 2, "lost": true, "state": "active"}]}] }} />
 
 **a) Datagrama de 1000 bytes de PC-PT a Laptop-PT, Vivienda 1 (0,5 pt).**
 
@@ -144,6 +238,30 @@ Solo el primer fragmento lleva la cabecera UDP (puertos). El destino reensambla 
 ---
 
 ## Pregunta 7: Prueba de UDP con NCAT (4 puntos)
+
+<ExamStatement>
+
+Se tiene una ejecución de envío de mensajes de pruebas usando NCAT (como en la experiencia de laboratorio). Se envían dos mensajes usando UDP como se muestra en las figuras. Responda:
+
+a) Realice el datagrama UDP correspondiente a ambos mensajes. *(1.0 pt)*
+
+b) ¿Por qué el Checksum de UDP es diferente al de la capa superior (IP)? *(0.5 pt)*
+
+c) ¿Por qué el Checksum sale como "unverified"? *(0.5 pt)*
+
+d) ¿Se produjo fragmentación? ¿Cuál es el offset en bytes del paquete No. 30? *(0.5 pt)*
+
+e) ¿Cuál es el valor del MTU? *(0.5 pt)*
+
+f) ¿Por qué el segundo frame tiene el tag "Malformed Packet"? *(1.0 pt)*
+
+<ExamFigure src={figUdp1} alt="Captura de Wireshark: frames 28 y 29 son fragmentos IP (off=0 y off=1480, ID=d0fb), frame 30 es UDP 36684 → 31337 Len=4096; frames 46 y 47 fragmentos con ID=fa87 y frame 48 Malformed Packet. Detalle del frame 30: UDP Src Port 36684, Dst Port 31337, Length 4104, Checksum 0x99bb [unverified]." caption="Figura 2. Frame UDP 1 y lista de frames capturados" />
+
+<ExamFigure src={figUdp2} alt="Detalle del frame 48: UDP Src Port 45339, Dst Port 53, Length 4104, Checksum 0xf220 [unverified], UDP payload 4096 bytes." caption="Figura 3. Frame UDP 2" />
+
+</ExamStatement>
+
+**Solución.**
 
 Captura tomada en 10.0.2.15 hacia 192.168.101.1 (interfaz enp0s3):
 

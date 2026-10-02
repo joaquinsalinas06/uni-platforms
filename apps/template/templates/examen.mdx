@@ -1,0 +1,50 @@
+---
+# Plantilla de un examen resuelto: content/evaluaciones/<categoria>/<examen>.mdx
+title: "Examen Parcial 2026-I"
+category: parciales
+categoryLabel: "Parciales"
+order: 1
+# PDF original, copiado a public/ (raw-materials/ no se despliega):
+#   cp raw-materials/pdfs/EP-2026I.pdf public/evaluaciones/parciales/2026-i.pdf
+# Con esto aparece "Descargar examen original" en la página y "PDF ↓" en el índice.
+pdf: "/evaluaciones/parciales/2026-i.pdf"
+source: "Examen Parcial <CURSO>, 2026-I (fecha)"
+---
+{/*
+  Reglas
+  - Enunciado: transcrito TAL CUAL dentro de <ExamStatement> (texto en Markdown,
+    símbolos y fórmulas en KaTeX, código/salidas de consola en bloques ```text).
+  - Figuras (capturas, topologías, gráficas, tablas escaneadas): NO se redibujan
+    como sustituto: se recorta la imagen real del PDF y va con <ExamFigure>.
+    Un diagrama propio (<Visualization>) puede ir además, dentro de la solución.
+  - Recortar una figura (coordenadas en píxeles a 250 dpi; ubicarlas mirando la
+    página renderizada con `pdftoppm -r 100 -png`, y multiplicar por 2,5):
+      pdftoppm -r 250 -f <pág> -l <pág> -singlefile -png \
+        -x <x> -y <y> -W <ancho> -H <alto> raw-materials/pdfs/<examen>.pdf \
+        content/evaluaciones/parciales/2026-i/p<pág>-<nombre>
+    El PNG va JUNTO al .mdx (no en public/): Astro lo optimiza a AVIF/WebP con
+    srcset y reserva su espacio (sin saltos), con skeleton mientras carga.
+  - `alt` describe los datos de la figura (IPs, valores, ejes): es lo que lee
+    un lector de pantalla y lo que encuentra el buscador.
+*/}
+import ExamStatement from '../../../src/components/ExamStatement.astro';
+import ExamFigure from '../../../src/components/ExamFigure.astro';
+{/* import topo from './2026-i/p2-topologia.png'; */}
+
+## Pregunta 1: <tema> (2 puntos)
+
+<ExamStatement>
+
+Enunciado transcrito… $RTT_1 = 50$ ms …
+
+{/* <ExamFigure src={topo} alt="Topología: PC 192.168.1.20:5324 …" caption="Figura 1. Distribución" /> */}
+
+a) Primera parte. *(1 pt)*
+
+b) Segunda parte. *(1 pt)*
+
+</ExamStatement>
+
+**Solución.**
+
+**a)** …

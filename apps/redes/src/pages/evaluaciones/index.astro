@@ -37,15 +37,26 @@ const categories = [
             ) : (
               <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {items.map((e) => (
-                  <li>
+                  <li class="relative">
                     <a
                       href={`/evaluaciones/${e.id}`}
                       class="group block h-full rounded-lg border border-[var(--rule)] p-4 no-underline transition-all hover:-translate-y-0.5 hover:border-[var(--accent)]"
                     >
-                      <p class="text-[1.0625rem] leading-snug font-medium group-hover:text-[var(--accent)]">
+                      <p class:list={['text-[1.0625rem] leading-snug font-medium group-hover:text-[var(--accent)]', e.data.pdf && 'pr-16']}>
                         {e.data.title}
                       </p>
                     </a>
+                    {e.data.pdf && (
+                      // Hermano del <a> de la tarjeta (no anidado): descarga directa.
+                      <a
+                        href={e.data.pdf}
+                        download
+                        title="Descargar examen original (PDF)"
+                        class="absolute top-3.5 right-3.5 rounded border border-[var(--rule)] px-2 py-1 font-mono text-[0.75rem] no-underline hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                      >
+                        PDF ↓
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

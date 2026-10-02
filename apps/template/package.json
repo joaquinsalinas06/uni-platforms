@@ -28,16 +28,17 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@uni/ui": "workspace:*",
+    "@uni/visualizations": "workspace:*",
     "astro": "^7.3.2",
     "katex": "^0.18.7",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
-    "yaml": "^2.9.1",
-    "@uni/visualizations": "workspace:*",
-    "@uni/ui": "workspace:*"
+    "yaml": "^2.9.1"
   },
   "allowScripts": {
     "esbuild": true

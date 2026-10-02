@@ -73,6 +73,11 @@ export const collections = {
       category: z.enum(['parciales', 'laboratorio']),
       categoryLabel: z.string(),
       order: z.number().int().default(0),
+      /** PDF original del examen, servido desde public/ (p. ej.
+       * "/evaluaciones/parciales/2025-ii.pdf"): botón de descarga. */
+      pdf: z.string().optional(),
+      /** De dónde sale el examen, en una línea ("Examen Parcial CS4054, 2025-II"). */
+      source: z.string().optional(),
     }),
   }),
 };
