@@ -45,13 +45,193 @@ Datos: tres bytes $01010011$, $01100110$, $01110100$.
 
 **Verificación del receptor:** suma los tres bytes más el checksum: $00101110 + 11010001 = 11111111$. Todo unos significa que no se detectó error *(derivado; equivale a recalcular y comparar, como dice la slide)*.
 
+### De dónde sale cada cosa
+
+#### Quién define los datos y el checksum
+
+Un segmento UDP tiene cinco partes. Cada una la define alguien distinto:
+
+<Visualization viz={{ type: 'packet', title: 'Segmento UDP: quién define cada campo', steps: [
+  { note: 'Los datos los escribe la aplicación: es el mensaje que el programa quiere enviar. En el ejercicio, el enunciado los da (tres bytes: 01010011, 01100110, 01110100).',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16 }, { label: 'puerto destino', bits: 16 }],
+      [{ label: 'longitud', bits: 16 }, { label: 'checksum', bits: 16 }],
+      [{ label: 'datos de la aplicación', bits: 32, state: 'active' }] ] } },
+  { note: 'Puertos y longitud los llena UDP al armar el segmento: el puerto origen y destino los fija el programa al abrir el socket, y la longitud es 8 + el tamaño de los datos.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16, state: 'marked' }, { label: 'puerto destino', bits: 16, state: 'marked' }],
+      [{ label: 'longitud', bits: 16, state: 'marked' }, { label: 'checksum', bits: 16 }],
+      [{ label: 'datos de la aplicación', bits: 32, state: 'muted' }] ] } },
+  { note: 'El checksum no lo decide nadie: se calcula a partir de todo lo demás (cabecera, datos y las direcciones IP, según la slide). Es el último campo en llenarse.',
+    fields: { width: 32, rows: [
+      [{ label: 'puerto origen', bits: 16, state: 'muted' }, { label: 'puerto destino', bits: 16, state: 'muted' }],
+      [{ label: 'longitud', bits: 16, state: 'muted' }, { label: 'checksum = ~(suma de todo)', bits: 16, state: 'answer' }],
+      [{ label: 'datos de la aplicación', bits: 32, state: 'muted' }] ] } },
+  { note: 'En el ejercicio se simplifica: solo hay 3 bytes de datos de 8 bits y se calcula su checksum. Es la misma regla con menos piezas.',
+    fields: { width: 8, rows: [
+      [{ label: 'byte 1 (dato)', bits: 8, value: '01010011' }],
+      [{ label: 'byte 2 (dato)', bits: 8, value: '01100110' }],
+      [{ label: 'byte 3 (dato)', bits: 8, value: '01110100' }],
+      [{ label: 'checksum (se calcula)', bits: 8, value: '?', state: 'answer' }] ] } },
+]}} />
+
+En la práctica, el que arma todo esto es el sistema operativo cuando el programa llama a `sendto`. El programador solo define los datos (y los puertos). Los 3 bytes del ejercicio los define el **enunciado**: el profesor los eligió para que la suma tenga acarreo y se vea el plegado.
+
+#### De dónde sale el checksum: lo que le falta a la suma
+
+El objetivo es que, al sumar los datos y el checksum, el receptor obtenga siempre **todo unos** (`11111111`, que es 255 con 8 bits). Entonces el emisor busca el número que le falta a la suma de los datos para llegar a 255:
+
+$$\text{checksum} = 255 - \text{suma de los datos} = 255 - 46 = 209 = 11010001$$
+
+Y restar de todo unos equivale a **invertir cada bit**, porque no hay préstamos: donde el bit era 1 queda 0 y donde era 0 queda 1.
+
+<Visualization viz={{ type: 'packet', title: 'El checksum es 255 − suma, o sea, los bits invertidos', steps: [
+  { note: 'Primero la suma de los datos con acarreo circular: 00101110 (46).',
+    fields: { width: 8, rows: [
+      [{ label: 'suma de los datos', bits: 8, value: '00101110', state: 'active' }] ] } },
+  { note: 'El objetivo es 11111111 (255). Se busca cuánto le falta a la suma para llegar ahí.',
+    fields: { width: 8, rows: [
+      [{ label: 'objetivo', bits: 8, value: '11111111', state: 'marked' }],
+      [{ label: 'suma de los datos', bits: 8, value: '00101110' }],
+      [{ label: 'lo que falta = objetivo − suma', bits: 8, value: '?', state: 'active' }] ] } },
+  { note: 'Resta bit a bit sin préstamos: cada bit de la suma se invierte. Eso es el complemento a uno, y es el checksum.',
+    fields: { width: 8, rows: [
+      [{ label: 'objetivo', bits: 8, value: '11111111', state: 'muted' }],
+      [{ label: 'suma de los datos', bits: 8, value: '00101110', state: 'muted' }],
+      [{ label: 'checksum (bits invertidos)', bits: 8, value: '11010001', state: 'answer' }] ] } },
+  { note: 'Comprobación: suma + checksum = 00101110 + 11010001 = 11111111. El receptor hace exactamente esta suma.',
+    fields: { width: 8, rows: [
+      [{ label: 'suma de los datos', bits: 8, value: '00101110' }],
+      [{ label: 'checksum', bits: 8, value: '11010001' }],
+      [{ label: 'total', bits: 8, value: '11111111', state: 'answer' }] ] } },
+]}} />
+
+**¿Por qué no poner un checksum fijo como 00000000?** Porque tiene que depender de los datos; si no, no detectaría nada. Y porque el receptor espera todo unos:
+
+| Checksum que pone el emisor | Receptor suma datos + checksum | Resultado |
+|---|---|---|
+| $00000000$ (inventado) | $46 + 0 = 46 = 00101110$ | No es todo unos: daría error con datos buenos |
+| $11010001$ (255 − 46) | $46 + 209 = 255 = 11111111$ | Todo unos: correcto |
+
+Solo hay un valor que hace que cuadre, y lo da la resta. *(Que `11111111` sea el "cero" de la aritmética en complemento a uno es una explicación derivada, no está en la slide.)*
+
+### Emisor y receptor, paso a paso
+
+Hay **un solo segmento** y dos papeles. Las "palabras" son los propios bytes del segmento (aquí 3 bytes de 8 bits, como en el ejercicio). No se compara nada entre dos listas: el emisor calcula un número y lo pone en el segmento; el receptor suma **todo lo que llegó, checksum incluido**, y mira si salió todo unos.
+
+#### Caso 1: llega bien (no se detecta error)
+
+<Visualization viz={{ type: 'net-scene', title: 'Quién hace qué: segmento sin errores', steps: [
+  { note: 'El emisor suma sus tres bytes con acarreo circular (resultado 00101110) y lo complementa: el checksum es 11010001.',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'active' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'esperando', x: 85, y: 55, state: 'idle' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [] },
+  { note: 'El emisor mete el checksum en la cabecera y envía el segmento: datos + 11010001. Nada se modifica en el camino.',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'idle' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'esperando', x: 85, y: 55, state: 'idle' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [{ from: 'e', to: 'r', label: 'datos + 11010001', order: 1, state: 'active' }] },
+  { note: 'El receptor suma los tres bytes y el checksum que vino en el segmento. Resultado: 11111111 (ver la cuenta abajo).',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'idle' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'suma = 11111111', x: 85, y: 55, state: 'active' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [{ from: 'e', to: 'r', label: 'datos + 11010001', order: 1, state: 'muted' }] },
+  { note: 'Todo unos: no se detectó error. El receptor entrega los datos.',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'idle' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'suma = 11111111', x: 85, y: 55, state: 'answer' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [{ from: 'e', to: 'r', label: 'datos + 11010001', order: 1, state: 'muted' }] },
+]}} />
+
+La cuenta del receptor:
+
+<Visualization viz={{ type: 'packet', title: 'Receptor: suma de lo recibido (sin errores)', steps: [
+  { note: 'Suma de los tres bytes recibidos: 83 + 102 = 185; 185 + 116 = 301 = 1 00101101; se pliega el acarreo: 00101110 (46).',
+    fields: { width: 8, rows: [
+      [{ label: 'byte 1', bits: 8, value: '01010011' }],
+      [{ label: 'byte 2', bits: 8, value: '01100110' }],
+      [{ label: 'byte 3', bits: 8, value: '01110100' }],
+      [{ label: 'suma plegada', bits: 8, value: '00101110', state: 'active' }] ] } },
+  { note: 'Se suma también el checksum recibido: 46 + 209 = 255.',
+    fields: { width: 8, rows: [
+      [{ label: 'suma plegada', bits: 8, value: '00101110', state: 'muted' }],
+      [{ label: 'checksum recibido', bits: 8, value: '11010001' }],
+      [{ label: 'resultado', bits: 8, value: '11111111', state: 'answer' }] ] } },
+]}} />
+
+#### Caso 2: un bit se daña en el camino (se detecta el error)
+
+El emisor hace exactamente lo mismo que antes y envía los mismos bytes con el mismo checksum. Por el camino el último bit del byte 2 cambia de 0 a 1: `01100110` pasa a `01100111` (102 pasa a 103). El emisor no lo sabe.
+
+<Visualization viz={{ type: 'net-scene', title: 'Quién hace qué: segmento con un bit dañado', steps: [
+  { note: 'El emisor calcula el checksum con sus datos originales: 11010001.',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'active' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'esperando', x: 85, y: 55, state: 'idle' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [] },
+  { note: 'El segmento viaja y un bit del byte 2 se voltea (01100110 pasa a 01100111). El checksum sigue siendo el original.',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'idle' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'esperando', x: 85, y: 55, state: 'idle' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [{ from: 'e', to: 'r', label: 'byte 2 alterado + 11010001', order: 1, state: 'active' }] },
+  { note: 'El receptor suma los bytes recibidos y el checksum: el resultado es 00000001, no todo unos (ver la cuenta abajo).',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'idle' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'suma = 00000001', x: 85, y: 55, state: 'active' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [{ from: 'e', to: 'r', label: 'byte 2 alterado + 11010001', order: 1, state: 'muted' }] },
+  { note: 'Hay ceros en el resultado: error detectado. El checksum solo detecta, no corrige; UDP no retransmite por su cuenta (derivado).',
+    devices: [
+      { id: 'e', kind: 'laptop', label: 'Emisor', sub: 'checksum = 11010001', x: 15, y: 55, state: 'idle' },
+      { id: 'r', kind: 'host', label: 'Receptor', sub: 'ERROR detectado', x: 85, y: 55, state: 'active' } ],
+    cables: [{ from: 'e', to: 'r' }],
+    packets: [{ from: 'e', to: 'r', label: 'byte 2 alterado + 11010001', order: 1, state: 'muted' }] },
+]}} />
+
+La cuenta del receptor:
+
+<Visualization viz={{ type: 'packet', title: 'Receptor: suma de lo recibido (con un bit dañado)', steps: [
+  { note: 'Llegan los tres bytes; el byte 2 ya no es el original (01100111 en vez de 01100110).',
+    fields: { width: 8, rows: [
+      [{ label: 'byte 1', bits: 8, value: '01010011' }],
+      [{ label: 'byte 2 (dañado)', bits: 8, value: '01100111', state: 'active' }],
+      [{ label: 'byte 3', bits: 8, value: '01110100' }],
+      [{ label: 'checksum recibido', bits: 8, value: '11010001' }] ] } },
+  { note: 'Suma de los tres bytes: 83 + 103 = 186; 186 + 116 = 302 = 1 00101110; se pliega el acarreo: 00101111 (47).',
+    fields: { width: 8, rows: [
+      [{ label: 'byte 1', bits: 8, value: '01010011', state: 'muted' }],
+      [{ label: 'byte 2 (dañado)', bits: 8, value: '01100111', state: 'muted' }],
+      [{ label: 'byte 3', bits: 8, value: '01110100', state: 'muted' }],
+      [{ label: 'suma plegada', bits: 8, value: '00101111', state: 'active' }] ] } },
+  { note: 'Se suma el checksum recibido: 47 + 209 = 256 = 1 00000000; se pliega el acarreo: 00000001.',
+    fields: { width: 8, rows: [
+      [{ label: 'suma plegada', bits: 8, value: '00101111', state: 'muted' }],
+      [{ label: 'checksum recibido', bits: 8, value: '11010001' }],
+      [{ label: 'resultado', bits: 8, value: '00000001', state: 'active' }] ] } },
+  { note: 'Se esperaba 11111111 y salió 00000001: error detectado.',
+    fields: { width: 8, rows: [
+      [{ label: 'esperado si no hay error', bits: 8, value: '11111111', state: 'answer' }],
+      [{ label: 'obtenido', bits: 8, value: '00000001', state: 'active' }] ] } },
+]}} />
+
+Es lo mismo que **recalcular y comparar**, como dice la slide: con los bytes recibidos la suma plegada es $00101111$ y su complemento es $11010000$, que **no** coincide con el checksum recibido $11010001$. Distinto: error. *(derivado: equivalente al método de sumar todo y buscar unos.)*
+
+Qué hace el receptor después de detectar el error no está en el material; solo se dice que el error se detecta. El caso en que el error **no** se detecta (dos bits que se compensan) está en [límites del checksum](/topics/algoritmo-checksum-udp/subtopics/pseudocabecera-deteccion-errores).
+
 ---
 
 ## 3. Preguntas del enunciado
 
 - **¿Por qué el complemento y no la suma?** El material no lo responde. Con el complemento, el receptor puede sumar *todo, checksum incluido*, y mirar si sale todo unos *(derivado)*.
 - **¿Un error de 1 bit pasa sin detectarse?** No: cambiar un solo bit cambia la suma en una potencia de 2, así que el resultado ya no coincide *(derivado)*.
-- **¿Y uno de 2 bits?** Sí puede pasar: si un bit sube de 0 a 1 en una palabra y otro baja de 1 a 0 en la misma posición de otra palabra, la suma no cambia *(derivado)*. La slide *weak protection* muestra un caso así (con 4 bits). Ver [límites](/topics/algoritmo-checksum-udp/pseudocabecera-deteccion-errores).
+- **¿Y uno de 2 bits?** Sí puede pasar: si un bit sube de 0 a 1 en una palabra y otro baja de 1 a 0 en la misma posición de otra palabra, la suma no cambia *(derivado)*. La slide *weak protection* muestra un caso así (con 4 bits). Ver [límites](/topics/algoritmo-checksum-udp/subtopics/pseudocabecera-deteccion-errores).
 
 ---
 
