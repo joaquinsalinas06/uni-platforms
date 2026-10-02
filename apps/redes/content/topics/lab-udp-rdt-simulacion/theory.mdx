@@ -19,7 +19,7 @@ UDP no recupera pérdidas ni avisa de problemas. Estas prácticas lo comprueban 
 | Error con NetCat (§7) | Enviar con `nc -u` a un puerto cerrado | UDP no confirma nada; el aviso lo da ICMP |
 | UDP frente a TCP (§8) | Mismas pruebas con `nc` y `nc -u` | UDP: sin handshake, tres palabras = tres datagramas, sin ACK ni cierre. TCP: handshake, ACK, FIN/RST |
 | Inundación UDP (sem. 6, §9) | Tres atacantes inundan a una víctima 10 a 15 s | Pico de paquetes en Statistics → I/O Graphs y de CPU/red en el monitor de recursos |
-| Canal con pérdidas (Ejercicios Extra, preg. 3 y 4) | Pérdida aleatoria de paquetes y rdt3.0 / ABP en Python | Detalle en [Inyección de pérdidas y timeouts](/topics/lab-udp-rdt-simulacion/inyeccion-perdidas-timeouts-udp) |
+| Canal con pérdidas (Ejercicios Extra, preg. 3 y 4) | Pérdida aleatoria de paquetes y rdt3.0 / ABP en Python | Detalle en [Inyección de pérdidas y timeouts](/topics/lab-udp-rdt-simulacion/subtopics/inyeccion-perdidas-timeouts-udp) |
 
 <Visualization viz={{ type: 'sequence',
   title: 'UDP hacia un puerto cerrado: avisa ICMP, no UDP',
@@ -47,7 +47,7 @@ UDP no recupera pérdidas ni avisa de problemas. Estas prácticas lo comprueban 
     }
   ] }} />
 
-El resumen de los ejercicios de la semana 6 y la cuenta de utilización: [Ejercicios resueltos](/topics/lab-udp-rdt-simulacion/resolucion-ejercicios-utilizacion).
+El resumen de los ejercicios de la semana 6 y la cuenta de utilización: [Ejercicios resueltos](/topics/lab-udp-rdt-simulacion/subtopics/resolucion-ejercicios-utilizacion).
 
 ---
 

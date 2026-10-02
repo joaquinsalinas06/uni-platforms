@@ -14,7 +14,7 @@ Selective repeat es la otra respuesta a la recuperación de errores con pipelini
 
 **Lo que dice el material:** solo el nombre. La slide *Considerations* dice, para los protocolos con pipeline en general, que además del buffer mínimo del emisor (paquetes transmitidos y no confirmados) **el receptor también puede necesitar guardar paquetes recibidos correctamente**. No dice cuál de los dos enfoques lo requiere.
 
-El material no desarrolla la regla de la ventana ni cómo se confirma cada paquete. Ver también: [Go-Back-N](/topics/protocolos-pipeline-gbn-sr/go-back-n-ventanas-acumulativas).
+El material no desarrolla la regla de la ventana ni cómo se confirma cada paquete. Ver también: [Go-Back-N](/topics/protocolos-pipeline-gbn-sr/subtopics/go-back-n-ventanas-acumulativas).
 
 ---
 

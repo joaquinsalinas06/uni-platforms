@@ -39,7 +39,7 @@ Una idea clave de la slide: emisor y receptor **no conocen el estado del otro** 
 | rdt2.2 | Igual que 2.1 | **Sin NAK**: el receptor envía ACK con el número del último paquete bien recibido; un ACK duplicado equivale a un NAK |
 | rdt3.0 | Errores de bits **y pérdidas** | **Temporizador**: si vence, se retransmite. Es el *alternating-bit protocol*, aún stop-and-wait |
 
-Las FSM completas de cada versión están en [Evolución de las FSM](/topics/transferencia-confiable-rdt/evolucion-fsm-rdt1-a-rdt22) y la de rdt3.0, con sus cuatro casos de ejecución, en [rdt3.0 y temporizadores](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait).
+Las FSM completas de cada versión están en [Evolución de las FSM](/topics/transferencia-confiable-rdt/subtopics/evolucion-fsm-rdt1-a-rdt22) y la de rdt3.0, con sus cuatro casos de ejecución, en [rdt3.0 y temporizadores](/topics/transferencia-confiable-rdt/subtopics/rdt3-temporizadores-stop-and-wait).
 
 <Visualization viz={{ type: 'sequence',
   title: 'Por qué hace falta el número de secuencia (rdt2.1)',

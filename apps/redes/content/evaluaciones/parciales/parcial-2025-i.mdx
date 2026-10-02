@@ -55,7 +55,7 @@ $$D_{cs} \ge \max\left\{\frac{NF}{u_s}, \frac{F}{d_{\min}}\right\} \qquad D_{P2P
 
 **P2P.** El servidor debe subir al menos una copia ($F/u_s$); el cliente más lento tarda $F/d_{\min}$; y entre todos hay que bajar $NF$ bits, con capacidad máxima de subida $u_{\text{total}} = u_s + u_1 + \dots + u_N$, de donde $NF/u_{\text{total}}$.
 
-**Implicancias con $N$ muy grande.** En cliente-servidor $NF/u_s$ crece **linealmente** con $N$. En P2P, con pares de subida parecida $u$, $\frac{NF}{u_s + Nu} \to \frac{F}{u}$ *(derivado)*: el tiempo se estabiliza, porque cada par que llega también aporta subida. Gráfica y detalle: [escalabilidad](/topics/arquitecturas-p2p-distribucion/analisis-escalabilidad-asintotica).
+**Implicancias con $N$ muy grande.** En cliente-servidor $NF/u_s$ crece **linealmente** con $N$. En P2P, con pares de subida parecida $u$, $\frac{NF}{u_s + Nu} \to \frac{F}{u}$ *(derivado)*: el tiempo se estabiliza, porque cada par que llega también aporta subida. Gráfica y detalle: [escalabilidad](/topics/arquitecturas-p2p-distribucion/subtopics/analisis-escalabilidad-asintotica).
 
 ---
 

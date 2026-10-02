@@ -15,13 +15,13 @@ import Visualization from '../../../../src/components/Visualization.astro';
 
 | Pregunta (Ejercicios 2) | Tema | Dónde |
 |---|---|---|
-| 1. Tabla de tiempo mínimo C/S vs P2P ($F = 20$ Gbit) | Distribución P2P | [Modelo matemático](/topics/arquitecturas-p2p-distribucion/modelo-matematico-distribucion) |
-| 2 y 3. Esquemas de distribución en modelo de fluido | Distribución P2P | [Modelo matemático](/topics/arquitecturas-p2p-distribucion/modelo-matematico-distribucion) |
-| 4. Checksum de 3 bytes y errores de 1 y 2 bits | Checksum | [Suma en complemento a uno](/topics/algoritmo-checksum-udp/calculo-suma-complemento-a-uno) |
-| 5. Bloqueo del receptor rdt2.1 con el emisor | rdt | [Evolución de las FSM](/topics/transferencia-confiable-rdt/evolucion-fsm-rdt1-a-rdt22) |
+| 1. Tabla de tiempo mínimo C/S vs P2P ($F = 20$ Gbit) | Distribución P2P | [Modelo matemático](/topics/arquitecturas-p2p-distribucion/subtopics/modelo-matematico-distribucion) |
+| 2 y 3. Esquemas de distribución en modelo de fluido | Distribución P2P | [Modelo matemático](/topics/arquitecturas-p2p-distribucion/subtopics/modelo-matematico-distribucion) |
+| 4. Checksum de 3 bytes y errores de 1 y 2 bits | Checksum | [Suma en complemento a uno](/topics/algoritmo-checksum-udp/subtopics/calculo-suma-complemento-a-uno) |
+| 5. Bloqueo del receptor rdt2.1 con el emisor | rdt | [Evolución de las FSM](/topics/transferencia-confiable-rdt/subtopics/evolucion-fsm-rdt1-a-rdt22) |
 | 6. DNS sobre UDP y TCP (`nslookup -type=A/ANY/AAAA`) | Laboratorio Wireshark | Cuestionario sobre tu propia captura |
 | 7. DHCP (Discover, Offer, Request, ACK) | Laboratorio Wireshark | [Ejercicios extra DHCP](/evaluaciones/laboratorio/dhcp-udp-applayer-extra) |
-| 8. Servidor y cliente UDP en Python (puerto 9999) | Sockets | [Comunicación cliente-servidor](/topics/lab-sockets-udp-python/comunicacion-cliente-servidor-udp) |
+| 8. Servidor y cliente UDP en Python (puerto 9999) | Sockets | [Comunicación cliente-servidor](/topics/lab-sockets-udp-python/subtopics/comunicacion-cliente-servidor-udp) |
 
 ### Utilización de stop-and-wait *(derivado de la slide)*
 
@@ -29,13 +29,13 @@ Con $R = 1\text{ Gbps}$, $L = 8000$ bits, $\text{RTT} = 30\text{ ms}$: $L/R = 0{
 
 $$U = \frac{L/R}{\text{RTT} + L/R} = \frac{0{,}008}{30{,}008} \approx 0{,}00027 = 0{,}027\,\%$$
 
-Con tres paquetes en tránsito, como en la figura de pipelining, $U = 3 \cdot 0{,}008/30{,}008 \approx 0{,}08\,\%$. Figuras: [rdt3.0](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait) y [pipelining](/topics/protocolos-pipeline-gbn-sr).
+Con tres paquetes en tránsito, como en la figura de pipelining, $U = 3 \cdot 0{,}008/30{,}008 \approx 0{,}08\,\%$. Figuras: [rdt3.0](/topics/transferencia-confiable-rdt/subtopics/rdt3-temporizadores-stop-and-wait) y [pipelining](/topics/protocolos-pipeline-gbn-sr).
 
 ---
 
 ## 3. Ejemplo resuelto
 
-Pregunta 8 del ejercicio: ¿cuál es la carga útil máxima que puede enviar el cliente? Las slides dan $65535 - 8 = 65527$ bytes (por el campo de longitud) y el enunciado habla de 65 507 bytes como límite teórico (el material no explica la diferencia; $65535 - 8 - 20 = 65507$ si se descuentan también los 20 bytes de la cabecera IP *(derivado)*). Ver [Ventajas y segmento UDP](/topics/protocolo-udp/ventajas-y-segmento-udp).
+Pregunta 8 del ejercicio: ¿cuál es la carga útil máxima que puede enviar el cliente? Las slides dan $65535 - 8 = 65527$ bytes (por el campo de longitud) y el enunciado habla de 65 507 bytes como límite teórico (el material no explica la diferencia; $65535 - 8 - 20 = 65507$ si se descuentan también los 20 bytes de la cabecera IP *(derivado)*). Ver [Ventajas y segmento UDP](/topics/protocolo-udp/subtopics/ventajas-y-segmento-udp).
 
 ---
 

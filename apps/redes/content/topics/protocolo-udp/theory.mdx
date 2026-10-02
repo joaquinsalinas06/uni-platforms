@@ -35,7 +35,7 @@ Cuatro campos de 16 bits: 8 bytes en total. `length` es la longitud en bytes del
 
 ### Por qué existe UDP
 
-Sin establecimiento de conexión (no suma un RTT), sin estado de conexión en emisor ni receptor, cabecera pequeña, sin control de congestión (puede enviar tan rápido como quiera) y funciona aun con congestión. Detalle: [Ventajas y segmento UDP](/topics/protocolo-udp/ventajas-y-segmento-udp). Usos y costo real: [Aplicaciones y overhead](/topics/protocolo-udp/aplicaciones-streaming-y-overhead).
+Sin establecimiento de conexión (no suma un RTT), sin estado de conexión en emisor ni receptor, cabecera pequeña, sin control de congestión (puede enviar tan rápido como quiera) y funciona aun con congestión. Detalle: [Ventajas y segmento UDP](/topics/protocolo-udp/subtopics/ventajas-y-segmento-udp). Usos y costo real: [Aplicaciones y overhead](/topics/protocolo-udp/subtopics/aplicaciones-streaming-y-overhead).
 
 ---
 
@@ -51,7 +51,7 @@ Preguntas típicas sobre la cabecera:
 
 ## 4. Ejemplo resuelto
 
-Parcial 2026-I, pregunta 7, trama con 4096 bytes de datos: `Length: 4104` $= 8 + 4096$. Puertos 36684 → 31337. Ver la figura en [Ventajas y segmento UDP](/topics/protocolo-udp/ventajas-y-segmento-udp).
+Parcial 2026-I, pregunta 7, trama con 4096 bytes de datos: `Length: 4104` $= 8 + 4096$. Puertos 36684 → 31337. Ver la figura en [Ventajas y segmento UDP](/topics/protocolo-udp/subtopics/ventajas-y-segmento-udp).
 
 Pregunta de la slide: *máxima carga útil de UDP*. La respuesta de la slide: $65535 - 8 = 65527$ bytes; *mayor puerto origen:* $2^{16} - 1 = 65535$.
 

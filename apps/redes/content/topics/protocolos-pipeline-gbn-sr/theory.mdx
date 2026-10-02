@@ -20,7 +20,7 @@ Enlace de $R = 1\text{ Gbps}$, paquetes de $L = 8000$ bits (1000 bytes, cabecera
 
 $$d_{\text{trans}} = \frac{L}{R} = \frac{8000}{10^9}\text{ s} = 8\ \mu\text{s}$$
 
-- **Stop-and-wait:** el ACK del primer paquete llega en $t = \text{RTT} + L/R$ y recién entonces sale el siguiente (figura en [rdt3.0](/topics/transferencia-confiable-rdt/rdt3-temporizadores-stop-and-wait)).
+- **Stop-and-wait:** el ACK del primer paquete llega en $t = \text{RTT} + L/R$ y recién entonces sale el siguiente (figura en [rdt3.0](/topics/transferencia-confiable-rdt/subtopics/rdt3-temporizadores-stop-and-wait)).
 - **Pipelining:** se envían varios (la slide dibuja 3) y, a medida que llegan los ACK, se envían más.
 
 <Visualization viz={{ type: 'spacetime',
@@ -158,7 +158,7 @@ Los números de la slide: $d_{\text{trans}} = 8\ \mu\text{s}$; ciclo stop-and-wa
     }
   ] }} />
 
-Los dos esquemas en detalle: [Go-Back-N](/topics/protocolos-pipeline-gbn-sr/go-back-n-ventanas-acumulativas) y [Selective Repeat](/topics/protocolos-pipeline-gbn-sr/selective-repeat-buffers-regla-ventana).
+Los dos esquemas en detalle: [Go-Back-N](/topics/protocolos-pipeline-gbn-sr/subtopics/go-back-n-ventanas-acumulativas) y [Selective Repeat](/topics/protocolos-pipeline-gbn-sr/subtopics/selective-repeat-buffers-regla-ventana).
 
 ---
 

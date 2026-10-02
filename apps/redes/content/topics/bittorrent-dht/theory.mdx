@@ -24,11 +24,11 @@ Un sistema P2P hace dos cosas **sin una autoridad central**: *encontrar* el obje
 ### De Gnutella a los overlays estructurados
 
 - A inicios de los 2000 aparecen aplicaciones P2P de intercambio de archivos (Kazaa, eMule, Napster, entre otras de la slide). **Gnutella** se dibuja como un grafo de nodos con enlaces arbitrarios.
-- La respuesta de la academia: **estructurar** el overlay, es decir, asignar identificadores con una función hash, $hash(x) \to n$, y organizar los nodos según ese identificador (*structured overlays*). La slide los dibuja como un anillo: ver [DHT circular](/topics/bittorrent-dht/dht-circular-enrutamiento).
+- La respuesta de la academia: **estructurar** el overlay, es decir, asignar identificadores con una función hash, $hash(x) \to n$, y organizar los nodos según ese identificador (*structured overlays*). La slide los dibuja como un anillo: ver [DHT circular](/topics/bittorrent-dht/subtopics/dht-circular-enrutamiento).
 
 ### BitTorrent
 
-Vocabulario que lista la slide (Torrent, chunk de 256 Kb, swarm, trackers, peer finder, *bad peer*, choking) y el diagrama del swarm: [Mecanismos de BitTorrent](/topics/bittorrent-dht/protocolo-bittorrent-mecanismos).
+Vocabulario que lista la slide (Torrent, chunk de 256 Kb, swarm, trackers, peer finder, *bad peer*, choking) y el diagrama del swarm: [Mecanismos de BitTorrent](/topics/bittorrent-dht/subtopics/protocolo-bittorrent-mecanismos).
 
 Cierre de la slide: P2P es la base de blockchain.
 
@@ -42,7 +42,7 @@ Para "seguir" una búsqueda en la DHT del ejemplo: ubica el identificador buscad
 
 ## 4. Ejemplo resuelto
 
-El ejemplo del material es `locate(d46a1c)` iniciado en el nodo `65a1fc`; su recorrido está en [DHT circular](/topics/bittorrent-dht/dht-circular-enrutamiento).
+El ejemplo del material es `locate(d46a1c)` iniciado en el nodo `65a1fc`; su recorrido está en [DHT circular](/topics/bittorrent-dht/subtopics/dht-circular-enrutamiento).
 
 ---
 
