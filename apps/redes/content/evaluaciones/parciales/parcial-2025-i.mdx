@@ -99,67 +99,124 @@ $$D_{cs} \ge \max\left\{\frac{NF}{u_s}, \frac{F}{d_{\min}}\right\} \qquad D_{P2P
 
 **Solución.** Paso 1: emisor. Paso 2: receptor.
 
-<Visualization viz={{ type: 'flow',
-  mode: 'fsm',
-  title: 'rdt2.1: números de secuencia 0 y 1',
-  steps: [
+<Visualization viz={{
+  "type": "fsm",
+  "title": "rdt2.1: números de secuencia 0 y 1",
+  "steps": [
     {
-      note: 'Emisor rdt2.1: numera los paquetes con 0 y 1. Si el ACK/NAK llega corrupto o es NAK, retransmite el mismo paquete.',
-      shapes: [
-        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
-        { id: 's1', kind: 'state', label: 'Esperar ACK o NAK 0' },
-        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
-        { id: 's3', kind: 'state', label: 'Esperar ACK o NAK 1' }
+      "note": "Emisor rdt2.1: numera los paquetes con 0 y 1. Si el ACK/NAK llega corrupto o es NAK, retransmite el mismo paquete.",
+      "states": [
+        {
+          "id": "s0",
+          "label": "Esperar llamada 0 de arriba",
+          "initial": true
+        },
+        {
+          "id": "s1",
+          "label": "Esperar ACK o NAK 0"
+        },
+        {
+          "id": "s2",
+          "label": "Esperar llamada 1 de arriba"
+        },
+        {
+          "id": "s3",
+          "label": "Esperar ACK o NAK 1"
+        }
       ],
-      arrows: [
-        { from: 's0', to: 's1', label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)' },
-        { from: 's1', to: 's1', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))\n/ udt_send(sndpkt)' },
-        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)\n/ Λ' },
-        { from: 's2', to: 's3', label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)' },
-        { from: 's3', to: 's3', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))\n/ udt_send(sndpkt)' },
-        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)\n/ Λ' }
+      "transitions": [
+        {
+          "from": "s0",
+          "to": "s1",
+          "event": "rdt_send(data)",
+          "action": "sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)"
+        },
+        {
+          "from": "s1",
+          "to": "s1",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))",
+          "action": "udt_send(sndpkt)"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)",
+          "action": "Λ"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "event": "rdt_send(data)",
+          "action": "sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)"
+        },
+        {
+          "from": "s3",
+          "to": "s3",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isNAK(rcvpkt))",
+          "action": "udt_send(sndpkt)"
+        },
+        {
+          "from": "s3",
+          "to": "s0",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt)",
+          "action": "Λ"
+        }
       ]
     },
     {
-      note: 'Receptor rdt2.1: en "Esperar 0" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.',
-      shapes: [
-        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
-        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      "note": "Receptor rdt2.1: en \"Esperar 0\" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.",
+      "states": [
+        {
+          "id": "r0",
+          "label": "Esperar 0 de abajo",
+          "initial": true
+        },
+        {
+          "id": "r1",
+          "label": "Esperar 1 de abajo"
+        }
       ],
-      arrows: [
+      "transitions": [
         {
-          from: 'r0',
-          to: 'r1',
-          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+          "from": "r0",
+          "to": "r1",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)",
+          "action": "extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r0',
-          to: 'r0',
-          label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)'
+          "from": "r0",
+          "to": "r0",
+          "event": "rdt_rcv(rcvpkt) && corrupt(rcvpkt)",
+          "action": "sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r0',
-          to: 'r0',
-          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+          "from": "r0",
+          "to": "r0",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)",
+          "action": "sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r1',
-          to: 'r0',
-          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+          "from": "r1",
+          "to": "r0",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)",
+          "action": "extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r1',
-          to: 'r1',
-          label: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)\n/ sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)'
+          "from": "r1",
+          "to": "r1",
+          "event": "rdt_rcv(rcvpkt) && corrupt(rcvpkt)",
+          "action": "sndpkt=make_pkt(NAK,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r1',
-          to: 'r1',
-          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)'
+          "from": "r1",
+          "to": "r1",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)",
+          "action": "sndpkt=make_pkt(ACK,checksum); udt_send(sndpkt)"
         }
       ]
     }
-  ] }} />
+  ]
+}} />
 
 **Emisor.** Numera los paquetes alternando **0** y **1**. Tras enviar el paquete 0 espera un ACK/NAK; si llega corrupto o es NAK, **retransmite** el mismo paquete; con un ACK correcto pasa a esperar el siguiente dato, que irá con número 1. Son cuatro estados porque se duplican los de rdt2.0 para cada número de secuencia.
 
@@ -182,65 +239,112 @@ $$D_{cs} \ge \max\left\{\frac{NF}{u_s}, \frac{F}{d_{\min}}\right\} \qquad D_{P2P
 - Receptor: ante un paquete corrupto o duplicado, en vez de NAK envía el ACK del último paquete bueno (en *Esperar 0*: `ACK 1`; en *Esperar 1*: `ACK 0`).
 - Emisor: además de `isACK`, revisa **qué número** confirma. Un ACK duplicado (con el número del paquete anterior) equivale a un NAK y provoca la retransmisión.
 
-<Visualization viz={{ type: 'flow',
-  mode: 'fsm',
-  title: 'rdt2.2: sin NAK (el ACK lleva el número de secuencia)',
-  steps: [
+<Visualization viz={{
+  "type": "fsm",
+  "title": "rdt2.2: sin NAK (el ACK lleva el número de secuencia)",
+  "steps": [
     {
-      note: 'Emisor rdt2.2: no existe NAK. Un ACK corrupto o con el número del paquete anterior ("ACK 1" mientras espera "ACK 0") hace el papel de NAK: se retransmite.',
-      shapes: [
-        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
-        { id: 's1', kind: 'state', label: 'Esperar ACK 0' },
-        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
-        { id: 's3', kind: 'state', label: 'Esperar ACK 1' }
+      "note": "Emisor rdt2.2: no existe NAK. Un ACK corrupto o con el número del paquete anterior (\"ACK 1\" mientras espera \"ACK 0\") hace el papel de NAK: se retransmite.",
+      "states": [
+        {
+          "id": "s0",
+          "label": "Esperar llamada 0 de arriba",
+          "initial": true
+        },
+        {
+          "id": "s1",
+          "label": "Esperar ACK 0"
+        },
+        {
+          "id": "s2",
+          "label": "Esperar llamada 1 de arriba"
+        },
+        {
+          "id": "s3",
+          "label": "Esperar ACK 1"
+        }
       ],
-      arrows: [
-        { from: 's0', to: 's1', label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)' },
+      "transitions": [
         {
-          from: 's1',
-          to: 's1',
-          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))\n/ udt_send(sndpkt)'
+          "from": "s0",
+          "to": "s1",
+          "event": "rdt_send(data)",
+          "action": "sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt)"
         },
-        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)\n/ Λ' },
-        { from: 's2', to: 's3', label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)' },
         {
-          from: 's3',
-          to: 's3',
-          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))\n/ udt_send(sndpkt)'
+          "from": "s1",
+          "to": "s1",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))",
+          "action": "udt_send(sndpkt)"
         },
-        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)\n/ Λ' }
+        {
+          "from": "s1",
+          "to": "s2",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)",
+          "action": "Λ"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "event": "rdt_send(data)",
+          "action": "sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt)"
+        },
+        {
+          "from": "s3",
+          "to": "s3",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))",
+          "action": "udt_send(sndpkt)"
+        },
+        {
+          "from": "s3",
+          "to": "s0",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)",
+          "action": "Λ"
+        }
       ]
     },
     {
-      note: 'Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).',
-      shapes: [
-        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
-        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      "note": "Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).",
+      "states": [
+        {
+          "id": "r0",
+          "label": "Esperar 0 de abajo",
+          "initial": true
+        },
+        {
+          "id": "r1",
+          "label": "Esperar 1 de abajo"
+        }
       ],
-      arrows: [
+      "transitions": [
         {
-          from: 'r0',
-          to: 'r1',
-          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)'
+          "from": "r0",
+          "to": "r1",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)",
+          "action": "extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r0',
-          to: 'r0',
-          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq1(rcvpkt))\n/ sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)'
+          "from": "r0",
+          "to": "r0",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq1(rcvpkt))",
+          "action": "sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r1',
-          to: 'r0',
-          label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)\n/ extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)'
+          "from": "r1",
+          "to": "r0",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq1(rcvpkt)",
+          "action": "extract(rcvpkt,data); deliver_data(data); sndpkt=make_pkt(ACK,1,checksum); udt_send(sndpkt)"
         },
         {
-          from: 'r1',
-          to: 'r1',
-          label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq0(rcvpkt))\n/ sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)'
+          "from": "r1",
+          "to": "r1",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || has_seq0(rcvpkt))",
+          "action": "sndpkt=make_pkt(ACK,0,checksum); udt_send(sndpkt)"
         }
       ]
     }
-  ] }} />
+  ]
+}} />
 
 ---
 

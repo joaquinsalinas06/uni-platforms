@@ -43,5 +43,5 @@ content/
 ## Restricciones Estrictas
 - **No inventar temas ni fórmulas**: Todo concepto debe basarse en el material oficial del curso.
 - **Solo material del curso**: Si algo no está en `raw-materials/text/` o en los PDFs de `raw-materials/pdfs/` (slides, labs, ejercicios, parciales), no va. Nada de contenido de libro de texto ni relleno (RFCs, productos, extensiones no vistas).
-- **Diagramas con la librería de Redes**: `net-scene`, `spacetime`, `window`, `packet` (+ `xy-chart`, `flow`, `sequence`). Contrato y apariencia en `templates/viz-redes.md`. Se usan inline en archivos `.mdx`; nada de mermaid ni imágenes sintéticas.
+- **Diagramas con la librería de Redes**: `net-scene`, `spacetime`, `window`, `packet`, `fsm` (+ `xy-chart`, `flow`, `sequence`). Contrato y apariencia en `templates/viz-redes.md`. Se usan inline en archivos `.mdx`; nada de mermaid ni imágenes sintéticas.
 - **Fórmulas documentadas**: Todo objeto en `formulas[]` de `meta.yaml` debe incluir `name`, `tex` y un `reasoning` explicativo de al menos 20 caracteres.

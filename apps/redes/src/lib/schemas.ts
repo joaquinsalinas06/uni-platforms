@@ -18,6 +18,7 @@ export const VISUALIZATION_TYPES = [
   'spacetime',
   'window',
   'packet',
+  'fsm',
 ] as const;
 
 /** Canal de COLOR SEMÁNTICO, separado de `state` (que sigue siendo el rol del
@@ -251,6 +252,9 @@ const pktLayer = z.object({
   state: state.optional(),
 });
 
+const fsmState = z.object({ id: z.string(), label: z.string(), initial: z.boolean().optional(), final: z.boolean().optional(), x: z.number().optional(), y: z.number().optional(), state: state.optional() });
+const fsmTransition = z.object({ from: z.string(), to: z.string(), event: z.string(), action: z.string().optional(), state: state.optional(), bend: z.number().optional() });
+
 const step = z.object({
   note: z.string(),
   nodes: z.array(vizNode).default([]),
@@ -298,6 +302,9 @@ const step = z.object({
   /** `packet` */
   fields: z.object({ width: z.number().int().positive().default(32), rows: z.array(z.array(pktField)) }).optional(),
   layers: z.array(pktLayer).optional(),
+  /** `fsm` */
+  states: z.array(fsmState).optional(),
+  transitions: z.array(fsmTransition).optional(),
   /** Nota acumulada del paso. */
   caption: z.string().optional(),
 });

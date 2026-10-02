@@ -442,7 +442,7 @@
         "Sem5_NetT-Transport"
       ],
       "hasVisualization": true,
-      "visualizationType": "flow",
+      "visualizationType": "fsm",
       "status": "generated"
     },
     "protocolos-pipeline-gbn-sr": {

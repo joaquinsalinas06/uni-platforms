@@ -302,9 +302,119 @@ $$D_{cs} = \max\left(\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right)$$
   ],
 }}>
 
-<Visualization viz={{ type: 'flow', mode: 'fsm', title: 'Figura 1: receptor rdt 2.1', static: true, steps: [{"note": "El receptor responde NAK a todo paquete corrupto o con el número de secuencia equivocado, incluidos los duplicados.", "shapes": [{"id": "w0", "kind": "state", "label": "Esperar 0 de abajo", "initial": true}, {"id": "w1", "kind": "state", "label": "Esperar 1 de abajo"}], "arrows": [{"from": "w0", "to": "w1", "label": "recibe ok, seq 0\n/ entregar datos, enviar ACK"}, {"from": "w1", "to": "w0", "label": "recibe ok, seq 1\n/ entregar datos, enviar ACK"}, {"from": "w0", "to": "w0", "label": "corrupto o seq 1\n/ enviar NAK"}, {"from": "w1", "to": "w1", "label": "corrupto o seq 0\n/ enviar NAK"}]}] }} />
+<Visualization viz={{
+  "type": "fsm",
+  "title": "Figura 1: receptor rdt 2.1",
+  "static": true,
+  "steps": [
+    {
+      "note": "El receptor responde NAK a todo paquete corrupto o con el número de secuencia equivocado, incluidos los duplicados.",
+      "states": [
+        {
+          "id": "w0",
+          "label": "Esperar 0 de abajo",
+          "initial": true
+        },
+        {
+          "id": "w1",
+          "label": "Esperar 1 de abajo"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "w0",
+          "to": "w1",
+          "event": "recibe ok, seq 0",
+          "action": "entregar datos, enviar ACK"
+        },
+        {
+          "from": "w1",
+          "to": "w0",
+          "event": "recibe ok, seq 1",
+          "action": "entregar datos, enviar ACK"
+        },
+        {
+          "from": "w0",
+          "to": "w0",
+          "event": "corrupto o seq 1",
+          "action": "enviar NAK"
+        },
+        {
+          "from": "w1",
+          "to": "w1",
+          "event": "corrupto o seq 0",
+          "action": "enviar NAK"
+        }
+      ]
+    }
+  ]
+}} />
 
-<Visualization viz={{ type: 'flow', mode: 'fsm', title: 'Figura 2: emisor rdt 2.1', static: true, steps: [{"note": "El emisor solo avanza al recibir un ACK correcto; ante un ACK/NAK corrupto o un NAK, retransmite.", "shapes": [{"id": "s0", "kind": "state", "label": "Esperar llamada 0", "initial": true}, {"id": "a0", "kind": "state", "label": "Esperar ACK/NAK 0"}, {"id": "s1", "kind": "state", "label": "Esperar llamada 1"}, {"id": "a1", "kind": "state", "label": "Esperar ACK/NAK 1"}], "arrows": [{"from": "s0", "to": "a0", "label": "rdt_send\n/ enviar paquete 0"}, {"from": "a0", "to": "a0", "label": "corrupto o NAK\n/ reenviar paquete 0"}, {"from": "a0", "to": "s1", "label": "ACK correcto"}, {"from": "s1", "to": "a1", "label": "rdt_send\n/ enviar paquete 1"}, {"from": "a1", "to": "a1", "label": "corrupto o NAK\n/ reenviar paquete 1"}, {"from": "a1", "to": "s0", "label": "ACK correcto"}]}] }} />
+<Visualization viz={{
+  "type": "fsm",
+  "title": "Figura 2: emisor rdt 2.1",
+  "static": true,
+  "steps": [
+    {
+      "note": "El emisor solo avanza al recibir un ACK correcto; ante un ACK/NAK corrupto o un NAK, retransmite.",
+      "states": [
+        {
+          "id": "s0",
+          "label": "Esperar llamada 0",
+          "initial": true
+        },
+        {
+          "id": "a0",
+          "label": "Esperar ACK/NAK 0"
+        },
+        {
+          "id": "s1",
+          "label": "Esperar llamada 1"
+        },
+        {
+          "id": "a1",
+          "label": "Esperar ACK/NAK 1"
+        }
+      ],
+      "transitions": [
+        {
+          "from": "s0",
+          "to": "a0",
+          "event": "rdt_send",
+          "action": "enviar paquete 0"
+        },
+        {
+          "from": "a0",
+          "to": "a0",
+          "event": "corrupto o NAK",
+          "action": "reenviar paquete 0"
+        },
+        {
+          "from": "a0",
+          "to": "s1",
+          "event": "ACK correcto"
+        },
+        {
+          "from": "s1",
+          "to": "a1",
+          "event": "rdt_send",
+          "action": "enviar paquete 1"
+        },
+        {
+          "from": "a1",
+          "to": "a1",
+          "event": "corrupto o NAK",
+          "action": "reenviar paquete 1"
+        },
+        {
+          "from": "a1",
+          "to": "s0",
+          "event": "ACK correcto"
+        }
+      ]
+    }
+  ]
+}} />
 
 **1. Entrega correcta.** El emisor envía el paquete 0; el receptor lo entrega y responde ACK, pasando a "Esperar 1".
 

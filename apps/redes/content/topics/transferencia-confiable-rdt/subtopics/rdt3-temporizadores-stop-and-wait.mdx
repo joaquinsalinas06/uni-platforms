@@ -13,41 +13,99 @@ Si el canal también puede **perder** paquetes o ACK, el emisor necesita saber c
 
 ## 2. Conceptos
 
-<Visualization viz={{ type: 'flow',
-  mode: 'fsm',
-  static: true,
-  title: 'rdt3.0 emisor: canal con pérdidas (temporizador)',
-  steps: [
+<Visualization viz={{
+  "type": "fsm",
+  "title": "rdt3.0 emisor: canal con pérdidas (temporizador)",
+  "static": true,
+  "steps": [
     {
-      note: 'Se agrega un temporizador: se arranca al enviar, se detiene al llegar el ACK correcto y, si vence (timeout), se retransmite. Los ACK de otro número o corruptos se ignoran (Λ).',
-      shapes: [
-        { id: 's0', kind: 'state', label: 'Esperar llamada 0 de arriba', initial: true },
-        { id: 's1', kind: 'state', label: 'Esperar ACK 0' },
-        { id: 's2', kind: 'state', label: 'Esperar llamada 1 de arriba' },
-        { id: 's3', kind: 'state', label: 'Esperar ACK 1' }
+      "note": "Se agrega un temporizador: se arranca al enviar, se detiene al llegar el ACK correcto y, si vence (timeout), se retransmite. Los ACK de otro número o corruptos se ignoran (Λ).",
+      "states": [
+        {
+          "id": "s0",
+          "label": "Esperar llamada 0 de arriba",
+          "initial": true
+        },
+        {
+          "id": "s1",
+          "label": "Esperar ACK 0"
+        },
+        {
+          "id": "s2",
+          "label": "Esperar llamada 1 de arriba"
+        },
+        {
+          "id": "s3",
+          "label": "Esperar ACK 1"
+        }
       ],
-      arrows: [
+      "transitions": [
         {
-          from: 's0',
-          to: 's1',
-          label: 'rdt_send(data)\n/ sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt); start_timer'
+          "from": "s0",
+          "to": "s1",
+          "event": "rdt_send(data)",
+          "action": "sndpkt=make_pkt(0,data,checksum); udt_send(sndpkt); start_timer"
         },
-        { from: 's0', to: 's0', label: 'rdt_rcv(rcvpkt)\n/ Λ' },
-        { from: 's1', to: 's1', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))\n/ Λ' },
-        { from: 's1', to: 's1', label: 'timeout\n/ udt_send(sndpkt); start_timer', state: 'active' },
-        { from: 's1', to: 's2', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)\n/ stop_timer' },
-        { from: 's2', to: 's2', label: 'rdt_rcv(rcvpkt)\n/ Λ' },
         {
-          from: 's2',
-          to: 's3',
-          label: 'rdt_send(data)\n/ sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt); start_timer'
+          "from": "s0",
+          "to": "s0",
+          "event": "rdt_rcv(rcvpkt)",
+          "action": "Λ"
         },
-        { from: 's3', to: 's3', label: 'rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))\n/ Λ' },
-        { from: 's3', to: 's3', label: 'timeout\n/ udt_send(sndpkt); start_timer', state: 'active' },
-        { from: 's3', to: 's0', label: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)\n/ stop_timer' }
+        {
+          "from": "s1",
+          "to": "s1",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,1))",
+          "action": "Λ"
+        },
+        {
+          "from": "s1",
+          "to": "s1",
+          "event": "timeout",
+          "action": "udt_send(sndpkt); start_timer",
+          "state": "active"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,0)",
+          "action": "stop_timer"
+        },
+        {
+          "from": "s2",
+          "to": "s2",
+          "event": "rdt_rcv(rcvpkt)",
+          "action": "Λ"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "event": "rdt_send(data)",
+          "action": "sndpkt=make_pkt(1,data,checksum); udt_send(sndpkt); start_timer"
+        },
+        {
+          "from": "s3",
+          "to": "s3",
+          "event": "rdt_rcv(rcvpkt) && (corrupt(rcvpkt) || isACK(rcvpkt,0))",
+          "action": "Λ"
+        },
+        {
+          "from": "s3",
+          "to": "s3",
+          "event": "timeout",
+          "action": "udt_send(sndpkt); start_timer",
+          "state": "active"
+        },
+        {
+          "from": "s3",
+          "to": "s0",
+          "event": "rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && isACK(rcvpkt,1)",
+          "action": "stop_timer"
+        }
       ]
     }
-  ] }} />
+  ]
+}} />
 
 - Al enviar se arranca el temporizador; al recibir el ACK correcto se detiene.
 - `timeout`: retransmite y rearranca el temporizador.

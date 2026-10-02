@@ -10,6 +10,7 @@ const { spacetimeIssues } = await import('../src/visualizations/spacetime/layout
 const { windowIssues } = await import('../src/visualizations/window/layout.ts');
 const { packetIssues } = await import('../src/visualizations/packet/layout.ts');
 const { flowIssues } = await import('../src/visualizations/flow/layout.ts');
+const { fsmIssues } = await import('../src/visualizations/fsm/layout.ts');
 const only = process.env.FAMILY;
 
 /** familia → (pasos) → issues por paso (string[][]) */
@@ -20,6 +21,7 @@ const AUDIT = {
   window: windowIssues,
   packet: packetIssues,
   flow: flowIssues,
+  fsm: fsmIssues,
 };
 
 const args = process.argv.slice(2);

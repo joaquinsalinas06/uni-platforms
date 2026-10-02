@@ -17,4 +17,4 @@ formulas:
     tex: "t = \\text{RTT} + \\frac{L}{R}"
     reasoning: "En stop-and-wait el emisor no envía hasta que llega el ACK, que llega un RTT después de terminar de transmitir el paquete (slide de pipelining)."
 hasVisualization: true
-visualizationType: "flow"
+visualizationType: "fsm"

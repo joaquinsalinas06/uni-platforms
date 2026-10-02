@@ -246,13 +246,61 @@ layers?: { label; header?: string; trailer?: string; state? }[]
 
 ---
 
-## 5. Familias existentes que también se usan
+## 5. `fsm`: máquinas de estados (rdt1.0–3.0, estilo de las slides)
+
+### Cómo se ve
+
+```
+              ┌──────────────────────────┐
+              │ rdt_rcv(rcvpkt) &&       │   ← EVENTO (negrita, mono)
+              │ corrupt(rcvpkt)          │
+              ├──────────────────────────┤
+              │ udt_send(NAK)            │   ← ACCIÓN (mono, gris); Λ si no hay
+              └──────────────────────────┘
+                     ╭──╮
+  ●┄┄▶ ( Esperar 0 de abajo ) ───────────▶ ( Esperar 1 de abajo )
+                     ◀─────────── arco de vuelta ───────────╯
+```
+
+- Cada estado es una elipse a la medida de su rótulo (sans, partido en líneas). `initial` → punto negro con flecha punteada; `final` → doble borde.
+- Cada transición lleva una tarjeta con fondo: EVENTO arriba, una raya, ACCIÓN abajo. Las condiciones largas se parten tras `&&`, `||`, `;`. Sin `action` → `Λ`.
+- Ida y vuelta entre el mismo par = dos arcos (uno arriba, otro abajo), con la punta sobre el borde del estado destino.
+- Varios bucles en un estado se reparten alrededor (arriba, abajo, costados, diagonales), con su tarjeta afuera.
+- Colocación automática: 1–3 estados en fila, 4 en cuadrado siguiendo el ciclo desde el inicial (como en las slides); en móvil, en columna. Se espacia sola hasta que nada choca. `x`/`y` (0–100) la fuerzan.
+- Paso a paso: la transición `state: 'active'` hace viajar una ficha de origen a destino y el destino se enciende al llegar. Ideal para una traza: un paso por evento.
+
+### Campos del paso
+
+```ts
+states:      { id; label; initial?; final?; x?; y?; state? }[]
+transitions: { from; to; event; action?; state?; bend? }[]   // bend: curvatura (± fracción de la distancia)
+```
+
+### Ejemplo (receptor rdt2.1, con un paso de traza)
+
+```mdx
+<Visualization viz={{ type: 'fsm', title: 'Receptor rdt2.1', steps: [
+  { note: 'Receptor: dos estados según el número de secuencia esperado.',
+    states: [{ id: 'r0', label: 'Esperar 0 de abajo', initial: true }, { id: 'r1', label: 'Esperar 1 de abajo' }],
+    transitions: [
+      { from: 'r0', to: 'r1', event: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)', action: 'extract(rcvpkt,data); deliver_data(data); udt_send(ACK)' },
+      { from: 'r0', to: 'r0', event: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)', action: 'udt_send(NAK)' } ] },
+  { note: 'Llega un paquete corrupto: NAK y sigue en "Esperar 0".',
+    states: [{ id: 'r0', label: 'Esperar 0 de abajo', initial: true }, { id: 'r1', label: 'Esperar 1 de abajo' }],
+    transitions: [
+      { from: 'r0', to: 'r1', event: 'rdt_rcv(rcvpkt) && notcorrupt(rcvpkt) && has_seq0(rcvpkt)', action: 'extract(rcvpkt,data); deliver_data(data); udt_send(ACK)' },
+      { from: 'r0', to: 'r0', event: 'rdt_rcv(rcvpkt) && corrupt(rcvpkt)', action: 'udt_send(NAK)', state: 'active' } ] },
+]}} />
+```
+
+---
+
+## 6. Familias existentes que también se usan
 
 - `xy-chart`: curvas.
   - Usos: tiempo de distribución C/S vs P2P en función de N (con `fn`), EstimatedRTT vs SampleRTT (con `points` reales), utilización.
   - Paso: `series[{id,label,points|fn,domain,kind:'line'|'step'|'bars'}]`, `x{label,min,max}`, `y{…}`, `hlines/vlines[{at,label}]`.
-- `flow` con `mode: 'fsm'`: máquinas de estado rdt 1.0–3.0.
-  - `shapes[{id, kind:'state', label, initial?}]`, `arrows[{from,to,label:'evento\n/acción'}]`.
+- `flow` (diagramas de flujo y bloques). Para máquinas de estado usar `fsm` (§5); `flow` con `mode: 'fsm'` sigue funcionando pero ya no se usa en el contenido.
 - `sequence`: intercambio de mensajes sin escala de tiempo (cookies, GET condicional, DORA).
   - `actors[{id,label}]`, `msgs[{from,to,label,flags?,lost?}]`.
 
@@ -272,3 +320,5 @@ Ningún campo del contrato cambió de nombre ni de forma. Sólo hay añadidos op
 - `net-scene`: los paquetes `active`/`answer` animan (sobre que viaja); `muted` quedan como flecha punteada numerada con su rótulo tenue. Ida y vuelta entre el mismo par van por lados opuestos del cable.
 - `window`: el rótulo `base=` (emisor) o `esperado=` (receptor, si hay celda `expected`) va bajo el marco. `nextseqnum` no se dibuja (no está en el contrato).
 - `packet` con `fields` y `layers` en el mismo paso: las capas van debajo de la rejilla.
+
+- `fsm` (nuevo, §5): reemplaza a `flow` + `mode: 'fsm'`. El rótulo `"evento\n/ acción"` pasa a `event` + `action`. Todos los bloques de `content/` se migraron.

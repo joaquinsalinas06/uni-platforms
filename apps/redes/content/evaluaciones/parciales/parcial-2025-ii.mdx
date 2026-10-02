@@ -183,79 +183,104 @@ $$D_{cs} \ge \max\left\{\frac{NF}{u_s},\ \frac{F}{d_{\min}}\right\} \qquad D_{P2
 
 **Solución.**
 
-<Visualization viz={{ type: 'flow',
-  mode: 'fsm',
-  title: 'Pregunta 3: receptor de rdt2.1 y de rdt2.2',
-  steps: [
+<Visualization viz={{
+  "type": "fsm",
+  "title": "Pregunta 3: receptor de rdt2.1 y de rdt2.2",
+  "steps": [
     {
-      note: 'Receptor rdt2.1: en "Esperar 0" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.',
-      shapes: [
-        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
-        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      "note": "Receptor rdt2.1: en \"Esperar 0\" un paquete con número 1 es un duplicado (el ACK anterior se corrompió): no se entrega, pero se vuelve a enviar ACK. Un paquete corrupto recibe NAK.",
+      "states": [
+        {
+          "id": "r0",
+          "label": "Esperar 0 de abajo",
+          "initial": true
+        },
+        {
+          "id": "r1",
+          "label": "Esperar 1 de abajo"
+        }
       ],
-      arrows: [
+      "transitions": [
         {
-          from: 'r0',
-          to: 'r1',
-          label: 'ok, seq 0\n/ entregar datos, ACK'
+          "from": "r0",
+          "to": "r1",
+          "event": "ok, seq 0",
+          "action": "entregar datos, ACK"
         },
         {
-          from: 'r0',
-          to: 'r0',
-          label: 'corrupto\n/ enviar NAK'
+          "from": "r0",
+          "to": "r0",
+          "event": "corrupto",
+          "action": "enviar NAK"
         },
         {
-          from: 'r0',
-          to: 'r0',
-          label: 'ok, seq 1 (duplicado)\n/ enviar ACK'
+          "from": "r0",
+          "to": "r0",
+          "event": "ok, seq 1 (duplicado)",
+          "action": "enviar ACK"
         },
         {
-          from: 'r1',
-          to: 'r0',
-          label: 'ok, seq 1\n/ entregar datos, ACK'
+          "from": "r1",
+          "to": "r0",
+          "event": "ok, seq 1",
+          "action": "entregar datos, ACK"
         },
         {
-          from: 'r1',
-          to: 'r1',
-          label: 'corrupto\n/ enviar NAK'
+          "from": "r1",
+          "to": "r1",
+          "event": "corrupto",
+          "action": "enviar NAK"
         },
         {
-          from: 'r1',
-          to: 'r1',
-          label: 'ok, seq 0 (duplicado)\n/ enviar ACK'
+          "from": "r1",
+          "to": "r1",
+          "event": "ok, seq 0 (duplicado)",
+          "action": "enviar ACK"
         }
       ]
     },
     {
-      note: 'Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).',
-      shapes: [
-        { id: 'r0', kind: 'state', label: 'Esperar 0 de abajo', initial: true },
-        { id: 'r1', kind: 'state', label: 'Esperar 1 de abajo' }
+      "note": "Receptor rdt2.2: ante un paquete corrupto o duplicado responde ACK con el número del ÚLTIMO paquete bien recibido (en lugar de NAK).",
+      "states": [
+        {
+          "id": "r0",
+          "label": "Esperar 0 de abajo",
+          "initial": true
+        },
+        {
+          "id": "r1",
+          "label": "Esperar 1 de abajo"
+        }
       ],
-      arrows: [
+      "transitions": [
         {
-          from: 'r0',
-          to: 'r1',
-          label: 'ok, seq 0\n/ entregar datos, ACK 0'
+          "from": "r0",
+          "to": "r1",
+          "event": "ok, seq 0",
+          "action": "entregar datos, ACK 0"
         },
         {
-          from: 'r0',
-          to: 'r0',
-          label: 'corrupto o seq 1\n/ enviar ACK 1'
+          "from": "r0",
+          "to": "r0",
+          "event": "corrupto o seq 1",
+          "action": "enviar ACK 1"
         },
         {
-          from: 'r1',
-          to: 'r0',
-          label: 'ok, seq 1\n/ entregar datos, ACK 1'
+          "from": "r1",
+          "to": "r0",
+          "event": "ok, seq 1",
+          "action": "entregar datos, ACK 1"
         },
         {
-          from: 'r1',
-          to: 'r1',
-          label: 'corrupto o seq 0\n/ enviar ACK 0'
+          "from": "r1",
+          "to": "r1",
+          "event": "corrupto o seq 0",
+          "action": "enviar ACK 0"
         }
       ]
     }
-  ] }} />
+  ]
+}} />
 
 **Cómo funciona (rdt2.1, receptor).** Dos estados: *Esperar 0 de abajo* y *Esperar 1 de abajo*. En *Esperar 0*:
 

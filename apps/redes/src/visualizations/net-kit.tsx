@@ -19,7 +19,7 @@ export const MAX_BOOST = 1.25;
 
 type Draw = (i: number, k: number, prev?: number) => ReactNode;
 
-function Layer({ i, width, draw }: { i: number; width: number; draw: Draw }) {
+function Layer({ i, width, draw, onK }: { i: number; width: number; draw: Draw; onK?: (kb: number) => void }) {
   const ref = useRef<SVGGElement>(null);
   const [k, setK] = useState(1);
   const prev = usePrevious(i);
@@ -29,7 +29,9 @@ function Layer({ i, width, draw }: { i: number; width: number; draw: Draw }) {
     const ro = new ResizeObserver(() => {
       const scale = svg.getBoundingClientRect().width / width;
       // ≥ 0.8 px por unidad: tamaño real. Más chico: compensa hasta MAX_BOOST.
-      setK(scale > 0 && scale < 0.8 ? Math.min(MAX_BOOST, 0.8 / scale) : 1);
+      const k = scale > 0 && scale < 0.8 ? Math.min(MAX_BOOST, 0.8 / scale) : 1;
+      setK(k);
+      onK?.(k > 1 ? MAX_BOOST : 1);
     });
     ro.observe(svg);
     return () => ro.disconnect();
@@ -37,15 +39,22 @@ function Layer({ i, width, draw }: { i: number; width: number; draw: Draw }) {
   return <g ref={ref} className="net-layer">{draw(i, k, prev)}</g>;
 }
 
-export default function NetFigure({ notes, width, height, title, static: isStatic, draw }: {
+export default function NetFigure({ notes, width: w0, height: h0, size, stepSizes, title, static: isStatic, draw }: {
   notes: string[];
   width: number;
   height: number;
+  /** Lienzo que depende del texto (k = 1 o MAX_BOOST): la familia re-encuadra en móvil. */
+  size?: (kb: number) => { width: number; height: number };
+  /** Tamaño de cada paso: uno más chico que el lienzo se amplía (zoom del canvas) en vez de quedar diminuto. */
+  stepSizes?: (kb: number) => { width: number; height: number }[];
   title?: string;
   static?: boolean;
   draw: Draw;
 }) {
-  const steps = notes.map((note) => ({ note, nodes: [], edges: [], highlight: [] }));
+  const [kb, setKb] = useState(1);
+  const sz = stepSizes?.(kb);
+  const steps = notes.map((note, i) => ({ note, nodes: [], edges: [], highlight: [], ...(sz ? sz[i] : {}) }));
+  const { width, height } = size ? size(kb) : { width: w0, height: h0 };
   return (
     <VisualizationCanvas
       steps={steps}
@@ -53,7 +62,7 @@ export default function NetFigure({ notes, width, height, title, static: isStati
       height={height}
       title={title}
       static={isStatic}
-      render={(i) => <Layer i={i} width={width} draw={draw} />}
+      render={(i) => <Layer i={i} width={width} draw={draw} onK={size ? setKb : undefined} />}
     />
   );
 }
