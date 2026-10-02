@@ -2,12 +2,6 @@
 title: "Formulario de Referencia Rápida — Redes de Computadoras"
 ---
 
-# Formulario de Referencia Rápida — Redes y Comunicaciones (CS4054)
-
-Compendio oficial de fórmulas, modelos matemáticos, cotas analíticas y algoritmos del curso, organizado rigurosamente por semanas académicas.
-
----
-
 ## Símbolos y Unidad Base (un solo criterio para todo el formulario)
 
 **Unidad base:** todas las fórmulas y ejemplos de este formulario se evalúan en **bits** (tamaños), **bps** (tasas), **segundos** (tiempos) y **metros** (distancias). Los valores de enunciado en ms, Mbps o MB se convierten **primero** (tabla de abajo); los resultados finales pueden expresarse en ms si es más legible.

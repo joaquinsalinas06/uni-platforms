@@ -1,11 +1,18 @@
 ---
 import katex from 'katex';
+import { getEntry, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import { knowledgeMap } from '../lib/knowledge-map';
 import { allMeta } from '../lib/topics';
 import { renderRich } from '../components/rich-text.ts';
 
-// El formulario sale entero de `formulas` en cada meta.yaml: nada escrito a
+// Compendio de estudio: el cuerpo de content/formulario.md (glosario, unidad
+// base, fórmulas por semana y tabla de examen). Debajo, las fórmulas de cada
+// meta.yaml con enlace a su tema.
+const entry = await getEntry('formulario', 'formulario');
+const Content = entry ? (await render(entry)).Content : null;
+
+// Las fórmulas por tema salen de `formulas` en cada meta.yaml: nada escrito a
 // mano acá, igual que la nav y el índice de búsqueda.
 const metaById = new Map(allMeta().map((m) => [m.id, m]));
 
@@ -38,6 +45,10 @@ const weeks = knowledgeMap.units
       <p class="tag">todavía no hay fórmulas cargadas en ningún meta.yaml</p>
     )
   }
+
+  {Content && <div class="prose max-w-none mb-16"><Content /></div>}
+
+  <h2 class="mb-8 text-2xl font-semibold tracking-[-0.02em]">Por tema, con enlace al razonamiento</h2>
 
   <div class="space-y-14">
     {
