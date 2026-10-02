@@ -11,10 +11,11 @@ usedBy:
 formulas:
   - name: "Tiempo de transmisión medio de un objeto por el enlace de acceso"
     tex: "\\Delta = \\frac{L}{R}"
-    reasoning: "Tiempo promedio para enviar un objeto de L bits por el enlace de acceso de capacidad R; es la entrada del modelo de retardo de acceso."
+    reasoning: "Es el mismo d_trans = L/R de la Semana 1, con L el tamaño medio del objeto y R la tasa del enlace de acceso; el ejercicio lo llama Delta."
   - name: "Retardo medio de acceso"
     tex: "d_{\\text{acceso}} = \\frac{\\Delta}{1 - \\Delta\\beta}"
-    reasoning: "Modelo del ejercicio para el retardo en el enlace de acceso con tasa de llegada de objetos beta; solo es válido si el producto Delta por beta es menor que 1."
+    reasoning: "Modelo del ejercicio para el retardo en el enlace de acceso con tasa de llegada de objetos beta; el enunciado entrega la fórmula y no la deduce. La condición Delta por beta menor que 1 no viene del enunciado: hace falta para que el denominador sea positivo; si no, el enlace está saturado."
+    source: "Sem07_Excercises3-1, pregunta 4"
   - name: "Tiempo de respuesta con caché"
     tex: "T = p_{\\text{miss}}\\left(d_{\\text{acceso}}' + d_{\\text{Internet}}\\right)"
     reasoning: "Solo los fallos de caché cruzan el enlace de acceso (con tasa de llegada reducida a p_miss por beta) y sufren el retardo de Internet; los aciertos se atienden en la LAN."

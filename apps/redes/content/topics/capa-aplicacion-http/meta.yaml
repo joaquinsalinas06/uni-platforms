@@ -12,7 +12,7 @@ usedBy:
 formulas:
   - name: "HTTP no persistente (secuencial)"
     tex: "T = S + 2\\,\\text{RTT}_0\\,(1+N)"
-    reasoning: "Cada uno de los N objetos y el HTML base necesita una conexión TCP nueva: handshake de 1 RTT0 más petición/respuesta de 1 RTT0; S es el tiempo de resolución DNS."
+    reasoning: "Cada uno de los N objetos y el HTML base necesita una conexión TCP nueva: handshake de 1 RTT0 más petición/respuesta de 1 RTT0; S es el tiempo de resolución DNS (suma de los RTT_i de los servidores DNS; con caché, S = 0). Cuidado: algunos enunciados llaman S al tamaño del archivo; ese valor es L, no este S."
   - name: "HTTP no persistente con k conexiones paralelas"
     tex: "T = S + 2\\,\\text{RTT}_0 + \\left\\lceil \\tfrac{N}{k} \\right\\rceil 2\\,\\text{RTT}_0"
     reasoning: "Tras el HTML base, los N objetos se descargan en rondas de hasta k conexiones simultáneas, cada ronda de 2 RTT0."
