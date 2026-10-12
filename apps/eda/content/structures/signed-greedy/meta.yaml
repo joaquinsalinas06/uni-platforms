@@ -1,0 +1,26 @@
+id: signed-greedy
+title: "Signed-Greedy"
+type: concept
+week: week-09
+
+prerequisites: [greedy-algorithm, independent-rectangles-bound]
+buildsOn: [tango-tree]
+usedBy: []
+
+complexity:
+  signed-greedy:
+    worst: "máx{Greedy⁺, Greedy⁻} = Θ(mayor cota de rectángulos independientes)"
+    reasoning: >-
+      OPT± (la menor unión de conjuntos satisfechos positivos y negativos) es
+      al menos |I| + ½·MIS por el teorema de rectángulos independientes, que a
+      su vez es al menos la mitad de máx{Greedy⁺, Greedy⁻}; y Greedy⁺ y
+      Greedy⁻ son O(OPT⁺) y O(OPT⁻) respectivamente, con lo que todo queda
+      emparedado dentro de un factor 4 de ¼(OPT⁺ + OPT⁻) ≥ ¼·OPT±. Por eso
+      Signed-Greedy está, salvo constante, tan cerca de la mejor cota de
+      rectángulos independientes como se puede estar.
+    source: "Sem9_Dynamic_Optimality_V.pdf#33-42"
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

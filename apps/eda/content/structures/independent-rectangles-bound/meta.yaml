@@ -1,0 +1,35 @@
+id: independent-rectangles-bound
+title: "Cota inferior de los rectángulos independientes"
+type: concept
+week: week-09
+
+prerequisites: [arborally-satisfied-set]
+buildsOn: [greedy-algorithm]
+usedBy: [wilber-2-bound, wilber-1-bound, signed-greedy]
+
+complexity:
+  cota-rectangulos-independientes:
+    worst: "OPT ≥ |I| + ½·MIS"
+    reasoning: >-
+      Cada rectángulo vacío entre dos puntos de la entrada I exige al menos
+      un punto extra en cualquier superconjunto satisfecho, y los puntos
+      extra que arreglan rectángulos independientes no se pueden compartir:
+      un argumento de carga sobre los segmentos horizontales con la misma
+      coordenada y (cada segmento agrega al menos un punto nuevo) da
+      OPT+ ≥ |I| + MIS+, y simétricamente para OPT−. Como OPT es al menos el
+      máximo de los dos, y el máximo es al menos su promedio, OPT ≥
+      ½(OPT+ + OPT−) ≥ |I| + ½·MIS+ + ½·MIS− ≥ |I| + ½·MIS.
+    source: "Sem9_Dynamic_Optimality_IV.pdf#12-34"
+  calculo-mis:
+    worst: "NP-difícil en general (Maximum Independent Set)"
+    reasoning: >-
+      Calcular el MIS de los rectángulos es un Maximum-Independent-Set sobre
+      un grafo de rectángulos, NP-difícil en general. Por eso la cota sirve
+      para DEMOSTRAR un mínimo sobre el costo de cualquier algoritmo de BST
+      para una secuencia dada, no como algoritmo para calcular OPT.
+    source: "Sem9_Dynamic_Optimality_IV.pdf#12"
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

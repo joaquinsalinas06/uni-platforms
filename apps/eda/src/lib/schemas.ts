@@ -5,7 +5,7 @@ import { NODE_STATES } from '../visualizations/canvas-types.ts';
 // (src/content.config.ts, src/lib/structures.ts) y scripts/check-knowledge-map.mjs.
 // No duplicar ninguno de estos schemas en otro archivo.
 
-export const VISUALIZATION_TYPES = ['tree', 'graph', 'persistent', 'range-tree'] as const;
+export const VISUALIZATION_TYPES = ['tree', 'graph', 'persistent', 'range-tree', 'geometric'] as const;
 
 // Los distintos "modos" de layout dentro de una familia. `tree` y `layers`
 // son de range-tree; los otros tres de persistent. hasVisualization/
@@ -75,6 +75,37 @@ const vizArray = z.object({
   states: z.array(z.enum(NODE_STATES)).optional(),
 });
 
+// Familia `geometric` (vista geométrica de un BST): puntos (llave, tiempo),
+// rectángulos entre dos puntos y segmentos — ver packages/visualizations/src/geometric/layout.ts.
+const geoEnd = z.union([z.string(), z.tuple([z.number(), z.number()])]);
+const geoPoint = z.object({
+  id: z.string(),
+  x: z.number(),
+  t: z.number(),
+  label: z.string().optional(),
+  /** `added` = punto que agrega el algoritmo (anillo); `input` = acceso de la entrada (relleno). */
+  kind: z.enum(['input', 'added']).default('input'),
+  state: z.enum(NODE_STATES).optional(),
+});
+const geoRect = z.object({
+  id: z.string(),
+  a: geoEnd,
+  b: geoEnd,
+  label: z.string().optional(),
+  state: z.enum(NODE_STATES).optional(),
+  fill: z.boolean().optional(),
+  dash: z.boolean().optional(),
+});
+const geoSegment = z.object({
+  id: z.string(),
+  from: geoEnd,
+  to: geoEnd,
+  label: z.string().optional(),
+  state: z.enum(NODE_STATES).optional(),
+  dash: z.boolean().optional(),
+  arrow: z.boolean().optional(),
+});
+
 export const visualizationSchema = z.object({
   type: z.enum(VISUALIZATION_TYPES),
   /** default de todos los pasos; cada paso puede sobreescribirlo. */
@@ -109,6 +140,15 @@ export const visualizationSchema = z.object({
             }),
           )
           .optional(),
+        /** `geometric`: puntos, rectángulos y segmentos del plano llave × tiempo. */
+        points: z.array(geoPoint).optional(),
+        rects: z.array(geoRect).optional(),
+        segments: z.array(geoSegment).optional(),
+        xMax: z.number().int().positive().optional(),
+        tMax: z.number().int().positive().optional(),
+        xLabels: z.array(z.string()).optional(),
+        /** `geometric`: fila (tiempo) que se procesa en este paso; se resalta con una banda. */
+        row: z.number().int().positive().optional(),
         /** La secuencia de Euler acumulada, la etiqueta `[l,r]` de una consulta, etc. */
         caption: z.string().optional(),
       }),

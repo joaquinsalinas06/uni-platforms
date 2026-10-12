@@ -55,6 +55,12 @@ export type CanvasPath = {
   color?: string;
   /** Punta de flecha al final, del mismo color que el trazo. */
   arrow?: boolean;
+  /** Animación al APARECER (sólo cuando el trazo es nuevo en este paso; uno que
+   * persiste entre pasos se interpola, no se re-anima): `fade` aparece, `grow`
+   * crece desde su centro (puntos), `draw` se traza de principio a fin. */
+  enter?: 'fade' | 'grow' | 'draw';
+  /** Retraso de la animación de entrada, en ms (entradas escalonadas). */
+  delay?: number;
 };
 
 export function pathColor(p: Pick<CanvasPath, 'state' | 'tone' | 'color'>): string {

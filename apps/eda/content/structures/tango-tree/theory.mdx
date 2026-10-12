@@ -1,0 +1,114 @@
+---
+kind: theory
+title: "Tango Trees"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Hasta aquí tenemos Splay Trees ($O(\lg n)$ amortizado, sin saber si son óptimos), la vista geométrica y Greedy (conjeturado óptimo, sin probar) y la cota de [Wilber-1](/structures/wilber-1-bound), una cota inferior demostrada.
+La pregunta (#6): *¿existe algún algoritmo concreto que **demostrablemente** le gane a cualquier BST balanceado, aunque no logre optimalidad dinámica completa?*
+
+Sí: los **Tango Trees** (#9). Son $O(\lg\lg n)$-competitivos, y están construidos exactamente sobre la cota de Wilber-1: **el primer avance real más allá de balancear**.
+
+## Intuición
+
+Imagina el árbol de referencia $P$ con una flecha en cada nodo señalando el hijo por el que bajó la última búsqueda. Si sigues las flechas obtienes **caminos** que parten el árbol. Una búsqueda que sigue las flechas se mueve por un único camino; una que se desvía de una flecha **cambia de camino** y
+cambia esa flecha. Tango guarda cada camino en su propio árbol pequeño: moverse *dentro* de un camino es baratísimo ($\lg\lg n$), y cada desvío cuesta lo mismo que una alternancia de Wilber-1, que **ya sabemos** que cualquier BST también tiene que pagar.
+
+## Estructura interna
+
+**Definición (#10).** Se fija un árbol de referencia $P$, **perfectamente balanceado** (altura $\Theta(\lg n)$), sobre las mismas claves. Cada nodo de $P$ tiene un puntero hacia su **hijo preferido**: el hijo por el que pasó el acceso más reciente dentro de su subárbol.
+
+**Observación (#11).** Como la altura de $P$ es $\Theta(\lg n)$, los punteros de hijo preferido forman **caminos disjuntos de a lo más $O(\lg n)$ nodos** cada uno: particionan todo $P$.
+
+Ejemplo sobre un árbol de siete llaves ($4$ raíz; $2$ y $6$ sus hijos; $1, 3, 5, 7$ hojas). Se accede $1$, luego $5$:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: "Árbol de referencia P, perfecto sobre 1..7. Antes de ningún acceso no hay hijos preferidos: cada nodo es un camino de un solo nodo.",
+      nodes: [
+        { id: 'n4', value: 4 },
+        { id: 'n2', value: 2, parent: 'n4', side: 'left' },
+        { id: 'n6', value: 6, parent: 'n4', side: 'right' },
+        { id: 'n1', value: 1, parent: 'n2', side: 'left' },
+        { id: 'n3', value: 3, parent: 'n2', side: 'right' },
+        { id: 'n5', value: 5, parent: 'n6', side: 'left' },
+        { id: 'n7', value: 7, parent: 'n6', side: 'right' },
+      ],
+    },
+    {
+      note: "Acceso a 1: la búsqueda baja 4 → 2 → 1. Por cada nodo del camino, el hijo por el que se bajó pasa a ser su hijo preferido: el camino preferido es {4, 2, 1}.",
+      highlight: ['n4', 'n2', 'n1'],
+      nodes: [
+        { id: 'n4', value: 4, state: 'marked' },
+        { id: 'n2', value: 2, parent: 'n4', side: 'left', state: 'marked' },
+        { id: 'n6', value: 6, parent: 'n4', side: 'right' },
+        { id: 'n1', value: 1, parent: 'n2', side: 'left', state: 'marked' },
+        { id: 'n3', value: 3, parent: 'n2', side: 'right' },
+        { id: 'n5', value: 5, parent: 'n6', side: 'left' },
+        { id: 'n7', value: 7, parent: 'n6', side: 'right' },
+      ],
+    },
+    {
+      note: "Acceso a 5: baja 4 → 6 → 5. En el nodo 4, la búsqueda baja por 6, que NO es su hijo preferido (era 2): cambia de camino. Es exactamente una alternancia de Wilber-1 (+1). El camino {4, 2, 1} se parte: 4 pasa a {4, 6, 5} y {2, 1} queda como camino propio.",
+      highlight: ['n4', 'n6', 'n5'],
+      nodes: [
+        { id: 'n4', value: 4, state: 'active' },
+        { id: 'n2', value: 2, parent: 'n4', side: 'left', state: 'marked' },
+        { id: 'n6', value: 6, parent: 'n4', side: 'right', state: 'active' },
+        { id: 'n1', value: 1, parent: 'n2', side: 'left', state: 'marked' },
+        { id: 'n3', value: 3, parent: 'n2', side: 'right' },
+        { id: 'n5', value: 5, parent: 'n6', side: 'left', state: 'active' },
+        { id: 'n7', value: 7, parent: 'n6', side: 'right' },
+      ],
+    },
+  ],
+}} />
+
+*(Ejemplo derivado de la definición #10; no aparece en las diapositivas. Ámbar: nodos de caminos preferidos previos; azul: el camino que recorre el acceso actual.)*
+
+**La relación con Wilber-1 (#14–#17).** Si una búsqueda baja por un hijo que **no** es el preferido de algún nodo $y$, pasan dos cosas a la vez: el hijo por el que se bajó se vuelve el nuevo hijo preferido de $y$, y
+**la cota de Wilber-1 aumenta exactamente en 1** —es la misma alternancia que ya se contaba—.
+
+**La estrategia (#18–#19).** Cada camino preferido se guarda en su propio **BBST** (árbol auxiliar), de tamaño $O(\lg n)$: así cada operación dentro de uno cuesta $O(\lg\lg n)$.
+Para poder saltar entre caminos, cada árbol auxiliar guarda, en sus **hojas**, punteros hacia los árboles auxiliares de los caminos vecinos correspondientes.
+
+## Operaciones
+
+- [tango-search](/structures/tango-tree/operations/tango-search): buscar una llave bajando por los árboles auxiliares y actualizar los caminos preferidos.
+
+## Análisis de complejidad
+
+**Costo de un acceso (#20–#21).** Cada vez que se cruza a un hijo no preferido, se sale del camino actual y se salta a otro, y además se actualiza la estructura de los caminos involucrados. Si ese trabajo cuesta $O(\lg\lg n)$ por cruce, y el número de cruces en un acceso es $1 + (\text{alternancias de Wilber-1 en ese acceso})$,
+entonces el costo total es $O(\lg\lg n) \cdot (m + \text{Wilber-1})$, y la estructura completa es **$O(\lg\lg n)$-competitiva**: la cota de rectángulos independientes ([independent-rectangles-bound](/structures/independent-rectangles-bound)) da $m + \text{Wilber-1} = O(\mathrm{OPT})$.
+
+**El problema al actualizar (#22–#23).** Los árboles auxiliares están ordenados **por valor** (como exige el modelo BST), no por profundidad en $P$: ¿sigue funcionando el truco de split/join? **Sí:** cortar por una profundidad $d$ resulta equivalente a cortar un **rango de valores**, por cómo un camino particiona las claves en subárboles.
+Usando el mínimo y el máximo del subárbol en el punto de corte, se simula el split por profundidad, en $O(\lg\lg n)$.
+
+**Un último detalle (#24).** En el modelo BST sólo hay **un árbol de punteros**: ¿es posible tener varios BBSTs auxiliares simultáneamente? No literalmente; todos los nodos viven en un único árbol grande y cada nodo guarda información extra que indica a qué camino/árbol auxiliar pertenece.
+
+**Árbol de árboles (#26).** Cada triángulo es un árbol auxiliar; sus hojas enlazan a las raíces de los caminos "hijos". Buscar $x$: bajar por estos árboles, saltando de uno a otro cuando el camino actual no contiene a $x$.
+
+## Tabla de complejidad
+
+La tabla resume la competitividad y el costo de actualizar por cruce.
+
+## Ejemplos
+
+Ver [examples.md](/structures/tango-tree/examples).
+
+## Comparación con estructuras relacionadas
+
+| | BST balanceado (p. ej. AVL) | [Splay Tree](/structures/splay-tree) | Tango Tree |
+|---|---|---|---|
+| Costo por acceso | $O(\lg n)$ | $O(\lg n)$ amortizado | $O(\lg\lg n)\cdot(1 + \text{alternancias})$ |
+| Competitividad frente a OPT | $O(\lg n)$ | desconocida (conjetura $O(1)$) | **$O(\lg\lg n)$, demostrada** |
+| Árbol de referencia | no | no | sí: perfecto, fijo de antemano |
+| Por qué no mejor que $\lg\lg n$ | | | $P$ se fija sin conocer la secuencia ([wilber-1-bound](/structures/wilber-1-bound)) |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/tango-tree/mastery-check).

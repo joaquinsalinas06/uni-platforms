@@ -1,0 +1,119 @@
+---
+kind: theory
+title: "Cota de Wilber-1 y la secuencia bit-reversal"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+[Wilber-2](/structures/wilber-2-bound) es una cota inferior calculable, pero no se parece a nada que un BST real haga. Para analizar un algoritmo concreto, [Tango Trees](/structures/tango-tree), hace falta
+una cota inferior expresada **sobre un árbol**: en términos de por qué rama baja cada búsqueda. Wilber-1 es esa cota (#43): *la que usaremos con Tango Trees*.
+
+## Intuición
+
+Fija un árbol de referencia $P$ cualquiera, con las llaves de la entrada. Cada vez que dos búsquedas consecutivas dentro del subárbol de un nodo $y$ **bajan por lados distintos**, el algoritmo tuvo que "cambiar de lado" en $y$: ese cambio
+es una alternancia, y cada alternancia es un rectángulo independiente más. Muchos cambios de lado ⇒ cualquier BST paga.
+
+## Estructura interna
+
+**Definición (#43).** Se fija un árbol de referencia $P$ con la entrada como llaves. Para cada nodo $y$ de $P$: se cuentan las **alternancias en la secuencia de accesos entre el subárbol izquierdo y el derecho de $y$**,
+**ignorando los accesos a $y$ o fuera de su subárbol**. Se suma sobre todos los $y$:
+
+$$\text{Wilber-1}(X, P) = \sum_{y \in P} \text{alt}_y(X).$$
+
+**Por qué es una cota inferior (#44).** Cada alternancia agrega un rectángulo independiente más ([independent-rectangles-bound](/structures/independent-rectangles-bound)); y la próxima clase se verá que es lo mismo que contar los
+*cambios de hijo preferido* al analizar Tango Trees.
+
+```cpp
+// Árbol de referencia: BST balanceado sobre las llaves lo..hi (raíz en el punto medio).
+// seq: accesos (sólo se miran los que caen en lo..hi). Devuelve la suma de alternancias.
+int wilber1(int lo, int hi, const vector<int>& seq) {
+  if (lo > hi) return 0;
+  int mid = (lo + hi) / 2, alt = 0, lado_ant = 0;
+  vector<int> sub;                                   // accesos que caen en el subárbol de esta raíz
+  for (int x : seq) if (lo <= x && x <= hi) {
+    sub.push_back(x);
+    if (x == mid) continue;                          // acceso a y: se ignora
+    int lado = x < mid ? -1 : +1;
+    if (lado_ant != 0 && lado != lado_ant) alt++;
+    lado_ant = lado;
+  }
+  return alt + wilber1(lo, mid - 1, sub) + wilber1(mid + 1, hi, sub);
+}
+```
+
+*(Código derivado de la definición con un árbol de referencia balanceado; las diapositivas no lo dan.)*
+
+## Operaciones
+
+Este tema no tiene operaciones; es una cota. El ejemplo extremo de la clase es la secuencia bit-reversal.
+
+### Un caso extremo: la secuencia bit-reversal (#45–#50)
+
+**Construcción.** Toma $0, 1, 2, \dots$ en binario e invierte los bits de cada uno: $0, 1, 2, 3, 4, 5, 6, 7 \to 000, 100, 010, 110, 001, 101, 011, 111 \Rightarrow 0, 4, 2, 6, 1, 5, 3, 7$.
+Usada como secuencia de accesos sobre un **árbol perfecto**, el número de alternancias en cada nodo $y$ resulta ser (según la clase) *exactamente el tamaño del subárbol de $y$*.
+
+El árbol del ejemplo es el perfecto con llaves $0$ a $6$ (raíz 3). El dibujo muestra los accesos $0, 4, 2, 6, 1, 5, 3$ (la secuencia, restringida a las llaves del árbol): en la raíz, las mitades se alternan en **cada** acceso.
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Secuencia bit-reversal 0, 4, 2, 6, 1, 5, 3 sobre las llaves 0..6 (el eje muestra las llaves; las columnas 0 a 6 van de izquierda a derecha).",
+      points: [
+        { id: 'a1', x: 1, t: 1 }, { id: 'a2', x: 5, t: 2 }, { id: 'a3', x: 3, t: 3 }, { id: 'a4', x: 7, t: 4 },
+        { id: 'a5', x: 2, t: 5 }, { id: 'a6', x: 6, t: 6 }, { id: 'a7', x: 4, t: 7 },
+      ],
+      xLabels: ['0', '1', '2', '3', '4', '5', '6'],
+    },
+    {
+      note: "Respecto de la raíz (llave 3, columna central): L R L R L R. Los accesos caen alternadamente a la izquierda (azul) y a la derecha (ámbar) en cada paso: 5 alternancias en la raíz.",
+      points: [
+        { id: 'a1', x: 1, t: 1, state: 'active' }, { id: 'a2', x: 5, t: 2, state: 'marked' }, { id: 'a3', x: 3, t: 3, state: 'active' },
+        { id: 'a4', x: 7, t: 4, state: 'marked' }, { id: 'a5', x: 2, t: 5, state: 'active' }, { id: 'a6', x: 6, t: 6, state: 'marked' },
+        { id: 'a7', x: 4, t: 7 },
+      ],
+      segments: [{ id: 'raiz', from: [4, 1], to: [4, 7], dash: true, state: 'answer' }],
+      xLabels: ['0', '1', '2', '3', '4', '5', '6'],
+    },
+  ],
+}} />
+
+*(Las coordenadas x del dibujo son la llave + 1; el dibujo es una ilustración derivada de la secuencia.)*
+
+**La consecuencia (#48–#50).**
+
+$$\text{Wilber-1} = \Theta(n \lg n) \;\Rightarrow\; \mathrm{OPT} = \Theta(n \lg n).$$
+
+Esto es una **cota inferior para una secuencia concreta**, y es la forma más simple de ver que no todo se puede hacer en $O(n)$: ningún algoritmo de BST puede ejecutar bit-reversal en menos de $\Omega(n \lg n)$.
+
+## Análisis de complejidad
+
+Dos observaciones sobre el análisis:
+
+1. **Lo que sale del código.** Calculado con el árbol perfecto sobre las llaves $0, \dots, n-1$ ($n = 2^k - 1$), el total de Wilber-1 de la secuencia bit-reversal vale: $k=3$: $7$; $k=4$: $27$; $k=5$: $83$; $k=6$: $227$ (derivado; no aparece en las diapositivas).
+   En el ejemplo de 7 llaves: la raíz tiene $5$ alternancias (tamaño $7$), los nodos $1$ y $5$ tienen una cada uno (tamaño $3$), y las hojas $0$. Con la definición de arriba (alternancias entre accesos consecutivos del subárbol, ignorando a $y$), el número de alternancias en un nodo interno es **el tamaño de su subárbol menos 2**:
+   la afirmación del profesor ("exactamente el tamaño") es válida en $\Theta$, y la suma $\sum_y (|\text{subárbol}(y)| - 2) \approx n \lg n$ da el crecimiento.
+2. **Un límite de la técnica.** ¿Existe, para toda secuencia $x$, algún árbol de referencia $P$ con $\text{Wilber-1}(x) = \Theta(\mathrm{OPT}(x))$? **Abierto.** Pero si $P$ se fija **sin conocer la secuencia por adelantado** (como debe hacer un algoritmo online), Wilber-1 puede quedar $\Omega(\lg\lg n)$ lejos de $\mathrm{OPT}$:
+   por eso la garantía de [Tango Trees](/structures/tango-tree) será $O(\lg\lg n)$-competitiva, no $O(1)$.
+
+## Tabla de complejidad
+
+La tabla resume la cota de Wilber-1 y el resultado de bit-reversal.
+
+## Ejemplos
+
+Ver [examples.md](/structures/wilber-1-bound/examples).
+
+## Comparación con estructuras relacionadas
+
+| | [Wilber-2](/structures/wilber-2-bound) | Wilber-1 |
+|---|---|---|
+| Qué necesita | La secuencia | La secuencia **y** un árbol de referencia $P$ |
+| Se cuenta | Alternancias de lado entre puntos visibles | Alternancias izquierda/derecha por nodo de $P$ |
+| Para qué sirve | Splay Trees llave-independientes | Analizar Tango Trees |
+| Cota en bit-reversal | — | $\Theta(n \lg n)$ |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/wilber-1-bound/mastery-check).

@@ -4,13 +4,15 @@ const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 /** Markdown en línea mínimo + KaTeX para enunciado/pistas/solución: el
  * texto viene de props (no pasa por el pipeline de remark), igual que la
- * nota de VisualizationCanvas. Soporta $…$, $$…$$, `código`, **negrita**,
+ * nota de VisualizationCanvas. Soporta $…$, $$…$$, `código`, bloques ```código```, **negrita**,
  * *itálica* o _itálica_, listas `- ` / `1. ` y saltos de línea. Todo lo demás
  * se escapa. */
 export function renderRich(src: string): string {
   const slots: string[] = [];
   const keep = (html: string) => `\u0000${slots.push(html) - 1}\u0000`;
   let t = src
+    // Bloques de código ```lang … ```: losa preformateada (los saltos y la sangría se conservan).
+    .replace(/```[a-z+]*\n([\s\S]*?)```/g, (_, c) => keep(`<pre class="rich-code"><code>${esc(c.replace(/\n$/, ''))}</code></pre>`))
     .replace(/\$\$([\s\S]+?)\$\$/g, (_, f) => keep(katex.renderToString(f.trim(), { throwOnError: false, displayMode: true })))
     .replace(/\$([^$\n]+?)\$/g, (_, f) => keep(katex.renderToString(f, { throwOnError: false })))
     .replace(/`([^`\n]+)`/g, (_, c) => keep(`<code>${esc(c)}</code>`));
@@ -20,6 +22,8 @@ export function renderRich(src: string): string {
     .replace(/(^|[^\w])_([^_\n]+)_(?!\w)/g, '$1<em>$2</em>');
   // Bloques: párrafos separados por línea en blanco; líneas "- " / "1. " → lista.
   const html = t.split(/\n{2,}/).map((block) => {
+    const solo = block.trim().match(/^\u0000(\d+)\u0000$/);
+    if (solo && slots[Number(solo[1])].startsWith('<pre')) return block.trim();   // un bloque de código no va dentro de <p>
     const lines = block.split('\n');
     const ul = lines.every((l) => /^\s*[-•]\s+/.test(l));
     const ol = lines.every((l) => /^\s*\d+[.)]\s+/.test(l));

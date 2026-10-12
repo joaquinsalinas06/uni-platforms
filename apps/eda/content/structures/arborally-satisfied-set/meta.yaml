@@ -1,0 +1,18 @@
+id: arborally-satisfied-set
+title: "Conjuntos arboralmente satisfechos"
+type: concept
+week: week-06
+
+prerequisites: [geometric-view]
+buildsOn: [bst-computational-model]
+usedBy: [greedy-algorithm, independent-rectangles-bound]
+
+# Concepto sin costo propio: el profesor lo usa para CONVERTIR el problema, no para
+# acotarlo. El único resultado cuantitativo (OPT = menor superconjunto satisfecho)
+# es una equivalencia, no una cota, así que complexity queda vacío a propósito.
+complexity: {}
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

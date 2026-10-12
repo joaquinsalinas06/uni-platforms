@@ -232,6 +232,33 @@ pipeline distingue entre uno y otro.
   `operation` lo tenía) — los 19 temas con `operations: []` en el knowledge
   map ya pueden tener diagrama.
 
+## Familia `geometric` (optimalidad dinámica, semanas 6 y 9)
+
+Plano **llave (horizontal) × tiempo (vertical, crece hacia arriba)** para la vista geométrica de un BST. Vive en
+`packages/visualizations/src/geometric/` (layout puro + wrapper + `layout.test.ts`) y está registrada en el registro
+local (`src/visualizations/registry.ts`), en `Visualization.astro` y en `src/lib/schemas.ts` (`VISUALIZATION_TYPES` y
+los campos de paso `points`, `rects`, `segments`, `xMax`, `tMax`, `xLabels`). Se dibuja todo con `CanvasPath`, sin
+estados nuevos.
+
+- **Punto**: `{ id, x, t, kind: 'input' | 'added', state?, label? }`. `input` = acceso pedido (relleno); `added` = punto
+  que agrega el algoritmo (anillo hueco). `x` y `t` son enteros desde 1.
+- **Rectángulo**: `{ id, a, b, state?, fill?, dash?, label? }` con `a`/`b` = id de un punto **o** `[x, t]` (esquina
+  virtual). Convención: ámbar (`marked`) = rectángulo sin satisfacer; carmesí (`answer`) = satisfecho/respuesta;
+  azul (`active`) = el que se mira ahora.
+- **Segmento**: `{ id, from, to, state?, dash?, arrow? }`, mismos extremos que un rectángulo.
+- Todos los pasos de un diagrama comparten ejes (el plano no salta); para etiquetar las llaves con otra cosa que
+  números usar `xLabels`.
+- Las notas de cada paso admiten markdown mínimo y `$math$` (`renderRich`); en el frontmatter YAML evitar `\` dentro de
+  strings entrecomillados (usar `>-`).
+- Test del layout: `node --test packages/visualizations/src/geometric/layout.test.ts` (no lo corre `pnpm test` de la app).
+
+## Repaso (semana 7) y semanas sin estructuras nuevas
+
+`/repaso` es una página única (`content/repaso.md`, colección `repaso`, `src/pages/repaso.astro`) con las 15 preguntas
+del problemset, agrupadas por nivel, con pistas progresivas y solución propia. `ExerciseBlock` renderiza enunciado,
+pistas y solución con `renderRich` (KaTeX, `código`, y bloques ```cpp```): se puede usar `$...$` y código en cualquier
+`exercises.md`. No existe `week-08` (parcial, sin clases): el mapa salta de la semana 7 a la 9.
+
 ## Pendiente
 
 - Borrar `demo-bst` y `week-00` cuando entre la primera estructura real.

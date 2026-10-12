@@ -1,0 +1,37 @@
+id: greedy-algorithm
+title: "Algoritmo Greedy (vista geométrica) y su conjetura"
+type: algorithm
+week: week-06
+
+prerequisites: [geometric-view, arborally-satisfied-set]
+buildsOn: [dynamic-optimality]
+usedBy: [signed-greedy]
+
+# Las dos cotas que el profesor da son una conjetura (#37) y una consecuencia
+# condicional (#40): ninguna está demostrada, y el campo `reasoning` lo dice así.
+complexity:
+  conjetura-greedy:
+    worst: "Greedy(X) = O(OPT(X))  (conjetura abierta; incluso Greedy(X) = OPT(X) + O(m))"
+    reasoning: >-
+      Greedy construye el conjunto satisfecho fila por fila agregando sólo lo
+      mínimo necesario; se conjetura que su tamaño nunca supera una constante
+      por el del menor conjunto satisfecho posible. De ser cierto, sería un
+      algoritmo de BST O(1)-competitivo y la optimalidad dinámica quedaría
+      resuelta. El profesor lo presenta explícitamente como conjetura: no se
+      ha demostrado ni refutado.
+    source: "Sem6_Dynamic_Optimality_III.pdf#37"
+  simulacion-online:
+    worst: "O(1) de desaceleración respecto de Greedy"
+    reasoning: >-
+      Un algoritmo online que mantenga conjuntos arboralmente satisfechos
+      implica un algoritmo de BST online con desaceleración O(1). Guardando
+      los nodos tocados en split trees (mover un nodo a la raíz y separarlo
+      en dos árboles cuesta O(1) amortizado) y organizando el BST real como
+      un treap de split trees, cada uno accede en O(1) a su predecesor y
+      sucesor, lo bastante para simular las decisiones de Greedy.
+    source: "Sem6_Dynamic_Optimality_III.pdf#40-42"
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

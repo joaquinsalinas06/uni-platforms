@@ -1,0 +1,35 @@
+id: wilber-2-bound
+title: "Cota de Wilber-2"
+type: concept
+week: week-09
+
+prerequisites: [independent-rectangles-bound]
+buildsOn: [splay-tree]
+usedBy: [wilber-1-bound]
+
+complexity:
+  wilber-2:
+    worst: "Wilber-2(X) ≤ OPT(X)  (cota inferior)"
+    reasoning: >-
+      Para cada punto p se miran los puntos anteriores visibles desde p (su
+      rectángulo con p no contiene otro punto), ordenados por tiempo
+      decreciente, y se cuentan las alternancias de signo de la posición
+      relativa respecto de p. Cada alternancia da un rectángulo independiente
+      más, así que la suma sobre todos los p acota inferiormente a OPT por el
+      teorema de los rectángulos independientes.
+    source: "Sem9_Dynamic_Optimality_IV.pdf#36-42"
+  llave-independiente:
+    worst: "E[Wilber-2(x_i)] = Θ(lg t_i)"
+    reasoning: >-
+      Si las llaves fueran "sin significado" (permutables al azar), el número
+      esperado de cambios de máximo bajo una permutación aleatoria ya es la
+      cota del conjunto de trabajo (t_i es el número de llaves distintas
+      accedidas desde el último acceso a x_i). Por eso OPT = Θ(cota del
+      conjunto de trabajo) y los Splay Trees son óptimos llave-independientes.
+      El profesor lo presenta como esbozo.
+    source: "Sem9_Dynamic_Optimality_IV.pdf#41-42"
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

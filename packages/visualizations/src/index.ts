@@ -15,6 +15,7 @@ export { default as NetworkTopologyVisualization } from './network-topology/Netw
 export { default as SequenceVisualization } from './sequence/SequenceVisualization';
 export { default as TimelineVisualization } from './timeline/TimelineVisualization';
 export { default as XyChartVisualization } from './xy-chart/XyChartVisualization';
+export { default as GeometricVisualization } from './geometric/GeometricVisualization';
 
 // Subcomponents and scenes
 export { SceneLayer, EquationPanel } from './CanvasScene';

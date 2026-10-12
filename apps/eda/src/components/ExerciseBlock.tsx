@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { renderRich } from '@uni/visualizations';
 
 export type Exercise = {
   level: number;
@@ -13,7 +14,7 @@ const LEVEL_NAMES = ['', 'reconocer', 'trazar', 'implementar', 'adaptar', 'dise�
  * Restricción del brief: la solución nunca aparece antes de las pistas.
  * Sólo se destraba cuando se han pedido todas.
  */
-export default function ExerciseBlock({ exercise }: { exercise: Exercise }) {
+export default function ExerciseBlock({ exercise, label }: { exercise: Exercise; label?: string }) {
   const [shown, setShown] = useState(0);
   const [solved, setSolved] = useState(false);
 
@@ -25,7 +26,7 @@ export default function ExerciseBlock({ exercise }: { exercise: Exercise }) {
         <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--accent)] font-mono text-[0.75rem] font-medium text-[var(--accent-ink)]">
           {exercise.level}
         </span>
-        <span className="tag">{LEVEL_NAMES[exercise.level]}</span>
+        <span className="tag">{label ?? LEVEL_NAMES[exercise.level]}</span>
         {/* Escalera de dificultad: se ve de un vistazo qué tan lejos está este de la base. */}
         <span className="ml-auto flex items-end gap-[3px]" aria-hidden="true">
           {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -41,7 +42,7 @@ export default function ExerciseBlock({ exercise }: { exercise: Exercise }) {
       </header>
 
       <div className="px-5 py-5">
-        <p className="max-w-[72ch] text-[1.0625rem] leading-relaxed">{exercise.statement}</p>
+        <div className="rich max-w-[72ch] text-[1.0625rem] leading-relaxed" dangerouslySetInnerHTML={{ __html: renderRich(exercise.statement) }} />
 
         {shown > 0 && (
           <ol className="mt-5 space-y-2.5">
@@ -52,7 +53,7 @@ export default function ExerciseBlock({ exercise }: { exercise: Exercise }) {
                 style={{ animation: 'reveal .4s cubic-bezier(.2,.7,.3,1) both' }}
               >
                 <span className="tag flex-none pt-1">{idx + 1}</span>
-                <span>{h}</span>
+                <span className="rich" dangerouslySetInnerHTML={{ __html: renderRich(h) }} />
               </li>
             ))}
           </ol>
@@ -89,7 +90,7 @@ export default function ExerciseBlock({ exercise }: { exercise: Exercise }) {
             style={{ animation: 'reveal .4s cubic-bezier(.2,.7,.3,1) both' }}
           >
             <p className="tag mb-1.5">solución</p>
-            <p className="text-[0.9375rem] leading-relaxed">{exercise.solution}</p>
+            <div className="rich text-[0.9375rem] leading-relaxed" dangerouslySetInnerHTML={{ __html: renderRich(exercise.solution) }} />
           </div>
         )}
       </div>

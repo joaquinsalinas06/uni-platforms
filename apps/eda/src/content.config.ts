@@ -67,4 +67,25 @@ export const collections = {
       sourceFiles: z.array(z.string()).default([]),
     }),
   }),
+  // Problemset de repaso (semana 7): una sola página con preguntas por nivel,
+  // cada una con pistas progresivas y solución — mismo contrato de ejercicio.
+  repaso: defineCollection({
+    loader: glob({ pattern: 'repaso.md', base: './content' }),
+    schema: z.object({
+      title: z.string(),
+      summary: z.string(),
+      items: z
+        .array(
+          z.object({
+            level: z.number().int().min(1).max(6),
+            etiqueta: z.string(),
+            href: z.string().optional(),
+            statement: z.string(),
+            hints: z.array(z.string()).min(1, 'un ejercicio sin pistas no puede revelar solución'),
+            solution: z.string().optional(),
+          }),
+        )
+        .default([]),
+    }),
+  }),
 };

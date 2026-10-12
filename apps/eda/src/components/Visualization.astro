@@ -18,6 +18,7 @@ import { visualizationSchema } from '../lib/schemas';
 import TreeVisualization from '../visualizations/tree/TreeVisualization';
 import PersistentVisualization from '../visualizations/persistent/PersistentVisualization';
 import RangeTreeVisualization from '../visualizations/range-tree/RangeTreeVisualization';
+import { GeometricVisualization } from '@uni/visualizations';
 
 interface Props {
   viz: { type: keyof typeof VISUALIZATIONS; mode?: string; steps: any[] };
@@ -50,3 +51,4 @@ const steps = viz.mode ? viz.steps.map((s) => ({ mode: viz.mode, ...s })) : viz.
 {viz.type === 'tree' && <TreeVisualization client:visible steps={steps} />}
 {viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
 {viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
+{viz.type === 'geometric' && <GeometricVisualization client:visible steps={steps} />}

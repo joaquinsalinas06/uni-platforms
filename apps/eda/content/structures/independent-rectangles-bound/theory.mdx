@@ -1,0 +1,150 @@
+---
+kind: theory
+title: "Cota inferior de los rectángulos independientes"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Con la [vista geométrica](/structures/geometric-view) y [Greedy](/structures/greedy-algorithm) tenemos un algoritmo **conjeturado** óptimo, pero ninguna **cota inferior
+demostrada** contra la cual medirlo (#6). La pregunta que abre la sesión: *¿cómo se demuestra, en general, que **ningún** algoritmo de BST puede hacerlo mejor que cierto valor, para una secuencia de accesos dada?*
+
+La herramienta (#7) es el **método de rectángulos independientes**: una técnica geométrica que da cotas inferiores demostrables, y de la cual salen dos resultados concretos,
+[Wilber-2](/structures/wilber-2-bound) y [Wilber-1](/structures/wilber-1-bound).
+
+## Intuición
+
+Mira dos puntos de la entrada que definen un rectángulo vacío. Para que el conjunto sea [arboralmente satisfecho](/structures/arborally-satisfied-set), **alguien** tiene que poner un punto en ese
+rectángulo. Si tienes varios rectángulos así y ningún punto puede servir a dos de ellos a la vez, entonces cada rectángulo te cuesta, por separado, un punto extra. Los rectángulos *independientes*
+son justo los que no se pueden arreglar con el mismo punto: cuantos más tengas, más caro es **cualquier** BST.
+
+## Estructura interna
+
+**Recordando la notación (#9).** Un conjunto es arboralmente satisfecho si todo rectángulo no degenerado inducido por dos de sus puntos contiene un tercero.
+
+**Rectángulos independientes (#12).** Dos rectángulos son *independientes* si **no** están arboralmente satisfechos entre sí, y **ninguna esquina de uno está estrictamente dentro del otro**.
+De cualquier par de puntos $a, b$ sale un único rectángulo $ab$; sólo 2 de sus 4 esquinas son puntos reales de la entrada —las otras 2 son "virtuales".
+
+Tres ejemplos de la clase (#15–#17), con coordenadas elegidas para dibujarlos:
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Independientes: separados. Los dos rectángulos no se tocan: ningún punto extra de uno puede servir al otro.",
+      points: [
+        { id: 'a', x: 1, t: 1 }, { id: 'b', x: 2, t: 2 },
+        { id: 'c', x: 4, t: 3 }, { id: 'd', x: 5, t: 4 },
+      ],
+      rects: [
+        { id: 'r1', a: 'a', b: 'b', state: 'active', fill: true },
+        { id: 'r2', a: 'c', b: 'd', state: 'answer', fill: true },
+      ],
+    },
+    {
+      note: "Independientes: parcialmente contenidos (una cruz), pero sin que ninguna esquina de uno quede estrictamente dentro del otro. El rectángulo ancho tiene sus esquinas fuera del alto, y viceversa.",
+      points: [
+        { id: 'a', x: 1, t: 1 }, { id: 'b', x: 4, t: 2 },
+        { id: 'c', x: 2, t: 1 }, { id: 'd', x: 3, t: 3 },
+      ],
+      rects: [
+        { id: 'r1', a: [1, 1], b: [4, 2], state: 'active', fill: true },
+        { id: 'r2', a: [2, 1], b: [3, 3], state: 'answer', fill: true },
+      ],
+    },
+    {
+      note: "Independientes: comparten una esquina, el punto (2, 2). Compartir una esquina real no es 'estar estrictamente dentro'.",
+      points: [
+        { id: 'a', x: 1, t: 1 }, { id: 'b', x: 2, t: 2 }, { id: 'c', x: 3, t: 3 },
+      ],
+      rects: [
+        { id: 'r1', a: 'a', b: 'b', state: 'active', fill: true },
+        { id: 'r2', a: 'b', b: 'c', state: 'answer', fill: true },
+      ],
+    },
+  ],
+}} />
+
+*(Las coordenadas son ilustrativas, elegidas para reproducir cada configuración de las figuras; el profesor no da números.)*
+
+**Rectángulos positivos y negativos (#18).** Según la pendiente del segmento entre los dos puntos que lo inducen, un rectángulo es *positivo* (pendiente positiva) o *negativo*.
+Un conjunto es *satisfecho positivo* si todos sus rectángulos positivos están arboralmente satisfechos —y análogamente *satisfecho negativo*—.
+$\mathrm{OPT}^+$ es el menor conjunto satisfecho positivo que contiene a $I$.
+
+**Teorema (#11).**
+
+$$\mathrm{OPT} \;\ge\; |I| + \tfrac{1}{2}\,\mathrm{MIS},$$
+
+donde $\mathrm{MIS}$ es el mayor conjunto de rectángulos independientes que se puede formar. Calcularlo es *Maximum Independent Set* —NP-difícil en general—, pero sirve como **cota inferior**, no como algoritmo.
+
+**Lema (#19).** $\mathrm{OPT}^+ \ge |I| + \mathrm{MIS}^+$.
+
+### Prueba del lema (#20–#32)
+
+Se asumen coordenadas $x, y$ distintas (siempre se puede perturbando la entrada) y un $\mathrm{MIS}$ $S$ de rectángulos positivos.
+
+1. **Primer paso (#22–#26).** Se toma el rectángulo más ancho de $S$ y se traza un **segmento vertical** que lo cruza de borde a borde sin tocar ningún otro rectángulo de $S$; existe por un argumento de casos sobre cómo los demás rectángulos pueden relacionarse con el más ancho.
+2. **Segundo paso (#27–#31).** Sean $p$ el punto de $\mathrm{OPT}^+$ más a la derecha y arriba **del lado izquierdo** del segmento, y $q$ el punto más a la izquierda y abajo **del lado derecho**, no por debajo de $p$.
+   $p$ y $q$ **deben tener la misma coordenada $y$**: si no, el rectángulo que forman $p$ y $q$ no estaría arboralmente satisfecho (contradicción).
+3. **Tercer paso, la carga (#32–#33).** El segmento $\overline{pq}$ cruza el segmento vertical del rectángulo más ancho —que no pertenece a ningún otro rectángulo de $S$—, así que $\overline{pq}$ **no vuelve a ser contado** por ningún otro rectángulo. Si hubiera $k$ segmentos $pq$ consecutivos con la misma coordenada $y$, a lo más uno de los $k+1$ puntos involucrados pertenece a $I$,
+   así que cada segmento **agrega al menos un punto nuevo**. Sumando sobre todas las líneas horizontales: $\mathrm{OPT}^+ \ge |I| + \mathrm{MIS}^+$.
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Ejemplo del argumento de conteo (#33): tres segmentos horizontales sobre la misma coordenada y. Cada segmento pq une dos puntos consecutivos de esa fila; entre k segmentos y k + 1 puntos, a lo más un punto es de la entrada.",
+      points: [
+        { id: 'i1', x: 1, t: 2 },
+        { id: 'e1', x: 2, t: 2, kind: 'added', state: 'answer' },
+        { id: 'e2', x: 3, t: 2, kind: 'added', state: 'answer' },
+        { id: 'e3', x: 4, t: 2, kind: 'added', state: 'answer' },
+      ],
+      segments: [
+        { id: 's1', from: 'i1', to: 'e1', state: 'active' },
+        { id: 's2', from: 'e1', to: 'e2', state: 'active' },
+        { id: 's3', from: 'e2', to: 'e3', state: 'active' },
+      ],
+      xMax: 4,
+      tMax: 2,
+    },
+  ],
+}} />
+
+*(Las coordenadas del dibujo son ilustrativas; la figura de la clase muestra la misma situación.)*
+
+### Conclusión (#34)
+
+Como $\mathrm{OPT}^+ \ge |I| + \mathrm{MIS}^+$, y simétricamente para $\mathrm{OPT}^-$:
+
+$$\mathrm{OPT} \ge \max\{\mathrm{OPT}^+, \mathrm{OPT}^-\} \ge \tfrac{1}{2}(\mathrm{OPT}^+ + \mathrm{OPT}^-) \ge |I| + \tfrac{1}{2}\mathrm{MIS}^+ + \tfrac{1}{2}\mathrm{MIS}^- \ge |I| + \tfrac{1}{2}\mathrm{MIS}.$$
+
+## Operaciones
+
+Este tema no tiene operaciones: es un resultado (una cota inferior). De él salen dos cotas concretas y calculables: [Wilber-2](/structures/wilber-2-bound) y [Wilber-1](/structures/wilber-1-bound), y la comparación con Greedy en [signed-greedy](/structures/signed-greedy).
+
+## Análisis de complejidad
+
+La cota es $\mathrm{OPT} \ge |I| + \frac{1}{2}\mathrm{MIS}$. El factor $\frac{1}{2}$ viene del último paso de la conclusión: se demuestra para los rectángulos positivos y para los negativos **por separado**, y $\mathrm{OPT}$ es al menos el máximo de las dos, que es al menos el promedio.
+Calcular $\mathrm{MIS}$ es NP-difícil en general; por eso la cota no es un algoritmo, sino una herramienta para **probar** que ninguna ejecución de BST puede costar menos que cierto valor.
+
+## Tabla de complejidad
+
+La tabla resume la cota inferior y la dureza de calcular MIS.
+
+## Ejemplos
+
+Ver [examples.md](/structures/independent-rectangles-bound/examples): dos puntos (MIS = 1), tres puntos en diagonal (MIS = 2) y por qué la cota no siempre es ajustada.
+
+## Comparación con estructuras relacionadas
+
+| | [Greedy](/structures/greedy-algorithm) | Rectángulos independientes |
+|---|---|---|
+| Qué da | Una cota **superior** (un algoritmo real) | Una cota **inferior** demostrable |
+| Se calcula en | Tiempo polinomial | NP-difícil en general (MIS) |
+| Garantiza | Un conjunto satisfecho | Que ningún conjunto satisfecho es más chico |
+| Relación | Greedy ≥ OPT ≥ \|I\| + ½·MIS | |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/independent-rectangles-bound/mastery-check).

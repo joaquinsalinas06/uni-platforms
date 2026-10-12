@@ -1,0 +1,35 @@
+id: tango-tree
+title: "Tango Trees"
+type: structure
+week: week-09
+
+prerequisites: [wilber-1-bound, balanced-bst]
+buildsOn: [bst-computational-model]
+usedBy: [signed-greedy]
+
+complexity:
+  competitividad:
+    worst: "O(lg lg n)-competitivo"
+    reasoning: >-
+      Cada camino de hijo preferido se guarda en su propio BBST auxiliar de
+      tamaño O(lg n), así que cada operación dentro de un camino cuesta
+      O(lg lg n). Cada vez que una búsqueda cruza a un hijo no preferido
+      salta a otro árbol auxiliar y actualiza los caminos involucrados, por
+      O(lg lg n). El número de cruces de un acceso es 1 más sus alternancias
+      de Wilber-1, así que el costo total es O(lg lg n)·(m + Wilber-1), y
+      como m + Wilber-1 es O(OPT), el costo es O(lg lg n)·OPT.
+    source: "Sem9_Dynamic_Optimality_V.pdf#18-27"
+  actualizacion:
+    worst: "O(lg lg n) por cruce (split/join por rango de valores)"
+    reasoning: >-
+      Los árboles auxiliares están ordenados por valor, no por profundidad.
+      Cortar por una profundidad d equivale a cortar un rango de valores,
+      por cómo un camino particiona las claves en subárboles; usando el
+      mínimo y el máximo del subárbol en el punto de corte se simula el split
+      por profundidad con operaciones de BBST sobre un árbol de tamaño O(lg n).
+    source: "Sem9_Dynamic_Optimality_V.pdf#22-23"
+
+professorAnalysisStyle: "análisis competitivo"
+hasVisualization: true
+visualizationType: tree
+placeholder: false

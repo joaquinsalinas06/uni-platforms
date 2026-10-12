@@ -1,0 +1,123 @@
+---
+kind: theory
+title: "Conjuntos arboralmente satisfechos"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Con la [vista geométrica](/structures/geometric-view) cualquier ejecución de BST es un conjunto de puntos. Pero **no todo conjunto de
+puntos es una ejecución posible**: un punto suelto en $(x, i)$ sin ningún otro en su fila no corresponde a ningún camino desde la raíz.
+Hace falta una condición que separe los conjuntos que *sí* vienen de un BST de los que no. Esa condición es la
+**satisfacción arboral**, y su teorema central (#25) dice que es exactamente la que buscamos.
+
+## Intuición
+
+Mira dos puntos que no están en la misma fila ni en la misma columna: forman las esquinas opuestas de un **rectángulo**. Si el BST tocó
+la llave $x$ en un momento $i$ y la llave $y$ en otro momento $j$, tiene que haber habido **algún otro toque** dentro (o en el borde de)
+ese rectángulo. Intuitivamente: para pasar de la llave $x$ a la llave $y$ en el árbol, el algoritmo tuvo que tocar algo "entre medio",
+en el tiempo o en el espacio.
+
+## Estructura interna
+
+**Definición (#21).** Un conjunto de puntos es *arboralmente satisfecho* si para todo par de puntos que **no comparten línea horizontal
+ni vertical** existe un **tercer punto** dentro del rectángulo que definen, o en su borde.
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Dos accesos: a la llave 1 en el tiempo 1 y a la llave 4 en el tiempo 2. No comparten fila ni columna, así que definen un rectángulo (en ámbar, porque está sin satisfacer): no contiene ningún tercer punto.",
+      points: [
+        { id: 'p', x: 1, t: 1 },
+        { id: 'q', x: 4, t: 2 },
+      ],
+      rects: [{ id: 'r', a: 'p', b: 'q', state: 'marked', fill: true }],
+    },
+    {
+      note: "Se agrega el punto (1, 2), sobre el borde del rectángulo: ahora el rectángulo de p y q contiene un tercer punto. Los pares nuevos (1,1)-(1,2) y (1,2)-(4,2) comparten línea, así que no exigen nada más: el conjunto ya es arboralmente satisfecho.",
+      points: [
+        { id: 'p', x: 1, t: 1 },
+        { id: 'q', x: 4, t: 2 },
+        { id: 'e', x: 1, t: 2, kind: 'added', state: 'active' },
+      ],
+      rects: [{ id: 'r', a: 'p', b: 'q', state: 'answer', fill: true }],
+    },
+  ],
+}} />
+
+*(Ejemplo derivado de la pregunta 10 del repaso; no aparece en las diapositivas.)*
+
+El conjunto de la ejecución de la clase —accesos $3,1,4,2$ sobre un árbol estático— cumple la condición para
+todos sus pares (#19: "puedes verificar que cumple esto para todo par de puntos").
+
+**Teorema (#23).** Un conjunto de puntos $(x_i, i)$ es arboralmente satisfecho **si y sólo si** corresponde a una ejecución válida de
+algún algoritmo de BST para la secuencia $x_1, \dots, x_m$.
+
+**Corolario.** La ejecución óptima de BST equivale al **conjunto arboralmente satisfecho más chico que contiene a los puntos de entrada**.
+
+Convertimos un problema sobre árboles en uno puramente geométrico: *¿cuál es el menor superconjunto arboralmente satisfecho de un conjunto de puntos dado?*
+
+### Prueba: BST válido ⇒ arboralmente satisfecho (#26–#32)
+
+Sean $(x, i)$ y $(y, j)$ dos puntos con $x < y$ e $i < j$. Sea $\mathrm{lca}_t(a, b)$ el ancestro común más bajo de $a$ y $b$ justo antes del tiempo $t$.
+Tres casos:
+
+1. Si $\mathrm{lca}_i(x, y) \neq x$: se usa el punto $(\mathrm{lca}_i(x, y), i)$ — se tocó junto con $x$ en el mismo acceso (el camino a $x$ pasa por el ancestro común), y cae en el borde del rectángulo.
+2. Si $\mathrm{lca}_j(x, y) \neq y$: se usa $(\mathrm{lca}_j(x, y), j)$, análogamente.
+3. Si ninguno de los dos: $x$ es ancestro de $y$ antes de $i$, e $y$ es ancestro de $x$ antes de $j$; en algún momento intermedio $k$, $y$ tuvo que **rotar por encima** de $x$: se usa $(y, k)$.
+
+### Prueba: arboralmente satisfecho ⇒ BST válido
+
+Es constructiva (#32): se organiza el conjunto de puntos como un **treap** (árbol cartesiano), ordenado en cada momento por el **próximo tiempo de toque**
+de cada nodo. La satisfacción arboral garantiza que, en cada instante, los nodos ya tocados forman un subárbol conexo en la parte superior del árbol —exactamente
+la forma que necesita un BST real para ejecutar esa secuencia de accesos.
+
+## Operaciones
+
+Este tema no tiene operaciones. La verificación de la propiedad se hace por definición; un comprobador ingenuo cubre todos los pares:
+
+```cpp
+// P: puntos (llave, tiempo). Devuelve true si P es arboralmente satisfecho.
+bool arboralmente_satisfecho(const vector<pair<int,int>>& P) {
+  for (auto a : P) for (auto b : P) {
+    if (a.first >= b.first || a.second == b.second) continue;       // ordena el par y descarta mismas filas/columnas
+    int x1 = a.first, x2 = b.first;
+    int t1 = min(a.second, b.second), t2 = max(a.second, b.second);
+    bool hay_tercero = false;
+    for (auto c : P)
+      if (c != a && c != b && x1 <= c.first && c.first <= x2 && t1 <= c.second && c.second <= t2) hay_tercero = true;
+    if (!hay_tercero) return false;
+  }
+  return true;
+}
+```
+
+*(Código derivado de la definición #21; no aparece en las diapositivas.)* Cuesta $O(|P|^3)$: suficiente para ejemplos del tamaño de la clase.
+
+## Análisis de complejidad
+
+Este tema no introduce una cota: es una **equivalencia** (tema `complexity: {}`). Lo que sí deja es una pregunta abierta explícita del profesor (#33):
+*¿cuál es la complejidad computacional de encontrar el menor conjunto arboralmente satisfecho? ¿Existe una $O(1)$-aproximación?* Si existiera, daría
+una $O(1)$-aproximación del costo óptimo offline de BST.
+
+## Tabla de complejidad
+
+No aplica — ver la sección anterior.
+
+## Ejemplos
+
+Ver [examples.md](/structures/arborally-satisfied-set/examples): el conjunto mínimo (un solo punto), el de la clase y un conjunto que viola la condición con dos arreglos posibles.
+
+## Comparación con estructuras relacionadas
+
+| | Árbol real | Conjunto satisfecho |
+|---|---|---|
+| Cómo se valida | Se ejecuta y se mide | Se comprueba cada rectángulo |
+| Qué distingue una ejecución válida | Que cada acceso baje por punteros desde la raíz | Que todo rectángulo tenga un tercer punto |
+| Costo | Movimientos y rotaciones | $\|P\|$ (ver [geometric-view](/structures/geometric-view)) |
+| Qué permite | Ejecutar | Plantear $\mathrm{OPT}$ como un problema de optimización geométrica |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/arborally-satisfied-set/mastery-check).

@@ -84,15 +84,42 @@
     },
     {
       "id": "week-06",
-      "title": "Semana 6 — Optimalidad dinámica II: Splay completo y el Lema de Acceso",
+      "title": "Semana 6 — Optimalidad dinámica II y III: Splay completo, Lema de Acceso y vista geométrica",
       "sourceFiles": [
-        "raw-materials/week6/Sem6_Dynamic_Optimality_II.pdf"
+        "raw-materials/week6/Sem6_Dynamic_Optimality_II.pdf",
+        "raw-materials/week6/Sem6_Dynamic_Optimality_III.pdf"
       ],
       "topics": [
         "splay-tree-adt",
         "logarithm-lemma",
         "access-lemma",
-        "static-optimality"
+        "static-optimality",
+        "geometric-view",
+        "arborally-satisfied-set",
+        "greedy-algorithm"
+      ]
+    },
+    {
+      "id": "week-07",
+      "title": "Semana 7 — Repaso para el parcial",
+      "sourceFiles": [
+        "raw-materials/week7/CS3014___Repaso_Parcial.pdf"
+      ],
+      "topics": []
+    },
+    {
+      "id": "week-09",
+      "title": "Semana 9 — Optimalidad dinámica IV y V: cotas inferiores, Wilber y Tango Trees",
+      "sourceFiles": [
+        "raw-materials/week9/Sem9_Dynamic_Optimality_IV.pdf",
+        "raw-materials/week9/Sem9_Dynamic_Optimality_V.pdf"
+      ],
+      "topics": [
+        "independent-rectangles-bound",
+        "wilber-2-bound",
+        "wilber-1-bound",
+        "tango-tree",
+        "signed-greedy"
       ]
     }
   ],
@@ -1003,6 +1030,209 @@
       "hasVisualization": true,
       "visualizationType": "tree",
       "complexityStyleFromProfessor": "amortized",
+      "status": "generated"
+    },
+    "geometric-view": {
+      "type": "concept",
+      "title": "Vista geométrica de una ejecución de BST",
+      "week": "week-06",
+      "prerequisites": [
+        "bst-computational-model",
+        "search-sequence-properties"
+      ],
+      "buildsOn": [
+        "dynamic-optimality"
+      ],
+      "usedBy": [
+        "arborally-satisfied-set",
+        "greedy-algorithm"
+      ],
+      "operations": [],
+      "sourceSlides": [
+        "Sem6_Dynamic_Optimality_III.pdf#10-19"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "arborally-satisfied-set": {
+      "type": "concept",
+      "title": "Conjuntos arboralmente satisfechos",
+      "week": "week-06",
+      "prerequisites": [
+        "geometric-view"
+      ],
+      "buildsOn": [
+        "bst-computational-model"
+      ],
+      "usedBy": [
+        "greedy-algorithm",
+        "independent-rectangles-bound"
+      ],
+      "operations": [],
+      "sourceSlides": [
+        "Sem6_Dynamic_Optimality_III.pdf#20-32"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "greedy-algorithm": {
+      "type": "algorithm",
+      "title": "Algoritmo Greedy (vista geométrica) y su conjetura",
+      "week": "week-06",
+      "prerequisites": [
+        "geometric-view",
+        "arborally-satisfied-set"
+      ],
+      "buildsOn": [
+        "dynamic-optimality"
+      ],
+      "usedBy": [
+        "signed-greedy"
+      ],
+      "operations": [
+        "greedy-row"
+      ],
+      "sourceSlides": [
+        "Sem6_Dynamic_Optimality_III.pdf#33-42"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "independent-rectangles-bound": {
+      "type": "concept",
+      "title": "Cota inferior de los rectángulos independientes",
+      "week": "week-09",
+      "prerequisites": [
+        "arborally-satisfied-set"
+      ],
+      "buildsOn": [
+        "greedy-algorithm"
+      ],
+      "usedBy": [
+        "wilber-2-bound",
+        "wilber-1-bound",
+        "signed-greedy"
+      ],
+      "operations": [],
+      "sourceSlides": [
+        "Sem9_Dynamic_Optimality_IV.pdf#11-34"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "wilber-2-bound": {
+      "type": "concept",
+      "title": "Cota de Wilber-2",
+      "week": "week-09",
+      "prerequisites": [
+        "independent-rectangles-bound"
+      ],
+      "buildsOn": [
+        "splay-tree"
+      ],
+      "usedBy": [
+        "wilber-1-bound"
+      ],
+      "operations": [],
+      "sourceSlides": [
+        "Sem9_Dynamic_Optimality_IV.pdf#35-42"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "wilber-1-bound": {
+      "type": "concept",
+      "title": "Cota de Wilber-1 y la secuencia bit-reversal",
+      "week": "week-09",
+      "prerequisites": [
+        "independent-rectangles-bound",
+        "balanced-bst"
+      ],
+      "buildsOn": [
+        "wilber-2-bound"
+      ],
+      "usedBy": [
+        "tango-tree"
+      ],
+      "operations": [],
+      "sourceSlides": [
+        "Sem9_Dynamic_Optimality_IV.pdf#43-50"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "tango-tree": {
+      "type": "structure",
+      "title": "Tango Trees",
+      "week": "week-09",
+      "prerequisites": [
+        "wilber-1-bound",
+        "balanced-bst"
+      ],
+      "buildsOn": [
+        "bst-computational-model"
+      ],
+      "usedBy": [
+        "signed-greedy"
+      ],
+      "operations": [
+        "tango-search"
+      ],
+      "sourceSlides": [
+        "Sem9_Dynamic_Optimality_V.pdf#9-27"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree",
+      "complexityStyleFromProfessor": "análisis competitivo",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "signed-greedy": {
+      "type": "concept",
+      "title": "Signed-Greedy",
+      "week": "week-09",
+      "prerequisites": [
+        "greedy-algorithm",
+        "independent-rectangles-bound"
+      ],
+      "buildsOn": [
+        "tango-tree"
+      ],
+      "usedBy": [],
+      "operations": [],
+      "sourceSlides": [
+        "Sem9_Dynamic_Optimality_V.pdf#28-45"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "geometric",
+      "complexityStyleFromProfessor": "análisis geométrico",
+      "supportConcept": false,
+      "placeholder": false,
       "status": "generated"
     }
   }

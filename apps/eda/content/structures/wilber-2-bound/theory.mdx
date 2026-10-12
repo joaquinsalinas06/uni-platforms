@@ -1,0 +1,125 @@
+---
+kind: theory
+title: "Cota de Wilber-2"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+El teorema de [rectángulos independientes](/structures/independent-rectangles-bound) da una cota inferior, pero depende de $\mathrm{MIS}$, que es NP-difícil. Hace falta una cota
+**calculable en tiempo polinomial** que aun así sea una cota inferior de verdad. Wilber-2 es la primera de las dos que salen de ese método (#35).
+
+## Intuición
+
+Mira cada acceso $p$ mirando hacia atrás en el tiempo, pero sólo a los accesos que **"ve"**: aquellos con los que forma un rectángulo vacío. Si esos accesos visibles caen alternadamente a la izquierda y a la derecha de $p$
+mientras retrocedes en el tiempo, cada cambio de lado es un rectángulo independiente más: el algoritmo no pudo haber dejado "preparado" a $p$ para ambos lados a la vez sin pagar.
+
+## Estructura interna
+
+**Idea de análisis (#36).** Para cada punto $p$ de la entrada: mira los puntos **visibles hacia abajo** (aquellos cuyo rectángulo con $p$ no contiene ningún otro punto), **ordenados por tiempo decreciente**, y cuenta las
+**alternancias de signo** de su posición respecto de $p$ (a la izquierda o a la derecha de la llave de $p$).
+
+**La cota (#37).** La suma de esas alternancias, sobre todos los puntos $p$ de la entrada, es una cota inferior de $\mathrm{OPT}$: cada alternancia da un rectángulo independiente más.
+
+> **Nota de apoyo** (no está en las diapositivas): la diapositiva habla de "alternancias de signo en $y_i - p$"; en los dibujos de la clase la llave es el eje horizontal, así que aquí se lee como el signo de $(\text{llave}_i - \text{llave}_p)$.
+> El código de abajo implementa esa lectura; no es una definición del profesor.
+
+Ejemplo con la secuencia $3, 1, 4, 2$ (los cuatro puntos son la entrada). Para el último acceso $p = (2, 4)$, los puntos anteriores visibles son $(4,3)$, $(1,2)$ y $(3,1)$: ningún otro punto de la entrada cae en sus rectángulos con $p$.
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "El punto p = (2, 4) y los accesos anteriores. Falta decidir cuáles son 'visibles' desde p.",
+      points: [
+        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3 },
+        { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
+      ],
+    },
+    {
+      note: "Mirando hacia atrás: el acceso (4, 3) está a la DERECHA de p y su rectángulo con p está vacío: es visible (signo +).",
+      points: [
+        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3, state: 'answer' },
+        { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
+      ],
+      rects: [{ id: 'r3', a: 'p', b: 'c', state: 'answer', fill: true }],
+    },
+    {
+      note: "Siguiente hacia atrás: (1, 2), a la IZQUIERDA de p (signo −). Su rectángulo con p no contiene a (4, 3): también visible. Hay un cambio de signo: una alternancia.",
+      points: [
+        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2, state: 'answer' }, { id: 'c', x: 4, t: 3 },
+        { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
+      ],
+      rects: [{ id: 'r2', a: 'p', b: 'b', state: 'answer', fill: true }],
+    },
+    {
+      note: "Por último (3, 1), de nuevo a la derecha (signo +): otra alternancia. Los signos, en orden de tiempo decreciente, son + − +: 2 alternancias. Los otros tres puntos no tienen visibles que alternen: Wilber-2 de esta secuencia vale 2.",
+      points: [
+        { id: 'a', x: 3, t: 1, state: 'answer' }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3 },
+        { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
+      ],
+      rects: [{ id: 'r1', a: 'p', b: 'a', state: 'answer', fill: true }],
+    },
+  ],
+}} />
+
+*(Ejemplo derivado aplicando la definición; no aparece en las diapositivas.)*
+
+```cpp
+// seq[t-1] = llave accedida en el tiempo t. Devuelve Wilber-2 de la secuencia.
+int wilber2(const vector<int>& seq) {
+  int m = seq.size(), total = 0;
+  for (int t = 1; t <= m; t++) {
+    int k = seq[t - 1], signo_ant = 0;
+    for (int s = t - 1; s >= 1; s--) {            // tiempo decreciente
+      int k2 = seq[s - 1];
+      if (k2 == k) continue;
+      bool visible = true;                         // ¿algún otro punto de la entrada en el rectángulo?
+      for (int u = s + 1; u < t && visible; u++)
+        if (min(k, k2) <= seq[u - 1] && seq[u - 1] <= max(k, k2)) visible = false;
+      if (!visible) continue;
+      int signo = k2 > k ? +1 : -1;
+      if (signo_ant != 0 && signo != signo_ant) total++;
+      signo_ant = signo;
+    }
+  }
+  return total;
+}
+```
+
+*(Código derivado de la definición; no aparece en las diapositivas.)*
+
+## Operaciones
+
+Este tema no tiene operaciones. Lo que se calcula es la cota (arriba) y se enuncian dos resultados adicionales sobre ella.
+
+## Análisis de complejidad
+
+**Resultados adicionales (#40–#42).**
+
+- *Conjetura:* se cree que $\text{Wilber-2} = \Theta(\mathrm{OPT})$. **Abierto**: ¿es $\mathrm{OPT} = \Theta(\text{Wilber-2})$?
+- *Optimalidad llave-independiente (Iacono, 2005):* si las llaves fueran "sin significado" (se podrían permutar al azar), entonces $\mathrm{OPT} = \Theta(\text{cota del conjunto de trabajo})$ —por lo tanto, **los Splay Trees son óptimos llave-independientes**.
+- *El porqué (esbozo):* $\mathbb{E}[\text{Wilber-2}(x_i)] = \Theta(\lg t_i)$: el número esperado de cambios de máximo bajo una permutación aleatoria ya es la cota del conjunto de trabajo ($t_i$: llaves distintas accedidas desde el último acceso a $x_i$).
+
+El costo de calcular la cota con el código de arriba es $O(m^3)$ por ser literal; un cálculo con estructuras de datos es más rápido, pero el profesor no lo da.
+
+## Tabla de complejidad
+
+La tabla resume la cota y el resultado llave-independiente.
+
+## Ejemplos
+
+Ver [examples.md](/structures/wilber-2-bound/examples).
+
+## Comparación con estructuras relacionadas
+
+| | Wilber-2 | [Wilber-1](/structures/wilber-1-bound) |
+|---|---|---|
+| Depende de | Sólo de la secuencia | De un árbol de referencia fijo $P$ |
+| Qué cuenta | Alternancias entre puntos visibles desde cada acceso | Alternancias izquierda/derecha en cada nodo de $P$ |
+| Uso en la clase | Splay Trees llave-independientes | Tango Trees ([tango-tree](/structures/tango-tree)) |
+| Abierto | ¿Wilber-2 = Θ(OPT)? | ¿Existe $P$ con Wilber-1 = Θ(OPT) para toda secuencia? |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/wilber-2-bound/mastery-check).

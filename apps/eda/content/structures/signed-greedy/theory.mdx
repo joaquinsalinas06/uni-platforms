@@ -1,0 +1,127 @@
+---
+kind: theory
+title: "Signed-Greedy"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+[Wilber-1](/structures/wilber-1-bound) y [Wilber-2](/structures/wilber-2-bound) son cotas inferiores concretas, pero parciales. Tras ver [Tango Trees](/structures/tango-tree) (un algoritmo con una garantía demostrada) queda la pregunta de la **otra manera de acotar por abajo** (#29): ¿existe una cota
+inferior que sea, salvo constante, *tan buena como cualquier cota de rectángulos independientes*, y que se calcule con un procedimiento tipo [Greedy](/structures/greedy-algorithm)?
+La respuesta es **Signed-Greedy**.
+
+## Intuición
+
+Recuerda que los rectángulos son *positivos* o *negativos* según la pendiente. [Greedy](/structures/greedy-algorithm) satisface **ambos tipos a la vez**, y eso lo vuelve un algoritmo de verdad. Si se hace un Greedy que sólo mire un tipo, ese Greedy
+a medias ya no produce una ejecución de BST válida, pero **sí** sigue acotando por abajo lo que cualquier ejecución válida debe pagar.
+
+## Estructura interna
+
+**Los dos Greedys por signo (#30–#32).**
+
+- $\text{Greedy}^+$: el algoritmo Greedy (de la clase de vista geométrica), pero considerando **sólo rectángulos positivos**.
+- $\text{Greedy}^-$: análogo, **sólo rectángulos negativos**.
+
+Y $\text{Signed-Greedy} = \max\{\text{Greedy}^+, \text{Greedy}^-\}$.
+
+> **Nota de apoyo** (no está en las diapositivas): con la regla de la escalera de [greedy-row](/structures/greedy-algorithm/operations/greedy-row), los rectángulos *positivos* de un acceso $(x_t, t)$ son los que forma con llaves $y < x_t$ tocadas antes (esquina inferior izquierda), así que
+> $\text{Greedy}^+$ sólo recorre la escalera hacia la **izquierda** y $\text{Greedy}^-$ sólo la de la **derecha**. Es una lectura derivada de la definición, no la del profesor.
+
+**Teorema (#33).**
+
+$$\max\{\text{Greedy}^+, \text{Greedy}^-\} = \Theta(\text{mayor cota de rectángulos independientes}).$$
+
+Es decir: Signed-Greedy está, salvo una constante, tan cerca de la mejor cota de rectángulos independientes como se puede estar.
+
+**Prueba (#35–#42).** Sea $\text{OPT}^\pm$ la menor unión de conjuntos satisfechos positivos y negativos. Se encadena (#34):
+
+$$\mathrm{OPT}^{\pm} \;\ge\; |I| + \tfrac12\mathrm{MIS} \;\ge\; \tfrac12 \max\{\text{Greedy}^+, \text{Greedy}^-\} \;\ge\; \tfrac12\max\{\mathrm{OPT}^+, \mathrm{OPT}^-\} \;\ge\; \tfrac14\big(\mathrm{OPT}^+ + \mathrm{OPT}^-\big) \;\ge\; \tfrac14 \mathrm{OPT}^{\pm}.$$
+
+Todo queda **emparedado dentro de un factor 4**, confirmando el teorema.
+
+*(La cadena sigue la diapositiva #35–#42, que en el PDF aparece en varias líneas; cada paso usa un resultado ya visto: el teorema de rectángulos independientes y el hecho de que $\text{Greedy}^\pm = O(\mathrm{OPT}^\pm)$.)*
+
+**Greedy vs. Signed-Greedy (#43–#45).**
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Secuencia 1, 2, 3, 4 (acceso secuencial). Greedy completo: 7 puntos. Las filas tienen una llave extra, la anterior (anillos).",
+      points: [
+        { id: 'p1', x: 1, t: 1 }, { id: 'p2', x: 2, t: 2 }, { id: 'p3', x: 3, t: 3 }, { id: 'p4', x: 4, t: 4 },
+        { id: 'e2', x: 1, t: 2, kind: 'added' }, { id: 'e3', x: 2, t: 3, kind: 'added' }, { id: 'e4', x: 3, t: 4, kind: 'added' },
+      ],
+    },
+    {
+      note: "Greedy+: sólo escalera hacia la izquierda. Aquí coincide con el Greedy completo: 7 puntos, porque todos los rectángulos de esta secuencia son positivos.",
+      points: [
+        { id: 'p1', x: 1, t: 1 }, { id: 'p2', x: 2, t: 2 }, { id: 'p3', x: 3, t: 3 }, { id: 'p4', x: 4, t: 4 },
+        { id: 'e2', x: 1, t: 2, kind: 'added', state: 'active' }, { id: 'e3', x: 2, t: 3, kind: 'added', state: 'active' }, { id: 'e4', x: 3, t: 4, kind: 'added', state: 'active' },
+      ],
+    },
+    {
+      note: "Greedy−: sólo escalera hacia la derecha. No hay llaves tocadas a la derecha de cada acceso: 4 puntos, ningún extra. Signed-Greedy = máx{7, 4} = 7.",
+      points: [
+        { id: 'p1', x: 1, t: 1 }, { id: 'p2', x: 2, t: 2 }, { id: 'p3', x: 3, t: 3 }, { id: 'p4', x: 4, t: 4 },
+      ],
+    },
+  ],
+}} />
+
+*(Ejemplo derivado ejecutando $\text{Greedy}^+$ y $\text{Greedy}^-$ como se explica en la nota de apoyo; no aparece en las diapositivas.)*
+
+- **Greedy:** calcula un conjunto que sea satisfecho positivo **y** negativo a la vez —por eso da una **cota superior** real (un algoritmo de verdad).
+- **Signed-Greedy:** no toma en cuenta la interacción entre rectángulos positivos y negativos —por eso sólo da una **cota inferior**, no un algoritmo válido.
+
+**Problema abierto (#44).** ¿Greedy y Signed-Greedy están a sólo un factor constante de diferencia?
+
+## Operaciones
+
+Este tema no tiene operaciones: es una cota, calculable con la misma escalera de Greedy mirando un solo lado.
+
+```cpp
+// signo = -1: sólo la escalera izquierda (Greedy+); signo = +1: sólo la derecha (Greedy-).
+int greedy_signado(int n, const vector<int>& acc, int signo) {
+  vector<int> ultimo(n + 2, 0);
+  int puntos = 0;
+  for (int t = 1; t <= (int)acc.size(); t++) {
+    int x = acc[t - 1];
+    vector<int> fila = {x};
+    int mejor = 0;
+    for (int y = x + signo; y >= 1 && y <= n; y += signo)
+      if (ultimo[y] > mejor) { fila.push_back(y); mejor = ultimo[y]; }
+    for (int y : fila) { ultimo[y] = t; puntos++; }
+  }
+  return puntos;
+}
+// Signed-Greedy = max(greedy_signado(n, acc, -1), greedy_signado(n, acc, +1))
+```
+
+*(Código derivado; no aparece en las diapositivas.)*
+
+## Análisis de complejidad
+
+El resultado es de **estructura**, no de costo: $\max\{\text{Greedy}^+, \text{Greedy}^-\}$ y la mayor cota de rectángulos independientes difieren a lo sumo en un factor constante (4 por la cadena de arriba). La utilidad es práctica y conceptual: calcular una cota inferior por el método de los rectángulos
+independientes exige resolver MIS (NP-difícil), mientras que $\text{Greedy}^\pm$ se computa en tiempo polinomial y la iguala salvo constante.
+
+## Tabla de complejidad
+
+La tabla resume el teorema (sandwich de factor 4).
+
+## Ejemplos
+
+Ver [examples.md](/structures/signed-greedy/examples).
+
+## Comparación con estructuras relacionadas
+
+| | [Greedy](/structures/greedy-algorithm) | Signed-Greedy |
+|---|---|---|
+| Rectángulos que satisface | Positivos y negativos a la vez | Sólo positivos (Greedy⁺) o sólo negativos (Greedy⁻) |
+| Qué da | Cota **superior** (algoritmo real, conjeturado O(OPT)) | Cota **inferior** (no es un algoritmo válido) |
+| Relación | Greedy ≥ OPT | Signed-Greedy = Θ(mejor cota de rectángulos independientes) |
+| Abierto | ¿Greedy = Θ(Signed-Greedy)? | |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/signed-greedy/mastery-check).

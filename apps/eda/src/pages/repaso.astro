@@ -1,0 +1,55 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import ExerciseBlock from '../components/ExerciseBlock';
+
+const [doc] = await getCollection('repaso');
+const { Content } = await render(doc);
+const items = doc.data.items;
+const niveles = [
+  { prefijo: 'Fácil', texto: 'Calentamiento directo' },
+  { prefijo: 'Intermedio', texto: 'Nivel esperado en la parte escrita del parcial' },
+  { prefijo: 'Difícil', texto: 'Más allá de lo exigible, para profundizar' },
+];
+---
+
+<Base title={doc.data.title} crumb="repaso">
+  <header class="stagger mb-12">
+    <p class="tag">semana 7</p>
+    <h1 class="mt-2 max-w-[20ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      {doc.data.title}
+    </h1>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  <div class="prose mb-12 max-w-[72ch]"><Content /></div>
+
+  <div class="space-y-14">
+    {
+      niveles.map((n) => {
+        const grupo = items.filter((i) => i.etiqueta.startsWith(n.prefijo));
+        return (
+          <section>
+            <div class="mb-5 flex items-baseline gap-4">
+              <h2 class="tag">{n.prefijo}</h2>
+              <span class="tag">{n.texto}</span>
+              <span class="h-px flex-1 bg-[var(--rule)]" />
+            </div>
+            <div class="space-y-6">
+              {grupo.map((item) => (
+                <div>
+                  {item.href && (
+                    <p class="tag mb-2">
+                      tema relacionado · <a href={item.href}>{item.etiqueta.split(' · ')[1]}</a>
+                    </p>
+                  )}
+                  <ExerciseBlock client:visible exercise={item} label={item.etiqueta} />
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })
+    }
+  </div>
+</Base>

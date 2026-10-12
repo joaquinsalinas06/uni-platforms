@@ -1,0 +1,28 @@
+id: geometric-view
+title: "Vista geométrica de una ejecución de BST"
+type: concept
+week: week-06
+
+prerequisites: [bst-computational-model, search-sequence-properties]
+buildsOn: [dynamic-optimality]
+usedBy: [arborally-satisfied-set, greedy-algorithm]
+
+# Es un concepto (`operations: []` en el knowledge map): una representación, no
+# una estructura con interfaz. Su única cota es la equivalencia de costos que el
+# profesor enuncia en #18: el costo de la ejecución es el número de puntos.
+complexity:
+  costo-ejecucion:
+    worst: "Θ(|P|), con |P| = Σ_i (nodos tocados en el acceso i)"
+    reasoning: >-
+      Cada punto (x, i) del conjunto P es un nodo x tocado en la búsqueda i,
+      así que |P| cuenta exactamente los nodos visitados. Como en una búsqueda
+      nunca hace falta tocar un mismo nodo más de O(1) veces, el costo real de
+      ejecutar el BST (movimientos de puntero y rotaciones) está dentro de un
+      factor constante de |P|: contar puntos es una medida de costo válida,
+      no una aproximación grosera.
+    source: "Sem6_Dynamic_Optimality_III.pdf#18"
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

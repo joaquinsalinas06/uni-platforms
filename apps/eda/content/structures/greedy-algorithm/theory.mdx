@@ -1,0 +1,129 @@
+---
+kind: theory
+title: "Algoritmo Greedy (vista geométrica) y su conjetura"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Sabemos que la mejor ejecución de BST para una secuencia es *el menor conjunto arboralmente satisfecho que contiene a sus puntos* ([arborally-satisfied-set](/structures/arborally-satisfied-set)).
+Pero encontrar ese mínimo es un problema abierto (#33), y un algoritmo de BST de verdad **no conoce el futuro**: recibe los accesos uno a uno. Hace falta un
+procedimiento concreto, que construya un conjunto satisfecho **sin mirar hacia adelante**, y que además se pueda comparar con el óptimo. Ése es Greedy.
+
+## Intuición
+
+Piensa en construir la ejecución **fila por fila**, de abajo hacia arriba en el tiempo. En cada fila se coloca el punto del acceso real y se agregan *los
+puntos mínimos necesarios* para que lo construido hasta ahí siga siendo arboralmente satisfecho. No se vuelve atrás: ninguna fila ya procesada se modifica.
+
+La clase lo conecta con un BST de verdad (#35): ejecutar un BST accediendo **una consulta a la vez**, rotando "lo mínimo necesario" para completar la búsqueda actual,
+es exactamente análogo a agregar "lo mínimo necesario" para mantener la satisfacción arboral.
+
+## Estructura interna
+
+**Greedy (#34).** Procesa el conjunto de puntos una fila (tiempo) a la vez. En cada fila agrega los puntos mínimos necesarios para que el conjunto acumulado hasta ahí
+quede arboralmente satisfecho.
+
+Para decidir *cuáles* son esos puntos mínimos hace falta una regla concreta. Las diapositivas no la escriben; sale del artículo que citan (Demaine, Harmon,
+Iacono, Kane & Pătrașcu, 2009) y es ésta:
+
+> **Nota de apoyo** (no está en las diapositivas): para el acceso $x$ en el tiempo $t$, se toca la llave $y$ si el rectángulo entre $(x, t)$ y $(y, \mathrm{ult}(y))$
+> —donde $\mathrm{ult}(y)$ es la última fila en que $y$ fue tocada— **no contiene ningún otro punto**. Mirando desde $x$ hacia cada lado, eso significa que $y$ entra si
+> su último toque es *más reciente* que el de todas las llaves ya vistas entre $x$ e $y$: una *escalera* de toques cada vez más recientes.
+
+Se ve mejor con la secuencia $2, 1, 3$ sobre las llaves $\{1, 2, 3\}$:
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Fila 1: el acceso a la llave 2. No hay nada anterior, así que no hace falta nada más. El conjunto {(2,1)} es trivialmente satisfecho.",
+      points: [{ id: 'p1', x: 2, t: 1 }],
+      xMax: 3,
+      row: 1,
+      tMax: 3,
+    },
+    {
+      note: "Fila 2: se pide la llave 1. El rectángulo entre (1,2) y (2,1) está vacío: el conjunto {(2,1), (1,2)} NO es satisfecho (rectángulo en ámbar).",
+      points: [{ id: 'p1', x: 2, t: 1 }, { id: 'p2', x: 1, t: 2 }],
+      rects: [{ id: 'r12', a: 'p1', b: 'p2', state: 'marked', fill: true }],
+      xMax: 3,
+      row: 2,
+      tMax: 3,
+    },
+    {
+      note: "Greedy agrega (2,2): la llave 2 se volvió a tocar de paso, igual que un BST real que rota para subirla. Ahora el rectángulo tiene un tercer punto en su borde.",
+      points: [{ id: 'p1', x: 2, t: 1 }, { id: 'p2', x: 1, t: 2 }, { id: 'e1', x: 2, t: 2, kind: 'added', state: 'active' }],
+      rects: [{ id: 'r12', a: 'p1', b: 'p2', state: 'answer', fill: true }],
+      xMax: 3,
+      row: 2,
+      tMax: 3,
+    },
+    {
+      note: "Fila 3: se pide la llave 3. Mirando hacia la izquierda, la llave 2 (tocada en t = 2) es más reciente que todo lo que hay entre medio: entra a la fila como (2,3). La llave 1 (tocada en t = 2) no es MÁS reciente que la 2, así que no entra.",
+      points: [
+        { id: 'p1', x: 2, t: 1 },
+        { id: 'p2', x: 1, t: 2 },
+        { id: 'e1', x: 2, t: 2, kind: 'added' },
+        { id: 'p3', x: 3, t: 3 },
+        { id: 'e2', x: 2, t: 3, kind: 'added', state: 'active' },
+      ],
+      xMax: 3,
+      row: 3,
+      tMax: 3,
+    },
+    {
+      note: "Resultado: 5 puntos, 3 pedidos y 2 extra. El conjunto es arboralmente satisfecho (el par (1,2)-(3,3) tiene a (2,2) y (2,3) dentro de su rectángulo).",
+      points: [
+        { id: 'p1', x: 2, t: 1 },
+        { id: 'p2', x: 1, t: 2 },
+        { id: 'e1', x: 2, t: 2, kind: 'added' },
+        { id: 'p3', x: 3, t: 3 },
+        { id: 'e2', x: 2, t: 3, kind: 'added' },
+      ],
+      rects: [{ id: 'r13', a: 'p2', b: 'p3', state: 'answer', fill: true }],
+      xMax: 3,
+      tMax: 3,
+    },
+  ],
+}} />
+
+*(Ejemplo derivado ejecutando la regla anterior; es la pregunta 15 del repaso. No aparece en las diapositivas.)*
+
+## Operaciones
+
+- [greedy-row](/structures/greedy-algorithm/operations/greedy-row) — procesar una fila: el punto del acceso más la escalera a cada lado.
+
+## Análisis de complejidad
+
+Aquí no hay una cota demostrada, y el profesor es explícito sobre eso. Hay dos resultados, de naturaleza muy distinta:
+
+**La conjetura (#37).** $\mathrm{Greedy} = O(\mathrm{OPT})$, o incluso $\mathrm{Greedy} = \mathrm{OPT} + O(m)$. Si fuera cierta, tendríamos un algoritmo $O(1)$-competitivo:
+**optimalidad dinámica resuelta**. Sigue sin demostrarse ni refutarse.
+
+**La simulación online (#39–#42).** Un algoritmo online que mantenga conjuntos arboralmente satisfechos implica un algoritmo de BST online con desaceleración $O(1)$. Por tanto, **si Greedy es $O(\mathrm{OPT})$,
+entonces hay un algoritmo de BST dinámicamente óptimo y además online**. La idea (#42): los nodos tocados en un acceso se guardan en un **split tree** (puede mover un nodo a la raíz y luego separarlo en dos árboles, todo en $O(1)$ amortizado).
+El BST real se organiza como un **treap de split trees**, ordenado por el nodo tocado más recientemente; cada split tree accede en $O(1)$ a su predecesor y sucesor en el árbol completo —suficiente para simular
+las decisiones de Greedy con sólo un factor constante de más trabajo.
+
+Lo que el profesor **no** da es el costo de ejecutar Greedy como programa (la escalera se puede recorrer ingenuamente en $O(n)$ por fila, ver [greedy-row](/structures/greedy-algorithm/operations/greedy-row)).
+
+## Tabla de complejidad
+
+Las dos filas de la tabla son afirmaciones condicionales (conjetura y simulación): no hay cota superior probada para Greedy.
+
+## Ejemplos
+
+Ver [examples.md](/structures/greedy-algorithm/examples): una fila, la secuencia de la clase $3, 1, 4, 2$ (donde Greedy y el árbol estático gastan lo mismo) y la secuencia bit-reversal de 8 llaves.
+
+## Comparación con estructuras relacionadas
+
+| | [Splay Tree](/structures/splay-tree) | Greedy |
+|---|---|---|
+| Qué es | Una estructura de datos concreta | Un algoritmo geométrico que se simula sobre un BST |
+| Garantía conocida | $O(\lg n)$ amortizado, estática y de conjunto de trabajo | Ninguna probada contra $\mathrm{OPT}$ |
+| Se sabe si es dinámicamente óptimo | No | No (conjetura) |
+| Online | Sí | Sí, vía split trees (si se simula) |
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/greedy-algorithm/mastery-check).

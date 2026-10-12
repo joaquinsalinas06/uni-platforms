@@ -1,0 +1,36 @@
+id: wilber-1-bound
+title: "Cota de Wilber-1 y la secuencia bit-reversal"
+type: concept
+week: week-09
+
+prerequisites: [independent-rectangles-bound, balanced-bst]
+buildsOn: [wilber-2-bound]
+usedBy: [tango-tree]
+
+complexity:
+  wilber-1:
+    worst: "Wilber-1(X, P) ≤ OPT(X)  (cota inferior, para cada árbol de referencia P)"
+    reasoning: >-
+      Se fija un árbol de referencia P con la entrada como llaves. Para cada
+      nodo y de P se cuentan las alternancias, en la secuencia de accesos,
+      entre su subárbol izquierdo y su derecho (ignorando los accesos a y o
+      fuera de su subárbol) y se suma sobre todos los y. Cada alternancia
+      agrega un rectángulo independiente más, así que la suma es una cota
+      inferior de OPT por el teorema de rectángulos independientes.
+    source: "Sem9_Dynamic_Optimality_IV.pdf#43-44"
+  bit-reversal:
+    worst: "Wilber-1 = Θ(n lg n)  ⇒  OPT = Θ(n lg n)"
+    reasoning: >-
+      En la secuencia bit-reversal sobre un árbol perfecto, las alternancias
+      en cada nodo y crecen con el tamaño de su subárbol (el profesor dice
+      que son exactamente ese tamaño): los accesos consecutivos caen en
+      mitades distintas porque el bit más alto de rev(i) es el bit menos
+      significativo de i. Sumando sobre todos los nodos, cuyos tamaños
+      suman Θ(n lg n) en un árbol perfecto, Wilber-1 = Θ(n lg n), y como
+      Wilber-1 ≤ OPT, el óptimo para esa secuencia es Θ(n lg n).
+    source: "Sem9_Dynamic_Optimality_IV.pdf#45-50"
+
+professorAnalysisStyle: "análisis geométrico"
+hasVisualization: true
+visualizationType: geometric
+placeholder: false

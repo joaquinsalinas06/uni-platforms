@@ -132,25 +132,51 @@ function FlowShape({ n, w, h, visual, idle }: { n: CanvasNode; w: number; h: num
 }
 
 /** Capa de trazos libres (CanvasPath). */
+// Animaciones de entrada de un trazo (CanvasPath.enter). Se montan con el
+// elemento: un trazo que persiste entre pasos (misma key) no se re-anima, sólo
+// interpola `d`/color. Respetan prefers-reduced-motion.
+const PATH_KEYFRAMES = `
+@keyframes vc-path-fade { from { opacity: 0 } }
+@keyframes vc-path-grow { from { opacity: 0; transform: scale(.15) } 70% { transform: scale(1.12) } }
+@keyframes vc-path-draw { from { stroke-dashoffset: 1 } to { stroke-dashoffset: 0 } }
+.vc-enter-grow { transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .vc-enter { animation: none !important; } }
+`;
+const ENTER_ANIM = {
+  fade: 'vc-path-fade 380ms ease-out both',
+  grow: 'vc-path-grow 420ms cubic-bezier(.2,.7,.3,1) both',
+  draw: 'vc-path-draw 600ms cubic-bezier(.4,0,.2,1) both',
+} as const;
+
 function PathLayer({ paths, arrowId }: { paths: CanvasPath[]; arrowId: string }) {
   return (
     <>
+      {paths.some((p) => p.enter) && <style>{PATH_KEYFRAMES}</style>}
       {paths.map((p) => {
         const color = pathColor(p);
+        // `draw` traza el contorno con dashoffset sobre una longitud normalizada;
+        // un trazo ya discontinuo no puede usarlo y cae a `fade`.
+        const enter = p.enter === 'draw' && (p.fill || p.dash) ? 'fade' : p.enter;
+        const transition = 'd 450ms cubic-bezier(.2,.7,.3,1), stroke 300ms, fill 300ms, opacity 300ms';
         return (
           <path
             key={p.id}
             d={p.d}
+            className={enter ? `vc-enter${enter === 'grow' ? ' vc-enter-grow' : ''}` : undefined}
+            pathLength={enter === 'draw' ? 1 : undefined}
             fill={p.fill ? color : 'none'}
             fillOpacity={p.fill ? (p.opacity ?? 0.16) : undefined}
             stroke={p.fill ? 'none' : color}
             strokeWidth={p.width ?? 1.5}
-            strokeDasharray={p.dash}
+            strokeDasharray={enter === 'draw' ? 1 : p.dash}
             strokeLinejoin="round"
             strokeLinecap="round"
             opacity={p.fill ? undefined : p.opacity}
             markerEnd={p.arrow ? `url(#${arrowId}-ctx)` : undefined}
-            style={{ transition: 'd 450ms cubic-bezier(.2,.7,.3,1), stroke 300ms, fill 300ms, opacity 300ms' }}
+            style={{
+              transition,
+              ...(enter ? { animation: ENTER_ANIM[enter], animationDelay: `${p.delay ?? 0}ms` } : {}),
+            }}
           />
         );
       })}

@@ -17,6 +17,7 @@ export const ALL_VISUALIZATION_TYPES = [
   'network-topology',
   'timeline',
   'memory-layout',
+  'geometric',
 ] as const;
 
 export const VISUALIZATION_TYPES = ALL_VISUALIZATION_TYPES;

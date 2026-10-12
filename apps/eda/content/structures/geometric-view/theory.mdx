@@ -1,0 +1,197 @@
+---
+kind: theory
+title: "Vista geométrica de una ejecución de BST"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+La semana pasada quedó una deuda: el [Splay Tree](/structures/splay-tree) es un candidato concreto a
+[optimalidad dinámica](/structures/dynamic-optimality), pero **no sabemos si lo es**, y tampoco tenemos
+una forma rigurosa de **comparar** candidatos entre sí. Compararlos mirando árboles es incómodo: cada
+algoritmo rota a su manera y la forma del árbol cambia en cada acceso.
+
+El profesor propone fijarse en lo único que **todo** algoritmo de BST hace, sea cual sea su estrategia:
+**tocar ciertos nodos en cierto orden** (#9). Si dibujamos eso, sin la estructura de árbol, la ejecución
+queda reducida a un **conjunto de puntos en el plano** — y un problema sobre árboles se vuelve un problema geométrico.
+
+## Intuición
+
+Piensa en un papel cuadriculado. El eje horizontal es el **espacio** (la llave) y el eje vertical es el
+**tiempo** (el número de acceso). Cada vez que el algoritmo toca una llave, pones un punto en la columna
+de esa llave, en la fila de ese momento. Una ejecución completa es un dibujo de puntos, fila por fila.
+
+Ejemplo de la clase: claves $\{1,2,3,4\}$ y accesos $3, 1, 4, 2$ (en ese orden). Lo mínimo que hay que
+dibujar es **un punto por acceso**: $(x_i, i)$.
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Un punto (x_i, i) por cada acceso: el acceso 1 es a la llave 3, el 2 a la llave 1, el 3 a la llave 4 y el 4 a la llave 2. Eje horizontal: la llave. Eje vertical: el tiempo, que crece hacia arriba.",
+      points: [
+        { id: 'a1', x: 3, t: 1 },
+        { id: 'a2', x: 1, t: 2 },
+        { id: 'a3', x: 4, t: 3 },
+        { id: 'a4', x: 2, t: 4 },
+      ],
+    },
+  ],
+}} />
+
+Pero esos cuatro puntos son sólo **lo que se pidió**. Un BST de verdad, al buscar, recorre un camino desde
+la raíz y **toca todos los nodos de ese camino**, no sólo el buscado. Eso también tiene que verse en el dibujo.
+
+## Estructura interna
+
+**Definición (#11).** Dada una secuencia de accesos $x_1, \dots, x_m$ sobre las claves $\{1, \dots, n\}$,
+se dibuja un punto $(x_i, i)$ por cada acceso. **Regla (#14):** si el acceso en el tiempo $i$ toca el nodo
+$x$, se dibuja el punto $(x, i)$ — *un punto por cada nodo visitado*, no sólo uno por acceso.
+
+El conjunto $P$ de todos esos puntos es la ejecución: su fila $i$ contiene exactamente los nodos que el
+algoritmo tocó en el acceso $i$, y los $m$ puntos de acceso pertenecen siempre a $P$ (el nodo buscado
+siempre se toca).
+
+Ejemplo completo (#16): un árbol estático posible para $\{1,2,3,4\}$ — la raíz 3, con hijo izquierdo 1
+(que tiene como hijo derecho a 2) e hijo derecho 4. Accediendo $3, 1, 4, 2$ en orden:
+
+<Visualization viz={{
+  type: 'tree',
+  steps: [
+    {
+      note: "Acceso 1, a la llave 3: es la raíz, así que sólo se toca {3}.",
+      highlight: ['n3'],
+      nodes: [
+        { id: 'n3', value: 3 },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right' },
+      ],
+    },
+    {
+      note: "Acceso 2, a la llave 1: se baja por 3 y luego a 1. Se tocan {3, 1}.",
+      highlight: ['n3', 'n1'],
+      nodes: [
+        { id: 'n3', value: 3 },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right' },
+      ],
+    },
+    {
+      note: "Acceso 3, a la llave 4: se baja por 3 y luego a 4. Se tocan {3, 4}.",
+      highlight: ['n3', 'n4'],
+      nodes: [
+        { id: 'n3', value: 3 },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right' },
+      ],
+    },
+    {
+      note: "Acceso 4, a la llave 2: se baja por 3, luego 1, luego 2. Se tocan {3, 1, 2}.",
+      highlight: ['n3', 'n1', 'n2'],
+      nodes: [
+        { id: 'n3', value: 3 },
+        { id: 'n1', value: 1, parent: 'n3', side: 'left' },
+        { id: 'n4', value: 4, parent: 'n3', side: 'right' },
+        { id: 'n2', value: 2, parent: 'n1', side: 'right' },
+      ],
+    },
+  ],
+}} />
+
+Los nodos tocados en cada acceso, puestos como puntos $(x, i)$, dan el conjunto completo. Los puntos
+rellenos son los accesos pedidos; los **anillos** son los nodos que se tocaron de paso por estar en el
+camino (#18):
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [
+    {
+      note: "Punto de partida: sólo los cuatro accesos pedidos, rellenos.",
+      points: [
+        { id: 'a1', x: 3, t: 1 },
+        { id: 'a2', x: 1, t: 2 },
+        { id: 'a3', x: 4, t: 3 },
+        { id: 'a4', x: 2, t: 4 },
+      ],
+    },
+    {
+      note: "Acceso 2 tocó también la raíz 3 (anillo en (3, 2)); el acceso 3 también la raíz (anillo en (3, 3)).",
+      points: [
+        { id: 'a1', x: 3, t: 1 },
+        { id: 'a2', x: 1, t: 2 },
+        { id: 'a3', x: 4, t: 3 },
+        { id: 'a4', x: 2, t: 4 },
+        { id: 'e1', x: 3, t: 2, kind: 'added', state: 'active' },
+        { id: 'e2', x: 3, t: 3, kind: 'added', state: 'active' },
+      ],
+    },
+    {
+      note: "El acceso 4, a la llave 2, tocó la raíz 3 y el nodo 1: dos anillos más, en (3, 4) y (1, 4). En total son 8 puntos: ése es el costo de la ejecución.",
+      points: [
+        { id: 'a1', x: 3, t: 1 },
+        { id: 'a2', x: 1, t: 2 },
+        { id: 'a3', x: 4, t: 3 },
+        { id: 'a4', x: 2, t: 4 },
+        { id: 'e1', x: 3, t: 2, kind: 'added' },
+        { id: 'e2', x: 3, t: 3, kind: 'added' },
+        { id: 'e3', x: 3, t: 4, kind: 'added', state: 'active' },
+        { id: 'e4', x: 1, t: 4, kind: 'added', state: 'active' },
+      ],
+      row: 4,
+    },
+  ],
+}} />
+
+## Operaciones
+
+Este tema no tiene operaciones: es una **representación**, no una estructura con interfaz. Lo que aporta es el
+lenguaje con el que los dos temas siguientes plantean todo lo demás: cuándo un conjunto de puntos corresponde
+a una ejecución válida de BST ([arborally-satisfied-set](/structures/arborally-satisfied-set)) y cómo
+construir uno pequeño fila por fila ([greedy-algorithm](/structures/greedy-algorithm)).
+
+## Análisis de complejidad
+
+**El costo de la ejecución es el número total de puntos** (#18). Esto no es una aproximación grosera: *nunca
+hace falta tocar un nodo más de $O(1)$ veces por búsqueda*, así que $|P|$ está dentro de un factor constante
+del costo real de ejecutar el algoritmo.
+
+El razonamiento, paso a paso:
+
+1. **Cota inferior.** Cada punto es un nodo tocado, y tocar un nodo cuesta al menos un movimiento de puntero:
+   el costo real es $\Omega(|P|)$.
+2. **Cota superior.** Como a lo sumo $O(1)$ veces por búsqueda se toca un mismo nodo, y cada toque cuesta $O(1)$
+   (puntero o rotación), el costo real es $O(|P|)$.
+3. **Consecuencia.** Contar puntos es una medida de costo válida: minimizar el costo de BST es minimizar $|P|$.
+
+Esto cierra el círculo con la pregunta de la semana 5: el costo óptimo $\mathrm{OPT}(S)$ de una secuencia
+$S$ pasa a ser *el menor número de puntos de una ejecución válida que contiene a los $m$ puntos de acceso*.
+
+## Tabla de complejidad
+
+La tabla muestra la equivalencia $\Theta(|P|)$. Una cota trivial que **no** sale del mazo pero se deduce
+de la regla: $|P| \ge m$, porque cada acceso toca al menos el nodo buscado.
+
+## Ejemplos
+
+Tres casos trazados en [examples.md](/structures/geometric-view/examples): el mínimo (un solo acceso), el de
+la clase (3, 1, 4, 2) y el límite donde un árbol estático desperdicia puntos.
+
+## Comparación con estructuras relacionadas
+
+| | Árbol dinámico ([bst-computational-model](/structures/bst-computational-model)) | Conjunto de puntos (este tema) |
+|---|---|---|
+| Qué guarda | Un árbol que rota con cada acceso | Sólo qué nodos se tocaron y cuándo |
+| Costo | Movimientos de puntero + rotaciones | Número de puntos $\|P\|$, salvo un factor constante |
+| Estructura | Forma del árbol en cada instante | Ninguna: es una rejilla $n \times m$ |
+| Sirve para | Ejecutar un algoritmo | **Comparar** algoritmos y razonar sobre $\mathrm{OPT}$ |
+
+Frente a [search-sequence-properties](/structures/search-sequence-properties): allí la secuencia se describía
+con propiedades (conjunto de trabajo, acceso secuencial...) para acotar el costo; aquí se la describe con
+puntos para acotar **cualquier** algoritmo, no sólo uno.
+
+## Prueba de dominio
+
+Ver [mastery-check.md](/structures/geometric-view/mastery-check).
