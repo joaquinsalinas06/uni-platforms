@@ -13,7 +13,9 @@ title: "Formulario de Referencia Rápida — Redes de Computadoras"
 | $d$, $s$ | Distancia y velocidad de propagación | m, m/s | Semana 1 |
 | $RTT_0$ = $RTT_s$ | RTT cliente $\leftrightarrow$ servidor del objeto | s | Semana 2 §0 |
 | $RTT_i$ | RTT al $i$-ésimo servidor DNS | s | Semana 3 §1 |
-| $S = \sum_{i=1}^{n} RTT_i$ | **Tiempo total de resolución DNS** (no un tamaño) | s | Semana 3 §1 |
+| $S = \sum_{i=1}^{n} RTT_i$ | **Suma de los RTT a los servidores DNS consultados** (no incluye $RTT_{\text{local}}$; no es un tamaño). Vale 0 si no hay consultas | s | Semana 3 §1 |
+| $RTT_{\text{local}}$ | RTT cliente $\leftrightarrow$ DNS local. Solo se usa si el enunciado lo da | s | Semana 3 §1 |
+| $T_{\text{DNS}}$ | Tiempo total de DNS $= RTT_{\text{local}} + S$ (cada término se omite si no aplica) | s | Semana 3 §1 |
 | $N$, $k$ | Nº de objetos referenciados, nº de conexiones paralelas | (adimensional) | Semana 2 |
 
 > **Cuidado con la letra $S$:** en la fórmula del curso (Semana 2 y 3) $S$ es el **tiempo DNS**. Algunos enunciados (parcial 2025-II: "$S = 8$ MB", parcial 2026-I: "$S = 2$ Mbits") usan la misma letra para el **tamaño del objeto**. En este formulario el tamaño siempre es $L$: al resolver, reemplazar $S_{\text{enunciado}} \to L$ y no mezclar ambos.
@@ -85,7 +87,7 @@ El enlace con el menor ancho de banda constituye el **cuello de botella** (*bott
 |---|---|---|
 | $RTT_0$ o $RTT_s$ | RTT entre el cliente y el **servidor que tiene el objeto** (mismo valor, distinto nombre según el examen) | HTTP, SMTP |
 | $RTT_1, RTT_2, \dots, RTT_n$ | RTT hacia cada servidor **DNS** consultado en orden (Root, TLD, autoritativo, ...) | DNS |
-| $S = \sum_{i=1}^{n} RTT_i$ | Tiempo total de resolución DNS (se explica en Semana 3 §1) | todas las fórmulas con DNS |
+| $S = \sum_{i=1}^{n} RTT_i$ | Suma de los RTT a los servidores DNS (se explica en Semana 3 §1); sin $RTT_{\text{local}}$ | todas las fórmulas con DNS |
 | $RTT_{\text{local}}$ | RTT cliente $\leftrightarrow$ resolver DNS local (si el enunciado lo da, se suma aparte) | Ejercicios DNS |
 
 - **Máximo índice:** la fórmula es general hasta $RTT_n$ ($n$ servidores DNS). En los parciales el máximo concreto es $RTT_3$ (2025-II: Root, TLD, autoritativo); el 2026-I usa solo $RTT_1, RTT_2$.
@@ -135,10 +137,22 @@ Sea $\beta$ la tasa de llegada de peticiones (objetos/s), $L$ el tamaño medio d
 ## Semana 3 — Sistema de Nombres de Dominio (DNS)
 
 ### 1. Latencia de Resolución DNS
-- **Resolución Iterativa Secuencial** (consultando Root, TLD y Autoritativo; $n$ servidores en general, $n=3$ en el caso típico):
-  $$T_{\text{DNS}} = S = \sum_{i=1}^{n} RTT_i = RTT_1 + RTT_2 + \dots + RTT_n$$
-- **Con caché parcial**: se omiten los $RTT_i$ de los niveles ya conocidos (p. ej. solo el autoritativo: $T_{\text{DNS}} = RTT_3$). Ahorro $= T_{\text{sin caché}} - T_{\text{con caché}}$.
-- **Si el enunciado da el RTT al resolver local** ($RTT_{\text{local}}$): $T_{\text{DNS}} = RTT_{\text{local}} + \sum_{i=1}^{n} RTT_i$.
+- **$S$ (una sola definición):** suma de los RTT a los servidores DNS que **sí se consultan**, en orden (Root, TLD, autoritativo; $n$ en general, $n=3$ en el caso típico):
+  $$S = \sum_{i=1}^{n} RTT_i = RTT_1 + RTT_2 + \dots + RTT_n$$
+  El enunciado puede darte los $RTT_i$ sueltos (los sumas tú) o $S$ ya sumado.
+- **$T_{\text{DNS}}$ (tiempo total de DNS):** además de $S$, puede haber un viaje del cliente al DNS local:
+  $$T_{\text{DNS}} = RTT_{\text{local}} + S$$
+  Cada término se incluye **solo si el enunciado lo da o lo implica**:
+
+  | Caso | $RTT_{\text{local}}$ | $S$ | $T_{\text{DNS}}$ |
+  |---|---|---|---|
+  | Sin DNS (IP dada o nombre ya en el equipo) | no | 0 | $0$ |
+  | El DNS local ya tiene la respuesta en caché | sí | 0 | $RTT_{\text{local}}$ |
+  | Consultas DNS y el enunciado no da el RTT al local | no | $\sum RTT_i$ | $S$ |
+  | Consultas DNS y el enunciado da el RTT al local | sí | $\sum RTT_i$ | $RTT_{\text{local}} + S$ |
+
+- **Con caché parcial**: solo se suman los $RTT_i$ de las consultas que aún se hacen (p. ej. solo el autoritativo: $S = RTT_3$). Ahorro $= T_{\text{sin caché}} - T_{\text{con caché}}$.
+- **$RTT_0$ ($=RTT_s$) no es parte de $S$ ni de $T_{\text{DNS}}$:** es el RTT al servidor web y va en la parte de HTTP.
 - **Tiempo Total de Acceso Web (DNS + HTTP Persistente)**:
   $$T_{\text{total}} = T_{\text{DNS}} + \underbrace{2 \cdot RTT_s}_{\text{Handshake TCP + Request HTTP}} + \frac{L_{\text{objeto}}}{R}$$
   Ejemplo parcial 2025-II ($L = 8\ \text{MB} = 64\times10^6$ bits, $R = 4\times10^6$ bps): $0{,}240 + 2(0{,}070) + \frac{64\times10^6}{4\times10^6} = 16{,}38\ \text{s}$.
@@ -256,7 +270,7 @@ Todo en bits, bps y segundos (ver [Símbolos y Unidad Base](#símbolos-y-unidad-
 | $Q$ enlaces, 1 paquete | $Q\,(L/R + d/s)$ |
 | $P$ paquetes en tubería | $(Q+P-1)\,L/R + Q\,d/s$ |
 | Throughput | $\min\{R_1,\dots,R_k\}$ |
-| DNS sin caché | $S = RTT_{\text{local}} + \sum_{i=1}^{n} RTT_i$ (omitir $RTT_{\text{local}}$ si no se da); ahorro $= T_{\text{sin}} - T_{\text{con}}$ |
+| DNS | $S = \sum_{i=1}^{n} RTT_i$ (0 si hay caché); $T_{\text{DNS}} = RTT_{\text{local}} + S$ (omitir $RTT_{\text{local}}$ si no se da); ahorro $= T_{\text{sin}} - T_{\text{con}}$ |
 | HTTP no persistente | $S + 2\,RTT_0\,(1+N)$ |
 | HTTP no persistente, $k$ paralelas | $S + 2\,RTT_0 + \lceil N/k \rceil\, 2\,RTT_0$ |
 | HTTP persistente | $S + 2\,RTT_0 + N\,RTT_0$ |

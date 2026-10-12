@@ -18,7 +18,6 @@
 // (seguir k punteros desde la raíz) — el caso límite descrito en
 // examples.md.
 
-#include <cstdint>
 #include <iostream>
 #include <vector>
 

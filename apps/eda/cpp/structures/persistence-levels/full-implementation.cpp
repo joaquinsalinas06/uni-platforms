@@ -26,8 +26,7 @@
 // es la REGLA DE NIVEL (qué escritura es legal en cada uno), no el costo.
 
 #include <iostream>
-#include <optional>
-#include <stdexcept>
+#include <string>
 #include <vector>
 
 using namespace std;
@@ -39,7 +38,7 @@ using namespace std;
 class PartialList {
  public:
   explicit PartialList(vector<int> initial) {
-    versions_.push_back(std::move(initial));
+    versions_.push_back(initial);
   }
 
   // Versión 0 = estado inicial. Cada set() exitoso agrega una versión nueva.
@@ -49,20 +48,22 @@ class PartialList {
 
   const vector<int>& get(int version) const {
     if (version < 0 || version >= (int)(versions_.size()))
-      throw std::out_of_range("versión inexistente");
+      throw string("versión inexistente");
     return versions_[version];
   }
 
   // Legal SOLO si version == latest(): "solo se puede actualizar la versión
   // más reciente". Escribir sobre cualquier otra versión es la operación
   // que persistencia parcial prohíbe por definición.
-  int set(int version, std::size_t index, int value) {
+  int set(int version, size_t index, int value) {
     if (version != latest())
-      throw std::logic_error(
+      throw string(
           "persistencia parcial: solo se puede escribir sobre la version mas reciente");
+    if (index >= versions_[version].size())
+      throw string("índice fuera de rango");
     vector<int> next = versions_[version];
-    next.at(index) = value;
-    versions_.push_back(std::move(next));
+    next[index] = value;
+    versions_.push_back(next);
     return latest();
   }
 
@@ -77,13 +78,13 @@ class PartialList {
 class TotalList {
  public:
   explicit TotalList(vector<int> initial) {
-    versions_.push_back(std::move(initial));
+    versions_.push_back(initial);
     parent_.push_back(-1);  // v0 no tiene padre
   }
 
   const vector<int>& get(int version) const {
     if (version < 0 || version >= (int)(versions_.size()))
-      throw std::out_of_range("versión inexistente");
+      throw string("versión inexistente");
     return versions_[version];
   }
 
@@ -94,10 +95,12 @@ class TotalList {
   // Legal sobre cualquier version existente: crea una hija nueva de ella.
   // No hay restricción de "más reciente" — eso es justo lo que distingue
   // total de parcial.
-  int set(int version, std::size_t index, int value) {
+  int set(int version, size_t index, int value) {
     vector<int> next = get(version);  // valida el rango
-    next.at(index) = value;
-    versions_.push_back(std::move(next));
+    if (index >= next.size())
+      throw string("índice fuera de rango");
+    next[index] = value;
+    versions_.push_back(next);
     parent_.push_back(version);
     return (int)(versions_.size()) - 1;
   }
@@ -135,7 +138,7 @@ int main() {
     bool rechazado = false;
     try {
       lst.set(v0, 2, 5);
-    } catch (const std::logic_error&) {
+    } catch (const string&) {
       rechazado = true;
     }
     if (!(rechazado))
