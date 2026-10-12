@@ -1,0 +1,284 @@
+---
+title: "PD4 — 2025-I"
+category: pd4
+categoryLabel: "PD4"
+order: 1
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Sobre esta resolución.** El PDF de la PD04 2025-I trae solución del profesor **sólo para el ejercicio 2** (texto). Los ejercicios 1 y 3 están **resueltos aquí con código propio**,
+> compilado y medido en un Apple M5 (4 núcleos de rendimiento + 6 de eficiencia, GCC 16, `-O2`); los tiempos son de **esta** máquina y los valores concretos no son los del profesor.
+> Los archivos completos están en `cpp/practica/pd4_qsort_tasks.cpp`, `pd4_postorden.cpp` y `pd4_dag_tasks.cpp`.
+
+## Ejercicio 1 — Escalabilidad de Quicksort (3 pts)
+
+Paralelice con OpenMP el código adjunto (`qsort.cpp`), sabiendo que la función recursiva `qs()` puede ejecutarse en **tareas** dentro de un constructor `parallel`. Valores iniciales aleatorios entre 0 y 99.
+(a) Paralelizar; (b) `#ifdef` para ejecutar secuencial o paralelo desde el mismo código; (c) graficar tiempos para $N = 10^6$ y $p = 1, 2, 4, 8, \dots$; (d) comparar teoría con experimento; (e) speedup y eficiencia analíticos en función de $n$ y $p$: ¿Quicksort es escalable?
+
+### Solución
+
+**(a)–(b) Código.** La partición es **en 3 vías** (menores | iguales | mayores). No es un capricho: con valores en $[0, 99]$ y $n = 10^6$ hay unos $10^4$ duplicados por valor, y una partición de Lomuto de 2 vías degenera a $O(n^2)$ con tantos iguales.
+Se crea una `task` por la mitad menor (si es lo bastante grande) y el mismo hilo sigue con la otra; las tareas pequeñas se ejecutan secuencialmente para no pagar el costo de crear tareas.
+
+```cpp
+static void qs(int *a, long lo, long hi, long cutoff) {
+  while (hi - lo > 1) {
+    int pivot = a[lo + (hi - lo) / 2];
+    long lt = lo, i = lo, gt = hi;           // [lo,lt) < p, [lt,i) == p, [gt,hi) > p
+    while (i < gt) {
+      if (a[i] < pivot)      std::swap(a[i++], a[lt++]);
+      else if (a[i] > pivot) std::swap(a[i], a[--gt]);
+      else                   i++;
+    }
+    if (lt - lo > cutoff) {
+#pragma omp task firstprivate(a, lo, lt, cutoff)
+      qs(a, lo, lt, cutoff);
+    } else {
+      qs(a, lo, lt, cutoff);
+    }
+    lo = gt;                                  // el mismo hilo continúa con la parte mayor
+  }
+}
+
+#ifdef _OPENMP
+  double t0 = omp_get_wtime();
+#pragma omp parallel
+#pragma omp single
+  qs(a.data(), 0, n, 10000);                  // la barrera final del parallel espera todas las tareas
+  double t = omp_get_wtime() - t0;
+#else
+  qs(a.data(), 0, n, 10000);
+#endif
+```
+
+`g++ -O2 -fopenmp pd4_qsort_tasks.cpp` produce el paralelo y `g++ -O2 pd4_qsort_tasks.cpp` el secuencial (los `pragma` se ignoran). Esto es lo que se pide en (b) con `#ifdef _OPENMP`; un `Makefile` basta con dos objetivos que cambien la bandera `-fopenmp`.
+
+**(c) Tiempos** ($N = 10^6$, mediana de 7 corridas, sin imprimir los arreglos):
+
+| $p$ | $T_p$ (ms) | Speedup $S = T_1/T_p$ | Eficiencia $E = S/p$ |
+|---|---|---|---|
+| 1 | 15.4 | 1.00 | 1.00 |
+| 2 | 9.0 | 1.71 | 0.86 |
+| 4 | 7.1 | 2.17 | 0.54 |
+| 8 | 7.1 | 2.17 | 0.27 |
+
+**(d)–(e) Teoría y análisis.** Con $n$ elementos y $k$ valores distintos, la partición en 3 vías hace un trabajo total $W = T_1 = \Theta(n \log k)$ (con claves distintas, $\Theta(n \log n)$).
+Pero la **partición de cada nivel es secuencial**: la raíz cuesta $n$, sus dos tareas $\approx n/2$ cada una, etc. El camino crítico es el de **una sola** rama,
+
+$$T_\infty \approx n + \tfrac{n}{2} + \tfrac{n}{4} + \cdots \le 2n = \Theta(n).$$
+
+Por Brent ([omp-tasks-icv](/topics/omp-tasks-icv)): $T_p \le \dfrac{n \log n}{p} + 2n$, y
+
+$$S(n,p) = \frac{n\log n}{\frac{n\log n}{p} + 2n} = \frac{p \log n}{\log n + 2p}, \qquad E(n,p) = \frac{\log n}{\log n + 2p}.$$
+
+Para $p$ fijo, $S \to p$ cuando $n \to \infty$ (más lento: crece como $\log n$), pero para $n$ fijo **$S$ se satura** en $\log n / 2$: con $n = 10^6$ y claves distintas sería $\log_2 n / 2 \approx 10$, y con sólo $k = 100$ valores distintos
+$\log_2 100 / 2 \approx 3.3$.
+Mantener $E$ constante exige $\log n \propto p$, es decir $n = 2^{\Theta(p)}$: la **función de isoeficiencia es exponencial**.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "Speedup medido de Quicksort con tasks (n = 10^6; eje x: p, eje y: S). Sube con p = 2 y se aplana a partir de p = 4: coincide con el techo log k / 2 ≈ 3.3 del modelo (menos, por el costo de las tareas y por tener sólo 4 núcleos de alto rendimiento en esta máquina).",
+      series: [
+        { id: 'medido', label: 'S medido', points: [[1, 1], [2, 1.71], [4, 2.17], [8, 2.17]] },
+        { id: 'ideal', label: 'ideal S = p', points: [[1, 1], [2, 2], [4, 4], [8, 8]] },
+      ],
+      params: {},
+    },
+    {
+      note: "Modelo S(n,p) = p·log2(k) / (log2(k) + 2p) con k = 100: el techo es ≈ 3.3. El experimento se mantiene por debajo y se satura igual — el cuello de botella es la partición secuencial de los primeros niveles.",
+      series: [
+        { id: 'medido', label: 'S medido', points: [[1, 1], [2, 1.71], [4, 2.17], [8, 2.17]] },
+        { id: 'modelo', label: 'modelo S(p)', points: [[1, 0.77], [2, 1.25], [4, 1.81], [8, 2.35]] },
+      ],
+      highlight: ['modelo'],
+      params: {},
+    },
+  ],
+}} />
+
+*Nota*: el modelo de la segunda curva es $T_1 / (T_1/p + T_\infty)$ con $T_1 = n\log_2 k$ y $T_\infty = 2n$: un **mínimo garantizado** del speedup (Brent acota el tiempo por arriba). Por eso queda por debajo del experimento para $p \le 4$ ($S(1) < 1$ muestra la holgura de la cota) y apenas por encima en $p = 8$, donde pesan el costo de las tareas y la heterogeneidad de núcleos. Lo que se debe comparar es la **forma** y el **techo** $\log_2 k / 2 \approx 3.3$.
+
+**¿Se demuestra que Quicksort es escalable?** Sólo débilmente: es **escalable en un régimen limitado** ($p \ll \log n$). Con la partición secuencial, la eficiencia cae al crecer $p$ salvo que $n$ crezca exponencialmente.
+Para escalar de verdad hay que paralelizar también la partición (*nota de apoyo*: con una partición paralela basada en prefix-sum, [prefix-sum-recurrences](/topics/prefix-sum-recurrences), $T_\infty$ baja a $O(\log^2 n)$).
+
+## Ejercicio 2 — OMP, `task` (2 pts)
+
+Complete y paralelice con OMP la secuencia de funciones; solo el **primer argumento** de las funciones `calculo_*` se modifica. Dibuje el DAG. Utilice `sections` y `tasks` y compare ventajas y desventajas.
+
+```cpp
+min_x = minimo(x, n);
+max_x = maximo(x, n);
+calculo_z(z, min_x, max_x, n);
+calculo_y(y, x, n);
+calculo_x(x, y, n);
+calculo_v(v, z, x);
+```
+
+### Solución
+
+**DAG.** Dependencias de datos (RAW) y la de anti-dependencia (WAR) por la que `calculo_x` **escribe** `x`, que `minimo`, `maximo` y `calculo_y` **leen** (y por eso `calculo_x` debe esperar a esas tres):
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Tres tareas sin predecesoras: minimo (lee x), maximo (lee x) y calc_y (lee x, escribe y). Sólo leen x: no hay nada que esperar.",
+      nodes: [
+        { id: 'min', value: 'minimo', parent: null, state: 'active' },
+        { id: 'max', value: 'maximo', parent: null, state: 'active' },
+        { id: 'y', value: 'calc_y', parent: null, state: 'active' },
+      ],
+      links: [
+      ],
+    },
+    {
+      note: "calc_z necesita min_x y max_x (RAW). calc_x necesita y (RAW) y, además, debe esperar a que minimo, maximo y calc_y terminen de LEER x antes de modificarlo (WAR, aristas punteadas).",
+      nodes: [
+        { id: 'min', value: 'minimo', parent: null },
+        { id: 'max', value: 'maximo', parent: null },
+        { id: 'y', value: 'calc_y', parent: null },
+        { id: 'z', value: 'calc_z', parent: 'min', state: 'active' },
+        { id: 'x', value: 'calc_x', parent: 'y', state: 'active' },
+      ],
+      links: [
+        { from: 'min', to: 'z' },
+        { from: 'max', to: 'z' },
+        { from: 'y', to: 'x' },
+        { from: 'min', to: 'x', kind: 'shared' },
+        { from: 'max', to: 'x', kind: 'shared' },
+      ],
+    },
+    {
+      note: "calc_v lee z (de calc_z) y x (de calc_x): es la tarea final. Camino crítico: tres tareas (por ejemplo minimo, calc_x, calc_v).",
+      nodes: [
+        { id: 'min', value: 'minimo', parent: null },
+        { id: 'max', value: 'maximo', parent: null },
+        { id: 'y', value: 'calc_y', parent: null },
+        { id: 'z', value: 'calc_z', parent: 'min' },
+        { id: 'x', value: 'calc_x', parent: 'y' },
+        { id: 'v', value: 'calc_v', parent: 'z', state: 'answer' },
+      ],
+      links: [
+        { from: 'min', to: 'z' },
+        { from: 'max', to: 'z' },
+        { from: 'y', to: 'x' },
+        { from: 'min', to: 'x', kind: 'shared' },
+        { from: 'max', to: 'x', kind: 'shared' },
+        { from: 'z', to: 'v' },
+        { from: 'x', to: 'v' },
+      ],
+    },
+  ],
+}} />
+
+**Con `task` + `depend`** — cada dependencia se declara por variable y el runtime respeta exactamente eso:
+
+```cpp
+#pragma omp parallel
+#pragma omp single
+{
+#pragma omp task depend(in : x) depend(out : mn)
+  mn = minimo(x);
+#pragma omp task depend(in : x) depend(out : mx)
+  mx = maximo(x);
+#pragma omp task depend(in : mn, mx) depend(out : z)
+  calculo_z(z, mn, mx);
+#pragma omp task depend(in : x) depend(out : y)
+  calculo_y(y, x);
+#pragma omp task depend(in : y) depend(inout : x)   // escribe x: espera las lecturas previas
+  calculo_x(x, y);
+#pragma omp task depend(in : z, x) depend(out : v)
+  calculo_v(v, z, x);
+}
+```
+
+**Con `sections`** — hay que agrupar a mano por "niveles" y entre grupos hay una **barrera implícita**:
+
+```cpp
+#pragma omp parallel
+{
+#pragma omp sections                 // 1.er bloque: todo lo que LEE x
+  {
+#pragma omp section
+    mn = minimo(x);
+#pragma omp section
+    mx = maximo(x);
+#pragma omp section
+    calculo_y(y, x);
+  }                                   // barrera: espera las 3, aunque calculo_z sólo necesite mn y mx
+#pragma omp sections                 // 2.º bloque
+  {
+#pragma omp section
+    calculo_z(z, mn, mx);
+#pragma omp section
+    calculo_x(x, y);                  // ya nadie lee x: es seguro escribirlo
+  }
+#pragma omp single
+  calculo_v(v, z, x);
+}
+```
+
+Ambas versiones dan el mismo resultado (se verificó con vectores de 1 000 elementos, `pd4_dag_tasks.cpp`).
+
+**Comparación (solución del profesor).**
+
+- En este caso, `sections` es **comparable** con `tasks` en tiempo de ejecución (**no hay muchas tareas en paralelo**).
+- `sections` es **más simple de programar**, pero `tasks` es **más específica y clara** en cuanto a las dependencias (lista de variables).
+- Además, la **barrera implícita** de `sections` hace esperar a todas las tareas del bloque aunque no tengan dependencia con las siguientes; **`tasks` evita eso**.
+
+## Ejercicio 3 — Post-orden (2 pts)
+
+(a) Paralelice con `omp task` el recorrido **post-orden** de un árbol binario de $n$ nodos (`tree_postor_sec.cpp`); (b) use `#ifdef` para tener versión secuencial o paralela según compilación, con un `Makefile`; (c) mida escalabilidad con un número creciente de nodos.
+
+### Solución
+
+El post-orden visita **primero los dos hijos y después el nodo**. La paralelización natural: los dos hijos son independientes (dos tareas) y el nodo debe esperar a **ambos** — un `taskwait` antes de visitarlo.
+Por debajo de una profundidad el recorrido pasa a secuencial para no crear millones de tareas diminutas:
+
+```cpp
+void postorden(Nodo *x, int prof) {
+  if (!x) return;
+#ifdef _OPENMP
+  if (prof > 0) {
+#pragma omp task shared(x) firstprivate(prof)
+    postorden(x->izq, prof - 1);
+#pragma omp task shared(x) firstprivate(prof)
+    postorden(x->der, prof - 1);
+#pragma omp taskwait                  // los hijos terminan ANTES de visitar el nodo
+  } else
+#endif
+  { postorden(x->izq, 0); postorden(x->der, 0); }
+  x->res = visitar(x);
+}
+#ifdef _OPENMP
+#pragma omp parallel
+#pragma omp single
+  postorden(raiz, 12);
+#else
+  postorden(raiz, 0);
+#endif
+```
+
+`Makefile` mínimo:
+
+```make
+sec: pd4_postorden.cpp
+	g++ -O2 -o postorden_sec pd4_postorden.cpp
+par: pd4_postorden.cpp
+	g++ -O2 -fopenmp -o postorden_par pd4_postorden.cpp
+```
+
+**(c) Escalabilidad.** Árbol balanceado de $n = 10^6$ nodos con ~1 µs de trabajo por nodo (mediana de 5):
+
+| $p$ | $T_p$ (ms) | $S$ | $E$ |
+|---|---|---|---|
+| 1 | 85.0 | 1.00 | 1.00 |
+| 2 | 43.9 | 1.94 | 0.97 |
+| 4 | 29.8 | 2.85 | 0.71 |
+| 8 | 19.4 | 4.38 | 0.55 |
+
+A diferencia de Quicksort, aquí **no hay un paso secuencial por nivel**: la carga de cada nodo se hace *después* de los hijos y el árbol balanceado ofrece paralelismo $W/T_\infty = n/\log n$, mucho mayor que $p$. El speedup sub-lineal viene del costo de crear tareas y de que la máquina tiene sólo 4 núcleos de alto rendimiento.
+Para medir con más nodos, `./po_par n` con $n = 2^{18}, 2^{20}, 2^{22}$ y comprobar que $T_p$ crece **linealmente** con $n$ (el recorrido es $\Theta(n)$). Resultado de los dos modos coincide (`raiz->res` idéntico en secuencial y paralelo).

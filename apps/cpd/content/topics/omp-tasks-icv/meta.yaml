@@ -1,0 +1,35 @@
+id: omp-tasks-icv
+title: "Tareas en OpenMP: task, depend y variables de control interno"
+type: algorithm
+unit: u4
+
+prerequisites: [omp-intro-parallel, omp-sync-data-scoping, dag-cost-model]
+buildsOn: [pram-models]
+usedBy: [omp-memory-model]
+
+complexity:
+  brent-tareas:
+    worst: "T_p \\le \\frac{T_1}{p} + T_\\infty"
+    reasoning: >-
+      Un programa con tasks y depend define un DAG: cada task es un nodo y
+      cada depend una arista. El teorema de Brent acota el tiempo de un
+      planificador voraz (un hilo libre siempre toma una task lista): el
+      trabajo total T_1 se reparte entre p hilos (T_1/p) y el camino crítico
+      T_inf nunca puede acortarse. En la PD04 2026-I (ejercicio 2) con
+      T_inf = O(n log^2 n) y trabajo O(n^2) resulta T_p = O(n^2/p + n log^2 n + n).
+    source: "PD04 2026-I, ejercicio 2.3"
+  overhead-sincronizacion:
+    worst: "O(p)"
+    reasoning: >-
+      Cada región parallel requiere crear o activar hilos, repartir trabajo
+      y sincronizar al final; se modela como una latencia constante de
+      sincronización que crece con el número de hilos. Las tasks agregan,
+      además, un costo por task creada y por cada punto de espera
+      (taskwait/taskgroup), por lo que las tasks deben ser lo bastante
+      gruesas para amortizarlo.
+    source: "PD04 2026-I, ejercicio 3.3"
+
+professorAnalysisStyle: brent-theorem
+hasVisualization: true
+visualizationType: dag
+placeholder: false

@@ -1,0 +1,249 @@
+---
+title: "PD4 — 2025-II (S01)"
+category: pd4
+categoryLabel: "PD4"
+order: 2
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Sobre esta resolución.** El PDF de esta PD **no incluye solución**; la resolución es **propia**: código compilado y medido en un Apple M5 (GCC 16, `-O2`, 4 núcleos de rendimiento + 6 de eficiencia), con
+> los archivos completos en `cpp/practica/pd4_gradiente.cpp`, `pd4_broken_triangle.cpp` y `pd4_dag_tasks.cpp`. Los tiempos son de esta máquina.
+
+## Ejercicio 1 — Gradiente logístico en paralelo (2.5 pts)
+
+La regresión logística binaria con $X \in \mathbb{R}^{n \times d}$, $y \in \{0,1\}^n$ y tasa de aprendizaje $\eta$ acumula el gradiente
+
+$$\nabla_w L(w) = \frac{1}{n}\sum_{i=1}^{n}(p_i - y_i)\,x_i, \qquad p_i = \sigma(w^\top x_i)$$
+
+y actualiza $w \leftarrow w - \eta \nabla_w L$. Paralelice `ejercicio01_sec.cpp` con OMP decidiendo primero **qué bucle paralelizar** ($n \gg d$): (1.1) con `reduction` (1 pt), (1.2) con `critical` (1 pt), (1.3) con `atomic` (0.5 pt). Compare tiempos y verifique contra la versión secuencial.
+
+### Solución
+
+**Qué bucle.** El bucle externo recorre las $n$ muestras (costo $O(d)$ por iteración); los internos sólo recorren $d$ componentes. Con $n \gg d$ **se paraleliza el bucle de muestras**: da $n$ iteraciones independientes para repartir. Paralelizar el bucle sobre $j$ ($d$ iteraciones, de unas pocas decenas) dejaría hilos ociosos y repetiría la creación de la región $n$ veces.
+La dependencia entre iteraciones es **sólo el acumulador** `grad[j]` (y `loss`): es una **reducción sobre un arreglo**, con $d$ elementos.
+
+**1.1 `reduction`.** La reducción de arreglos (`grad[0:d]`) es OpenMP 4.5. Cada hilo recibe un `grad` privado de $d$ elementos, inicializado en 0, y se suman al final ($O(d \log p)$):
+
+```cpp
+#pragma omp parallel for reduction(+ : gr[0 : d])
+for (int i = 0; i < n; i++) {
+  double e = err(i);                       // p_i - y_i  (usa z = w·x_i, O(d))
+  for (int j = 0; j < d; j++) gr[j] += e * X[i*d + j];
+}
+```
+
+**1.2 `critical`.** Hay dos maneras, con costos muy distintos:
+
+```cpp
+// (a) Ingenuo: un critical por muestra → n entradas, la región queda serializada
+#pragma omp parallel for
+for (int i = 0; i < n; i++) {
+  double e = err(i);
+#pragma omp critical
+  for (int j = 0; j < d; j++) g[j] += e * X[i*d + j];
+}
+
+// (b) Recomendado: gradiente LOCAL por hilo y UN critical por hilo (p entradas)
+#pragma omp parallel
+{
+  vector<double> loc(d, 0);
+#pragma omp for
+  for (int i = 0; i < n; i++) { double e = err(i); for (int j = 0; j < d; j++) loc[j] += e * X[i*d + j]; }
+#pragma omp critical
+  for (int j = 0; j < d; j++) g[j] += loc[j];
+}
+```
+
+**1.3 `atomic`.** Cada actualización `g[j] += ...` es una operación atómica sobre un elemento compartido:
+
+```cpp
+#pragma omp parallel for
+for (int i = 0; i < n; i++) {
+  double e = err(i);
+  for (int j = 0; j < d; j++) {
+#pragma omp atomic
+    g[j] += e * X[i*d + j];
+  }
+}
+```
+
+**Comparación** ($n = 2 \times 10^6$, $d = 16$; segundos, una corrida por celda; el secuencial tardó 0.034 s en todas):
+
+| $p$ | `reduction` | `critical` (b: local) | `critical` (a: ingenuo) | `atomic` |
+|---|---|---|---|---|
+| 1 | 0.030 | 0.030 | 0.041 | 0.055 |
+| 2 | 0.016 | 0.017 | 0.085 | 0.162 |
+| 4 | 0.008 | 0.011 | 0.110 | 0.228 |
+| 8 | 0.007 | 0.007 | 0.134 | **1.430** |
+
+**Lectura.**
+
+- `reduction` y `critical` local escalan igual (speedup ≈ 5 con $p = 8$ en esta máquina): sólo se sincroniza **una vez por hilo**.
+- `critical` ingenuo (a) y `atomic` **empeoran al aumentar $p$**: son $n$ (o $n \cdot d$) entradas serializadas en la misma dirección, con contención que crece con el número de hilos. Con $p = 8$ `atomic` es **más de 40 veces más lento** que el secuencial.
+- Moraleja de la clase: **acumular local y combinar una vez** ([omp-sync-data-scoping](/topics/omp-sync-data-scoping)); el costo de sincronización de `reduction` es $O(\log p)$ por componente, el de `critical`/`atomic` sobre un recurso compartido es $O(M)$ con $M$ accesos en competencia.
+
+**Validez.** Las tres versiones coinciden con el secuencial salvo por el orden de las sumas en punto flotante: la diferencia acumulada es $\approx 10^{-9}$ (por la no asociatividad de la suma en `double`), así que **se compara con tolerancia**, no con `==`.
+
+## Ejercicio 2 — Broken triangle (2 pts)
+
+Dos puntos aleatorios en un intervalo lo dividen en tres segmentos. (a) ¿Cuál es la probabilidad de que formen un triángulo? (b) ¿Cuál es la probabilidad de que ese triángulo sea obtuso? Resuelva con **Monte Carlo en paralelo**. Un triángulo existe si $\max(s_1,s_2,s_3) < 0.5$; es obtuso si $2 s_{max}^2 > s_1^2 + s_2^2 + s_3^2$.
+
+(1) Paralelice `ejercicio02_sec.cpp` con OMP, ejecute el secuencial, responda a) y b) y compruebe que paralelo y secuencial coinciden (1 pt). (2) Describa las ventajas de la implementación según lo discutido en clase, el **overhead** y si el algoritmo aún puede optimizarse (1 pt).
+
+### Solución
+
+**(1) Código.** Cada muestra es independiente (*embarrassingly parallel*): los hilos sólo comparten los dos contadores, que se resuelven con `reduction(+)`. Cada hilo usa **su propio generador** con semilla distinta:
+
+```cpp
+long n_tri = 0, n_obt = 0;
+#pragma omp parallel reduction(+ : n_tri, n_obt)
+{
+  std::mt19937_64 gen(12345 + 7919ULL * omp_get_thread_num());   // un generador por hilo
+  std::uniform_real_distribution<double> U(0.0, 1.0);
+#pragma omp for schedule(static)
+  for (long i = 0; i < N; i++) {
+    double u = U(gen), v = U(gen);
+    if (u > v) std::swap(u, v);
+    double s1 = u, s2 = v - u, s3 = 1.0 - v;
+    double smax = std::max({s1, s2, s3});
+    if (smax < 0.5) {
+      n_tri++;
+      if (2.0 * smax * smax > s1*s1 + s2*s2 + s3*s3) n_obt++;
+    }
+  }
+}
+```
+
+**Resultados** ($N = 10^8$):
+
+| | Probabilidad |
+|---|---|
+| a) $P(\text{triángulo})$ | **0.2500** (simulado 0.24997; teórico $1/4$) |
+| b) $P(\text{obtuso} \mid \text{triángulo})$ | **0.6823** (simulado 0.68229; teórico $9 - 12\ln 2 \approx 0.68223$) |
+| $P(\text{obtuso})$ sobre todas las rupturas | 0.1706 ($= (9-12\ln 2)/4$) |
+
+*Nota de apoyo*: los valores teóricos son resultados clásicos del problema de la varilla rota; la PD sólo pide las estimaciones. Con $N = 10^8$ el error estándar es $\sqrt{p(1-p)/N} \approx 4 \times 10^{-5}$.
+**Paralelo vs secuencial:** al usar generadores distintos las secuencias no son idénticas, así que no coinciden **bit a bit**: se comprueba que coinciden **dentro del error estadístico** ($\sim 10^{-4}$) y que el número de muestras procesadas es $N$ en ambos.
+
+Escalabilidad ($N = 10^8$; segundos, `real`):
+
+| $p$ | $T_p$ | $S$ | $E$ |
+|---|---|---|---|
+| 1 | 1.47 | 1.00 | 1.00 |
+| 2 | 0.77 | 1.91 | 0.95 |
+| 4 | 0.39 | 3.77 | 0.94 |
+| 8 | 0.24 | 6.13 | 0.77 |
+
+**(2) Ventajas, overhead y optimización.**
+
+- **Ventajas.** Las muestras son independientes: no hay comunicación ni dependencias entre iteraciones (paralelismo de datos casi perfecto). El único recurso compartido son los contadores, y con `reduction` cada hilo trabaja con **copias privadas** y se suman una sola vez: no hay `critical` ni `atomic` por muestra. `schedule(static)` reparte $N/p$ iteraciones sin costo de planificación porque todas cuestan lo mismo.
+- **Overhead.** (i) Crear la región paralela: $O(p)$; (ii) combinar los contadores: $O(\log p)$; (iii) **inicializar un generador por hilo** (el estado de `mt19937_64` ocupa ~2.5 KB); (iv) la barrera final de la región. Con $N$ grande, todo esto es despreciable frente a $N/p$: $T_p = O(N/p + \log p)$.
+- **Optimizable.** Sí: (a) usar un generador más liviano (p. ej. `xoshiro256`) o generar en bloques para **vectorizar**; (b) evitar la rama `if (u > v)` con `min/max`; (c) como $s_{max}$ determina ambas condiciones, calcular el cuadrado una sola vez; (d) asegurar que los contadores privados no compartan línea de caché (en la versión con `reduction` ya es así; con un arreglo `cont[tid]` habría *false sharing*).
+
+## Ejercicio 3 — DAG-OMP (1.5 pts)
+
+En la PD2 se generó el DAG del algoritmo siguiente. `ini()` inicializa dos matrices; los parámetros del resto de funciones son sólo de entrada. Genere un código C++-OMP que paralelice eficientemente el algoritmo con `task` y `depend` (1 pt) y el DAG correspondiente (0.5 pt).
+
+```cpp
+double sistema() {
+  double A[n][n], B[n][n], a, b, x, y, z;
+  ini(A, B);
+  a = tarea_1(A);
+  b = tarea_2(B);
+  s1 = suma_prefijos_s1(B, a);
+  s2 = suma_prefijos_s2(B, a, b);
+  z = s1 + s2;
+  return z;
+}
+```
+
+### Solución
+
+**Dependencias por variable:** `ini` escribe `A` y `B`; `tarea_1` lee `A` y escribe `a`; `tarea_2` lee `B` y escribe `b`; `s1` lee `B, a`; `s2` lee `B, a, b`; `z` lee `s1, s2`.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "ini escribe A y B (raíz). tarea_1 (lee A, escribe a) y tarea_2 (lee B, escribe b) son independientes y pueden correr a la vez.",
+      nodes: [
+        { id: 'ini', value: 'ini', parent: null, state: 'active' },
+        { id: 't1', value: 'tarea_1', parent: 'ini', state: 'active' },
+        { id: 't2', value: 'tarea_2', parent: 'ini', state: 'active' },
+      ],
+      links: [
+        { from: 'ini', to: 't1', label: 'A' },
+        { from: 'ini', to: 't2', label: 'B' },
+      ],
+    },
+    {
+      note: "s1 necesita B (de ini) y a (de tarea_1); s2 necesita además b (de tarea_2). s1 y s2 no dependen entre sí: se ejecutan en paralelo.",
+      nodes: [
+        { id: 'ini', value: 'ini', parent: null },
+        { id: 't1', value: 'tarea_1', parent: 'ini' },
+        { id: 't2', value: 'tarea_2', parent: 'ini' },
+        { id: 's1', value: 's1', parent: 't1', state: 'active' },
+        { id: 's2', value: 's2', parent: 't2', state: 'active' },
+      ],
+      links: [
+        { from: 'ini', to: 't1' },
+        { from: 'ini', to: 't2' },
+        { from: 't1', to: 's1', label: 'a' },
+        { from: 't1', to: 's2', label: 'a' },
+        { from: 't2', to: 's2', label: 'b' },
+        { from: 'ini', to: 's1', kind: 'shared' },
+        { from: 'ini', to: 's2', kind: 'shared' },
+      ],
+    },
+    {
+      note: "z = s1 + s2 es el nodo final. Camino crítico: ini, tarea_1, s1 (o s2), z: 4 tareas. Trabajo total: 6 tareas. Las aristas punteadas de ini a s1 y s2 son la dependencia por B.",
+      nodes: [
+        { id: 'ini', value: 'ini', parent: null },
+        { id: 't1', value: 'tarea_1', parent: 'ini' },
+        { id: 't2', value: 'tarea_2', parent: 'ini' },
+        { id: 's1', value: 's1', parent: 't1' },
+        { id: 's2', value: 's2', parent: 't2' },
+        { id: 'z', value: 'z', parent: 's1', state: 'answer' },
+      ],
+      links: [
+        { from: 'ini', to: 't1' },
+        { from: 'ini', to: 't2' },
+        { from: 't1', to: 's1', label: 'a' },
+        { from: 't1', to: 's2', label: 'a' },
+        { from: 't2', to: 's2', label: 'b' },
+        { from: 'ini', to: 's1', kind: 'shared' },
+        { from: 'ini', to: 's2', kind: 'shared' },
+        { from: 's1', to: 'z' },
+        { from: 's2', to: 'z' },
+      ],
+    },
+  ],
+}} />
+
+**Código:**
+
+```cpp
+double sistema(int n) {
+  V A(n), B(n); double a, b, s1, s2, z = 0;
+#pragma omp parallel
+#pragma omp single
+  {
+#pragma omp task depend(out : A, B)
+    ini(A, B);
+#pragma omp task depend(in : A) depend(out : a)
+    a = tarea_1(A);
+#pragma omp task depend(in : B) depend(out : b)
+    b = tarea_2(B);
+#pragma omp task depend(in : B, a) depend(out : s1)
+    s1 = suma_prefijos_s1(B, a);
+#pragma omp task depend(in : B, a, b) depend(out : s2)
+    s2 = suma_prefijos_s2(B, a, b);
+#pragma omp task depend(in : s1, s2) depend(out : z)
+    z = s1 + s2;
+  }                                   // la barrera del parallel espera todo; ya se puede devolver z
+  return z;
+}
+```
+
+Verificado: el resultado con tareas coincide con la versión secuencial (`pd4_dag_tasks.cpp`). Por Brent: $T_p \le T_1/p + T_\infty$ con $T_\infty = t_{ini} + t_{tarea\_1} + t_{s} + t_{z}$; con más de 2 hilos no hay más paralelismo (el DAG es **ancho 2**: `tarea_1 ‖ tarea_2` y `s1 ‖ s2`).

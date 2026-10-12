@@ -184,12 +184,180 @@ items:
       - "`array_of_blocklengths = {1,1}`, `array_of_types = {MPI_INT, MPI_FLOAT}`, y `array_of_displacements = {0, MPI_Aint_diff(dir_f, dir_i)}`."
     solution: "MPI_Get_address(&snd_buf.i,&first_var_address);\nMPI_Get_address(&snd_buf.f,&second_var_address);\narray_of_displacements[0]=0;\narray_of_displacements[1]=MPI_Aint_diff(second_var_address,first_var_address);\narray_of_types[0]=MPI_INT; array_of_types[1]=MPI_FLOAT;\nMPI_Type_create_struct(2,array_of_blocklengths,array_of_displacements,array_of_types,&send_recv_type);\nMPI_Type_commit(&send_recv_type);"
     cppFile: "ejemplo08-struct.cpp"
+
+  - level: 1
+    statement: Escriba una región paralela con 4 hilos en la que cada hilo imprima `Peekaboo desde el hilo = <id>`. Primero declare `id` como variable **compartida** y fuerce la condición de carrera con `sleep(1)`; luego resuélvala con la cláusula `private`. Explique qué impresiones aparecen en cada caso.
+    hints:
+    - 'Con `id` compartida hay **una sola** ubicación de memoria para los 4 hilos: todos escriben ahí y luego imprimen lo que haya al momento de despertar.'
+    - '`omp_set_num_threads(4)` fija el número de hilos de la siguiente región; `omp_get_thread_num()` devuelve el id del hilo (0 es el master).'
+    - '`#pragma omp parallel private(id)` le da a cada hilo su propia copia de `id`, sin inicializar.'
+    solution: "#pragma omp parallel private(id)\n{\n  id = omp_get_thread_num();\n  sleep(1);\n  printf(\"Peekaboo desde el hilo = %d \\n\", id);\n}\nCon `id` compartida varios hilos imprimen el id del último que escribió (se repiten valores). Con `private(id)` se imprimen exactamente 0,1,2,3 (en orden indeterminado)."
+    cppFile: omp01_hello.cpp
+  - level: 1
+    statement: 'Con `N = 16` iteraciones y 4 hilos, use `#pragma omp for` para sumar dos vectores `c[i] = a[i] + b[i]` e imprima, en cada iteración, el hilo que la ejecutó. Compare `schedule(static)`, `schedule(static, 3)`, `schedule(dynamic)` y `schedule(dynamic, 3)`: ¿qué iteraciones ejecuta cada hilo en cada caso?'
+    hints:
+    - '`static` sin chunk divide las iteraciones en 4 bloques contiguos e iguales, uno por hilo, antes de ejecutar.'
+    - '`static, 3` reparte bloques de 3 en rueda: los hilos 0 y 1 reciben un segundo bloque porque 16 no es múltiplo de 12.'
+    - '`dynamic` entrega un bloque cuando el hilo termina el anterior: el reparto cambia entre corridas.'
+    solution: 'static: hilo0→0..3, hilo1→4..7, hilo2→8..11, hilo3→12..15.
+
+      static,3: hilo0→{0..2,12..14}, hilo1→{3..5,15}, hilo2→{6..8}, hilo3→{9..11}.
+
+      dynamic / dynamic,3: asignación no determinista, cada hilo toma el siguiente bloque libre; conviene cuando el costo por iteración es desigual.'
+    cppFile: omp02_for.cpp
+  - level: 2
+    statement: Use `sections` con 2 hilos para que una sección calcule `c = a + b` y la otra `d = a * b` sobre vectores de 100 elementos. ¿Se puede usar `nowait` en el `sections`? ¿Por qué?
+    hints:
+    - Cada `section` se ejecuta **una sola vez** y por un solo hilo; con 2 hilos y 2 secciones, uno ejecuta cada una (aunque un mismo hilo podría ejecutar ambas).
+    - '`sections` tiene una barrera implícita al final; `nowait` la elimina.'
+    - 'Piense qué hay justo después del `sections`: ¿algún código lee `c` o `d` antes de que termine la región paralela?'
+    solution: "#pragma omp parallel num_threads(2) shared(a,b,c,d) private(i,id)\n{\n#pragma omp sections nowait\n {\n#pragma omp section\n  for (i=0;i<N;i++) c[i]=a[i]+b[i];\n#pragma omp section\n  for (i=0;i<N;i++) d[i]=a[i]*b[i];\n }\n}\nSí se puede usar `nowait`: no hay código dentro de la región que dependa de `c` ni `d`, y la región paralela termina con su propia barrera."
+    cppFile: omp03_sections.cpp
+  - level: 2
+    statement: Genere una región paralela en la que sólo **un** hilo (con `single nowait`) ejecute `a=10; b[id]=a;` donde `id` es el identificador del hilo que entró al `single`. Después de la región, imprima `b`. ¿Qué posiciones de `b` cambian y quién decide cuál?
+    hints:
+    - '`single` lo ejecuta **un** hilo cualquiera, no necesariamente el master; el estándar no dice cuál.'
+    - El arreglo `b` se inicializa en -1; sólo la posición `id` del hilo ganador debería ser 10.
+    - '`nowait` evita que los demás hilos esperen en la barrera del `single`, pero la región paralela igualmente termina con una barrera.'
+    solution: "#pragma omp parallel\n{\n#pragma omp single nowait\n { a=10; id=omp_get_thread_num(); b[id]=a; }\n}\nSólo cambia `b[id]` del hilo que ejecutó el bloque; cuál fue lo decide el runtime (el primero que llega)."
+    cppFile: omp04_single.cpp
+  - level: 2
+    statement: Cuente cuántos ceros tiene un arreglo `b` de 1024 elementos en paralelo. Escriba la versión con un contador privado `cnt` por hilo y un `critical` **fuera** del bucle para sumar en `cnt_t`. ¿Por qué es mejor que poner `critical` dentro del `for`?
+    hints:
+    - Cada hilo cuenta en su variable privada, sin ninguna sincronización, durante el bucle.
+    - El `critical` sólo debe ejecutarse una vez por hilo, para sumar el parcial al total.
+    - Compare cuántas veces entra un hilo a la sección crítica en cada versión.
+    solution: "#pragma omp parallel private(cnt)\n{\n int cnt = 0;\n#pragma omp for\n for(int i=0;i<n;i++) if(b[i]==0) cnt++;\n#pragma omp critical\n cnt_t += cnt;\n}\nDentro del `for`, el `critical` se ejecutaría tantas veces como ceros haya (serializa); fuera, p veces (una por hilo): el costo de sincronización baja de O(n) a O(p)."
+    cppFile: omp05_critical_conteo.cpp
+  - level: 2
+    statement: Calcule el producto escalar de dos vectores de 32 elementos (a=1.0, b=2.0) con `parallel for` y `reduction(+:result)` con `schedule(dynamic)`. ¿Qué valor final obtiene? ¿Qué pasa con los parciales que se imprimen dentro del bucle?
+    hints:
+    - Cada hilo trabaja con una copia privada de `result` inicializada en 0.
+    - Los parciales impresos dentro del bucle son los de **cada copia privada**, no el total.
+    - Al terminar el bucle se suman las copias privadas al `result` compartido.
+    solution: '#pragma omp parallel for schedule(dynamic) reduction(+:result)
+
+      for(i=0;i<n;i++) result += a[i]*b[i];
+
+      Resultado final: 64 (32 productos de 1.0·2.0). Los parciales por hilo varían según el reparto; sólo el valor final es independiente del schedule.'
+    cppFile: omp06_reduction.cpp
+  - level: 2
+    statement: 'Compare `private(i,j)` y `firstprivate(i,j)` en la región paralela: `i=1, j=2` antes; dentro `i=3; j=j+2;`. ¿Qué valores se imprimen dentro y después de la región en cada caso?'
+    hints:
+    - '`private` crea una copia **sin inicializar**: `j + 2` usaría basura.'
+    - '`firstprivate` inicializa cada copia con el valor del original antes de entrar.'
+    - En ambos casos los **originales** `i` y `j` no cambian al salir de la región.
+    solution: 'firstprivate: dentro, cada hilo imprime i=3, j=4; después de la región: i=1, j=2.
+
+      private: dentro i=3 pero j = (basura)+2 (no determinista); después: i=1, j=2.'
+    cppFile: omp08_private.cpp
+  - level: 2
+    statement: Paralelice `for (i=0; i<n-1; i++) a[i] = b[i] + b[i+1];` y luego ejecute `a[i] = b[i];` fuera de la región. ¿Qué cláusula necesita para que `i` valga `n-1` al salir, igual que en el programa secuencial?
+    hints:
+    - Una variable `private` no devuelve su valor al original al terminar la región.
+    - La cláusula debe copiar al original el valor de la **última** iteración (en orden secuencial).
+    - Va en la directiva `omp for`.
+    solution: "#pragma omp parallel\n{\n#pragma omp for lastprivate(i)\n for (i=0;i<n-1;i++) a[i]=b[i]+b[i+1];\n}\na[i]=b[i];  /* i == n-1 */"
+    cppFile: omp09_lastprivate.cpp
+  - level: 3
+    statement: Calcule el máximo de `work(i)` para `i = 0..2^20-1` en paralelo. Compare (a) `critical` **dentro** del bucle y (b) cada hilo con `pmax` privado y un `critical` **fuera** del bucle. ¿Cuántas entradas a la sección crítica hay en cada caso y cuál versión escala?
+    hints:
+    - En (a) cada iteración compite por el cerrojo.
+    - En (b) cada hilo calcula su máximo local sin sincronizar y sólo combina una vez.
+    - Mida con `omp_get_wtime()` y varíe el número de hilos.
+    solution: "(a) 2^20 entradas al critical: la región queda serializada, sin speedup.\n(b) p entradas (una por hilo): el costo de sincronización es O(p) y el bucle escala como O(n/p).\n#pragma omp parallel private(pmax)\n{ pmax=0;\n#pragma omp for\n for(i=0;i<n;i++){ r=work(i); pmax=(r>pmax?r:pmax); }\n#pragma omp critical\n mx=(pmax>mx?pmax:mx); }"
+    cppFile: omp11_critical_max.cpp
+  - level: 3
+    statement: Calcule pi con la regla del rectángulo (2^20 pasos) repartiendo los índices en rueda (`i = id; i += nthrds`). Combine los parciales con `atomic` y con `critical`. ¿Por qué hay que inicializar `sum` en cada hilo?
+    hints:
+    - Cada hilo acumula `sum += 4.0/(1.0+x*x)` en una variable **local** y suma `sum*step` a `pi` una sola vez.
+    - '`atomic` basta porque la actualización es una única operación `pi += ...`.'
+    - 'Una variable local no inicializada contiene basura: el resultado dependería de la pila.'
+    solution: "#pragma omp parallel\n{ int i,id=omp_get_thread_num(),nt=omp_get_num_threads(); double x,sum=0;\n for(i=id;i<num_steps;i+=nt){ x=(i+0.5)*step; sum+=4.0/(1.0+x*x); }\n#pragma omp atomic\n pi += sum*step; }\nCon `sum=0` el resultado converge a 3.14159... y es el mismo con `critical`."
+    cppFile: omp12_atomic_pi.cpp
+  - level: 2
+    statement: 'Para una matriz `A[4][16]` compare tres paralelizaciones del doble bucle: (1) `parallel for` sólo en `i`, (2) `parallel for` anidado en `i` y `j` con `omp_set_nested(1)`, (3) `parallel for collapse(2)`. ¿Cuántas unidades de trabajo reparte cada una?'
+    hints:
+    - En (1) sólo hay N = 4 iteraciones para repartir.
+    - 'En (2) se crean regiones paralelas dentro de regiones paralelas: más overhead.'
+    - '`collapse(2)` fusiona los dos bucles en un espacio de N·M iteraciones.'
+    solution: '(1) 4 unidades: con más de 4 hilos algunos quedan ociosos.
+
+      (2) 4 regiones externas × 16 internas con dos niveles de creación de hilos (overhead).
+
+      (3) 64 unidades en una sola región: mejor balance y menor overhead.
+
+      #pragma omp parallel for collapse(2)
+
+      for(int i=0;i<N;i++) for(int j=0;j<M;j++) A[i][j]=i+j;'
+    cppFile: omp15_collapse_3.cpp
+  - level: 2
+    statement: Cree tres tareas (`t1`, `t2`, `t3`) dentro de `parallel num_threads(3)` + `single`, cada una imprimiendo el hilo que la ejecuta. Dibuje al menos tres asignaciones posibles tarea→hilo. ¿Se puede predecir la salida?
+    hints:
+    - El hilo que ejecuta `single` **crea** las tareas; cualquier hilo libre puede **ejecutarlas**.
+    - Una tarea puede ejecutarse inmediatamente o quedar diferida.
+    - El orden de impresión no está determinado.
+    solution: "#pragma omp parallel num_threads(3)\n#pragma omp single\n{\n#pragma omp task\n printf(\"t1 hilo %d\\n\",omp_get_thread_num());\n#pragma omp task\n printf(\"t2 hilo %d\\n\",omp_get_thread_num());\n#pragma omp task\n printf(\"t3 hilo %d\\n\",omp_get_thread_num());\n}\nPosibles: cada tarea en un hilo distinto; t1 y t2 en el mismo hilo y t3 en otro; las tres en un solo hilo. La salida no es predecible."
+    cppFile: omp17_task01.cpp
+  - level: 3
+    statement: 'Prediga la salida de dos programas con tareas: (A) `task depend(out: x) x=2;` seguido de `task depend(in: x) print(x)`, y (B) el mismo par pero con el orden de creación **invertido** (`in` primero, `out` después), con `int x = 1`. Justifique con el tipo de dependencia.'
+    hints:
+    - 'En (A) es lectura tras escritura (RAW): la lectura espera a la escritura.'
+    - En (B) la tarea `out` depende de las tareas `in` **anteriores** sobre `x` (WAR).
+    - Las dependencias se establecen por el orden de **creación** de las tareas.
+    solution: '(A) imprime `x = 2`. (B) imprime `x = 1`: la escritura espera a la lectura previa, así que el print ocurre antes de `x = 2`.'
+    cppFile: omp22_task_dep_2.cpp
+  - level: 3
+    statement: En el programa de las tareas A, B, C, D, E, F (B crea C y D, hace `taskwait`, crea E; el padre hace `taskwait` y luego imprime F), indique **qué impresiones están garantizadas en orden** y cuál no. Después añada un `taskgroup` para garantizar que F salga después de E.
+    hints:
+    - El `taskwait` del padre espera a sus tareas **hijas** (A y B), no a las nietas.
+    - E es hija de B, es decir, nieta del padre.
+    - '`taskgroup` espera a todas las tareas creadas dentro, incluidas las descendientes.'
+    solution: 'Garantizado: B antes que C y D; C y D antes que E; A y B antes que F. NO garantizado: E antes que F (E es nieta). Solución: encerrar la creación de A y B en `#pragma omp taskgroup { ... }` antes de imprimir F.'
+    cppFile: omp21_taskwait02.cpp
+  - level: 3
+    statement: 'Dibuje el DAG de tareas del programa con `depend` (T1: out a; T2: out b, con una tarea anidada T5: in b, out c; T3: in a,b out c; T4: in c). ¿Cuál es el camino crítico y qué problema hay con T3 y T5?'
+    hints:
+    - Cada `depend` en una tarea crea aristas desde las tareas **hermanas** anteriores que escribieron esa variable.
+    - 'T5 es hija de T2: sus dependencias no la conectan con T3 ni T4.'
+    - Dos tareas sin dependencia entre sí que escriben `c` forman una carrera.
+    solution: 'Aristas: T1→T3 (a), T2→T3 (b), T3→T4 (c). Camino crítico: T1→T3→T4 (3 tareas). T5 no tiene aristas hacia T3/T4: T3 y T5 escriben `c` sin orden (carrera); sólo coinciden en el resultado porque a+b = b+3 = 3.'
+    cppFile: omp22_task_dep_5.cpp
+  - level: 3
+    statement: Sume los 120 elementos de un arreglo (todos 1) creando una tarea por bloque de 10 elementos dentro de un `for` con `schedule(static)` y combine los parciales con `critical`. ¿Qué valor obtiene y cuántas tareas se crean?
+    hints:
+    - Cada tarea calcula `psum` de su bloque `[start, end]`.
+    - Combinar `psum` en `sum` requiere exclusión mutua.
+    - Hay 120/10 = 12 bloques.
+    solution: '12 tareas; cada una suma 10 elementos y hace `#pragma omp critical sum += psum;`. Resultado: 120.'
+    cppFile: omp19_task_suma.cpp
+  - level: 4
+    statement: El programa de los 5 filósofos (cada uno toma primero su tenedor izquierdo y luego el derecho con `omp_set_lock`) a veces se cuelga. Explique por qué y modifíquelo para que **nunca** se bloquee.
+    hints:
+    - Piense en lo que pasa si los 5 hilos toman su tenedor izquierdo antes de que alguno pida el derecho.
+    - 'Es una espera circular: cada uno retiene un lock y espera el del vecino.'
+    - 'Rompa la simetría: fije un orden total de los locks.'
+    solution: 'Deadlock: ciclo de espera F0→F1→F2→F3→F4→F0. Solución por jerarquía de recursos: pedir siempre primero el lock de menor índice:
+
+      int first=left<right?left:right, second=left<right?right:left;
+
+      omp_set_lock(&forks[first]); omp_set_lock(&forks[second]); eat(id); omp_unset_lock(&forks[second]); omp_unset_lock(&forks[first]);'
+    cppFile: omp29_filosofos.cpp
+  - level: 2
+    statement: Escriba un programa híbrido MPI+OpenMP donde cada proceso abra una región paralela de 4 hilos e imprima `hilo i de np, proceso r de numprocs`. Con `mpirun -np 2`, ¿cuántas líneas se imprimen? ¿Qué cambia en una máquina con 8 núcleos por nodo si se usan 2 procesos × 4 hilos en vez de 1 × 8?
+    hints:
+    - '`MPI_Init`/`MPI_Finalize` encierran todo; `#pragma omp parallel` va entre ambos.'
+    - El total de hilos es procesos × hilos por proceso.
+    - En ambas combinaciones se usan los 8 núcleos; cambia cuántos procesos hay con halo propio.
+    solution: '2 procesos × 4 hilos = 8 líneas. 2×4 vs 1×8: se usan los mismos 8 núcleos; con 1×8 hay menos procesos (menos halos y mensajes) pero más sincronización de hilos y mayor exposición a efectos NUMA.'
+    cppFile: omp30_hibrido_mpi_omp.cpp
+
 ---
 
 Ejercicios de laboratorio de todo el curso, organizados de menor a mayor
 dificultad dentro de cada bloque temático: primero comunicación punto a
 punto y estructura básica de un programa MPI, luego las operaciones
 colectivas, después comunicación bloqueante vs. no bloqueante en anillo, y
-por último los tipos de datos derivados. El código completo de cada item
+después los tipos de datos derivados, y por último la unidad de memoria compartida: regiones paralelas OpenMP, reparto de trabajo, sincronización y alcance de datos, tareas, modelo de memoria y paralelismo híbrido. El código completo de cada item
 vive en `cpp/practica/`.
 </content>

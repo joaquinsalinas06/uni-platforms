@@ -1,0 +1,25 @@
+id: omp-memory-model
+title: "Modelo de memoria, corrección y locks en OpenMP"
+type: concept
+unit: u4
+
+prerequisites: [omp-sync-data-scoping, omp-tasks-icv]
+buildsOn: []
+usedBy: [hybrid-mpi-openmp]
+
+complexity:
+  interleavings:
+    worst: "\\binom{2k}{k} = \\frac{(2k)!}{(k!)^2} \\sim \\frac{4^k}{\\sqrt{2k}}"
+    reasoning: >-
+      Con 2 hilos y k sentencias por hilo, una ejecución es una lista de 2k
+      posiciones donde hay que decidir cuáles k pertenecen al hilo 1 (las
+      otras k van al hilo 2), respetando el orden interno de cada hilo. Eso
+      es elegir k posiciones de 2k sin repetición: C(2k, k). Crece como 4^k
+      (asintótica de la slide), por eso es inviable verificar un programa
+      concurrente probando todos los intercalados.
+    source: "U4.4 Paralelismo compartido-OMP.pdf, diapositiva 3"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: timeline
+placeholder: false

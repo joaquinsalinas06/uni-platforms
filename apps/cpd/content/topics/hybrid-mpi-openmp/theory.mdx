@@ -1,0 +1,181 @@
+---
+kind: theory
+title: "Paralelismo híbrido MPI + OpenMP"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Hasta aquí hay dos modelos separados: [MPI](/topics/mpi-intro) (procesos, memoria distribuida, mensajes) y [OpenMP](/topics/omp-intro-parallel) (hilos, memoria compartida, un nodo). Los **supercomputadores actuales** son ambas cosas a la vez:
+muchos nodos, cada uno con varios sockets y decenas o cientos de hilos. Tres límites físicos explican por qué hace falta combinarlos:
+
+1. **Ley de Moore**: la cantidad de transistores sigue creciendo (Dongarra et al. 2024), pero ya no se traduce en frecuencia sino en **núcleos**. Ejemplos de la clase: Intel Xeon CPU Max 9470 (52 núcleos, 104 hilos, 2 sockets por nodo);
+   AMD EPYC 9004 (hasta 96 núcleos y 192 hilos por socket, hasta 2 sockets); Intel Xeon Scalable "Sapphire Rapids" (hasta 60 núcleos, 120 hilos, 8 sockets por nodo).
+2. **Cómputo vs. acceso a memoria**: los FLOPs de hardware crecen ≈ 3.0×/2 años, el ancho de banda de DRAM ≈ 1.6×/2 años y el de interconexión ≈ 1.4×/2 años (Gholami et al. 2024). Cada vez cuesta más **mover** datos que calcular con ellos.
+3. **Consumo de energía**: la potencia dinámica de un CMOS es $P_{dyn}(f) = \gamma \cdot f^3$ — ver [sequential-model-architectures](/topics/sequential-model-architectures) para el *power wall*.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "Potencia dinámica relativa de un núcleo al subir su frecuencia (eje x: f relativa, eje y: P/γ = f³). Duplicar la frecuencia cuesta 8× en potencia.",
+      series: [
+        { id: 'un-nucleo', label: 'P = γ f³ (un núcleo)', points: [[1, 1], [2, 8], [3, 27], [4, 64]] },
+      ],
+      params: {},
+    },
+    {
+      note: "Dos núcleos a f/2 dan el mismo throughput que uno a f, pero consumen 2·γ·(f/2)³ = γf³/4. Por eso la solución es explotar muchos núcleos lentos (the chickens and the ox) y programar para ellos.",
+      series: [
+        { id: 'un-nucleo', label: 'P = γ f³ (un núcleo)', points: [[1, 1], [2, 8], [3, 27], [4, 64]] },
+        { id: 'dos-nucleos', label: '2 núcleos a f/2 (mismo throughput)', points: [[1, 0.25], [2, 2], [3, 6.75], [4, 16]] },
+      ],
+      highlight: ['dos-nucleos'],
+      params: {},
+    },
+  ],
+}} />
+
+*Nota de apoyo*: la comparación "2 núcleos a $f/2$" es una consecuencia directa de la fórmula de la diapositiva; en ambas curvas el eje x es el **throughput** relativo.
+
+## Intuición
+
+Pensá en un edificio de oficinas: **MPI** es la comunicación **entre** edificios (llamadas, mensajería) y **OpenMP** es lo que pasa **dentro** de cada edificio (todos ven la misma pizarra). Lo natural es un proceso MPI por edificio (por nodo o por socket)
+y hilos OpenMP adentro: se comunica por mensajes lo que hay que comunicar entre edificios y se comparte memoria el resto.
+
+La figura de la clase lo muestra como un espectro entre un *nodo MPI puro* y un *nodo SMP puro*:
+
+<Visualization viz={{
+  type: 'network-topology',
+  steps: [
+    {
+      note: "Nodo MPI puro: 16 tareas MPI, una por núcleo, cada una con su memoria local. Toda comunicación pasa por el runtime MPI.",
+      processes: [
+        { id: 'n0', label: '16 procesos MPI x 1 hilo', state: 'active' },
+      ],
+      dataFlow: [],
+    },
+    {
+      note: "Híbrido: 4 procesos MPI × 4 hilos OpenMP. Las 4 tareas MPI se comunican por mensajes; dentro de cada una, 4 hilos comparten memoria. Se reducen las copias de halo y el número de mensajes.",
+      processes: [
+        { id: 'mpi0', label: 'MPI 0 · 4 hilos', state: 'active' },
+        { id: 'mpi1', label: 'MPI 1 · 4 hilos', state: 'active' },
+        { id: 'mpi2', label: 'MPI 2 · 4 hilos', state: 'active' },
+        { id: 'mpi3', label: 'MPI 3 · 4 hilos', state: 'active' },
+      ],
+      dataFlow: [
+        { from: 'mpi0', to: 'mpi1' },
+        { from: 'mpi1', to: 'mpi2' },
+        { from: 'mpi2', to: 'mpi3' },
+        { from: 'mpi3', to: 'mpi0' },
+      ],
+    },
+    {
+      note: "Nodo SMP puro: 1 tarea MPI con 16 hilos. Ya no hay mensajes dentro del nodo, pero se pierde escalabilidad entre nodos y aparecen los efectos NUMA entre sockets.",
+      processes: [
+        { id: 'smp', label: '1 proceso MPI × 16 hilos', state: 'marked' },
+      ],
+      dataFlow: [],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+### Qué se combina con qué
+
+> **MPI se usa para comunicar procesos, y OpenMP dentro de cada proceso.** Los hilos pertenecen a un proceso y se **sincronizan** (barreras, secciones críticas...); los procesos tienen uno o más hilos y **se comunican por mensajes**.
+
+| | Memoria compartida (OpenMP) | Memoria distribuida (MPI) |
+|---|---|---|
+| Unidad | Hilos de un proceso | Procesos |
+| Comunicación | Implícita; se **sincroniza** | Explícita; **mensajes** |
+| Escala | Un nodo (límite de hardware) | Muchos nodos |
+
+Estructura de un programa híbrido (slide 17): se inicializa MPI, se crean **regiones paralelas OpenMP dentro de procesos MPI**, se pueden llamar rutinas MPI tanto en regiones paralelas como en seriales, y se finaliza MPI.
+
+```cpp
+MPI_Init(&argc, &argv);
+MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#pragma omp parallel num_threads(4) default(shared) private(iam, np)
+{
+  np  = omp_get_num_threads();
+  iam = omp_get_thread_num();
+  printf("Peekaboo desde el hilo %d de un total de %d y desde el proceso %d de un total de %d\n",
+         iam, np, rank, numprocs);
+}
+MPI_Finalize();
+```
+
+Compilación y ejecución: `mpicc -fopenmp peekaboo_mpi_omp.c` y `mpirun -np 2 ./a.out`. Con 2 procesos y 4 hilos se imprimen **8** líneas, una por pareja (proceso, hilo). **El número óptimo de hilos por proceso es una característica
+del hardware y debe probarse.**
+
+### Ventajas y desventajas (slide 10)
+
+| Ventajas | Desventajas |
+|---|---|
+| Mayor **escalabilidad** (aumenta la granularidad) | Mayor **complejidad** de código |
+| Mejor **balance de cargas** | El rendimiento de **MPI y de OpenMP** debe ser bueno |
+| Optimiza el **uso de memoria** | **Efectos NUMA** |
+
+Se benefician los algoritmos (slide 11): con **escalabilidad MPI limitada**, que requieren **balance de carga dinámico**, que usan hardware con **memoria limitada y mucha comunicación MPI**, y las aplicaciones de **paralelismo masivo**.
+
+### Por qué no es automáticamente más eficiente (slide 26)
+
+- OpenMP tiene **mayor escalabilidad** por su paralelismo implícito, pero con un **límite de hardware**.
+- Durante una comunicación MPI **todos los hilos esperan (idle) menos uno**.
+- **Costo excesivo** en la creación de múltiples hilos.
+- **No existen librerías/compiladores optimizados** en OpenMP (en la comparación con las de MPI).
+
+## Operaciones
+
+- [omp-halo-decomposition](/topics/hybrid-mpi-openmp/algorithms/omp-halo-decomposition) — regiones de halo, descomposición de dominio 2D/3D y por qué OpenMP reduce memoria y comunicación.
+- [mpi-omp-launch](/topics/hybrid-mpi-openmp/algorithms/mpi-omp-launch) — cómo combinar procesos e hilos en una máquina (8 núcleos por nodo), scripts de Slurm en Khipu y Perlmutter.
+
+## Análisis de complejidad
+
+La combinación se justifica con dos argumentos cuantitativos de la clase:
+
+1. **Potencia**: $P_{dyn} = \gamma f^3$ → muchos núcleos lentos, como se vio arriba.
+2. **Halo**: en una malla 2D de $N \times N$ con $P$ procesos, cada uno computa $N^2/P$ celdas y comunica un halo proporcional a su perímetro, $4N/\sqrt{P}$. Al multiplicar $P$ por 4, el cómputo por proceso cae a $1/4$ pero el halo sólo a $1/2$: la relación
+   **comunicación/cómputo empeora como $\sqrt{P}$**. Con híbrido, en vez de $P$ subdominios de MPI hay menos subdominios (uno por proceso, con varios hilos dentro) y **menos halo total** — ver [omp-halo-decomposition](/topics/hybrid-mpi-openmp/algorithms/omp-halo-decomposition).
+
+## Tabla de complejidad
+
+Arriba aparecen la potencia dinámica y el tamaño del halo; el razonamiento de ambas está en la sección anterior.
+
+## Ejemplos
+
+**Ecuación de Poisson 3D con Jacobi** (slides 24–25). Se resuelve en $[0,1]^3$ con una malla regular ($h = h_x = h_y = h_z$). El paso de Jacobi calcula la iteración $n+1$ a partir de los 6 vecinos de la iteración $n$:
+
+$$u^{n+1}_{ijk} = \frac{1}{6}\left(u^n_{i+1jk} + u^n_{i-1jk} + u^n_{ij+1k} + u^n_{ij-1k} + u^n_{ijk+1} + u^n_{ijk-1} - h^2 f_{ijk}\right)$$
+
+Los experimentos de la figura se hicieron en un IBM Blue Gene de 10 240 nodos con 4 núcleos cada uno: el **speedup de MPI+OpenMP queda por encima del de MPI puro** en el rango de núcleos medido (tanto en la versión "old" como en la "new"). Es el caso típico donde el híbrido gana.
+
+**Contra-ejemplos de la clase** (SPHYNX/SPH-EXA, N-cuerpos):
+
+- SPHYNX, ChaNGa y SPH-EXA con 12 hilos/ranks por nodo: la **eficiencia de escalamiento fuerte** cae de 1.0 a ≈ 0.3–0.45 al pasar a 32 nodos; en escalamiento débil SPH-EXA baja a ≈ 0.4 con 512 nodos. Ni MPI+OpenMP ni MPI puro escalan idealmente.
+- N-cuerpos: con 20 hilos, `hpx::async` alcanza un speedup cercano al ideal (≈ 18–19 de 20), mientras OpenMP y `hpx::parallel::for_each` quedan en ≈ 13: `hpx::async` **evita barreras innecesarias** y deja a los hilos continuar. *(Valores leídos de las figuras: son aproximados.)*
+
+## Comparación con temas relacionados
+
+| | MPI puro | OpenMP puro | Híbrido |
+|---|---|---|---|
+| Alcance | Cualquier nº de nodos | Un nodo | Cualquier nº de nodos |
+| Memoria por núcleo | Copias de halo por proceso | Sin halos | Halos por **proceso**, no por núcleo |
+| Comunicación | Mensajes entre todos | Sincronización | Mensajes entre procesos + sincronización dentro |
+| Complejidad de código | Media | Baja | **Alta** |
+| NUMA | No aplica por proceso | Hay que cuidar la localidad | Hay que cuidar el mapeo hilos↔socket |
+
+## Prueba de dominio
+
+Al terminar este tema debo poder:
+
+- Explicar por qué se pasó de subir la frecuencia a multiplicar núcleos ($P \propto f^3$) y qué significa "núcleos lentos".
+- Describir el modelo híbrido (MPI entre procesos, OpenMP dentro) y la estructura `MPI_Init` → región `parallel` → `MPI_Finalize`.
+- Listar ventajas, desventajas y los casos en que el híbrido conviene.
+- Calcular cuántos procesos e hilos hay en una máquina con $n$ nodos de $c$ núcleos para una combinación dada, y predecir las líneas que imprime el programa de ejemplo.
+- Explicar qué es una región de halo y por qué reducirlas reduce memoria y comunicación.
+- Dar las razones por las que MPI+OpenMP **no** siempre es más eficiente.

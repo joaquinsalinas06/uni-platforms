@@ -1,0 +1,161 @@
+---
+kind: theory
+title: "Sincronización y alcance de datos en OpenMP"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+En memoria compartida **todos los hilos ven las mismas variables**: eso es lo que hace barata la comunicación en
+[OpenMP](/topics/omp-intro-parallel), y también lo que la hace peligrosa. Dos preguntas aparecen en cuanto hay más de un hilo:
+
+1. **¿De quién es cada variable?** ¿Hay una sola copia que todos escriben (*shared*) o una copia por hilo (*private*)? Las
+   **cláusulas de alcance de datos** deciden esto.
+2. **¿Quién entra primero?** Si dos hilos actualizan la misma ubicación sin coordinarse hay una **condición de carrera**
+   (*race condition*). Los **constructores de sincronización** (`master`, `critical`, `barrier`, `atomic`, `flush`, `ordered`) resuelven esto.
+
+## Intuición
+
+Una pizarra compartida: si dos personas leen "5", suman 1 cada una y escriben "6", se perdió un incremento. Se arregla de tres maneras —
+turnarse para usar la pizarra (`critical`/`atomic`), darle a cada persona una libreta propia y juntar los resultados al final (`private` + `reduction`),
+o esperar a que todos terminen antes de seguir (`barrier`).
+
+<Visualization viz={{
+  type: 'timeline',
+  steps: [
+    {
+      note: "Dos hilos ejecutan x = x + 1 sobre la misma variable (x = 0). Ambos leen x = 0 antes de que alguno escriba.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 1, label: 'lee x = 0', state: 'active' },
+        { lane: 't1', tStart: 0, tEnd: 1, label: 'lee x = 0', state: 'active' },
+      ],
+      messages: [],
+    },
+    {
+      note: "Cada hilo calcula 0 + 1 y escribe 1. El segundo x = 1 pisa al primero: se hicieron dos incrementos y el resultado es x = 1, no 2.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 1, label: 'lee x = 0', state: 'muted' },
+        { lane: 't1', tStart: 0, tEnd: 1, label: 'lee x = 0', state: 'muted' },
+        { lane: 't0', tStart: 1, tEnd: 2, label: 'escribe x = 1', state: 'marked' },
+        { lane: 't1', tStart: 1, tEnd: 2, label: 'escribe x = 1', state: 'marked' },
+      ],
+      messages: [],
+    },
+    {
+      note: "Con critical (o atomic) el hilo 1 espera a que el hilo 0 termine su lectura-escritura completa: x = 2. El precio es que esa parte quedó serializada.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 2, label: 'x = x + 1 (x → 1)', state: 'answer' },
+        { lane: 't1', tStart: 0, tEnd: 2, label: 'espera', state: 'muted' },
+        { lane: 't1', tStart: 2, tEnd: 4, label: 'x = x + 1 (x → 2)', state: 'answer' },
+      ],
+      messages: [],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+### Constructores de sincronización
+
+| Constructor | Qué garantiza |
+|---|---|
+| `master` | El bloque lo ejecuta **sólo el hilo 0**; los demás lo saltan **sin esperar** (no hay barrera). |
+| `critical [(nombre)]` | **Un hilo a la vez** ejecuta el bloque. Afecta a todos los hilos de la región; se le puede dar nombre para tener secciones críticas **independientes**. |
+| `barrier` | Todos los hilos esperan en ese punto hasta que **todos** llegaron. |
+| `atomic` | Una **única ubicación de memoria** se actualiza atómicamente; es una "mini-critical" que sólo cubre la sentencia siguiente. |
+| `flush` | Punto de sincronización donde la vista de memoria de cada hilo se escribe/consolida. |
+| `ordered` | Las iteraciones de un bucle ejecutan ese bloque en el **orden secuencial** — ver [omp-for-schedule](/topics/omp-intro-parallel/algorithms/omp-for-schedule). |
+
+`flush` está **implícito** en: `barrier`; el inicio y el final de `parallel`, `critical` y `ordered`; el final de `for`, `sections` y `single`.
+Por eso un `barrier` basta para que un valor escrito por un hilo sea visible para los demás (se retoma en [omp-memory-model](/topics/omp-memory-model)).
+
+Las directivas que **no aceptan cláusulas** son `master`, `critical`, `barrier`, `atomic`, `flush`, `ordered` y `threadprivate`
+(*nota*: `atomic` sí admite los modificadores `read`/`write`/`update`/`capture`, que no son cláusulas de datos).
+
+### Cláusulas de alcance de datos
+
+Por defecto, en OpenMP las variables son **compartidas**, excepto los índices de los bucles `for`, que son privados.
+Las cláusulas controlan qué variables de la región serial pasan a la región paralela y cuáles son visibles a todos o privadas:
+
+| Cláusula | Efecto |
+|---|---|
+| `shared(lista)` | Existe **una sola** ubicación de memoria, cuya dirección todos pueden leer. Para escribir se recomienda usar `critical`. |
+| `private(lista)` | Cada hilo recibe un **objeto nuevo del mismo tipo**, **sin inicializar**; toda referencia al original se reemplaza por la copia. |
+| `firstprivate(lista)` | `private` + inicialización con el valor del original **antes** de entrar a la región. |
+| `lastprivate(lista)` | `private` + al salir, el original recibe el valor de la **última iteración** (o sección) en orden secuencial. |
+| `default(shared \| none)` | Alcance por defecto de toda la región; sólo se puede usar una vez por directiva `parallel`. |
+| `threadprivate(lista)` | Variables **globales** que se replican, una copia por hilo, y **persisten entre regiones paralelas**. |
+| `copyin(lista)` | Copia el valor del master a las variables `threadprivate` de todos los hilos. |
+| `copyprivate(lista)` | Con `single`: el valor de un hilo se propaga a las copias privadas de los demás. |
+
+## Operaciones
+
+- [omp-critical-atomic](/topics/omp-sync-data-scoping/algorithms/omp-critical-atomic) — exclusión mutua: `critical` (con nombre) frente a `atomic` y sus cuatro formas.
+- [omp-data-scoping](/topics/omp-sync-data-scoping/algorithms/omp-data-scoping) — `private`, `firstprivate`, `lastprivate`, `threadprivate`.
+- [omp-master-barrier](/topics/omp-sync-data-scoping/algorithms/omp-master-barrier) — `master`, `barrier` y su ligadura a la región paralela más inmediata.
+
+## Análisis de complejidad
+
+Este tema no define una cota propia (`complexity: {}`), pero sí el **costo de sincronizar**, que es lo que separa un programa paralelo
+correcto de uno que además escala. Recordando $T_p = T_s/p + T_{overhead}$:
+
+- Una sección `critical`/`atomic` **serializa** a los hilos que compiten por ella. Si $M$ accesos compiten, el costo es $O(M)$ aunque
+  haya $p$ hilos (PD04 2026-I) — por eso conviene que cada hilo acumule en una variable `private` y actualice la compartida **una vez**.
+- Un `barrier` cuesta lo que tarde el hilo **más lento**: no hay trabajo que pueda saltarse esa espera.
+
+Patrón recomendado de la clase (`omp11_critical_max.cpp`, `omp27_suma_prod_critical.cpp`): **acumular local, combinar al final**. Compará poner el `critical` dentro del `for`
+(una entrada por iteración, $n$ entradas) con ponerlo después del `for` (una por hilo, $p$ entradas).
+
+## Tabla de complejidad
+
+No aplica — ver la sección anterior.
+
+## Ejemplos
+
+**Conteo de ceros** (`omp05_critical_conteo.cpp`): cada hilo cuenta en un `cnt` privado y sólo al final suma en `cnt_t` dentro de un `critical`:
+
+```cpp
+#pragma omp parallel private(cnt)
+{
+  int cnt = 0;
+#pragma omp for
+  for (int i = 0; i < n; i++)
+    if (b[i] == 0) cnt++;          // sin critical: cada hilo tiene su cnt
+#pragma omp critical
+  cnt_t += cnt;                    // una entrada por hilo
+}
+```
+
+**Máximo con `critical`** (`omp11_critical_max.cpp`): la clase pide evaluar el `critical` dentro y fuera del bucle. Fuera: cada hilo calcula su `pmax`
+y el `critical` sólo mezcla $p$ valores.
+
+## Comparación con temas relacionados
+
+| | `critical` | `atomic` | `reduction` | `barrier` |
+|---|---|---|---|---|
+| Qué protege | Un bloque arbitrario | **Una** sentencia sobre **una** ubicación | Una variable escalar acumulada | No protege datos: sincroniza hilos |
+| Costo | Serializa el bloque | Serializa sólo esa actualización | $O(\log p)$ combinando parciales | Espera al más lento |
+| Cuándo | Bloques largos o varias variables | Un contador o un acumulador simple | Sumas, productos, máximos, ... | Separar fases dependientes |
+
+## Prueba de dominio
+
+Al terminar este tema debo poder:
+
+- Explicar por qué `x = x + 1` desde dos hilos puede dar 1 y cómo lo evitan `critical` y `atomic`.
+- Elegir entre `critical`, `atomic` y `reduction` para un acumulador, y justificar por qué es mejor acumular local y combinar al final.
+- Decir qué hace cada cláusula de alcance (`private`, `firstprivate`, `lastprivate`, `threadprivate`, `copyin`, `copyprivate`) y cuál usar cuando el valor inicial o final importa.
+- Nombrar las directivas con `flush` implícito y las que no aceptan cláusulas.
+- Explicar la diferencia entre `master` (sin barrera) y `single` (con barrera).

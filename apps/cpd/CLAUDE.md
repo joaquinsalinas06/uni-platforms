@@ -30,7 +30,7 @@ Siempre **pnpm**. Dev server en segundo plano: `astro dev --background`, y
 ```
 content/
   knowledge-map.json          ← fuente de verdad; SÓLO lo toca el agente de integración
-  units/u{1,2,3}.md
+  units/u{1,2,3,4}.md
   topics/<id>/
     meta.yaml                 ← interfaz de coordinación entre agentes
     theory.md                 ← 9 secciones fijas
@@ -155,6 +155,20 @@ arriba de todo, vía frontmatter `visualization:`), `.mdx` sólo cuando hace
 falta más de un diagrama o uno a mitad de la prosa, importando
 `../../../src/components/Visualization.astro` y pasándole el mismo shape de
 `visualizationSchema` como prop JS.
+
+## Lecciones de visualización (U4)
+
+- **Las notas de cada paso son texto plano**: nada de backticks, `**negritas**` ni `$math$` (se ven literales).
+- **`dag`**: los saltos de línea (`\n`) se pierden y los nodos se pisan si el `value` es largo. Usar ids cortos
+  (`T1`, `a`, `calc_x`, ≤ 7 caracteres) y dejar el detalle en la nota; `kind: 'shared'` dibuja una arista punteada
+  (útil para dependencias WAR). Si un paso invierte el sentido de las aristas, quitar `parent` de los nodos que
+  quedarían arriba: `parent` + `links` en sentidos opuestos forma un ciclo y el layout desordena todo.
+- **`network-topology`**: etiquetas de proceso cortas (`P0 x4`); con cadenas de `dataFlow` el layout los pone en fila.
+- **`memory-layout`**: 16 px por byte; un bloque de 1 byte no admite etiqueta. Usar bloques de ≥ 4 bytes.
+- **`timeline`**: etiquetas de carril cortas (`hilo 0`, no `hilo 0 (master)`): se pisan con la primera barra.
+- Teoría con código y diagramas intercalados: `theory.mdx` importando `Visualization.astro`; subtemas en `.md` con
+  una sola visualización en el frontmatter y `cppSteps` apuntando a `cpp/topics/<id>/`.
+- Evaluaciones nuevas: añadir la categoría a `src/content.config.ts` y a `src/pages/evaluaciones/index.astro` (PD4 ya está).
 
 ## Pendiente
 

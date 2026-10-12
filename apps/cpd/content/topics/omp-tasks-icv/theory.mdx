@@ -1,0 +1,218 @@
+---
+kind: theory
+title: "Tareas en OpenMP: task, depend y variables de control interno"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+`for` reparte **iteraciones** de un bucle y `sections` reparte un número **fijo de bloques escritos en el código**
+([omp-intro-parallel](/topics/omp-intro-parallel)). Ninguno sirve cuando el trabajo **no se conoce de antemano**: una recursión
+(Quicksort, recorrido de un árbol), una lista de elementos que se descubre al recorrerla, o un conjunto de funciones con **dependencias de datos** entre ellas.
+
+Para eso OpenMP (desde la versión 3.0) ofrece **tareas** (`task`): una porción de código que se **empaqueta y se entrega a un pool**; cualquier hilo libre de la región la ejecuta ahora o más tarde.
+Con la cláusula `depend`, las tareas forman un **DAG** como los de [dag-cost-model](/topics/dag-cost-model), y el runtime las planifica respetando las aristas.
+
+## Intuición
+
+Un hilo (normalmente dentro de `single`) **crea** tareas como quien deja pedidos en una ventanilla; los demás hilos de la región son los empleados que van tomando pedidos. Cada pedido es una tarea:
+puede ejecutarse **inmediatamente** o quedar **diferida** (por ejemplo, si no hay hilos disponibles).
+
+```cpp
+int main() {
+#pragma omp parallel num_threads(3)
+  {
+#pragma omp single
+    {
+#pragma omp task
+      printf("t1: impresión desde el hilo: %d\n", omp_get_thread_num());
+#pragma omp task
+      printf("t2: impresión desde el hilo: %d\n", omp_get_thread_num());
+#pragma omp task
+      printf("t3: impresión desde el hilo: %d\n", omp_get_thread_num());
+    }
+  }
+}
+```
+
+Quién ejecuta cada tarea **no está determinado**. El propio archivo de clase deja tres posibles asignaciones a mano (`omp17_task01.cpp`):
+
+<Visualization viz={{
+  type: 'timeline',
+  steps: [
+    {
+      note: "Posibilidad 1: cada tarea la toma un hilo distinto — máximo paralelismo.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+        { id: 't2', label: 'hilo 2' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 3, label: 't1', state: 'active' },
+        { lane: 't1', tStart: 0, tEnd: 3, label: 't2', state: 'active' },
+        { lane: 't2', tStart: 0, tEnd: 3, label: 't3', state: 'active' },
+      ],
+      messages: [],
+    },
+    {
+      note: "Posibilidad 2: un hilo encadena t1 y t2 mientras otro ejecuta t3; el tercer hilo queda ocioso.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+        { id: 't2', label: 'hilo 2' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 3, label: 't1', state: 'active' },
+        { lane: 't0', tStart: 3, tEnd: 6, label: 't2', state: 'active' },
+        { lane: 't1', tStart: 0, tEnd: 3, label: 't3', state: 'active' },
+        { lane: 't2', tStart: 0, tEnd: 6, label: 'ocioso', state: 'muted' },
+      ],
+      messages: [],
+    },
+    {
+      note: "Posibilidad 3: una tarea se suspende y otro hilo continúa (tareas desacopladas, untied): las tareas no están atadas a un hilo.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+        { id: 't2', label: 'hilo 2' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 2, label: 't1 (parte 1)', state: 'active' },
+        { lane: 't0', tStart: 2, tEnd: 5, label: 't2', state: 'active' },
+        { lane: 't1', tStart: 2, tEnd: 4, label: 't1 (parte 2)', state: 'marked' },
+        { lane: 't2', tStart: 0, tEnd: 3, label: 't3', state: 'active' },
+      ],
+      messages: [],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+### La directiva `task`
+
+```cpp
+#pragma omp task [clause ...] newline
+    untied
+    default (shared | none)
+    private (list)
+    shared (list)
+    firstprivate (list)
+    if (scalar expression)
+    structured_block
+```
+
+Una tarea "se ejecuta inmediatamente o es diferida por el hilo que la encuentre". Se usa casi siempre así: `parallel` → `single` (un hilo crea) → varios `task`.
+Las variables que una tarea referencia se tratan, por defecto, como `firstprivate` salvo que ya sean `shared` en el contexto.
+(*Nota de apoyo*: esto último es una regla del estándar, no está en las slides.)
+
+### Sincronizar tareas
+
+| Constructor | Qué espera |
+|---|---|
+| `taskwait` | Las tareas **hijas** (creadas directamente por la tarea actual) hasta que terminen. No espera a los nietos. |
+| `taskgroup` | **Todas** las tareas creadas dentro del grupo, incluidas las descendientes (hijos, nietos, ...). Las tareas fuera del grupo no participan en la sincronización. |
+| `taskyield` | No espera nada: **suspende** la tarea actual para que el hilo ejecute otra. Mejora la concurrencia con tareas anidadas o de duración desigual. |
+
+### La cláusula `depend`
+
+```cpp
+#pragma omp task depend(dependency-type : list)
+    structured block
+```
+
+- `in`: la tarea **lee** la variable; depende de todas las tareas anteriores que la tengan en `out` o `inout`.
+- `out` / `inout`: la tarea **escribe** (o lee y escribe); depende de todas las tareas anteriores que la tengan en `in`, `out` o `inout`.
+
+La dependencia se establece **por el orden en que se crean las tareas** y por las variables mencionadas: la tarea que se crea primero con `out(x)` precede a las que luego piden `in(x)`.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "depend(out: x): la primera tarea (W) escribe x = 2. Se crea primero, así que las que lean x después la esperarán.",
+      nodes: [
+        { id: 'w', value: 'W', parent: null, state: 'active' },
+      ],
+      links: [
+      ],
+    },
+    {
+      note: "Dos tareas depend(in: x) (R1 imprime x+1, R2 imprime x+2) dependen de la escritura W, pero no entre sí: pueden correr en cualquier orden o a la vez. Salidas posibles: x+1 = 3, x+2 = 4 o al revés.",
+      nodes: [
+        { id: 'w', value: 'W', parent: null, state: 'muted' },
+        { id: 'r1', value: 'R1', parent: 'w', state: 'active' },
+        { id: 'r2', value: 'R2', parent: 'w', state: 'active' },
+      ],
+      links: [
+        { from: 'w', to: 'r1', label: 'x' },
+        { from: 'w', to: 'r2', label: 'x' },
+      ],
+    },
+  ],
+}} />
+
+## Operaciones
+
+- [omp-task-basics](/topics/omp-tasks-icv/algorithms/omp-task-basics) — `taskwait`, `taskgroup`, `taskyield`: qué espera cada uno (con los ejemplos A–F y A1/B1).
+- [omp-task-depend](/topics/omp-tasks-icv/algorithms/omp-task-depend) — `depend(in/out/inout)`: los cinco ejemplos, el DAG del último y las PD04.
+- [omp-collapse-icv](/topics/omp-tasks-icv/algorithms/omp-collapse-icv) — `collapse`, `nowait`, y las **variables de control interno** (ICVs) para hilos anidados.
+
+## Análisis de complejidad
+
+Un programa con `task` + `depend` **es** un DAG: cada tarea es un nodo con peso (su costo) y cada `depend` una arista. Por lo tanto valen las cotas de
+[dag-cost-model](/topics/dag-cost-model): $T_p \ge T_1/p$ (trabajo) y $T_p \ge T_\infty$ (camino crítico). Un planificador **voraz** (un hilo libre toma siempre una tarea lista) cumple el
+**teorema de Brent** ([pram-models](/topics/pram-models)):
+
+$$T_p \le \frac{T_1}{p} + T_\infty$$
+
+Aplicación de la PD04 2026-I (ejercicio 2): cinco funciones $a$ a $e$ de costos $O(n)$, $O(n\log n)$, $O(n\log n)$, $O(n\log^2 n)$ y $O(n)$, y un bucle final de $n$ iteraciones de costo $O(n)$.
+El DAG expone que $b$ depende de $a$, mientras $c$, $d$ y $e$ son independientes entre sí; el camino crítico es $T_\infty = O(n\log^2 n + n)$ y el trabajo del bucle $n \cdot O(n) = O(n^2)$, de modo que
+
+$$T_p = O\!\left(\frac{n^2}{p} + n\log^2 n + n\right)$$
+
+Además del trabajo, cada **región paralela** cuesta una sincronización $O(p)$ y cada **task** su propio costo de creación y espera: las tareas deben ser lo bastante gruesas para amortizarlo.
+
+## Tabla de complejidad
+
+La tabla de arriba resume Brent y el overhead de sincronización; el razonamiento completo está en la sección anterior.
+
+## Ejemplos
+
+**Orden de impresión con `depend`** (cuatro variantes de la clase, `omp22_task_dep_*.cpp`):
+
+| Código | Salida | Por qué |
+|---|---|---|
+| `task depend(out:x) x=2;` luego `task depend(in:x) print(x)` | `x = 2` | La lectura espera a la escritura. |
+| `task depend(in:x) print(x)` luego `task depend(out:x) x=2` | `x = 1` | La escritura espera a la **lectura** previa (`out` depende de `in` anteriores): el print ocurre antes. |
+| `out:x x=1`, `out:x x=2`, `taskwait`, `print(x)` | `x = 2` | Dos `out` sobre `x` se serializan en orden de creación; `taskwait` espera a ambas. |
+| `out:x x=2`, `in:x print(x+1)`, `in:x print(x+2)` | `x+1=3, x+2=4` en cualquier orden | Las dos lecturas no dependen entre sí. |
+
+**PD04 2025-I, ejercicio 2.** Las funciones `minimo`, `maximo`, `calculo_z`, `calculo_y`, `calculo_x`, `calculo_v` se paralelizan con `sections` y con `task`; el profesor compara ambos (ver abajo).
+
+## Comparación con temas relacionados
+
+`sections` frente a `task` en el ejercicio 2 de la PD04 2025-I (solución del profesor):
+
+| | `sections` | `task` + `depend` |
+|---|---|---|
+| Tiempo de ejecución | **Comparable** cuando hay pocas tareas en paralelo | Comparable |
+| Programación | Más **simple** | Más específica |
+| Dependencias | Implícitas: el orden de los bloques y una **barrera al final de `sections`** | **Explícitas**: la lista de variables de cada `depend` |
+| Efecto de la barrera | Hace esperar a **todas** las tareas del bloque, incluso las que no tienen dependencia con lo siguiente | Se evita: sólo espera lo que realmente se necesita |
+| Número de unidades de trabajo | Fijo y escrito en el código | Dinámico: puede crearse en bucles o recursión |
+
+Frente a `for` ([omp-for-schedule](/topics/omp-intro-parallel/algorithms/omp-for-schedule)): `for` es paralelismo de **datos** y reparte un espacio de iteraciones conocido;
+`task` es paralelismo de **tareas** irregular.
+
+## Prueba de dominio
+
+Al terminar este tema debo poder:
+
+- Escribir el patrón `parallel` → `single` → `task` y explicar por qué la asignación tarea→hilo no está determinada.
+- Diferenciar `taskwait` (hijas), `taskgroup` (todas las descendientes del grupo) y `taskyield` (ceder el hilo).
+- Predecir la salida de un fragmento con `depend(in/out/inout)` dado el orden de creación de las tareas.
+- Dibujar el DAG de un código con `depend` y calcular su trabajo, camino crítico y la cota de Brent.
+- Justificar cuándo conviene `task` frente a `sections` o `for`.
+- Usar `omp_set_num_threads`, `omp_set_nested`, `omp_set_max_active_levels` y predecir cuántos hilos hay en cada nivel.

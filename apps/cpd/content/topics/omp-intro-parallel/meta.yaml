@@ -1,0 +1,15 @@
+id: omp-intro-parallel
+title: "OpenMP: modelo fork-join, región parallel y reparto de trabajo"
+type: concept
+unit: u4
+
+prerequisites: [sequential-model-architectures, mpi-intro]
+buildsOn: [performance-metrics]
+usedBy: [omp-sync-data-scoping, omp-tasks-icv, hybrid-mpi-openmp]
+
+complexity: {}
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: timeline
+placeholder: false

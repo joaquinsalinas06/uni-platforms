@@ -1,0 +1,15 @@
+id: omp-sync-data-scoping
+title: "Sincronización y alcance de datos en OpenMP"
+type: concept
+unit: u4
+
+prerequisites: [omp-intro-parallel]
+buildsOn: []
+usedBy: [omp-tasks-icv, omp-memory-model]
+
+complexity: {}
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: timeline
+placeholder: false

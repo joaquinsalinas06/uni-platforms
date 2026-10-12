@@ -372,3 +372,96 @@ Ejemplo `MPI_Type_vector` para columna `j` de `double A[4][4]`: `MPI_Type_vector
 $$T_{comm} = \alpha + x\beta$$
 
 No hay fórmula de costo propia distinta de $T_{comm}=\alpha+x\beta$; el ahorro de un tipo derivado es pagar $\alpha$ una sola vez en vez de $x$ veces. [ver tema mpi-intro](/topics/mpi-intro) · [ver tema mpi-derived-datatypes](/topics/mpi-derived-datatypes)
+
+## Unidad 4 — Memoria compartida (OpenMP) y paralelismo híbrido
+
+### OpenMP: modelo fork-join, región parallel y reparto de trabajo
+
+**Definición.** OpenMP es una API de **memoria compartida** (UMA/ccNUMA) con directivas de compilador, librería de runtime y variables de entorno. Modelo **fork-join**: el hilo master (hilo 0) crea un equipo de hilos en `parallel` (FORK) y al terminar el bloque se sincronizan y queda sólo el master (JOIN). Las directivas son comentarios sintácticos: sin `-fopenmp` se ignoran; `#ifdef _OPENMP` permite un único código secuencial/paralelo.
+
+**Clasificación — constructores de trabajo compartido** (no crean hilos nuevos):
+
+| Constructor | Reparte | Barrera implícita |
+|---|---|---|
+| `for` | Iteraciones de un bucle (paralelismo de datos) | Sí (salvo `nowait`) |
+| `sections` / `section` | Bloques distintos, uno por hilo (paralelismo de tareas fijas) | Sí (salvo `nowait`) |
+| `single` | Un solo hilo ejecuta el bloque | Sí (salvo `nowait`) |
+| `master` | Sólo el hilo 0; el resto salta | **No** |
+
+**Clasificación — `schedule(kind, chunk)`**: `static` (bloques fijos antes de ejecutar; sin chunk, partes iguales contiguas), `dynamic` (bloque nuevo al terminar el anterior), `guided` (como dynamic con bloques que decrecen), `runtime` (lo decide `OMP_SCHEDULE`), `auto` (el compilador).
+
+**Modelo de costo (PD04 2026-I).** $T_p = T_s/p + T_{overhead}$ con región `parallel`: $O(p)$; `reduction`: $O(\log p)$; `critical`/`atomic` con $M$ accesos en competencia: $O(M)$.
+
+[ver tema completo](/topics/omp-intro-parallel)
+
+### Sincronización y alcance de datos en OpenMP
+
+**Constructores de sincronización:** `master` (hilo 0, sin barrera), `critical [(nombre)]` (un hilo a la vez; nombres distintos = secciones independientes), `barrier` (todos esperan), `atomic [read|write|update|capture]` (una sentencia sobre una ubicación), `flush` (vista consistente de memoria), `ordered` (iteraciones en orden secuencial; a lo sumo una región por iteración).
+
+**`flush` implícito** en: `barrier`; inicio y fin de `parallel`, `critical` y `ordered`; fin de `for`, `sections` y `single`.
+
+**Cláusulas de alcance de datos:**
+
+| Cláusula | Efecto |
+|---|---|
+| `shared` | Una única copia, visible para todos |
+| `private` | Copia nueva **sin inicializar** por hilo; el original no cambia |
+| `firstprivate` | `private` + inicializada con el valor del original antes de la región |
+| `lastprivate` | `private` + el original recibe el valor de la última iteración/sección |
+| `threadprivate` | Global replicada por hilo; **persiste entre regiones** paralelas |
+| `copyin` / `copyprivate` | Difunden valores a copias `threadprivate` / privadas (con `single`) |
+| `reduction(op:lista)` | Copias privadas con el neutro del operador, combinadas al final |
+
+**Regla práctica.** Acumular localmente y combinar una vez por hilo: el `critical` fuera del bucle cuesta $p$ entradas; dentro, $n$.
+
+[ver tema completo](/topics/omp-sync-data-scoping)
+
+### Tareas en OpenMP: task, depend y variables de control interno
+
+**Definición.** `#pragma omp task` empaqueta un bloque que cualquier hilo libre de la región ejecuta (ahora o diferido). Patrón: `parallel` → `single` → `task`.
+
+**Clasificación — sincronización de tareas:** `taskwait` (espera las **hijas**), `taskgroup` (espera **todas las descendientes** del grupo), `taskyield` (suspende la tarea actual para ejecutar otra).
+
+**Clasificación — `depend`:** `in` depende de los `out/inout` anteriores sobre la variable; `out` / `inout` dependen de los `in/out/inout` anteriores. Las aristas se establecen por orden de creación y entre tareas **hermanas**.
+
+**Fórmula — cota de Brent con tareas.**
+
+$$T_p \le \frac{T_1}{p} + T_\infty$$
+
+Cada `task` es un nodo del DAG y cada `depend` una arista; $T_1$ es el trabajo y $T_\infty$ el camino crítico. PD04 2026-I (ej. 2): $T_p = O\!\left(\frac{n^2}{p} + n\log^2 n + n\right)$.
+
+**ICVs:** `omp_set_num_threads`, `omp_set_nested`, `omp_set_max_active_levels`, `omp_set_dynamic`; cada región recibe una copia. `collapse(n)` fusiona $n$ bucles perfectamente anidados en un espacio de $\prod$ iteraciones.
+
+[ver tema completo](/topics/omp-tasks-icv)
+
+### Modelo de memoria, corrección y locks en OpenMP
+
+**Definición.** *Data race*: dos hilos acceden a la misma ubicación, al menos uno escribe, sin orden ni sincronización. *Happens-before*: relación de orden que garantiza qué valores ve una lectura; la establecen `barrier`, `critical`, `atomic`, `task depend`, `reduction` y `flush`.
+
+**Fórmula — número de intercalados** de 2 hilos con $k$ sentencias cada uno (orden interno fijo):
+
+$$\binom{2k}{k} = \frac{(2k)!}{(k!)^2} \sim \frac{4^k}{\sqrt{2k}}$$
+
+(Para $k = 2$: 6; la asintótica estándar es $4^k/\sqrt{\pi k}$.) Por eso se **razona** (prueba por contradicción con un ciclo de "ocurre antes") en vez de probar ejecuciones.
+
+**Locks (`omp_lock_t`):** `omp_init_lock`, `omp_set_lock` (espera y toma), `omp_unset_lock`, `omp_destroy_lock`. **Deadlock** = espera circular; se previene imponiendo un **orden total** a los locks (pedir siempre el de menor índice primero).
+
+[ver tema completo](/topics/omp-memory-model)
+
+### Paralelismo híbrido MPI + OpenMP
+
+**Definición.** MPI entre procesos (memoria distribuida) y OpenMP dentro de cada proceso (memoria compartida). Combinaciones en un nodo de $c$ núcleos: (procesos × hilos) con producto $c$.
+
+**Fórmula — potencia dinámica.**
+
+$$P_{dyn}(f) = \gamma \cdot f^3$$
+
+Dos núcleos a $f/2$ rinden lo mismo que uno a $f$ con $2\gamma(f/2)^3 = \gamma f^3/4$ de potencia: muchos núcleos lentos.
+
+**Fórmula — halo en malla 2D** ($N \times N$, $P$ procesos): cómputo por proceso $N^2/P$; halo $\sim 4N/\sqrt{P}$; relación comunicación/cómputo $4\sqrt{P}/N$. Al pasar de $P$ a $4P$ procesos: celdas $\times 1/4$, halo $\times 1/2$. En 3D con 1 celda de halo: $1 - \left(\frac{n}{n+2}\right)^3$ ($n = 10 \to 42\%$, $20 \to 25\%$, $40 \to 14\%$).
+
+**Ventajas:** mayor escalabilidad (granularidad), mejor balance de cargas, menos memoria. **Desventajas:** más complejidad, ambos modelos deben rendir bien, efectos NUMA. **No siempre es más eficiente:** durante la comunicación MPI todos los hilos menos uno esperan; costo de crear hilos; faltan librerías/compiladores optimizados para OpenMP.
+
+**Ejecución en Slurm:** `--ntasks` = procesos MPI, `--cpus-per-task` = hilos, `export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK`, `mpirun ./programa`.
+
+[ver tema completo](/topics/hybrid-mpi-openmp)

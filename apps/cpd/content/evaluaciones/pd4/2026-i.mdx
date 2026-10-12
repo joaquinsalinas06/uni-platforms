@@ -1,0 +1,257 @@
+---
+title: "PD4 — 2026-I"
+category: pd4
+categoryLabel: "PD4"
+order: 4
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Sobre esta resolución.** El PDF de la PD04 2026-I trae solución del profesor para el **ejercicio 1.1** (estrategia de paralelización), el **ejercicio 2** (DAG, PRAM y complejidad) y el **ejercicio 3** (código y overhead); se reproducen y se comentan.
+> Faltan en el PDF las soluciones de 1.2 y 1.3 (el código `knn.cpp` está en Canvas): se resuelven aquí con un KNN de fuerza bruta **propio** (`cpp/practica/pd4_knn.cpp`) medido en un Apple M5 (4 núcleos de rendimiento + 6 de eficiencia, GCC 16, `-O2`).
+> El ejercicio 3 se verificó también con código (`pd4_promedio.cpp`).
+
+## Ejercicio 1 — KNN (2 pts)
+
+Paralelice el código KNN (`knn.cpp`, en Canvas) con directivas OMP. **1.1** Decida la estrategia de paralelismo (¿qué bucle paraleliza?), fundaméntela y genere el código (0.5 pts). **1.2** Mida $T_{ejec}$ vs. $p = \{2, 4, 8, 16\}$ (en Khipu hasta $p = 32$) y analice la **escalabilidad fuerte** (0.5 pts). **1.3** Decida si incrementar $N_{test}$ o $N_{train}$ para medir la **escalabilidad débil**, mida y analice (1 pt).
+
+### Solución
+
+**1.1 (solución del profesor).** Se paraleliza el bucle de la **data de prueba** ($N_{test}$): cada punto de prueba debe recorrer **todo** $N_{train}$, y así se evita un paso posterior de reducción de distancias (cada hilo ya tiene sus $k$ vecinos completos). Código:
+
+```cpp
+#pragma omp parallel for schedule(static)
+for (int q = 0; q < Ntest; q++) {
+  vector<pair<float,int>> best(K, {1e30f, 0});     // los k mejores de ESTA consulta: privado
+  for (int i = 0; i < Ntrain; i++) {
+    float s = 0;
+    for (int j = 0; j < D; j++) { float df = te[q*D+j] - tr[i*D+j]; s += df*df; }
+    if (s < best[K-1].first) { best[K-1] = {s, lab[i]}; sort(best.begin(), best.end()); }
+  }
+  int cnt[3] = {0,0,0}; for (auto &b : best) cnt[b.second]++;
+  pred[q] = max_element(cnt, cnt+3) - cnt;         // voto por mayoría
+}
+```
+
+Alternativa descartada: paralelizar el bucle sobre $N_{train}$ obligaría a que cada hilo mantenga sus $k$ mejores **parciales** y a una **reducción** final de $p \cdot k$ candidatos por consulta (más memoria y sincronización por cada punto de prueba).
+Con `schedule(static)` basta, porque todas las consultas cuestan lo mismo ($N_{train} \cdot d$).
+
+**1.2 Escalabilidad fuerte** ($N_{train} = 40\,000$, $N_{test} = 8\,000$, $d = 16$, $k = 5$ **fijos**; trabajo total $W = N_{train} N_{test} d$ constante):
+
+| $p$ | $T_p$ (s) | $S = T_1/T_p$ | $E = S/p$ |
+|---|---|---|---|
+| 1 | 0.697 | 1.00 | 1.00 |
+| 2 | 0.354 | 1.97 | 0.98 |
+| 4 | 0.182 | 3.83 | 0.96 |
+| 8 | 0.135 | 5.17 | 0.65 |
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "Escalabilidad fuerte medida (eje x: p, eje y: speedup). Casi lineal hasta p = 4; con p = 8 la curva se aleja de la ideal.",
+      series: [
+        { id: 'medido', label: 'speedup medido', points: [[1, 1], [2, 1.97], [4, 3.83], [8, 5.17]] },
+        { id: 'ideal', label: 'ideal S = p', points: [[1, 1], [2, 2], [4, 4], [8, 8]] },
+      ],
+      highlight: ['medido'],
+      params: {},
+    },
+  ],
+}} />
+
+**Análisis.** Hasta $p = 4$ la eficiencia se mantiene en $0.96$–$0.98$: el reparto es perfecto (consultas independientes, sin comunicación; $T_p = O(N_{test} N_{train} d / p + \text{overhead})$ con overhead $O(p)$ de la región paralela). La caída a $E = 0.65$ en $p = 8$ **no es del algoritmo**:
+esta máquina tiene sólo **4 núcleos de rendimiento** y 6 de eficiencia; los hilos 5–8 corren en núcleos más lentos (y la memoria de entrenamiento, 2.5 MB, ya no cabe en la caché por núcleo). En Khipu (núcleos homogéneos) se espera mantener $E$ alta hasta $p = 32$ mientras $N_{test}/p$ siga siendo grande.
+El límite teórico de escalabilidad fuerte es $p \le N_{test}$ (cada hilo necesita al menos una consulta).
+
+**1.3 Escalabilidad débil: se incrementa $N_{test}$** (proporcional a $p$) con $N_{train} = 40\,000$ fijo. Así el **trabajo por hilo** $N_{test}/p \cdot N_{train} \cdot d$ queda constante y el conjunto de entrenamiento (de sólo lectura, compartido) **no cambia de tamaño**: se mide el overhead paralelo y no efectos de caché por un $N_{train}$ creciente.
+
+| $p$ | $N_{test}$ | $T_p$ (s) | $E_{débil} = T_1/T_p$ |
+|---|---|---|---|
+| 1 | 1 000 | 0.088 | 1.00 |
+| 2 | 2 000 | 0.089 | 0.99 |
+| 4 | 4 000 | 0.091 | 0.97 |
+| 8 | 8 000 | 0.136 | 0.65 |
+
+En escalabilidad débil el tiempo **ideal es constante**. Se mantiene casi plano hasta $p = 4$ ($E_{débil} \ge 0.97$) y sube 50 % con $p = 8$ por la misma razón de hardware. *Nota de apoyo*: como el trabajo crece con $N_{test}$ (lineal), la ley de Gustafson ([performance-metrics](/topics/performance-metrics)) predice speedup escalado $\approx p$ mientras la parte secuencial (lectura de datos, creación de la región) sea despreciable.
+
+## Ejercicio 2 — Tareas en paralelo (2 pts)
+
+Dada la función secuencial (las funciones internas **no modifican** sus argumentos):
+
+```cpp
+int ejercicio_2(int n, double *v, double &x, double &y) {
+  int i, j, k = 0;
+  double a, b, c, d;
+  a = calcula_a(v, x);   // O(n)
+  b = calcula_b(v, a);   // O(n log n)
+  c = calcula_c(v, x);   // O(n log n)
+  d = calcula_d(v, y);   // O(n log^2 n)
+  e = calcula_e(v, x);   // O(n)
+  x += a + b + c;
+  y += c + d + e;
+  for (i = 0; i < n; i++) {
+    j = f(x, y, v[i]);   // O(n)
+    if (j > 0 && j < 4) k++;
+  }
+  return k;
+}
+```
+
+**2.1** Dibuje el grafo de dependencias (DAG) (0.5 pts); se paralelizan las 5 primeras tareas y el bucle; el cálculo de $x, y$ se hace en la **última tarea**. **2.2** Diseñe un algoritmo (pseudocódigo PRAM) que **maximice el paralelismo** (1 pt). **2.3** Indique la complejidad (0.5 pts).
+
+### Solución
+
+**2.1 DAG.** `b` usa `a`; `c`, `d`, `e` sólo usan `v`, `x`, `y` (entradas) y son independientes; la actualización de `x` usa `a, b, c`, la de `y` usa `c, d, e`; el bucle final necesita ambos.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Cinco funciones: b depende de a; c, d y e son independientes de todas (sólo leen v, x, y, que las funciones no modifican). Costos: a O(n), b O(n log n), c O(n log n), d O(n log² n), e O(n).",
+      nodes: [
+        { id: 'a', value: 'a', parent: null, state: 'active' },
+        { id: 'b', value: 'b', parent: 'a', state: 'active' },
+        { id: 'c', value: 'c', parent: null, state: 'active' },
+        { id: 'd', value: 'd', parent: null, state: 'active' },
+        { id: 'e', value: 'e', parent: null, state: 'active' },
+      ],
+      links: [
+        { from: 'a', to: 'b' },
+      ],
+    },
+    {
+      note: "La última tarea (x,y) actualiza x += a+b+c e y += c+d+e. Se trata como un único nodo final antes del bucle (no modifica el orden O(n) del DAG).",
+      nodes: [
+        { id: 'a', value: 'a', parent: null },
+        { id: 'b', value: 'b', parent: 'a' },
+        { id: 'c', value: 'c', parent: null },
+        { id: 'd', value: 'd', parent: null },
+        { id: 'e', value: 'e', parent: null },
+        { id: 'xy', value: 'x,y', parent: 'b', state: 'active' },
+      ],
+      links: [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'xy' },
+        { from: 'c', to: 'xy' },
+        { from: 'd', to: 'xy' },
+        { from: 'e', to: 'xy' },
+      ],
+    },
+    {
+      note: "El bucle for: n iteraciones independientes (cada una cuesta O(n) y sólo lee x, y, v[i]); k se acumula por reducción. Camino crítico: d (O(n log² n)), luego x,y, luego una iteración (O(n)).",
+      nodes: [
+        { id: 'a', value: 'a', parent: null },
+        { id: 'b', value: 'b', parent: 'a' },
+        { id: 'c', value: 'c', parent: null },
+        { id: 'd', value: 'd', parent: null },
+        { id: 'e', value: 'e', parent: null },
+        { id: 'xy', value: 'x,y', parent: 'b' },
+        { id: 'loop', value: 'for', parent: 'xy', state: 'answer' },
+      ],
+      links: [
+        { from: 'a', to: 'b' },
+        { from: 'b', to: 'xy' },
+        { from: 'c', to: 'xy' },
+        { from: 'd', to: 'xy' },
+        { from: 'e', to: 'xy' },
+        { from: 'xy', to: 'loop' },
+      ],
+    },
+  ],
+}} />
+
+**2.2 PRAM (solución del profesor).**
+
+```
+Algorithm: Ejercicio 02
+Input:  entero n, arrays v, x, y           Output: contador k de valores con 0 < j < 4
+
+calcula_a ‖ calcula_c ‖ calcula_d ‖ calcula_e        // cuatro tareas independientes: O(n log² n)
+calcula_b                                            // depende de a: O(n log n)
+x += a + b + c
+y += c + d + e
+para i = 1 hasta n pardo
+    j = f(x, y, v[i])                                // O(n)
+    si (j > 0 y j < 4) entonces k++                  // contador compartido: sumar con reducción
+```
+
+El bucle final tiene $n$ iteraciones **independientes**: se ejecutan todas a la vez con $n$ procesadores ($T = O(n)$ por iteración); el incremento de `k` se resuelve con una reducción (en un PRAM, suma en árbol en $O(\log n)$, o CRCW con suma).
+
+**2.3 Complejidad (solución del profesor).** De acuerdo al PRAM, $T_\infty = O(n \log^2 n + n)$: el máximo de la primera fase ($d$, $O(n\log^2 n)$) más el bucle paralelo ($O(n)$ por iteración). Aplicando **Brent** ([omp-tasks-icv](/topics/omp-tasks-icv)), el tiempo con $p$ procesadores es
+
+$$T_p = O\!\left(\frac{n^2}{p} + n\log^2 n + n\right)$$
+
+donde $n^2/p$ es el trabajo del bucle ($n$ iteraciones de costo $O(n)$) repartido entre $p$ hilos, y $n\log^2 n + n$ es el camino crítico. *Observación de apoyo*: la solución del profesor escribe `calcula_b` como $O(n)$ en el PRAM mientras el enunciado lo da como $O(n \log n)$; no cambia el término dominante.
+En OpenMP, `k` se paraleliza con `reduction(+:k)` y el bucle con `parallel for` (o `taskloop reduction`), las cinco primeras funciones con `task` y `depend` (ver [omp-task-depend](/topics/omp-tasks-icv/algorithms/omp-task-depend)); el código verificado está en `pd4_dag_tasks.cpp`.
+
+## Ejercicio 3 — Función promedio (2 pts)
+
+La función determina las posiciones de los valores mayores al promedio en una matriz $N \times N$:
+
+```cpp
+int ejercicio_1(int N, double **A, double posiciones[][2]) {
+  int i, j, k = 0;
+  /* Cálculo del promedio */
+  for (i = 0; i < N; i++) for (j = 0; j < N; j++) sum += *(*(A + i) + j);
+  prom = sum / (N * N);
+  /* Posiciones de valores mayores al promedio */
+  for (i = 0; i < N; i++)
+    for (j = 0; j < N; j++)
+      if (A[i][j] > prom) { posiciones[k][0] = i; posiciones[k][1] = j; k = k + 1; }
+}
+```
+
+**3.1** Paralelice con OMP (0.5 pts). **3.2** Describa y analice el nivel de paralelismo logrado (0.5 pts). **3.3** Formule ecuaciones para el overhead y obtenga una expresión final para $T_p(n, p)$ (1 pt).
+
+### Solución
+
+**3.1 Código (solución del profesor).**
+
+```cpp
+int ejercicio_3_omp(int N, double **A, double posiciones[][2]) {
+  int i, j, k = 0;
+  double sum = 0.0, prom;
+  /* Cálculo paralelo de la suma */
+#pragma omp parallel for collapse(2) reduction(+ : sum)
+  for (i = 0; i < N; i++)
+    for (j = 0; j < N; j++)
+      sum += A[i][j];
+  prom = sum / (N * N);
+  /* Guardar posiciones mayores al promedio */
+#pragma omp parallel for collapse(2)
+  for (i = 0; i < N; i++) {
+    for (j = 0; j < N; j++) {
+      if (A[i][j] > prom) {
+        int idx;
+#pragma omp atomic capture
+        idx = k++;
+        posiciones[idx][0] = i;
+        posiciones[idx][1] = j;
+      }
+    }
+  }
+  return k;
+}
+```
+
+**Verificación** (`pd4_promedio.cpp`, $N = 2000$): el conjunto de posiciones del paralelo **coincide** con el del secuencial en $p = 1, 2, 4, 8$ ($k = 2\,000\,287$). Ojo: el **orden** en `posiciones` no es el mismo (cada hilo toma `idx` cuando le toca), así que la comparación se hace **como conjunto**, no elemento a elemento.
+
+**3.2 Nivel de paralelismo (solución del profesor).** En el cálculo del promedio se usa `reduction(+:sum)` porque varios hilos acumulan sumas parciales. En la segunda fase la variable `k` es compartida: se usa `atomic capture` para que cada hilo obtenga una posición **única** en `posiciones`. Con $p$ hilos:
+
+$$T_p = O\!\left(\frac{N^2}{p}\right) + \text{overhead}.$$
+
+El `atomic capture` puede generar **contención** si muchos elementos superan el promedio, pero evita condiciones de carrera y mantiene correcta la escritura en `posiciones`.
+
+**3.3 Overhead y $T_p(n,p)$ (solución del profesor).**
+
+- Cada región `#pragma omp parallel for`: creación/activación de hilos, reparto de iteraciones y sincronización implícita final, modelado como latencia constante de sincronización: $O(p)$.
+- `reduction(+:sum)`: copias privadas combinadas al final: $O(\log p)$.
+- `atomic capture` sobre `k`: serialización parcial. Si $M$ elementos cumplen $A[i][j] > prom$, el costo total es $O(M)$ (con constante alta por contención); en el peor caso $M = N^2$.
+
+$$\boxed{T_p = O\!\left(\frac{N^2}{p} + \log p + M\right)}, \qquad M = \#\{(i,j) : A[i][j] > prom\}.$$
+
+**Contraste experimental** ($N = 2000$, valores uniformes en $[0,1]$, de modo que $M \approx N^2/2 = 2 \times 10^6$): el tiempo **total** del paralelo es 21 ms con 1 hilo, 39 ms con 2, 43 ms con 4 y **90 ms con 8**, frente a **≈ 16–20 ms del secuencial**. El término $M$ domina: la fase 2 está **serializada** y la contención sobre `k` crece con $p$.
+Es exactamente la advertencia del profesor ("puede crecer hasta $O(N^2)$").
+
+*Nota de apoyo (mejora, no pedida)*: se evita la contención con **un buffer local por hilo** (cada hilo guarda sus posiciones en un vector privado) y se concatenan al final con un prefix-sum de los tamaños — la misma idea de "acumular local, combinar una vez" ([omp-sync-data-scoping](/topics/omp-sync-data-scoping)). Entonces $T_p = O(N^2/p + \log p)$ y el término $M$ desaparece del camino crítico.

@@ -85,7 +85,7 @@ export const collections = {
     }),
     schema: z.object({
       title: z.string(),
-      category: z.enum(['pd1', 'pd2', 'pd3', 'parciales']),
+      category: z.enum(['pd1', 'pd2', 'pd3', 'pd4', 'parciales']),
       categoryLabel: z.string(),
       order: z.number().int().default(0),
     }),

@@ -1,0 +1,207 @@
+---
+title: "PD4 — 2025-II (S02)"
+category: pd4
+categoryLabel: "PD4"
+order: 3
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Sobre esta resolución.** El PDF de esta PD **no incluye solución**; la resolución es **propia**: código compilado y medido en un Apple M5 (GCC 16, `-O2`). Archivos completos en `cpp/practica/pd4_histograma.cpp`,
+> `pd4_broken_triangle.cpp` y `pd4_dag_tasks.cpp`. El ejercicio 2 es el mismo problema que en la [S01](/evaluaciones/pd4/2025-ii-s01) con la pregunta (2) distinta.
+
+## Ejercicio 1 — Histograma (2.5 pts)
+
+Paralelice `ejercicio01_sec.cpp` (histograma con **bins por hilo**) con OpenMP: (1.1) con `reduction` (1 pt), (1.2) con `atomic` (0.5 pt); compare el performance y asegure la validez contra el secuencial. (1.3) Basándose en el pseudocódigo secuencial, genere un **PRAM** para uno de los casos (1 pt).
+
+```
+Algoritmo secuencial   Entrada: N muestras, B bins   Salida: H[0..B-1]
+  H[b] ← 0 para b = 0..B-1
+  generar N datos x_i ∈ [0, B-1]
+  para i ← 0 hasta N-1:  b ← x_i ;  H[b] ← H[b] + 1
+  verificación: Σ_b H[b] = N
+```
+
+### Solución
+
+**1.1 `reduction`.** Cada hilo recibe una copia **privada de todo el histograma** (`B` contadores en 0), cuenta sólo sus muestras y al final se suman las copias bin a bin:
+
+```cpp
+long *hr = H.data();
+#pragma omp parallel for reduction(+ : hr[0 : B])
+for (long i = 0; i < N; i++) hr[x[i]]++;
+```
+
+**1.2 `atomic`.** Un único histograma compartido; cada incremento es atómico:
+
+```cpp
+#pragma omp parallel for
+for (long i = 0; i < N; i++) {
+#pragma omp atomic
+  H[x[i]]++;
+}
+```
+
+**Comparación** ($N = 2^{26}$ muestras, $B = 256$ bins; segundos; el secuencial tardó 0.017 s):
+
+| $p$ | `reduction` | `atomic` |
+|---|---|---|
+| 1 | 0.017 | 0.039 |
+| 2 | 0.009 | 0.813 |
+| 4 | 0.004 | 0.639 |
+| 8 | 0.004 | 0.797 |
+
+Con **pocos bins** la contención es peor: $B = 8$, $N = 2^{24}$, $p = 8$ → `reduction` 0.002 s, `atomic` **0.504 s** (frente a 0.007 s secuencial).
+
+**Lectura.** `reduction` escala (speedup ≈ 4 con 8 hilos, limitado por el ancho de banda de memoria, pues cada muestra se lee una sola vez). `atomic` es **más lento que el secuencial** apenas hay 2 hilos: muchos hilos incrementan el mismo `H[b]`
+(tanto más cuanto menos bins), y cada incremento obliga a la línea de caché a viajar entre núcleos. El precio de `reduction` es la **memoria**: $p \cdot B$ contadores en vez de $B$, y una fase final de combinación $O(B \log p)$ — despreciable si $B \ll N/p$.
+
+**Validez.** En ambos casos se verifican (i) $\sum_b H[b] = N$ y (ii) que **cada** $H[b]$ coincide con el del secuencial: es aritmética entera, así que la comparación es **exacta** (no hay tolerancia como en punto flotante).
+
+**1.3 PRAM** (caso `reduction`, EREW, $P$ procesadores). Cada procesador cuenta sus $N/P$ muestras en un histograma **local** (sin conflictos de escritura) y luego los $P$ histogramas se suman bin a bin con un **árbol binario** (ver [pram-algorithms](/topics/pram-algorithms)):
+
+```
+Entrada: N, B, x[0..N-1], P procesadores        Salida: H[0..B-1]
+1.  para p ← 0 hasta P-1 pardo:                  // fase local, EREW (cada p escribe H_p)
+      H_p[b] ← 0 para todo b
+      para i ← p·N/P hasta (p+1)·N/P - 1:
+         H_p[x_i] ← H_p[x_i] + 1                 // O(N/P)
+2.  para s ← 1 hasta ⌈log₂ P⌉:                   // reducción en árbol, B·P/2 procesadores
+      para b ← 0 hasta B-1, p ← 0 hasta P-1 con p mod 2^s = 0 pardo:
+         H_p[b] ← H_p[b] + H_{p+2^{s-1}}[b]      // sumas disjuntas: EREW
+3.  H ← H_0
+```
+
+**Complejidad:** fase 1 $O(N/P)$; fase 2 $O(\log P)$ pasos con $B\,P/2$ procesadores. $T_P = O(N/P + \log P)$; trabajo $W = O(N + B\,P)$ y espacio $O(B\,P)$. Eficiencia $E = N/(P \cdot T_P) = N/(N + P \log P)$, que se mantiene cerca de 1 mientras $P \log P \ll N$.
+La variante con `atomic` corresponde a un PRAM **CRCW con suma**: todos los procesadores ejecutan a la vez $H[x_i] \leftarrow H[x_i] + 1$ y el modelo suma las escrituras concurrentes — $T = O(N/P)$ pero **no es implementable** en hardware real sin serializar, que es justo lo que muestran los tiempos.
+
+## Ejercicio 2 — Broken triangle (2 pts)
+
+El enunciado y el código son los de la [S01](/evaluaciones/pd4/2025-ii-s01#ejercicio-2--broken-triangle-2-pts) (probabilidad de formar triángulo y de que sea obtuso, por Monte Carlo con OMP). La pregunta (2) cambia: **(2) Indique cómo garantiza que cada hilo genere un conjunto de números random distintos. Describa el overhead en el código propuesto (1 pt).**
+
+### Solución
+
+**Resultados** (los mismos de la S01, $N = 10^8$): $P(\text{triángulo}) = 0.2500$ y $P(\text{obtuso} \mid \text{triángulo}) = 0.6823$.
+
+**Números aleatorios distintos por hilo.** El riesgo es doble: (i) compartir un único generador entre hilos es una **condición de carrera** (y con `rand()` además hay un cerrojo interno que serializa) y (ii) dos generadores con la **misma semilla** producen **la misma secuencia**, es decir, muestras repetidas que no aportan información. Se garantiza con:
+
+1. **Un generador por hilo**, declarado **dentro** de la región paralela (estado privado): `std::mt19937_64 gen(...)`.
+2. **Una semilla distinta por hilo**, derivada del id: `12345 + 7919ULL * omp_get_thread_num()`. Una mejor práctica es separar los flujos con un método de *salto* (`jump` en xoshiro, o *leapfrog*) para garantizar que no se solapen; semillas consecutivas bastan en la práctica con `mt19937_64` por el estado grande.
+3. **Reproducibilidad**: con `schedule(static)` y el mismo $p$, cada hilo ejecuta siempre las mismas iteraciones con la misma secuencia, así que el resultado es repetible (con otro $p$ cambia, pero estadísticamente equivalente).
+
+**Overhead del código.** Inicializar un generador por hilo (~2.5 KB de estado; una vez por hilo, no por iteración), crear la región paralela $O(p)$, combinar los dos contadores con `reduction` $O(\log p)$ y la barrera final. Todo es $O(p)$ frente al trabajo útil $N/p$: despreciable con $N = 10^8$ (speedup 6.1 con 8 hilos, ver la tabla de la S01).
+Un overhead **evitable**: si los contadores fueran un arreglo `cont[tid]` compartido habría *false sharing* (hilos distintos escribiendo en la misma línea de caché); con `reduction` cada hilo tiene su copia privada.
+
+## Ejercicio 3 — DAG-OMP (1.5 pts)
+
+En la PD2 se generó el DAG del algoritmo `OpArr`. Genere el código C++-OMP que lo paralelice eficientemente con `task` y `depend` (1 pt) y dibuje el DAG (0.5 pt).
+
+```cpp
+double OpArr(double A[], double B[], double C[], int n) {
+  int i, j; double s1, s2, a, res;
+  suma_de_prefijos(A, n);              // tarea 1: array de suma de prefijos de A
+  quicksort(B, n);                     // tarea 2: ordena B
+  scan_left(C + x, n);                 // tarea 3: acumula C con una constante x
+  for (i = 0; i < n; i++) {            // tarea 4
+    s1 = 0;
+    for (j = 0; j < n; j++) s1 += A[j] * B[j];
+    for (j = 0; j < n; j++) A[j] *= s1;
+  }
+  for (i = 0; i < n; i++) {            // tarea 5
+    s2 = 0;
+    for (j = 0; j < n; j++) s2 += B[j] * C[j];
+    for (j = 0; j < n; j++) C[j] *= s2;
+  }
+  a = s1 / s2; res = 0;                // cálculo final (tarea 6)
+  for (i = 0; i < n; i++) res += a * C[i];
+  return res;
+}
+```
+
+### Solución
+
+**Dependencias por variable.** Las tareas 1, 2 y 3 operan sobre arreglos distintos (`A`, `B`, `C`): son **independientes**. La tarea 4 usa $A$ (tras la 1) y $B$ (tras la 2) y produce `s1`; la tarea 5 usa $B$ (tras la 2) y $C$ (tras la 3) y produce `s2`; la 6 necesita `s1`, `s2` y `C` ya multiplicado por la tarea 5.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Tres tareas sin predecesoras, sobre arreglos distintos: T1 = prefijos de A, T2 = quicksort de B, T3 = scan de C.",
+      nodes: [
+        { id: 't1', value: 'T1', parent: null, state: 'active' },
+        { id: 't2', value: 'T2', parent: null, state: 'active' },
+        { id: 't3', value: 'T3', parent: null, state: 'active' },
+      ],
+      links: [
+      ],
+    },
+    {
+      note: "T4 combina A (tras T1) y B (tras T2); T5 combina B (tras T2) y C (tras T3). T4 y T5 son independientes entre sí: las dos sólo LEEN B.",
+      nodes: [
+        { id: 't1', value: 'T1', parent: null },
+        { id: 't2', value: 'T2', parent: null },
+        { id: 't3', value: 'T3', parent: null },
+        { id: 't4', value: 'T4', parent: 't1', state: 'active' },
+        { id: 't5', value: 'T5', parent: 't3', state: 'active' },
+      ],
+      links: [
+        { from: 't1', to: 't4', label: 'A' },
+        { from: 't2', to: 't4', label: 'B' },
+        { from: 't2', to: 't5', label: 'B' },
+        { from: 't3', to: 't5', label: 'C' },
+      ],
+    },
+    {
+      note: "T6 (cálculo final) necesita s1 (de T4), s2 (de T5) y C ya multiplicado (de T5). Camino crítico: la más larga de T1, T2, T3, luego T4 o T5, luego T6.",
+      nodes: [
+        { id: 't1', value: 'T1', parent: null },
+        { id: 't2', value: 'T2', parent: null },
+        { id: 't3', value: 'T3', parent: null },
+        { id: 't4', value: 'T4', parent: 't1' },
+        { id: 't5', value: 'T5', parent: 't3' },
+        { id: 't6', value: 'T6', parent: 't4', state: 'answer' },
+      ],
+      links: [
+        { from: 't1', to: 't4', label: 'A' },
+        { from: 't2', to: 't4', label: 'B' },
+        { from: 't2', to: 't5', label: 'B' },
+        { from: 't3', to: 't5', label: 'C' },
+        { from: 't4', to: 't6', label: 's1' },
+        { from: 't5', to: 't6', label: 's2' },
+      ],
+    },
+  ],
+}} />
+
+```cpp
+double OpArr(V A, V B, V C, int n, double x) {
+  double s1 = 0, s2 = 0, a, res = 0;
+#pragma omp parallel
+#pragma omp single
+  {
+#pragma omp task depend(inout : A)
+    suma_de_prefijos(A);                                              // T1
+#pragma omp task depend(inout : B)
+    quicksort_(B);                                                    // T2
+#pragma omp task depend(inout : C)
+    scan_left(C, x);                                                  // T3
+#pragma omp task depend(inout : A) depend(in : B) depend(out : s1)    // T4: A tras T1, B tras T2
+    for (int i = 0; i < n; i++) {
+      s1 = 0;
+      for (int j = 0; j < n; j++) s1 += A[j] * B[j];
+      for (int j = 0; j < n; j++) A[j] *= s1;
+    }
+#pragma omp task depend(inout : C) depend(in : B) depend(out : s2)    // T5: C tras T3, B tras T2
+    for (int i = 0; i < n; i++) {
+      s2 = 0;
+      for (int j = 0; j < n; j++) s2 += B[j] * C[j];
+      for (int j = 0; j < n; j++) C[j] *= s2;
+    }
+#pragma omp task depend(in : s1, s2, C) depend(out : res)             // T6
+    { a = s1 / s2; for (int i = 0; i < n; i++) res += a * C[i]; }
+  }
+  return res;
+}
+```
+
+**Observaciones.** (i) T4 **sólo lee** `B` y T5 también: por eso `in : B` en ambas permite que corran a la vez (dos lecturas no dependen entre sí). (ii) Si T4 hubiera declarado `inout : B`, se habrían serializado sin necesidad. (iii) El código conserva **tal cual** los bucles `for i` de las tareas 4 y 5 (cada una repite su cuerpo $n$ veces, reescribiendo `A`/`C` y `s1`/`s2`); la dependencia entre tareas **no cambia**, sólo qué variables lee y escribe cada una. Se verificó con $n = 6$ y valores menores que 1 (las multiplicaciones repetidas desbordarían con $n$ grande) que el resultado con tareas coincide con el secuencial (`pd4_dag_tasks.cpp`). Con $T_1$ = trabajo total y $T_\infty$ = camino crítico: $T_p \le T_1/p + T_\infty$; el DAG tiene ancho 3 en el primer nivel y 2 en el segundo, así que más de 3 hilos no ayudan.

@@ -1,0 +1,140 @@
+---
+kind: theory
+title: "Modelo de memoria, corrección y locks en OpenMP"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Hasta aquí OpenMP parece un modelo ingenuo: "los hilos comparten memoria y yo los coordino con `critical`, `atomic` o `barrier`". Pero **¿qué valor ve un hilo cuando otro escribió la misma variable?**
+La respuesta depende del hardware y del compilador, y un programa que *parece* correcto puede fallar sólo de vez en cuando. Este tema da las herramientas para **razonar sobre la corrección** de un programa
+paralelo: contar las ejecuciones posibles, entender por qué el compilador y el procesador reordenan, y fijar qué garantiza un **modelo de memoria**.
+
+## Intuición
+
+Cada hilo tiene su **escritorio** (registros y caché) y sólo ocasionalmente archiva en el **archivo común** (la RAM). Si un hilo anota algo en su escritorio, otro puede no verlo hasta que haya un "viaje al archivo".
+`barrier`, `critical`, `atomic`, `flush`, `task depend` y `reduction` son esos viajes **obligatorios**: sin ellos, el orden en que se ven las escrituras no está garantizado.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Arquitectura de memoria compartida de la clase: cada hilo tiene registros y una caché local; la RAM es la única memoria común.",
+      nodes: [
+        { id: 'h0', value: 'hilo 0', state: 'active' },
+        { id: 'r0', value: 'registros', parent: 'h0' },
+        { id: 'c0', value: 'caché 0', parent: 'r0' },
+        { id: 'ram', value: 'RAM\n(compartida)', parent: 'c0', state: 'marked' },
+        { id: 'c1', value: 'caché 1', parent: 'ram' },
+        { id: 'r1', value: 'registros', parent: 'c1' },
+        { id: 'h1', value: 'hilo 1', parent: 'r1', state: 'active' },
+      ],
+      links: [
+        { from: 'h0', to: 'r0' },
+        { from: 'r0', to: 'c0' },
+        { from: 'c0', to: 'ram' },
+        { from: 'ram', to: 'c1' },
+        { from: 'c1', to: 'r1' },
+        { from: 'r1', to: 'h1' },
+      ],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+### Un ejemplo de memoria en OpenMP (U4.3)
+
+```cpp
+int x = 2;
+#pragma omp parallel num_threads(2) shared(x)
+{
+  if (omp_get_thread_num() == 0) {
+    x = 5;
+  } else {
+    /* Print 1: lectura concurrente de x */
+  }
+#pragma omp barrier          // ← sin esta barrera, Print 2 y Print 3 pueden ver x = 2
+  if (omp_get_thread_num() == 0) {
+    /* Print 2 */
+  } else {
+    /* Print 3 */
+  }
+}
+```
+
+Tras `Print 1`, `x` puede valer 2 **o** 5, según el momento en que se ejecuten los hilos: el hilo 1 puede leer antes de que el hilo 0 escriba. La barrera contiene **flushes implícitos** en todos los hilos, y eso garantiza que
+`Print 2` y `Print 3` impriman 5.
+
+### Los cuatro criterios de un modelo de memoria (C++)
+
+1. **Orden del programa** (*program order*): dentro de un hilo existe un orden lógico entre las operaciones.
+2. **Consistencia de memoria** (*memory consistency*): qué valores puede observar un hilo cuando otros hacen escrituras concurrentes.
+3. **Condición de carrera** (*data race*): dos hilos acceden a la misma ubicación, **al menos uno escribe** y los accesos **no están ordenados ni sincronizados**.
+4. **Happens-before**: relación de orden que da garantías entre operaciones. Si una escritura ocurre *happens-before* una lectura, la lectura debe observar un valor compatible con ese orden. Los mecanismos de sincronización establecen estas relaciones **entre hilos**.
+
+OpenMP garantiza la consistencia con los constructores ya vistos: `barrier`, `critical`, `atomic`, `task depend`, `reduction` y `flush`.
+
+### Por qué el programa que se escribe no es el que se ejecuta
+
+El compilador puede hacer cualquier cambio que **no altere la semántica de un programa secuencial**. Con `-O3` estas tres versiones de `f()` son equivalentes en secuencial:
+
+```cpp
+void f() { x=1; y=x+1; z=x+1; }     // original
+void f() { x=1; z=x+1; y=x+1; }     // se reordenan y, z
+void f() { x=1; z=2;   y=2;   }     // propagación de constantes
+```
+
+Si otro hilo ejecuta `g() { x=5; }` concurrentemente, **ya no son equivalentes**: en el segundo caso podría terminar `x=1, z=y=2`; en el tercero `y` nunca podría ser 6 (porque el compilador ya reemplazó `x+1` por `2`).
+Otro caso, un *spin-wait*: un hilo hace `while(x==1);` esperando que otro cambie `x` — con `-O3` el compilador puede eliminar la relectura de `x` (las líneas 3 y 4 del ensamblador x86 no optimizado) y el hilo queda en un bucle infinito.
+
+Los compiladores modernos garantizan un orden de acceso a memoria **local por hilo**, no global, y logran un factor de optimización típico de 3–10 eliminando incluso sentencias completas. Además, el **procesador** reordena accesos
+(ejecución en *pipeline* con varias instrucciones simultáneas) y **cada hilo tiene su caché local**, así que una escritura puede hacerse visible a otros hilos en momentos distintos.
+
+## Operaciones
+
+- [omp-interleavings-assert](/topics/omp-memory-model/algorithms/omp-interleavings-assert) — ¿puede fallar el `assert`? Contar ejecuciones intercaladas y la prueba por contradicción.
+- [omp-locks-deadlock](/topics/omp-memory-model/algorithms/omp-locks-deadlock) — `critical` vs `atomic` vs locks (`omp_lock_t`), el problema de los filósofos y el histograma.
+
+## Análisis de complejidad
+
+Con **2 hilos y $k$ sentencias por hilo**, una ejecución es una lista de $2k$ posiciones; para fijarla hay que elegir **qué $k$ posiciones pertenecen a un hilo** (las otras $k$ van al otro). Eso es una
+combinación sin repetición de $2k$ en $k$:
+
+$$\binom{2k}{k} = \frac{(2k)!}{(k!)^2} \sim \frac{4^k}{\sqrt{2k}}$$
+
+(la slide escribe $\sqrt{2k}$ en el denominador; *nota de apoyo*: la asintótica estándar es $4^k/\sqrt{\pi k}$ — ambas crecen como $4^k$ y la conclusión es la misma).
+Con $k = 2$ hay $\binom{4}{2} = 6$ intercalados; con $k = 20$ ya son $\binom{40}{20} \approx 1.38 \times 10^{11}$. **Probar todas las ejecuciones no es una estrategia de verificación**: la corrección se demuestra razonando
+(orden del programa + sincronización), no ejecutando.
+
+## Tabla de complejidad
+
+La tabla de arriba da el número de ejecuciones intercaladas y de dónde sale; el desarrollo está en la sección anterior.
+
+## Ejemplos
+
+**¿Puede fallar el `assert`?** (`omp25_assert_sections.cpp`): `f()` hace `x=1; y=1;` y `g()` hace `a=y; b=x; assert(b>=a)`. Las dos funciones se lanzan en dos `section`.
+Ver el análisis completo en [omp-interleavings-assert](/topics/omp-memory-model/algorithms/omp-interleavings-assert).
+
+**El mismo programa con `critical`** (`omp26_assert_critical.cpp`): `f()` y `g()` dentro de secciones críticas: ya no hay intercalado dentro de las funciones.
+
+## Comparación con temas relacionados
+
+| | Garantiza orden entre hilos | Costo | Ejemplo |
+|---|---|---|---|
+| `barrier` | Todo lo anterior a la barrera es visible después | Espera al hilo más lento | Fase 1 → fase 2 |
+| `critical` / lock | Exclusión mutua + `flush` al entrar y salir | Serializa el bloque | Estructura compartida |
+| `atomic` | Atomicidad de **una** actualización | Contención sobre una dirección | Contador |
+| `task depend` | Orden entre tareas según variables | Aristas del DAG | Pipeline de funciones |
+| `reduction` | Combinación sin carrera de copias privadas | $O(\log p)$ | Suma, máximo |
+
+## Prueba de dominio
+
+Al terminar este tema debo poder:
+
+- Explicar el programa de la barrera: por qué `Print 1` puede mostrar 2 o 5, y por qué `Print 2` y `Print 3` muestran 5 tras `barrier`.
+- Definir condición de carrera, orden del programa, consistencia de memoria y *happens-before*.
+- Contar los intercalados de $2$ hilos con $k$ sentencias y justificar por qué no se puede verificar probando.
+- Dar un ejemplo de transformación del compilador que es válida en secuencial y rompe un programa paralelo.
+- Nombrar los constructores de OpenMP que establecen *happens-before* entre hilos.

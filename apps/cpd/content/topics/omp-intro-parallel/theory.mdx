@@ -1,0 +1,300 @@
+---
+kind: theory
+title: "OpenMP: modelo fork-join, región parallel y reparto de trabajo"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+En la [Unidad 3](/units/u3) todo el paralelismo fue de **memoria distribuida**: cada proceso MPI
+tiene su memoria local y la única forma de compartir un dato es enviarlo
+([mpi-intro](/topics/mpi-intro)). Dentro de **un solo nodo** esa disciplina es
+innecesariamente cara: los núcleos de un socket ya ven la misma memoria
+(UMA) o un único espacio de direcciones repartido físicamente (ccNUMA), y copiar
+mensajes entre procesos que podrían leer el mismo arreglo duplica memoria y
+tiempo.
+
+**OpenMP** (*Open Multi-Processing*) es la API estándar para ese caso:
+**memoria compartida** en C/C++ y Fortran, construida con
+**directivas de compilador**, una **librería de runtime** y **variables de entorno**.
+Nació para paralelizar bucles con iteraciones independientes, y se adopta de
+forma **incremental**: el programa secuencial sigue siendo válido, y cada
+`#pragma omp` lo paraleliza un poco más.
+
+> Versiones (U4.1): Fortran 1.0 (oct-1997), C/C++ 1.0 (oct-1998), C/C++ 2.0 (mar-2002),
+> 2.5 (2005), 3.0 (2008), 3.1 (2011), 4.0 (2013), 5.0 (2018), 5.1 (2020), 5.2 (2021) y 6.0 (nov-2024).
+> Compiladores: GCC 4.9 → OpenMP 4.0, GCC 9 / Intel / LLVM-Clang 12 → OpenMP 5.0.
+
+## Intuición
+
+OpenMP paraleliza con **hilos** (*threads*): la unidad de planificación más
+pequeña del sistema operativo. El programa arranca con un único **hilo master**
+(el hilo 0). Al llegar a una región paralela ocurre un **FORK**: el master crea un grupo
+de hilos y todos ejecutan el bloque. Al terminar el bloque, los hilos se
+sincronizan (**JOIN**) y vuelve a quedar sólo el master. Este es el modelo **fork-join**.
+
+<Visualization viz={{
+  type: 'timeline',
+  steps: [
+    {
+      note: "Inicio: sólo existe el hilo master (hilo 0), ejecutando la parte secuencial del programa.",
+      lanes: [
+        { id: 't0', label: 'master' },
+        { id: 't1', label: 'hilo 1' },
+        { id: 't2', label: 'hilo 2' },
+        { id: 't3', label: 'hilo 3' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 2, label: 'secuencial', state: 'active' },
+      ],
+      messages: [],
+    },
+    {
+      note: "FORK: al encontrar #pragma omp parallel, el master crea el grupo de hilos y el bloque estructurado se ejecuta en todos ellos a la vez.",
+      lanes: [
+        { id: 't0', label: 'master' },
+        { id: 't1', label: 'hilo 1' },
+        { id: 't2', label: 'hilo 2' },
+        { id: 't3', label: 'hilo 3' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 2, label: 'secuencial', state: 'muted' },
+        { lane: 't0', tStart: 2, tEnd: 5, label: 'región parallel', state: 'active' },
+        { lane: 't1', tStart: 2, tEnd: 5, label: 'región parallel', state: 'active' },
+        { lane: 't2', tStart: 2, tEnd: 5, label: 'región parallel', state: 'active' },
+        { lane: 't3', tStart: 2, tEnd: 5, label: 'región parallel', state: 'active' },
+      ],
+      messages: [],
+    },
+    {
+      note: "JOIN: los hilos terminan y se sincronizan (barrera implícita al final de la región). Sólo el master continúa con el código secuencial siguiente.",
+      lanes: [
+        { id: 't0', label: 'master' },
+        { id: 't1', label: 'hilo 1' },
+        { id: 't2', label: 'hilo 2' },
+        { id: 't3', label: 'hilo 3' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 2, label: 'secuencial', state: 'muted' },
+        { lane: 't0', tStart: 2, tEnd: 5, label: 'región parallel', state: 'muted' },
+        { lane: 't1', tStart: 2, tEnd: 5, label: 'región parallel', state: 'muted' },
+        { lane: 't2', tStart: 2, tEnd: 5, label: 'región parallel', state: 'muted' },
+        { lane: 't3', tStart: 2, tEnd: 5, label: 'región parallel', state: 'muted' },
+        { lane: 't0', tStart: 5, tEnd: 7, label: 'secuencial', state: 'active' },
+      ],
+      messages: [],
+    },
+  ],
+}} />
+
+La figura de la clase muestra el mismo patrón repetido con distinto número de
+hilos por región (*Parallel Task I, II, III*): el número de hilos se decide
+**región por región**, no una vez para todo el programa.
+
+## Estructura interna
+
+OpenMP son tres piezas que se usan juntas:
+
+| Pieza | Para qué sirve |
+|---|---|
+| **Directivas de compilador** (`#pragma omp ...`) | Inician una región paralela, reparten iteraciones o secciones entre hilos, serializan regiones y sincronizan. Son comentarios sintácticos: si se compila sin `-fopenmp` el compilador las ignora y el programa sigue siendo secuencial. |
+| **Librería de runtime** (`omp_get_thread_num`, `omp_get_num_threads`, `omp_set_num_threads`, `omp_get_wtime`...) | Consultar y fijar el número de hilos, su identificador, hilos dinámicos, paralelismo anidado y el reloj. |
+| **Variables de entorno** (`OMP_NUM_THREADS`, `OMP_SCHEDULE`...) | Controlan la ejecución en tiempo real: número de hilos, cómo se reparten las iteraciones, asignación de hilos a procesos. |
+
+### La directiva `parallel`
+
+Es la que **crea** los hilos. Su forma completa es:
+
+```cpp
+#pragma omp parallel [clause ...] newline
+    if (scalar_expression)
+    private (list)
+    shared (list)
+    default (shared | none)
+    firstprivate (list)
+    reduction (operator : list)
+    copyin (list)
+    num_threads (integer)
+structured_block
+```
+
+Cada hilo del grupo ejecuta **todo** el bloque estructurado: el código dentro de `parallel` queda
+*duplicado* en cada hilo. Lo que diferencia a un hilo de otro es su identificador, que se obtiene con `omp_get_thread_num()`
+(el hilo 0 es el master). Las cláusulas de alcance de datos (`private`, `shared`, ...) se estudian en
+[omp-sync-data-scoping](/topics/omp-sync-data-scoping).
+
+Primer ejemplo de clase — cada hilo se presenta:
+
+```cpp
+#include <iostream>
+#include <unistd.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+int main() {
+  int id = -1;
+#ifdef _OPENMP
+  omp_set_num_threads(4);
+#endif
+
+#pragma omp parallel private(id)
+  {
+#ifdef _OPENMP
+    id = omp_get_thread_num();
+#endif
+    sleep(1);
+    printf("Peekaboo desde el hilo = %d \n", id);
+  }
+}
+```
+
+El `#ifdef _OPENMP` es el truco para que **el mismo archivo** compile como secuencial o como
+paralelo (la PD04 2025-I lo pide explícitamente para Quicksort y para el post-orden).
+
+### ¿Por qué `private(id)`? Una condición de carrera
+
+La slide plantea tres pasos: (1) abrir una región paralela donde `id` sea una variable **compartida**,
+(2) forzar el problema agregando `sleep(1)`, (3) resolverlo con la cláusula `private`.
+
+Si `id` es compartida, hay una **sola** ubicación de memoria para los 4 hilos. Todos escriben su número en ella
+y luego imprimen: lo que cada uno imprime depende de quién escribió último.
+
+<Visualization viz={{
+  type: 'timeline',
+  steps: [
+    {
+      note: "id compartida: el hilo 0 escribe id = 0 en la única copia de memoria.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 1, label: 'id = 0', state: 'active' },
+      ],
+      messages: [],
+    },
+    {
+      note: "El hilo 1 escribe id = 1 sobre la misma variable mientras el hilo 0 duerme (el sleep(1) fuerza el solapamiento).",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 1, label: 'id = 0' },
+        { lane: 't0', tStart: 1, tEnd: 3, label: 'sleep(1)' },
+        { lane: 't1', tStart: 1, tEnd: 2, label: 'id = 1', state: 'active' },
+      ],
+      messages: [],
+    },
+    {
+      note: "Cuando el hilo 0 despierta e imprime, lee id = 1: dos hilos imprimen \"hilo = 1\" y ninguno imprime \"hilo = 0\". Con private(id) cada hilo tiene su propia copia y el problema desaparece.",
+      lanes: [
+        { id: 't0', label: 'hilo 0' },
+        { id: 't1', label: 'hilo 1' },
+      ],
+      events: [
+        { lane: 't0', tStart: 0, tEnd: 1, label: 'id = 0', state: 'muted' },
+        { lane: 't0', tStart: 1, tEnd: 3, label: 'sleep(1)', state: 'muted' },
+        { lane: 't0', tStart: 3, tEnd: 4, label: 'imprime 1', state: 'marked' },
+        { lane: 't1', tStart: 1, tEnd: 2, label: 'id = 1', state: 'muted' },
+        { lane: 't1', tStart: 3, tEnd: 4, label: 'imprime 1', state: 'marked' },
+      ],
+      messages: [],
+    },
+  ],
+}} />
+
+## Operaciones
+
+La directiva `parallel` sólo **abre** la región. El trabajo se reparte con los
+**constructores de trabajo compartido** (*work-sharing*), que dividen la ejecución de la región entre los hilos
+**sin crear hilos nuevos**:
+
+- [omp-for-schedule](/topics/omp-intro-parallel/algorithms/omp-for-schedule) — `for` y la cláusula `schedule` (static, dynamic, guided, runtime, auto), `nowait` y `ordered`.
+- [omp-sections-single](/topics/omp-intro-parallel/algorithms/omp-sections-single) — `sections`/`section` (paralelismo de tareas fijas) y `single`.
+- [omp-reduction](/topics/omp-intro-parallel/algorithms/omp-reduction) — la cláusula `reduction` y el producto escalar.
+
+Los constructores de sincronización (`master`, `critical`, `barrier`, `atomic`, `flush`, `ordered`) y las cláusulas
+`private/firstprivate/lastprivate/threadprivate` están en [omp-sync-data-scoping](/topics/omp-sync-data-scoping).
+
+Los tres constructores de trabajo compartido pueden **combinarse** con `parallel` en una sola directiva
+(`#pragma omp parallel for`, `#pragma omp parallel sections`):
+
+```cpp
+#pragma omp parallel for shared(a, b, c, chunk) private(i) schedule(static, chunk)
+for (int i = 0; i < N; i++)
+    c[i] = a[i] + b[i];
+```
+
+> **Nota de apoyo** (no está en la slide): la slide original escribe `#pragma omp section` dentro de un
+> `parallel for`, lo cual no es válido (`section` sólo existe dentro de `sections`); el
+> bucle va directamente debajo de `parallel for`, como se muestra arriba.
+
+## Análisis de complejidad
+
+Este tema no introduce una cota propia (`complexity: {}` en `meta.yaml`), pero sí el **vocabulario de costo** que
+usan los temas siguientes. Con $p$ hilos y trabajo secuencial $T_s$, el tiempo paralelo se plantea como
+
+$$T_p = \frac{T_s}{p} + T_{overhead}$$
+
+y, según la solución de la PD04 2026-I, el overhead de OpenMP se descompone así:
+
+- **Región `parallel` / `parallel for`**: creación o activación de hilos, reparto de iteraciones y barrera implícita
+  al final. Se modela como una latencia de sincronización $O(p)$.
+- **`reduction`**: cada hilo trabaja con una copia privada y al final se combinan los $p$ parciales, como una reducción en árbol: $O(\log p)$.
+- **Construcciones que serializan** (`critical`, `atomic`): contención sobre un recurso compartido, hasta $O(M)$ si $M$ accesos compiten.
+
+Por eso la escalabilidad no se demuestra con una sola medición sino variando $p$ y el tamaño del problema
+(escalabilidad fuerte y débil) — ver [performance-metrics](/topics/performance-metrics).
+
+## Tabla de complejidad
+
+No aplica — ver la sección anterior.
+
+## Ejemplos
+
+Los ejemplos de laboratorio de esta unidad (`omp01_hello.cpp` ... `omp06_reduction.cpp`) están en
+[/practica](/practica); los fragmentos relevantes aparecen dentro de cada subtema, junto al concepto que ilustran.
+
+**Ejemplo `parallel` de granularidad gruesa (U4.3).** Cada hilo decide en qué parte del arreglo trabaja a partir de su
+identificador y del número total de hilos — la misma idea de descomposición de dominio que MPI, pero sin enviar mensajes:
+
+```cpp
+void sub(float *x, int npoints) {
+    int iam, nt, ipoints, istart;
+#pragma omp parallel default(shared) private(iam, nt, ipoints, istart)
+    {
+        iam = omp_get_thread_num();
+        nt  = omp_get_num_threads();
+        ipoints = npoints / nt;       // tamaño de la partición
+        istart  = iam * ipoints;      // índice inicial
+        if (iam == nt - 1)            // el último hilo puede hacer más
+            ipoints = npoints - istart;
+        subdomain(x, istart, ipoints);
+    }
+}
+```
+
+## Comparación con temas relacionados
+
+| | **OpenMP** | **MPI** ([mpi-intro](/topics/mpi-intro)) |
+|---|---|---|
+| Memoria | Compartida (UMA / ccNUMA). Una variable existe una sola vez salvo que se declare `private`. | Distribuida: cada proceso tiene su copia local. |
+| Unidad de ejecución | Hilos dentro de un proceso. | Procesos independientes. |
+| Comunicación | Implícita, leyendo/escribiendo memoria; hay que **sincronizar** para evitar carreras. | Explícita, con mensajes (`Send`/`Recv`, colectivas). |
+| Alcance | Un nodo (socket o nodo con varios sockets); no se aplica a la memoria distribuida entre nodos. | Cualquier número de nodos. |
+| Esfuerzo vs rendimiento (figura de clase) | Rinde pronto con poco esfuerzo, pero se **satura** por el límite de hardware. | Exige más esfuerzo antes de rendir, pero sigue escalando. |
+| Combinación | OpenMP + MPI supera a cada uno por separado — ver [hybrid-mpi-openmp](/topics/hybrid-mpi-openmp). | |
+
+## Prueba de dominio
+
+Al terminar este tema debo poder:
+
+- Explicar el modelo fork-join (qué hace el master, qué ocurre en FORK y en JOIN) y por qué el número de hilos se decide por región.
+- Decir por qué un `#pragma omp` es seguro de ignorar y cómo se logra un único código secuencial/paralelo con `_OPENMP`.
+- Escribir `#pragma omp parallel` con `private`, `num_threads` y obtener `omp_get_thread_num()` / `omp_get_num_threads()`.
+- Reconocer la condición de carrera que produce una variable compartida escrita por todos los hilos y arreglarla con `private`.
+- Nombrar los tres constructores de trabajo compartido y la forma combinada con `parallel`.
+- Contrastar OpenMP y MPI en memoria, comunicación y alcance.

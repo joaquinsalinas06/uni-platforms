@@ -56,6 +56,24 @@
         "mpi-blocking-nonblocking",
         "mpi-derived-datatypes"
       ]
+    },
+    {
+      "id": "u4",
+      "title": "Unidad 4 — Memoria compartida (OpenMP) y paralelismo híbrido",
+      "sourceFiles": [
+        "raw-materials/U4/U4.1 Paralelismo compartido-OMP.pdf",
+        "raw-materials/U4/U4.2 Paralelismo compartido-OMP.pdf",
+        "raw-materials/U4/U4.3 Paralelismo compartido-OMP.pdf",
+        "raw-materials/U4/U4.4 Paralelismo compartido-OMP.pdf",
+        "raw-materials/U4/U4.5 Paralelismo-hibrido.pdf"
+      ],
+      "topics": [
+        "omp-intro-parallel",
+        "omp-sync-data-scoping",
+        "omp-tasks-icv",
+        "omp-memory-model",
+        "hybrid-mpi-openmp"
+      ]
     }
   ],
   "topics": {
@@ -361,6 +379,147 @@
       "supportConcept": false,
       "placeholder": false,
       "status": "generated"
+    },
+    "omp-intro-parallel": {
+      "type": "concept",
+      "title": "OpenMP: modelo fork-join, región parallel y reparto de trabajo",
+      "unit": "u4",
+      "prerequisites": [
+        "sequential-model-architectures",
+        "mpi-intro"
+      ],
+      "buildsOn": [
+        "performance-metrics"
+      ],
+      "usedBy": [
+        "omp-sync-data-scoping",
+        "omp-tasks-icv",
+        "hybrid-mpi-openmp"
+      ],
+      "subtopics": [
+        "omp-for-schedule",
+        "omp-sections-single",
+        "omp-reduction"
+      ],
+      "sourceSlides": [
+        "U4.1 Paralelismo compartido-OMP.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "timeline",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "derivation-based"
+    },
+    "omp-sync-data-scoping": {
+      "type": "concept",
+      "title": "Sincronización y alcance de datos en OpenMP",
+      "unit": "u4",
+      "prerequisites": [
+        "omp-intro-parallel"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "omp-tasks-icv",
+        "omp-memory-model"
+      ],
+      "subtopics": [
+        "omp-critical-atomic",
+        "omp-data-scoping",
+        "omp-master-barrier"
+      ],
+      "sourceSlides": [
+        "U4.2 Paralelismo compartido-OMP.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "timeline",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "derivation-based"
+    },
+    "omp-tasks-icv": {
+      "type": "algorithm",
+      "title": "Tareas en OpenMP: task, depend y variables de control interno",
+      "unit": "u4",
+      "prerequisites": [
+        "omp-intro-parallel",
+        "omp-sync-data-scoping",
+        "dag-cost-model"
+      ],
+      "buildsOn": [
+        "pram-models"
+      ],
+      "usedBy": [
+        "omp-memory-model"
+      ],
+      "subtopics": [
+        "omp-task-basics",
+        "omp-task-depend",
+        "omp-collapse-icv"
+      ],
+      "sourceSlides": [
+        "U4.3 Paralelismo compartido-OMP.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "brent-theorem"
+    },
+    "omp-memory-model": {
+      "type": "concept",
+      "title": "Modelo de memoria, corrección y locks en OpenMP",
+      "unit": "u4",
+      "prerequisites": [
+        "omp-sync-data-scoping",
+        "omp-tasks-icv"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "hybrid-mpi-openmp"
+      ],
+      "subtopics": [
+        "omp-interleavings-assert",
+        "omp-locks-deadlock"
+      ],
+      "sourceSlides": [
+        "U4.4 Paralelismo compartido-OMP.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "timeline",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "derivation-based"
+    },
+    "hybrid-mpi-openmp": {
+      "type": "concept",
+      "title": "Paralelismo híbrido MPI + OpenMP",
+      "unit": "u4",
+      "prerequisites": [
+        "mpi-intro",
+        "omp-intro-parallel",
+        "omp-memory-model"
+      ],
+      "buildsOn": [
+        "performance-metrics"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "omp-halo-decomposition",
+        "mpi-omp-launch"
+      ],
+      "sourceSlides": [
+        "U4.5 Paralelismo-hibrido.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "derivation-based"
     }
   }
 }

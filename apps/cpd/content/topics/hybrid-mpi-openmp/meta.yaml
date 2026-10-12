@@ -1,0 +1,35 @@
+id: hybrid-mpi-openmp
+title: "Paralelismo híbrido MPI + OpenMP"
+type: concept
+unit: u4
+
+prerequisites: [mpi-intro, omp-intro-parallel, omp-memory-model]
+buildsOn: [performance-metrics]
+usedBy: []
+
+complexity:
+  potencia-dinamica:
+    worst: "P_{dyn}(f) = \\gamma \\cdot f^{3}"
+    reasoning: >-
+      La potencia dinámica de un procesador CMOS crece con el cubo de la
+      frecuencia (la tensión debe subir junto con f). Doblar la frecuencia
+      de un núcleo multiplica su potencia por 8, mientras que doblar el
+      número de núcleos a la mitad de la frecuencia mantiene el mismo
+      throughput con potencia 2 * gamma * (f/2)^3 = P/4. De ahí la
+      estrategia de explotar muchos núcleos lentos.
+    source: "U4.5 Paralelismo-hibrido.pdf, diapositiva 5"
+  halo-por-proceso-2d:
+    worst: "H(P) = \\frac{4N}{\\sqrt{P}}"
+    reasoning: >-
+      En una malla 2D de N x N celdas repartida entre P procesos
+      (subdominios cuadrados), cada proceso computa N^2/P celdas y su
+      perímetro, que es lo que debe intercambiar como halo, mide
+      4 * N/sqrt(P). Al multiplicar P por 4 el cómputo por proceso se
+      reduce a 1/4 pero el halo sólo a 1/2: la región de halo disminuye
+      como O(1/sqrt(P)), más lento que el cómputo.
+    source: "U4.5 Paralelismo-hibrido.pdf, diapositiva 13"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
