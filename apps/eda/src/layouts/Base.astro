@@ -3,6 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import '../styles/global.css';
 import KnowledgeMapNav from '../components/KnowledgeMapNav.astro';
 import SearchDialog from '../components/SearchDialog';
+import { AskAiWidget } from '@uni/ui/ask-ai';
 import { buildSearchIndex } from '../lib/search-index';
 
 interface Props {
@@ -111,6 +112,10 @@ const searchIndex = await buildSearchIndex();
         </p>
       </div>
     </footer>
+
+    <div transition:persist="ai-corner-dock">
+      <AskAiWidget client:idle />
+    </div>
 
     <script>
       document.getElementById('theme')?.addEventListener('click', () => {

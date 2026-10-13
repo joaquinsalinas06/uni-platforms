@@ -15,9 +15,10 @@ interface Props {
   caption?: string;
 }
 const { src, alt, caption } = Astro.props;
+const aiFigSummary = `Figura de examen${caption ? ` (${caption})` : ''}: ${alt} [Imagen: ${src.src}]`;
 ---
 
-<figure class="exam-fig not-prose my-6">
+<figure class="exam-fig not-prose my-6" data-ai-diagram={aiFigSummary}>
   <a href={src.src} target="_blank" rel="noopener" class="exam-fig-frame" style={`aspect-ratio: ${src.width} / ${src.height}`} title="Abrir en tamaño original">
     <Picture
       src={src}

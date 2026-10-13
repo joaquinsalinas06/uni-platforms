@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ask-ai": "./src/ask-ai/index.ts"
+  },
   "dependencies": {
     "@uni/visualizations": "workspace:*",
     "@codemirror/lang-cpp": "^6.0.3",

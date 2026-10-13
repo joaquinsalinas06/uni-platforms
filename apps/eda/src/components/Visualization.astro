@@ -15,6 +15,7 @@
 // sigue siendo el registro quien decide qué familias existen.
 import { VISUALIZATIONS } from '../visualizations/registry';
 import { visualizationSchema } from '../lib/schemas';
+import { summarizeVisualization } from '@uni/ui/ask-ai';
 import TreeVisualization from '../visualizations/tree/TreeVisualization';
 import PersistentVisualization from '../visualizations/persistent/PersistentVisualization';
 import RangeTreeVisualization from '../visualizations/range-tree/RangeTreeVisualization';
@@ -46,9 +47,35 @@ const viz = parsed.data;
 // aplica aquí; si no, el mode a nivel de bloque se descartaba en silencio y
 // había que repetirlo paso por paso. El mode propio de un paso gana.
 const steps = viz.mode ? viz.steps.map((s) => ({ mode: viz.mode, ...s })) : viz.steps;
+const aiDiagramSummary = summarizeVisualization(viz, steps);
 ---
 
-{viz.type === 'tree' && <TreeVisualization client:visible steps={steps} />}
-{viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
-{viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
-{viz.type === 'geometric' && <GeometricVisualization client:visible steps={steps} />}
+<div class="ai-diagram-block relative" data-ai-diagram={aiDiagramSummary}>
+  <div class="sr-only">{aiDiagramSummary}</div>
+  <div class="mb-1.5 flex justify-end" data-ai-widget="diagram-trigger">
+    <button
+      type="button"
+      data-ask-diagram-btn
+      class="tag rounded border border-[var(--rule)] bg-[var(--paper)] px-2 py-0.5 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+    >
+      ✦ consultar diagrama con IA
+    </button>
+  </div>
+  {viz.type === 'tree' && <TreeVisualization client:visible steps={steps} />}
+  {viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
+  {viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
+  {viz.type === 'geometric' && <GeometricVisualization client:visible steps={steps} />}
+</div>
+
+<script>
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement | null)?.closest('[data-ask-diagram-btn]');
+    if (!btn) return;
+    const block = btn.closest('[data-ai-diagram]') as HTMLElement | null;
+    const summary = block?.getAttribute('data-ai-diagram');
+    if (summary) {
+      window.dispatchEvent(new CustomEvent('uni:ask-diagram', { detail: { summary } }));
+    }
+  });
+</script>
+

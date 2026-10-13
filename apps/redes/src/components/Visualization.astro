@@ -18,6 +18,7 @@
 // abajo.
 import { VISUALIZATIONS } from '../visualizations/registry';
 import { visualizationSchema } from '../lib/schemas';
+import { summarizeVisualization } from '@uni/ui/ask-ai';
 import XyChartVisualization from '../visualizations/xy-chart/XyChartVisualization';
 import DagVisualization from '../visualizations/dag/DagVisualization';
 import NetworkTopologyVisualization from '../visualizations/network-topology/NetworkTopologyVisualization';
@@ -58,30 +59,56 @@ const viz = parsed.data;
 const steps = viz.mode ? viz.steps.map((s) => ({ mode: viz.mode, ...s })) : viz.steps;
 
 const notImplemented = VISUALIZATIONS[viz.type] === null;
+const aiDiagramSummary = summarizeVisualization(viz, steps);
 ---
 
-{viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
-{viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
-{viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
-{viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
-{/* circuit: `interactive` (slider) y `practice` (reducir) tienen su propio componente;
-    el circuito normal va sólo cuando no hay ninguno de los dos. */}
-{viz.type === 'circuit' && !viz.interactive && !viz.practice && <CircuitVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'circuit' && viz.interactive && <CircuitInteractive client:visible steps={steps} interactive={viz.interactive} title={viz.title} />}
-{viz.type === 'circuit' && !viz.interactive && viz.practice && <CircuitPractice client:visible steps={steps} practice={viz.practice} title={viz.title} />}
-{viz.type === 'sequence' && <SequenceVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'flow' && <FlowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'net-scene' && <NetSceneVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'spacetime' && <SpacetimeVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'window' && <WindowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'packet' && <PacketVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'fsm' && <FsmVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+<div class="ai-diagram-block relative" data-ai-diagram={aiDiagramSummary}>
+  <div class="sr-only">{aiDiagramSummary}</div>
+  <div class="mb-1.5 flex justify-end" data-ai-widget="diagram-trigger">
+    <button
+      type="button"
+      data-ask-diagram-btn
+      class="tag rounded border border-[var(--rule)] bg-[var(--paper)] px-2 py-0.5 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+    >
+      ✦ consultar diagrama con IA
+    </button>
+  </div>
+  {viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
+  {viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
+  {viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
+  {viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
+  {/* circuit: `interactive` (slider) y `practice` (reducir) tienen su propio componente;
+      el circuito normal va sólo cuando no hay ninguno de los dos. */}
+  {viz.type === 'circuit' && !viz.interactive && !viz.practice && <CircuitVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'circuit' && viz.interactive && <CircuitInteractive client:visible steps={steps} interactive={viz.interactive} title={viz.title} />}
+  {viz.type === 'circuit' && !viz.interactive && viz.practice && <CircuitPractice client:visible steps={steps} practice={viz.practice} title={viz.title} />}
+  {viz.type === 'sequence' && <SequenceVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'flow' && <FlowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'net-scene' && <NetSceneVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'spacetime' && <SpacetimeVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'window' && <WindowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'packet' && <PacketVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'fsm' && <FsmVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
 
-{
-  notImplemented && (
-    <p class="tag rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
-      visualización "{viz.type}" pendiente de implementar
-    </p>
-  )
-}
+  {
+    notImplemented && (
+      <p class="tag rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
+        visualización "{viz.type}" pendiente de implementar
+      </p>
+    )
+  }
+</div>
+
+<script>
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement | null)?.closest('[data-ask-diagram-btn]');
+    if (!btn) return;
+    const block = btn.closest('[data-ai-diagram]') as HTMLElement | null;
+    const summary = block?.getAttribute('data-ai-diagram');
+    if (summary) {
+      window.dispatchEvent(new CustomEvent('uni:ask-diagram', { detail: { summary } }));
+    }
+  });
+</script>
+
