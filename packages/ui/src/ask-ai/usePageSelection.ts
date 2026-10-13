@@ -4,7 +4,7 @@ import type { SelectionScope, SelectionState } from './types';
 
 /**
  * Hook dedicado exclusivamente a capturar selecciones de texto/fórmulas/diagramas
- * dentro de <main> y eventos personalizados `uni:ask-diagram`.
+ * dentro de <main> y clicks en el botón `[data-ask-diagram-btn]`.
  */
 export function usePageSelection(options: {
   widgetRef: RefObject<HTMLElement | null>;
@@ -17,6 +17,22 @@ export function usePageSelection(options: {
   const [scope, setScope] = useState<SelectionScope>('selection-with-page');
 
   useEffect(() => {
+    const selectDiagramSummary = (summary: string) => {
+      setSelection({
+        text: `[Diagrama seleccionado]\n${summary}`,
+        latexFormulas: [],
+        diagramNotes: [summary],
+        rect: {
+          top: window.innerHeight - 180,
+          left: window.innerWidth - 220,
+          bottom: window.innerHeight - 140,
+          width: 200,
+        },
+      });
+      setScope('selection-with-page');
+      onDiagramRequested?.();
+    };
+
     const updateSelection = () => {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
@@ -59,10 +75,18 @@ export function usePageSelection(options: {
       });
     };
 
+    const onClick = (e: MouseEvent) => {
+      const btn = (e.target as HTMLElement | null)?.closest('[data-ask-diagram-btn]');
+      if (!btn) return;
+      const summary = btn.closest('[data-ai-diagram]')?.getAttribute('data-ai-diagram');
+      if (summary) selectDiagramSummary(summary);
+    };
+
     const onMouseUp = (e: MouseEvent) => {
       if (
         widgetRef.current?.contains(e.target as Node) ||
-        popoverRef.current?.contains(e.target as Node)
+        popoverRef.current?.contains(e.target as Node) ||
+        (e.target as HTMLElement | null)?.closest('[data-ask-diagram-btn]')
       ) {
         return;
       }
@@ -87,39 +111,20 @@ export function usePageSelection(options: {
       }
     };
 
-    const onAskDiagram = (e: Event) => {
-      const custom = e as CustomEvent<{ summary: string }>;
-      const summary = custom.detail?.summary;
-      if (!summary) return;
-      setSelection({
-        text: `[Diagrama seleccionado]\n${summary}`,
-        latexFormulas: [],
-        diagramNotes: [summary],
-        rect: {
-          top: window.innerHeight - 180,
-          left: window.innerWidth - 220,
-          bottom: window.innerHeight - 140,
-          width: 200,
-        },
-      });
-      setScope('selection-with-page');
-      onDiagramRequested?.();
-    };
-
     const onPageLoad = () => {
       setSelection(null);
       onEscape?.();
     };
 
+    document.addEventListener('click', onClick);
     document.addEventListener('mouseup', onMouseUp);
     document.addEventListener('keyup', onKeyUp);
-    window.addEventListener('uni:ask-diagram', onAskDiagram as EventListener);
     document.addEventListener('astro:page-load', onPageLoad);
 
     return () => {
+      document.removeEventListener('click', onClick);
       document.removeEventListener('mouseup', onMouseUp);
       document.removeEventListener('keyup', onKeyUp);
-      window.removeEventListener('uni:ask-diagram', onAskDiagram as EventListener);
       document.removeEventListener('astro:page-load', onPageLoad);
     };
   }, [widgetRef, popoverRef, onDiagramRequested, onEscape]);

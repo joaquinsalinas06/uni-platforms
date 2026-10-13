@@ -5,7 +5,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./ask-ai": "./src/ask-ai/index.ts"
+    "./astro": "./src/astro.ts"
   },
   "dependencies": {
     "@uni/visualizations": "workspace:*",

@@ -17,6 +17,8 @@ import {
   RangeTreeVisualization,
 } from '@uni/visualizations';
 
+import AiDiagramFrame from './ask-ai/AiDiagramFrame.astro';
+
 interface Props {
   viz: any;
 }
@@ -36,27 +38,29 @@ const steps = viz.mode ? viz.steps.map((s: any) => ({ mode: viz.mode, ...s })) :
 const notImplemented = !VISUALIZATIONS[viz.type as keyof typeof VISUALIZATIONS];
 ---
 
-{viz.type === 'tree' && <TreeVisualization client:visible steps={steps} />}
-{viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
-{viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
+<AiDiagramFrame viz={viz} steps={steps}>
+  {viz.type === 'tree' && <TreeVisualization client:visible steps={steps} />}
+  {viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
+  {viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
 
-{viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
-{viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
-{viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
-{viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
+  {viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
+  {viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
+  {viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
+  {viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
 
-{viz.type === 'circuit' && !viz.interactive && !viz.practice && <CircuitVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'circuit' && viz.interactive && <CircuitInteractive client:visible steps={steps} interactive={viz.interactive} title={viz.title} />}
-{viz.type === 'circuit' && !viz.interactive && viz.practice && <CircuitPractice client:visible steps={steps} practice={viz.practice} title={viz.title} />}
+  {viz.type === 'circuit' && !viz.interactive && !viz.practice && <CircuitVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'circuit' && viz.interactive && <CircuitInteractive client:visible steps={steps} interactive={viz.interactive} title={viz.title} />}
+  {viz.type === 'circuit' && !viz.interactive && viz.practice && <CircuitPractice client:visible steps={steps} practice={viz.practice} title={viz.title} />}
 
-{viz.type === 'sequence' && <SequenceVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
-{viz.type === 'flow' && <FlowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'sequence' && <SequenceVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'flow' && <FlowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
 
-{
-  notImplemented && (
-    <p class="tag rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
-      visualización "{viz.type}" pendiente de implementar
-    </p>
-  )
-}
+  {
+    notImplemented && (
+      <p class="tag rounded border border-dashed border-[var(--rule)] bg-[var(--fill)] px-3 py-1.5">
+        visualización "{viz.type}" pendiente de implementar
+      </p>
+    )
+  }
+</AiDiagramFrame>

@@ -1,0 +1,25 @@
+---
+import { summarizeVisualization } from './dom-extractor';
+
+interface Props {
+  viz: Record<string, any>;
+  steps: Record<string, any>[];
+}
+
+const { viz, steps } = Astro.props;
+const aiDiagramSummary = summarizeVisualization(viz, steps);
+---
+
+<div class="ai-diagram-block relative" data-ai-diagram={aiDiagramSummary}>
+  <div class="sr-only">{aiDiagramSummary}</div>
+  <div class="mb-1.5 flex justify-end" data-ai-widget="diagram-trigger">
+    <button
+      type="button"
+      data-ask-diagram-btn
+      class="tag rounded border border-[var(--rule)] bg-[var(--paper)] px-2 py-0.5 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+    >
+      ✦ consultar diagrama con IA
+    </button>
+  </div>
+  <slot />
+</div>

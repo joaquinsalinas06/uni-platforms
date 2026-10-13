@@ -18,7 +18,7 @@
 // abajo.
 import { VISUALIZATIONS } from '../visualizations/registry';
 import { visualizationSchema } from '../lib/schemas';
-import { summarizeVisualization } from '@uni/ui/ask-ai';
+import { AiDiagramFrame } from '@uni/ui/astro';
 import XyChartVisualization from '../visualizations/xy-chart/XyChartVisualization';
 import DagVisualization from '../visualizations/dag/DagVisualization';
 import NetworkTopologyVisualization from '../visualizations/network-topology/NetworkTopologyVisualization';
@@ -54,20 +54,9 @@ const viz = parsed.data;
 const steps = viz.mode ? viz.steps.map((s) => ({ mode: viz.mode, ...s })) : viz.steps;
 
 const notImplemented = VISUALIZATIONS[viz.type] === null;
-const aiDiagramSummary = summarizeVisualization(viz, steps);
 ---
 
-<div class="ai-diagram-block relative" data-ai-diagram={aiDiagramSummary}>
-  <div class="sr-only">{aiDiagramSummary}</div>
-  <div class="mb-1.5 flex justify-end" data-ai-widget="diagram-trigger">
-    <button
-      type="button"
-      data-ask-diagram-btn
-      class="tag rounded border border-[var(--rule)] bg-[var(--paper)] px-2 py-0.5 transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
-    >
-      ✦ consultar diagrama con IA
-    </button>
-  </div>
+<AiDiagramFrame viz={viz} steps={steps}>
   {viz.type === 'xy-chart' && <XyChartVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
   {viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
   {viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
@@ -88,17 +77,5 @@ const aiDiagramSummary = summarizeVisualization(viz, steps);
       </p>
     )
   }
-</div>
-
-<script>
-  document.addEventListener('click', (e) => {
-    const btn = (e.target as HTMLElement | null)?.closest('[data-ask-diagram-btn]');
-    if (!btn) return;
-    const block = btn.closest('[data-ai-diagram]') as HTMLElement | null;
-    const summary = block?.getAttribute('data-ai-diagram');
-    if (summary) {
-      window.dispatchEvent(new CustomEvent('uni:ask-diagram', { detail: { summary } }));
-    }
-  });
-</script>
+</AiDiagramFrame>
 
