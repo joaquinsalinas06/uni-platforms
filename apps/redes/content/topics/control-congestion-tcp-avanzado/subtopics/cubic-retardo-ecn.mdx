@@ -21,7 +21,62 @@ Las slides 26–32 presentan maneras de utilizar mejor el cuello de botella sin 
 
 Si el emisor aumenta el ritmo y el throughput no mejora pero sí sube el RTT, la cola del cuello de botella está creciendo. El enfoque por retardo intenta frenar antes de provocar un descarte. ECN puede proporcionar evidencia explícita del router, mientras TCP clásico infiere el problema desde los extremos.
 
-## 4. Errores típicos
+## 4. CUBIC: interpretar la curvatura sin inventar parámetros
+
+Las slides 26–27 comparan el «diente de sierra» AIMD con una búsqueda que recuerda la ventana a la que apareció la congestión. Supón que antes de una pérdida la conexión tenía una ventana máxima observada \(W_{max}\). Tras reducirla, el algoritmo intenta recuperar con rapidez una región conocida, **se acerca lentamente al antiguo máximo** para no sobrepasar bruscamente la capacidad y, si no vuelve a observar congestión, continúa explorando por encima de ese valor.
+
+La explicación usa una relación **cúbica con el tiempo relativo a K**. Una escritura ilustrativa de esa forma es \(W(t)=W_{max}+c(t-K)^3\), donde \(t\) representa tiempo transcurrido desde la reducción, \(K\) indica el momento en que \(W\) vuelve a \(W_{max}\), y \(c>0\) controla la escala de crecimiento. **Esta expresión sirve para visualizar la curva; las diapositivas no suministran un valor numérico de c ni una regla de cálculo de K.** Por eso no sería legítimo resolver una traza de 12 rondas de «CUBIC exacto» inventando parámetros.
+
+El término cúbico es negativo antes de K y positivo después; su pendiente \(3c(t-K)^2\) es pequeña cerca de K y crece al alejarse. Esa es exactamente la intuición de la slide: rapidez lejos del máximo antiguo y cautela junto a él. La slide 26 dibuja \(W_{max}/2\) como referencia conceptual; **no** debes equiparar automáticamente esa reducción ilustrativa con toda implementación real de CUBIC.
+
+## 5. Control por retardo: calcular la diferencia entre camino libre y camino encolado
+
+La slide 29 explica una observación que se suele pasar por alto: cuando el enlace cuello de botella ya está ocupado continuamente, aumentar los datos en vuelo **no eleva su capacidad de salida**; aumenta el tamaño de la cola y por tanto el RTT medido.
+
+La slide 30 propone comparar dos tasas:
+
+$$T_{sin\ cola}\approx\frac{cwnd}{RTT_{min}},\qquad T_{observado}=\frac{\text{bytes enviados durante el último RTT}}{\text{duración de ese RTT}}.$$
+
+Aquí \(RTT_{min}\) es el menor RTT observado, aproximación del camino sin cola; **no** significa «tiempo mínimo garantizado» ni el RTT fijo de una conexión. El cociente de cwnd por \(RTT_{min}\) es un throughput de **referencia** que presupone suficiente tráfico en vuelo y que el receptor no lo limita. Si la tasa observada es muy cercana a esa referencia, el modelo aumenta cwnd linealmente. Si es bastante menor, interpreta que hay cola e intenta disminuir cwnd linealmente. El material no fija un porcentaje para las expresiones «muy cerca» y «muy por debajo»; establecer un umbral del 10%, por ejemplo, sería una decisión adicional, no un dato de la slide.
+
+**Ejemplo derivado:** si \(cwnd=100\,000\) B y \(RTT_{min}=0.050\) s, el caudal de referencia es \(100\,000/0.050=2\,000\,000\) B/s = **16 Mb/s**. Si en el último RTT de 0.065 s se enviaron 100000 B, el valor medido es \(100\,000/0.065\approx1\,538\,462\) B/s = **12.31 Mb/s**. La diferencia es ≈3.69 Mb/s, con retraso adicional de 15 ms en la medición. En el modelo esto sugiere cola creciente y justifica reducir la ventana; no permite demostrar por sí solo la causa exacta del retardo. **Comprobación:** 100000 B × 8 = 800000 bits; divididos entre 0.065 s son ≈12.31 millones de bits por segundo.
+
+BBR se menciona en la slide 31 como ejemplo desplegado; no se presentan sus variables internas ni su algoritmo, de modo que no corresponde reconstruirlo aquí.
+
+## 6. ECN: seguir el bit que viaja por la red y vuelve en un ACK
+
+ECN evita depender exclusivamente del descarte como indicio de congestión. La diapositiva 32 representa la siguiente cadena causal:
+
+1. El emisor transmite un datagrama IP preparado para notificación ECN. Los bits del campo IP indican que admite este tratamiento.
+2. Un router cuya cola muestra congestión marca **CE** en la cabecera IP, representado como ECN=11 en la slide, en lugar de tener que eliminar ese datagrama para señalizar el problema.
+3. El receptor TCP observa la marca del datagrama recibido. Envía un ACK con el bit **ECE** activo para comunicar al emisor que atravesó una congestión marcada.
+4. El emisor utiliza esta información como señal de congestión para ajustar su ventana. La señal de ECE **no es** el valor rwnd ni un ACK de nuevos datos extra.
+5. La figura presenta el paso entre las capas: **IP transporta la marca del router y TCP devuelve la señal en el ACK**.
+
+<Visualization viz={{
+  type: 'net-scene',
+  title: 'ECN: del router al emisor sin pérdida obligatoria',
+  steps: [
+    { note: 'El emisor envía el datagrama a través de un router. La red todavía no ha marcado congestión.',
+      devices:[{id:'s',kind:'host',label:'Emisor TCP',x:7,y:50},{id:'r',kind:'router',label:'Router con cola',x:50,y:50},{id:'d',kind:'server',label:'Receptor TCP',x:92,y:50}],
+      cables:[{from:'s',to:'r'},{from:'r',to:'d'}],
+      packets:[{from:'s',to:'r',label:'IP con ECN',order:1,state:'active'}] },
+    { note: 'Al detectar congestión, el router marca CE (ECN=11). El datagrama marcado puede continuar hasta el receptor.',
+      devices:[{id:'s',kind:'host',label:'Emisor TCP',x:7,y:50},{id:'r',kind:'router',label:'Marca CE',x:50,y:50},{id:'d',kind:'server',label:'Receptor TCP',x:92,y:50}],
+      cables:[{from:'s',to:'r'},{from:'r',to:'d'}],
+      packets:[{from:'r',to:'d',label:'ECN=11',order:2,state:'active'}] },
+    { note: 'El receptor devuelve ECE=1 en el ACK. El emisor recibe así una notificación explícita y ajusta su control de congestión.',
+      devices:[{id:'s',kind:'host',label:'Emisor TCP',x:7,y:50},{id:'r',kind:'router',label:'Router',x:50,y:50},{id:'d',kind:'server',label:'Receptor TCP',x:92,y:50}],
+      cables:[{from:'s',to:'r'},{from:'r',to:'d'}],
+      packets:[{from:'d',to:'s',label:'ACK ECE=1',order:3,state:'answer'}] }
+  ]
+}} />
+
+**Distinguir los tres enfoques:** el AIMD clásico infiere congestión por pérdidas y cambia la ventana; CUBIC cambia **cómo explora** el valor de cwnd tras pérdidas; el control por retardo mira la diferencia entre el RTT actual y un RTT de referencia; ECN aporta una **marca explícita desde el router**. Son mecanismos y señales diferentes que persiguen evitar congestionar la misma capacidad limitada.
+
+**Fallos comunes al interpretar una captura:** no esperes hallar un campo «cwnd» dentro de TCP, porque es estado local del emisor; no trates un ECE como indicación de pérdida confirmada; no atribuyas una cola exclusivamente al receptor por un RTT alto; y no infieras el parámetro de la curva CUBIC de una gráfica que solo tiene puntos por ronda.
+
+## 7. Errores típicos
 
 - Afirmar que cwnd se transmite como campo TCP.
 - Usar la descripción histórica de la slide sobre Linux como medición del equipo actual.
