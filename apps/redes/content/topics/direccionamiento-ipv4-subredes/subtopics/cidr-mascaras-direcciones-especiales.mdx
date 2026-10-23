@@ -22,11 +22,7 @@ La notación decimal facilita leer una dirección, pero los límites de red est�
 
 Para /23, el tercer octeto de la máscara es 254 (`11111110`). Un bloque empieza en un tercer octeto par y abarca dos valores consecutivos. /24 deja ocho bits host y la máscara es 255.255.255.0.
 
-## 3. Ejemplo resuelto
-
-Para 200.23.16.0/23 de la slide: prefijo de 23 bits, nueve host, $2^9=512$ direcciones. Red 200.23.16.0; broadcast 200.23.17.255. En una subred ordinaria que reserva ambos extremos, quedan 510 direcciones intermedias. Esta resta no se generaliza aquí a casos especiales no tratados en las slides.
-
-## 4. Procedimiento binario completo para cualquier prefijo del material
+## 3. Resolución binaria paso a paso: dirección, máscara y subredes
 
 Una dirección IPv4 tiene 32 bits; en CIDR, el sufijo /p significa **p bits de red desde la izquierda** y $32-p$ bits de host. La máscara pone 1 en los bits de red y 0 en los de host. Para obtener la dirección de red se usa **AND bit a bit**. Para obtener el broadcast de la subred se pone a 1 toda la parte host: $broadcast=red\;OR\;\neg máscara$, usando solo 32 bits. La nota de la slide que menciona OR no significa aplicar OR con la máscara original: eso produciría un resultado incorrecto.
 
@@ -76,7 +72,7 @@ Un /23 contiene 512 direcciones. Al tomar un bit más de red, cada /24 tendrá $
 - **Pensar que se suman los octetos para obtener una red.** CIDR compara bits de prefijo, no suma octetos decimales.
 - **Suponer que sumar rutas equivale a elegir cualquier red contigua.** La ruta agregada debe tener prefijo común y estar alineada con el bloque.
 
-## 5. Errores típicos
+## 4. Errores típicos
 
 - Leer /23 como 23 direcciones.
 - Confundir máscara con broadcast.
