@@ -106,3 +106,77 @@ $$\text{EstimatedRTT}_3 = 0{,}875 \cdot 0{,}0286245 + 0{,}125 \cdot 0{,}029577 =
 ## 5. Ampliación: DevRTT y timeout (Ex4)
 
 A partir del estado anterior Est=100 ms y Dev=5 ms, la primera muestra 106 ms da Est=100.75 ms, Dev=5.0625 ms y timeout=121 ms. Se actualiza primero Est y luego la desviación con ese Est nuevo. [Las tres filas y Karn](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-4-rtt-devrtt-timeout-y-karn) completan el procedimiento.
+
+---
+
+## 6. RTT, dispersión, timeout y Karn: solución autónoma de Ex4, pregunta 4
+
+Un ACK TCP no solo confirma bytes: también puede proporcionar una medida del tiempo que tardaron en recibir reconocimiento. Se define **SampleRTT** como el tiempo de llegada del ACK correspondiente **menos** el instante en que se envió un segmento de datos que puede medirse sin ambigüedad. Los valores puntuales fluctúan por colas, propagación y procesamiento; por eso TCP usa un promedio suavizado **EstimatedRTT**, una medida de variabilidad **DevRTT**, y un **TimeoutInterval** que deja margen para esa variabilidad.
+
+### Significado de todas las variables y supuestos
+
+| Variable | Significado | Unidad |
+|---|---|---|
+| $SampleRTT_n$ | Muestra n: ACK recibido menos envío del dato **no retransmitido** | ms o s |
+| $EstimatedRTT_n$ | Promedio exponencial actualizado después de la muestra n | Misma unidad |
+| $DevRTT_n$ | Desviación media suavizada respecto al nuevo EstimatedRTT | Misma unidad |
+| $\alpha$ | Peso de la muestra reciente en EstimatedRTT; aquí 0.125 | Sin unidad |
+| $\beta$ | Peso del error reciente en DevRTT; aquí 0.25 | Sin unidad |
+| $TimeoutInterval_n$ | Límite calculado para esperar un ACK antes de actuar por timeout | Misma unidad |
+
+Para Ex4 las condiciones **iniciales** son $EstimatedRTT_0=100$ ms, $DevRTT_0=5$ ms, y muestras consecutivas **106, 120, 140 ms**. Estas condiciones iniciales son explícitas en el ejercicio; no hay que reemplazarlas por la primera muestra como ocurre en LAB3 P1 cuando se pide comenzar con el primer POST.
+
+El enunciado establece:
+
+$$EstimatedRTT_n=(1-\alpha)EstimatedRTT_{n-1}+\alpha SampleRTT_n$$
+$$DevRTT_n=(1-\beta)DevRTT_{n-1}+\beta\left|SampleRTT_n-EstimatedRTT_n\right|$$
+$$TimeoutInterval_n=EstimatedRTT_n+4DevRTT_n.$$
+
+**Orden decisivo:** usa primero $EstimatedRTT_n$ en el cálculo de $DevRTT_n$. Usar el promedio anterior en la desviación cambiaría las respuestas numéricas.
+
+### Muestra 1: 106 ms
+
+1. Promedio: $EstimatedRTT_1=0.875(100)+0.125(106)=87.5+13.25=\mathbf{100.75\ ms}$.
+2. Error absoluto frente al promedio actualizado: $|106-100.75|=5.25$ ms.
+3. Desviación: $DevRTT_1=0.75(5)+0.25(5.25)=3.75+1.3125=\mathbf{5.0625\ ms}$.
+4. Timeout: $100.75+4(5.0625)=100.75+20.25=\mathbf{121.0\ ms}$.
+
+### Muestra 2: 120 ms
+
+1. $EstimatedRTT_2=0.875(100.75)+0.125(120)=88.15625+15=\mathbf{103.15625\ ms}$.
+2. $|120-103.15625|=16.84375$ ms.
+3. $DevRTT_2=0.75(5.0625)+0.25(16.84375)=3.796875+4.2109375=\mathbf{8.0078125\ ms}$.
+4. $Timeout_2=103.15625+4(8.0078125)=103.15625+32.03125=\mathbf{135.1875\ ms}$.
+
+### Muestra 3: 140 ms
+
+1. $EstimatedRTT_3=0.875(103.15625)+0.125(140)=90.26171875+17.5=\mathbf{107.76171875\ ms}$.
+2. $|140-107.76171875|=32.23828125$ ms.
+3. $DevRTT_3=0.75(8.0078125)+0.25(32.23828125)=6.005859375+8.0595703125=\mathbf{14.0654296875\ ms}$.
+4. $Timeout_3=107.76171875+4(14.0654296875)=107.76171875+56.26171875=\mathbf{164.0234375\ ms}$.
+
+| n | Sample (ms) | EstimatedRTT (ms) | DevRTT (ms) | Timeout (ms) |
+|---|---:|---:|---:|---:|
+| Inicial | — | 100.000000 | 5.000000 | 120.000000* |
+| 1 | 106 | 100.750000 | 5.062500 | 121.000000 |
+| 2 | 120 | 103.156250 | 8.0078125 | 135.187500 |
+| 3 | 140 | 107.76171875 | 14.0654296875 | 164.0234375 |
+
+*El valor inicial 120 ms es solamente la **evaluación algebraica** $100+4\cdot5$, no una medición realizada en la captura.*
+
+**Comprobación de plausibilidad:** los tres EstimatedRTT son menores que la última muestra y aumentan sin saltar directamente a 140 ms, porque el valor histórico pesa 87.5%. Los tres timeouts son mayores que sus respectivos estimados; el margen crece cuando crece DevRTT, como debe ocurrir si hay mayor incertidumbre.
+
+### Ex4 4.b: por qué Karn excluye muestras de segmentos retransmitidos
+
+Imagina que se envía un segmento de bytes 1000–1499 en $t=0$, se retransmite en $t=80$ ms y el emisor recibe un ACK=1500 en $t=100$ ms. El ACK acumulativo **no identifica cuál de las dos copias produjo esa confirmación**. Si reconocía al original, el RTT sería 100 ms. Si correspondía a la copia, medirías 20 ms. Actualizar EstimatedRTT con uno de estos dos números sin saber su origen sesgaría el estimador y podría producir más expiraciones artificiales.
+
+Por ello, la regla de Karn evita utilizar ACK ambiguos de segmentos retransmitidos para actualizar las muestras de RTT. Esto **no elimina** los timers ni las retransmisiones: separa las decisiones de recuperación de las observaciones que alimentan el estimador. Si un alumno resta «hora de último envío» de «hora del ACK» sin comprobar que era un segmento original no retransmitido, su SampleRTT puede ser incorrecto aun cuando la resta aritmética sea perfecta.
+
+### Diferenciar ejercicios con muestras iniciales distintas
+
+- **LAB3 P1:** el primer POST se toma como referencia y, por instrucción de la guía de semana 9, $EstimatedRTT_1=SampleRTT_1$. Se miden **seis** segmentos y sus ACK de la captura oficial o propia.
+- **Parcial 2025-II:** la tabla anterior de esta página presenta **cinco** segmentos seleccionados de la traza; esa convención de selección está declarada.
+- **Ex4 P4:** comienza desde el estado **100 ms / 5 ms** ya dado. Son números analíticos del enunciado, no tramas de Wireshark; usa tres muestras **106/120/140**.
+
+La distinción impide obtener dos valores «correctos» incompatibles por mezclar condiciones iniciales. También evita confundir **RTT de transporte**, que termina cuando llega un ACK TCP, con **RTT de aplicación** en Ex4 P7, donde el servidor espera dos segundos antes de contestar: ACK y respuesta de aplicación son sucesos distintos.
+

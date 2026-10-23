@@ -22,9 +22,55 @@ La notación decimal facilita leer una dirección, pero los límites de red est�
 
 Para /23, el tercer octeto de la máscara es 254 (`11111110`). Un bloque empieza en un tercer octeto par y abarca dos valores consecutivos. /24 deja ocho bits host y la máscara es 255.255.255.0.
 
-## 3. Ejemplo resuelto
+## 3. Resolución binaria paso a paso: dirección, máscara y subredes
 
-Para 200.23.16.0/23 de la slide: prefijo de 23 bits, nueve host, $2^9=512$ direcciones. Red 200.23.16.0; broadcast 200.23.17.255. En una subred ordinaria que reserva ambos extremos, quedan 510 direcciones intermedias. Esta resta no se generaliza aquí a casos especiales no tratados en las slides.
+Una dirección IPv4 tiene 32 bits; en CIDR, el sufijo /p significa **p bits de red desde la izquierda** y $32-p$ bits de host. La máscara pone 1 en los bits de red y 0 en los de host. Para obtener la dirección de red se usa **AND bit a bit**. Para obtener el broadcast de la subred se pone a 1 toda la parte host: $broadcast=red\;OR\;\neg máscara$, usando solo 32 bits. La nota de la slide que menciona OR no significa aplicar OR con la máscara original: eso produciría un resultado incorrecto.
+
+### Ejemplo oficial: 200.23.16.0/23
+
+Datos: IP 200.23.16.0, prefijo 23; incógnitas: máscara, red, broadcast, total de direcciones, rango de hosts.
+
+1. Escribe los octetos en binario: $200=11001000$, $23=00010111$, $16=00010000$, $0=00000000$.
+2. Reparte 23 bits de red: 8 del primer octeto, 8 del segundo y **7 del tercero**. El octeto parcial de la máscara es $11111110_2=254$.
+3. La máscara es **255.255.254.0**; su forma binaria es $11111111.11111111.11111110.00000000$.
+4. AND: el tercer octeto $00010000\ AND\ 11111110=00010000$, y el último se hace cero. Por tanto, **red 200.23.16.0**.
+5. Complemento de la máscara: **0.0.1.255**, o los nueve bits host a uno. OR con la red: tercer octeto $00010000\ OR\ 00000001=00010001=17$. Broadcast: **200.23.17.255**.
+6. Quedan $32-23=9$ bits host: $2^9=512$ direcciones. Si el ejercicio pide hosts utilizables de una subred ordinaria, $512-2=510$, desde **200.23.16.1** hasta **200.23.17.254**.
+
+**Comprobación:** cada subred /23 ocupa dos valores consecutivos del tercer octeto. Como 16 es par, cubre 16–17; la siguiente empieza en 18. Se puede verificar igualmente que 200.23.17.255 AND 255.255.254.0 devuelve 200.23.16.0.
+
+### Ejemplo derivado: localizar la red de 200.23.19.140/23
+
+No confundas la IP de una interfaz con la primera dirección del bloque. El octeto 19 es $00010011_2$. Al aplicar el AND con $11111110_2$, pasa a $00010010_2=18$. El último octeto, 140, pasa a cero. Así se obtiene red **200.23.18.0/23**, broadcast **200.23.19.255**, hosts utilizables **200.23.18.1–200.23.19.254** y capacidad teórica de **510 hosts**. La dirección 200.23.19.140 está dentro del rango, lo que comprueba la respuesta.
+
+### Subdividir un bloque y agregar rutas
+
+En la diapositiva de direccionamiento jerárquico, el ISP tiene **200.23.16.0/20**. Quedan $32-20=12$ bits de host y abarca desde 200.23.16.0 hasta 200.23.31.255, porque la máscara /20 es 255.255.240.0. Para asignar bloques /23 se toman $23-20=3$ bits adicionales: $2^3=8$ bloques, cada uno de 512 direcciones.
+
+| Organización de la slide | Subred /23 | Última dirección |
+|---|---|---|
+| 0 | 200.23.16.0/23 | 200.23.17.255 |
+| 1 | 200.23.18.0/23 | 200.23.19.255 |
+| 2 | 200.23.20.0/23 | 200.23.21.255 |
+| 3 | 200.23.22.0/23 | 200.23.23.255 |
+| 4 | 200.23.24.0/23 | 200.23.25.255 |
+| 5 | 200.23.26.0/23 | 200.23.27.255 |
+| 6 | 200.23.28.0/23 | 200.23.29.255 |
+| 7 | 200.23.30.0/23 | 200.23.31.255 |
+
+La agregación anuncia **un solo prefijo /20** para alcanzar los ocho bloques /23. Esto evita propagar ocho rutas cuando todas salen por el mismo ISP. Si la organización 1 migra a otro ISP y ese nuevo proveedor anuncia **200.23.18.0/23**, la ruta más específica /23 prevalece sobre la /20 **para los destinos entre 200.23.18.0 y 200.23.19.255**. Las demás direcciones continúan coincidiendo solo con la agregada /20. La selección por **prefijo más largo** explica por qué un anuncio de /20 y otro de /23 pueden coexistir sin contradicción.
+
+### Cómo pasar de /23 a dos /24 sin perder direcciones
+
+Un /23 contiene 512 direcciones. Al tomar un bit más de red, cada /24 tendrá $2^{32-24}=256$ direcciones. Por eso 200.23.16.0/23 se parte exactamente en **200.23.16.0/24** y **200.23.17.0/24**. No se puede construir un /24 que empiece en 200.23.16.128 como si esa fuese una red /24 válida: las direcciones de red deben alinearse con el tamaño del bloque.
+
+### Errores habituales y prueba inversa
+
+- **Confundir /23 con máscara 255.255.255.0.** Esa máscara corresponde a /24; en /23 el tercer octeto vale 254.
+- **Buscar broadcast haciendo IP OR máscara.** Debes usar los bits de host (complemento de la máscara), no los bits de red.
+- **Dividir 512 entre 8 para encontrar los ocho /23.** La división se hace sobre los 4096 valores del /20; cada /23 posee 512.
+- **Pensar que se suman los octetos para obtener una red.** CIDR compara bits de prefijo, no suma octetos decimales.
+- **Suponer que sumar rutas equivale a elegir cualquier red contigua.** La ruta agregada debe tener prefijo común y estar alineada con el bloque.
 
 ## 4. Errores típicos
 

@@ -11,19 +11,50 @@ El host necesita dirección al entrar a la red, pero también parámetros para c
 
 ## 2. Conceptos
 
-<Visualization viz={{"type": "sequence", "title": "DHCP: concesión de la slide 28", "steps": [{"note": "Ejemplo de las slides: xid=654; oferta 223.1.2.4 durante 3600 s. La renovación puede omitir Discover y Offer.", "actors": [{"id": "c", "label": "Cliente nuevo"}, {"id": "s", "label": "223.1.2.5"}], "msgs": [{"from": "c", "to": "s", "label": "Discover", "flags": "0.0.0.0:68 → broadcast:67"}, {"from": "s", "to": "c", "label": "Offer 223.1.2.4", "flags": "lease 3600 s"}, {"from": "c", "to": "s", "label": "Request", "flags": "xid 654"}, {"from": "s", "to": "c", "label": "ACK", "flags": "confirma concesión"}]}], "static": true}} />
+<Visualization viz={{"type": "sequence", "title": "DHCP: concesión de la slide 28", "steps": [{"note": "Ejemplo de las slides: Discover/Offer usan xid=654; Request/ACK se ilustran con xid=655; la oferta es 223.1.2.4 durante 3600 s. La renovación puede omitir Discover y Offer.", "actors": [{"id": "c", "label": "Cliente nuevo"}, {"id": "s", "label": "223.1.2.5"}], "msgs": [{"from": "c", "to": "s", "label": "Discover", "flags": "0.0.0.0:68 → broadcast:67"}, {"from": "s", "to": "c", "label": "Offer 223.1.2.4", "flags": "lease 3600 s"}, {"from": "c", "to": "s", "label": "Request", "flags": "xid 655"}, {"from": "s", "to": "c", "label": "ACK", "flags": "confirma concesión"}]}], "static": true}} />
 
 Discover y Request iniciales salen de 0.0.0.0:68 hacia 255.255.255.255:67. En la figura del curso, Offer y ACK se muestran broadcast hacia el puerto 68. No debe imponerse un destino Ethernet unicast a todas las capturas: se inspecciona el que efectivamente aparece.
 
 Además de la IP, DHCP puede devolver máscara, dirección del primer router y servidores DNS. La slide permite omitir Discover/Offer si el cliente recuerda la dirección y desea reutilizarla.
 
-## 3. Ejemplo resuelto
+## 3. Paso a paso del intercambio DHCP de la slide 28
 
-La oferta de 223.1.2.5 entrega `yiaddr=223.1.2.4`, xid=654 y lifetime=3600 s. El cliente relaciona la respuesta con su solicitud por ese identificador. Son datos de la **slide**, no una medición de tu red.
+DHCP resuelve dos problemas prácticos: el host recién conectado necesita parámetros **antes de poder comunicarse normalmente por IP**, y el administrador desea prestar direcciones para reutilizarlas cuando los dispositivos se desconectan. Un servidor DHCP puede estar ubicado en el router conectado a varias subredes, como en la diapositiva 27.
 
-[Ejercicio extra de DHCP](/evaluaciones/laboratorio/dhcp-udp-applayer-extra).
+| Fase | Quién habla y a quién | Datos destacados de la figura | Cambio de estado |
+|---|---|---|---|
+| Discover | Cliente $0.0.0.0:68$ → broadcast $255.255.255.255:67$ | xid 654, dirección aún 0.0.0.0 | Busca servidores; todavía no posee IP definitiva |
+| Offer | Servidor $223.1.2.5:67$ → broadcast puerto 68 | oferta $223.1.2.4$, xid 654, lease 3600 s | Aparece una dirección **propuesta**, aún no confirmada |
+| Request | Cliente puerto 68 → broadcast puerto 67 | solicita $223.1.2.4$; la figura muestra xid 655 | El cliente elige y solicita usar la dirección |
+| ACK | Servidor puerto 67 → broadcast puerto 68 | confirma $223.1.2.4$, xid 655 y lifetime 3600 s | El cliente ya puede configurar la concesión confirmada |
 
-## 4. Errores típicos
+La diapositiva usa **identificadores 654 y 655** en los dos pares ilustrados. En un análisis real no debes obligar a que cada uno de los cuatro paquetes tenga los mismos valores mostrados aquí: son los datos específicos de **esa figura**. La captura propia debe documentar su identificador real, el servidor y la duración observados.
+
+### Por qué intervienen UDP, broadcast y 0.0.0.0
+
+El cliente no puede anunciar una dirección IP concedida que **todavía no tiene**. Por ello, la figura empieza con 0.0.0.0 como dirección origen y usa broadcast para encontrar al servidor sin conocer su dirección. Los puertos 68 (cliente) y 67 (servidor) distinguen los extremos de DHCP sobre **UDP**, a diferencia del SYN/SYN-ACK/ACK que establece conexiones **TCP**. El «ACK» de DHCP es un **mensaje de aplicación del protocolo DHCP** y no un ACK de transporte TCP.
+
+### Cuándo cambia realmente la configuración del host
+
+Discover solo descubre; Offer **propone**; Request pide formalmente; ACK de DHCP confirma la concesión. Para salir de la subred, el host necesita más que una dirección: la diapositiva 29 incluye **máscara**, **primer router** y **servidor DNS**. La máscara le permite reconocer destinos que considera locales; el router de primer salto conduce tráfico hacia redes externas; DNS transforma nombres en direcciones. Si una configuración no proporciona alguno de esos datos, no se puede asumir que el host lo recibió por DHCP.
+
+### Ejercicio derivado: interpretar 3600 segundos de lease
+
+El campo de vida útil de la oferta de la figura vale **3600 s = 60 min = 1 h**. Esto permite usar una dirección **temporalmente**, no significa que el equipo deba renovar exactamente cada 3600 s ni que un ACK TCP sea necesario. La slide 26 explica que la concesión puede **renovarse**, y la slide 28 señala que Discover/Offer pueden omitirse si el cliente recuerda una dirección y quiere reutilizarla. No fija aquí instantes de renovación T1/T2, por lo que no sería fiel inventar un cronograma de renovación con porcentajes concretos.
+
+**Comprobación conceptual:** si el servidor anuncia 223.1.2.4, la dirección del servidor (223.1.2.5) y la del cliente son **distintas**. Si el cliente aún usa 0.0.0.0 durante la solicitud, eso no contradice la dirección que pide recibir.
+
+## 4. Qué comprobar en una práctica de DHCP e IP/MAC
+
+1. En Wireshark distingue paquetes DHCP/UDP por puertos, opciones, xid y dirección ofrecida; no cuentes los paquetes IP como si fueran el archivo de una conexión TCP.
+2. Verifica IP, prefijo, gateway y DNS de la interfaz tras la concesión. **ifconfig** permite observar interfaces y direcciones en los sistemas donde está disponible; la slide 17 lo utiliza para interfaces.
+3. Usa **netstat -nr** para revisar la tabla de rutas y la ruta por defecto, según la slide 16: una dirección IP válida no prueba por sí sola que exista ruta hacia Internet.
+4. **traceroute** (slide 18) permite observar saltos de red hacia un destino; no muestra, por sí solo, qué mensajes DHCP se intercambiaron.
+5. Distingue el direccionamiento: **IPv4** (32 bits) permite enrutar datagramas entre subredes; **MAC**, normalmente 48 bits en las LAN de la slide 19, permite llevar una trama hasta una interfaz del mismo enlace. ARP relaciona dirección IPv4 destino de enlace con dirección MAC para el envío local; no lo confundas con DHCP, que asigna parámetros IP.
+
+**Errores de análisis:** copiar 223.1.2.4 como IP de tu computadora sin haberla medido; interpretar «gateway» como MAC del host; llamar DHCP ACK al tercer segmento del handshake TCP; suponer que cambiar de Wi-Fi conserva la misma dirección concedida; y afirmar que todo ciclo de renovación obliga a observar las cuatro fases.
+
+## 5. Errores típicos
 
 - Confundir DHCP ACK con un ACK TCP: este intercambio usa UDP.
 - Afirmar que toda renovación repite siempre las cuatro fases.

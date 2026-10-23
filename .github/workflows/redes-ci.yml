@@ -1,0 +1,57 @@
+name: Redes CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/redes/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/redes-ci.yml'
+  push:
+    branches:
+      - main
+      - content/redes-w9-w10-deep-revision
+    paths:
+      - 'apps/redes/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/redes-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: redes-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Astro, material y TCP
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check knowledge map
+        run: pnpm --filter redes-platform check
+      - name: Check MDX and source contracts
+        run: pnpm --filter redes-platform verify
+      - name: Build Redes with Astro
+        run: pnpm --filter redes-platform build
+      - name: Run TCP material and socket tests
+        working-directory: apps/redes
+        run: python3 -m unittest discover -s tests -v
