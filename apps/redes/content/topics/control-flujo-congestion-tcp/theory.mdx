@@ -31,7 +31,7 @@ $$FlightSize=LastByteSent-LastByteAcked,\qquad FlightSize\leq\min(rwnd,cwnd).$$
 
 La recepción anuncia **rwnd** porque necesita evitar que su buffer se llene más rápido de lo que la aplicación consume sus bytes. El **cwnd** es estado local del emisor que intenta evitar la saturación de routers y enlaces. El campo Win/Window Size de TCP permite observar **recepción**, no congestión; no existe un campo de cabecera TCP que publique cwnd. Para interpretar correctamente una captura, además hay que considerar el **Window Scale** negociado en el handshake: un valor bruto del campo de 16 bits no siempre equivale a la ventana calculada en bytes.
 
-**Ejemplo derivado:** el receptor anuncia \(rwnd=12\,000\) B, la estimación del emisor limita a \(cwnd=8\,000\) B y ya tiene \(FlightSize=5\,000\) B sin confirmar. Límite conjunto \(=\min(12\,000,8\,000)=8\,000\) B; bytes adicionales permitidos \(\max(0,8000-5000)=\mathbf{3000\ B}\). Si llega un ACK que reconoce 2000 B nuevos, el vuelo baja a 3000 B y ahora se podrían enviar otros **5000 B**, **si** la ventana anunciada y cwnd no cambian. Si el receptor en ese instante reduce rwnd a 4000 B, el límite sería 4000 B y solo quedaría **1000 B** de espacio adicional. Comprueba que ningún paso supera el menor de los dos límites.
+**Ejemplo derivado:** el receptor anuncia $rwnd=12\,000$ B, la estimación del emisor limita a $cwnd=8\,000$ B y ya tiene $FlightSize=5\,000$ B sin confirmar. Límite conjunto $=\min(12\,000,8\,000)=8\,000$ B; bytes adicionales permitidos $\max(0,8000-5000)=\mathbf{3000\ B}$. Si llega un ACK que reconoce 2000 B nuevos, el vuelo baja a 3000 B y ahora se podrían enviar otros **5000 B**, **si** la ventana anunciada y cwnd no cambian. Si el receptor en ese instante reduce rwnd a 4000 B, el límite sería 4000 B y solo quedaría **1000 B** de espacio adicional. Comprueba que ningún paso supera el menor de los dos límites.
 
 ### Cómo cambia una ventana al recibir ACK de nuevos bytes
 
@@ -66,7 +66,7 @@ En ese diagrama cada celda es **un bloque conceptual MSS**; no representa los n�
 2. **Tres ACK duplicados y retransmisión:** puede haberse perdido un segmento; el algoritmo de congestión puede modificar cwnd. La ventana anunciada por el receptor no prueba qué versión de TCP está en uso.
 3. **Bytes en vuelo menores que rwnd:** **no** demuestra que la conexión está limitada por cwnd. La aplicación podría no producir suficientes datos y otras restricciones podrían intervenir. Necesitas correlacionar entrega, tasas, pérdidas y RTT.
 
-Al resolver ejercicios, escribe siempre los límites **en la misma unidad** (bytes o MSS convertidos a bytes), anota el vuelo ya ocupado, calcula \(L=\min(rwnd,cwnd)\) y solo después \(Disponible=\max(0,L-FlightSize)\). Es incorrecto identificar \(Disponible\) con cwnd a secas o sumar cwnd y rwnd.
+Al resolver ejercicios, escribe siempre los límites **en la misma unidad** (bytes o MSS convertidos a bytes), anota el vuelo ya ocupado, calcula $L=\min(rwnd,cwnd)$ y solo después $Disponible=\max(0,L-FlightSize)$. Es incorrecto identificar $Disponible$ con cwnd a secas o sumar cwnd y rwnd.
 
 ---
 
