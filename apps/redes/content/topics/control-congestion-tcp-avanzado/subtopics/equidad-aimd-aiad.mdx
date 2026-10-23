@@ -17,13 +17,7 @@ Al sumar la misma cantidad a ambos flujos, la diferencia $x_2-x_1$ no cambia. Al
 
 En **AIAD**, sumar o restar una misma cantidad conserva la diferencia mientras ningún flujo llegue a cero. Por eso no converge en general a la diagonal.
 
-## 3. Ejemplo resuelto
-
-Con C=10 y $(2,6)$: AI lleva a $(3,7)$; MD a $(1.5,3.5)$; AI a $(4,6)$; MD a $(2,3)$. Las diferencias iniciales 4, 2 y 1 se reducen. Con AIAD y disminución de 1, se alternaría entre $(3,7)$ y $(2,6)$: diferencia 4.
-
-El reparto $R/K$ es **por conexión**. Si existen nueve conexiones y una aplicación abre una más, recibe aproximadamente $R/10$. Si abre once, controla once de veinte y recibe aproximadamente $11R/20$; la slide lo redondea a $R/2$.
-
-## 4. Demostración geométrica de convergencia
+## 3. Demostración geométrica y ejemplo completo
 
 Ex4 pregunta 1 pide justificar **por qué** el algoritmo converge hacia una distribución justa desde un punto arbitrario $P_0=(x_1,x_2)$, no solamente dibujar líneas. Para interpretar la figura de Chiu–Jain usa estos dos lugares geométricos:
 
@@ -70,7 +64,7 @@ La conclusión depende de los supuestos. Las diapositivas consideran flujos con 
 4. Repite hasta observar la progresión geométrica de la diferencia; señala en cada vuelta dónde se cumple eficiencia.
 5. Para AIAD, calcula la diferencia antes y después de sumar o restar la misma constante y da un contraejemplo si se pide negar convergencia garantizada.
 
-## 5. Errores típicos
+## 4. Errores típicos
 
 - Probar equidad solo con un punto ya sobre la diagonal.
 - Interpretar el modelo ideal como garantía con RTT distintos.
