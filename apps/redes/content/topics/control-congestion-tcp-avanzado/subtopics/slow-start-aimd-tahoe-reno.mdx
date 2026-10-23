@@ -47,7 +47,7 @@ La restricción aproximada de envío es $FlightSize\leq \min(rwnd,cwnd)$. Si el 
 
 ### Rondas 1–4: por qué la ventana crece 1, 2, 4 y 8
 
-Con $cwnd_1=1$ MSS y $ssthresh=8$ MSS, se está en **slow start** mientras $cwnd<ssthresh$. Cada ACK de datos nuevos incrementa aproximadamente un MSS por RTT acumulado, lo que duplica la ventana en la idealización por rondas: $1\to2\to4\to8$. Alcanzar el umbral conduce a **congestion avoidance**. En esta fase, el crecimiento agregado es aproximadamente $+1$ MSS por RTT, no $+1$ MSS **por cada ACK**.
+Con $cwnd_1=1$ MSS y $ssthresh=8$ MSS, se está en **slow start** mientras $cwnd\lt ssthresh$. Cada ACK de datos nuevos incrementa aproximadamente un MSS por RTT acumulado, lo que duplica la ventana en la idealización por rondas: $1\to2\to4\to8$. Alcanzar el umbral conduce a **congestion avoidance**. En esta fase, el crecimiento agregado es aproximadamente $+1$ MSS por RTT, no $+1$ MSS **por cada ACK**.
 
 Las diapositivas expresan el incremento aditivo y la reducción multiplicativa como un patrón de sierra. La magnitud exacta de cada incremento a nivel de ACK depende de la implementación y del tamaño de los bytes reconocidos; la tabla sigue el modelo discreto exigido por Ex4.
 
