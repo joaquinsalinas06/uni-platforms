@@ -29,7 +29,7 @@ Si un datagrama con DF=1 supera una MTU posterior, el router no puede fragmentar
 
 ## 4. Algoritmo de fragmentación y por qué se divide entre ocho
 
-Una **MTU** es el tamaño máximo del paquete de capa superior que puede llevar una trama del enlace correspondiente (no el tamaño de los datos TCP). Un datagrama IPv4 tiene cabecera de longitud \(H\) y carga de longitud \(P=D-H\), donde \(D\) es su longitud total IP. Si necesita atravesar un enlace de MTU \(M<D\) y se permite fragmentación, se crean varios **datagramas IPv4**, cada uno con cabecera propia. Sus partes de datos deben recomponerse en el destino.
+Una **MTU** es el tamaño máximo del paquete de capa superior que puede llevar una trama del enlace correspondiente (no el tamaño de los datos TCP). Un datagrama IPv4 tiene cabecera de longitud $H$ y carga de longitud $P=D-H$, donde $D$ es su longitud total IP. Si necesita atravesar un enlace de MTU $M<D$ y se permite fragmentación, se crean varios **datagramas IPv4**, cada uno con cabecera propia. Sus partes de datos deben recomponerse en el destino.
 
 Los campos involucrados son:
 
@@ -46,26 +46,26 @@ Como los offsets se expresan en bloques de **8 bytes**, todos los fragmentos **s
 
 $$P_{fragmento}=8\left\lfloor\frac{M-H}{8}\right\rfloor.$$
 
-No basta usar \(M-H\) si no es múltiplo de 8: la posición del fragmento siguiente no se podría representar como offset entero.
+No basta usar $M-H$ si no es múltiplo de 8: la posición del fragmento siguiente no se podría representar como offset entero.
 
 ### Reconstrucción exacta de la slide 8
 
-**Datos:** datagrama de \(D=4000\) B, MTU \(M=1500\) B, cabecera IPv4 \(H=20\) B y DF=0; **incógnitas:** cantidades de fragmentos, datos, Total Length, MF y offsets.
+**Datos:** datagrama de $D=4000$ B, MTU $M=1500$ B, cabecera IPv4 $H=20$ B y DF=0; **incógnitas:** cantidades de fragmentos, datos, Total Length, MF y offsets.
 
-1. Carga original: \(P=4000-20=3980\) B.
-2. Carga máxima no final: \(8\lfloor(1500-20)/8\rfloor=8\lfloor185\rfloor=1480\) B.
-3. Dos fragmentos completos usan \(1480+1480=2960\) B; quedan \(3980-2960=1020\) B.
+1. Carga original: $P=4000-20=3980$ B.
+2. Carga máxima no final: $8\lfloor(1500-20)/8\rfloor=8\lfloor185\rfloor=1480$ B.
+3. Dos fragmentos completos usan $1480+1480=2960$ B; quedan $3980-2960=1020$ B.
 4. Primer fragmento: 1480 B de carga, Total Length 1500 B, offset 0, MF=1.
-5. Segundo: empieza tras 1480 B, offset \(1480/8=185\), Total Length 1500 B, MF=1.
-6. Tercero: empieza tras 2960 B, offset \(2960/8=370\), lleva 1020 B, Total Length \(1020+20=1040\) B, MF=0.
+5. Segundo: empieza tras 1480 B, offset $1480/8=185$, Total Length 1500 B, MF=1.
+6. Tercero: empieza tras 2960 B, offset $2960/8=370$, lleva 1020 B, Total Length $1020+20=1040$ B, MF=0.
 
-**Comprobación de integridad de bytes:** \(1480+1480+1020=3980\) B de carga, exactamente la original. **Comprobación de espacio:** cada fragmento mide como máximo 1500 B. **Comprobación de cabeceras:** se enviaron \(1500+1500+1040=4040\) B IP, 40 B adicionales frente al datagrama original debido a las **dos cabeceras extras**.
+**Comprobación de integridad de bytes:** $1480+1480+1020=3980$ B de carga, exactamente la original. **Comprobación de espacio:** cada fragmento mide como máximo 1500 B. **Comprobación de cabeceras:** se enviaron $1500+1500+1040=4040$ B IP, 40 B adicionales frente al datagrama original debido a las **dos cabeceras extras**.
 
 Los tres comparten el mismo Identification; no se debe confundir ID con el número de orden del fragmento. El último tiene MF=0, pero eso **no confirma** que hayan llegado todos los anteriores. El destino reconoce la pieza final por MF=0 y reensambla por posiciones y longitud; un fragmento perdido impide entregar el datagrama IPv4 completo.
 
 ### Ejemplo derivado para practicar: 4000 B con MTU de 1000 B
 
-Mantén \(D=4000\), \(H=20\), DF=0, pero cambia \(M=1000\). La carga máxima no final es \(8\lfloor980/8\rfloor=8\cdot122=976\) B, **no 980**. Cuatro fragmentos completos llevan 3904 B y queda \(3980-3904=76\) B.
+Mantén $D=4000$, $H=20$, DF=0, pero cambia $M=1000$. La carga máxima no final es $8\lfloor980/8\rfloor=8\cdot122=976$ B, **no 980**. Cuatro fragmentos completos llevan 3904 B y queda $3980-3904=76$ B.
 
 | Fragmento | Datos (B) | Total Length (B) | Offset (unidades de 8 B) | MF |
 |---|---:|---:|---:|---:|
@@ -75,7 +75,7 @@ Mantén \(D=4000\), \(H=20\), DF=0, pero cambia \(M=1000\). La carga máxima no 
 | 4 | 976 | 996 | 366 | 1 |
 | 5 | 76 | 96 | 488 | 0 |
 
-**Comprobaciones:** datos \(4\cdot976+76=3980\) B; totales \(4\cdot996+96=4080\) B (cuatro cabeceras extra, \(4\cdot20=80\) B); offsets \(0,122,244,366,488\) representan posiciones \(0,976,1952,2928,3904\) B, sin huecos ni solapamientos.
+**Comprobaciones:** datos $4\cdot976+76=3980$ B; totales $4\cdot996+96=4080$ B (cuatro cabeceras extra, $4\cdot20=80$ B); offsets $0,122,244,366,488$ representan posiciones $0,976,1952,2928,3904$ B, sin huecos ni solapamientos.
 
 ### Diferencia fundamental entre fragmentación IPv4 y segmentación TCP
 
@@ -91,9 +91,9 @@ Si DF=1 y un router necesita superar la MTU de la siguiente interfaz, no fragmen
 
 ### Método de resolución sin depender de la figura
 
-1. Comprobar \(D\), \(M\), \(H\) y DF; si \(D\le M\), no fragmentar.
-2. Hallar \(P=D-H\) y \(P_{fragmento}=8\lfloor(M-H)/8\rfloor\).
-3. Dividir \(P\) en piezas de ese tamaño y una última con el resto; las piezas no finales son múltiplos de 8.
+1. Comprobar $D$, $M$, $H$ y DF; si $D\le M$, no fragmentar.
+2. Hallar $P=D-H$ y $P_{fragmento}=8\lfloor(M-H)/8\rfloor$.
+3. Dividir $P$ en piezas de ese tamaño y una última con el resto; las piezas no finales son múltiplos de 8.
 4. Total Length de cada fragmento = H + su carga; offset = bytes de carga **anteriores** divididos entre 8.
 5. Asignar MF=1 a todos salvo el último; preservar Identification y verificar que la suma de **solo datos** recupera P.
 6. Diferenciar el reensamblado en destino de los ACK TCP: IPv4 no tiene ACK por fragmento.
