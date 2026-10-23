@@ -17,11 +17,7 @@ Las slides 26–32 presentan maneras de utilizar mejor el cuello de botella sin 
 
 **ECN.** El router marca los dos bits ECN de IP para indicar congestión; el receptor lo comunica con ECE en un ACK TCP. Intervienen ambas capas. No es un cambio del número de ACK ni una disminución del campo rwnd.
 
-## 3. Ejemplo resuelto
-
-Si el emisor aumenta el ritmo y el throughput no mejora pero sí sube el RTT, la cola del cuello de botella está creciendo. El enfoque por retardo intenta frenar antes de provocar un descarte. ECN puede proporcionar evidencia explícita del router, mientras TCP clásico infiere el problema desde los extremos.
-
-## 4. CUBIC: interpretar la curvatura sin inventar parámetros
+## 3. CUBIC: interpretar la curvatura sin inventar parámetros
 
 Las slides 26–27 comparan el «diente de sierra» AIMD con una búsqueda que recuerda la ventana a la que apareció la congestión. Supón que antes de una pérdida la conexión tenía una ventana máxima observada $W_{max}$. Tras reducirla, el algoritmo intenta recuperar con rapidez una región conocida, **se acerca lentamente al antiguo máximo** para no sobrepasar bruscamente la capacidad y, si no vuelve a observar congestión, continúa explorando por encima de ese valor.
 
@@ -29,7 +25,7 @@ La explicación usa una relación **cúbica con el tiempo relativo a K**. Una es
 
 El término cúbico es negativo antes de K y positivo después; su pendiente $3c(t-K)^2$ es pequeña cerca de K y crece al alejarse. Esa es exactamente la intuición de la slide: rapidez lejos del máximo antiguo y cautela junto a él. La slide 26 dibuja $W_{max}/2$ como referencia conceptual; **no** debes equiparar automáticamente esa reducción ilustrativa con toda implementación real de CUBIC.
 
-## 5. Control por retardo: calcular la diferencia entre camino libre y camino encolado
+## 4. Control por retardo: calcular la diferencia entre camino libre y camino encolado
 
 La slide 29 explica una observación que se suele pasar por alto: cuando el enlace cuello de botella ya está ocupado continuamente, aumentar los datos en vuelo **no eleva su capacidad de salida**; aumenta el tamaño de la cola y por tanto el RTT medido.
 
@@ -43,7 +39,7 @@ Aquí $RTT_{min}$ es el menor RTT observado, aproximación del camino sin cola; 
 
 BBR se menciona en la slide 31 como ejemplo desplegado; no se presentan sus variables internas ni su algoritmo, de modo que no corresponde reconstruirlo aquí.
 
-## 6. ECN: seguir el bit que viaja por la red y vuelve en un ACK
+## 5. ECN: seguir el bit que viaja por la red y vuelve en un ACK
 
 ECN evita depender exclusivamente del descarte como indicio de congestión. La diapositiva 32 representa la siguiente cadena causal:
 
@@ -76,7 +72,7 @@ ECN evita depender exclusivamente del descarte como indicio de congestión. La d
 
 **Fallos comunes al interpretar una captura:** no esperes hallar un campo «cwnd» dentro de TCP, porque es estado local del emisor; no trates un ECE como indicación de pérdida confirmada; no atribuyas una cola exclusivamente al receptor por un RTT alto; y no infieras el parámetro de la curva CUBIC de una gráfica que solo tiene puntos por ronda.
 
-## 7. Errores típicos
+## 6. Errores típicos
 
 - Afirmar que cwnd se transmite como campo TCP.
 - Usar la descripción histórica de la slide sobre Linux como medición del equipo actual.
