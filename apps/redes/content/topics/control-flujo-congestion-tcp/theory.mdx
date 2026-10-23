@@ -23,6 +23,53 @@ La diferencia con UDP sigue siendo útil: UDP no ofrece estos mecanismos de tran
 
 ---
 
+### Una sola transmisión debe cumplir dos restricciones independientes
+
+TCP es un **flujo continuo de bytes**, no un intercambio de mensajes independientes. Para reutilizar el enlace puede tener varios segmentos transmitidos sin confirmar. Los datos «en vuelo» constituyen el intervalo enviado y pendiente de ACK. Que el emisor pueda colocar más bytes depende de **ambos controles**, no del mayor de ellos:
+
+$$FlightSize=LastByteSent-LastByteAcked,\qquad FlightSize\leq\min(rwnd,cwnd).$$
+
+La recepción anuncia **rwnd** porque necesita evitar que su buffer se llene más rápido de lo que la aplicación consume sus bytes. El **cwnd** es estado local del emisor que intenta evitar la saturación de routers y enlaces. El campo Win/Window Size de TCP permite observar **recepción**, no congestión; no existe un campo de cabecera TCP que publique cwnd. Para interpretar correctamente una captura, además hay que considerar el **Window Scale** negociado en el handshake: un valor bruto del campo de 16 bits no siempre equivale a la ventana calculada en bytes.
+
+**Ejemplo derivado:** el receptor anuncia \(rwnd=12\,000\) B, la estimación del emisor limita a \(cwnd=8\,000\) B y ya tiene \(FlightSize=5\,000\) B sin confirmar. Límite conjunto \(=\min(12\,000,8\,000)=8\,000\) B; bytes adicionales permitidos \(\max(0,8000-5000)=\mathbf{3000\ B}\). Si llega un ACK que reconoce 2000 B nuevos, el vuelo baja a 3000 B y ahora se podrían enviar otros **5000 B**, **si** la ventana anunciada y cwnd no cambian. Si el receptor en ese instante reduce rwnd a 4000 B, el límite sería 4000 B y solo quedaría **1000 B** de espacio adicional. Comprueba que ningún paso supera el menor de los dos límites.
+
+### Cómo cambia una ventana al recibir ACK de nuevos bytes
+
+El número de secuencia de TCP identifica el **primer byte** que transporta cada segmento; ACK indica el **siguiente byte esperado**. Si se envía desde Seq=1001 una carga de 1000 B, ocupa los bytes 1001–2000 y un ACK=2001 confirma ese intervalo. Ese ACK desplaza LastByteAcked y libera espacio para nuevos datos en vuelo. Si el ACK no avanza (duplicado), el emisor no puede contar el mismo dato como confirmado dos veces.
+
+<Visualization viz={{
+  type: 'window',
+  title: 'Mover el borde de la ventana con ACK acumulativo',
+  steps: [
+    { note: 'Ventana de cuatro bloques de un MSS: 0 y 1 enviados; faltan sus ACK. 2 y 3 todavía se pueden enviar.',
+      windows:[{role:'sender',label:'Emisor: antes del ACK',base:0,size:4,cells:[{n:0,state:'sent'},{n:1,state:'sent'},{n:2,state:'usable'},{n:3,state:'usable'},{n:4,state:'unusable'},{n:5,state:'unusable'}]}] },
+    { note: 'El ACK acumulativo confirma 0 y 1; el borde inferior avanza a 2. Los bloques 4 y 5 entran ahora en el espacio permitido.',
+      windows:[{role:'sender',label:'Emisor: después del ACK',base:2,size:4,cells:[{n:0,state:'acked'},{n:1,state:'acked'},{n:2,state:'usable'},{n:3,state:'usable'},{n:4,state:'usable'},{n:5,state:'usable'}]}] },
+    { note: 'Si rwnd disminuye a dos MSS mientras cwnd sigue en cuatro, la restricción del receptor limita la zona utilizable a los bloques 2 y 3.',
+      windows:[{role:'sender',label:'Límite conjunto: 2 MSS',base:2,size:2,cells:[{n:0,state:'acked'},{n:1,state:'acked'},{n:2,state:'usable'},{n:3,state:'usable'},{n:4,state:'unusable'},{n:5,state:'unusable'}]}] }
+  ]
+}} />
+
+En ese diagrama cada celda es **un bloque conceptual MSS**; no representa los números de byte reales de una captura, porque esos avanzan según la longitud de cada carga TCP. El cambio en el último fotograma no demuestra congestión: se redujo **rwnd** sin tocar cwnd.
+
+### Qué sucede en emisor, receptor y routers
+
+**Emisor:** escribe bytes en TCP; el stack numera el flujo, envía hasta que alcanza el menor límite y reanuda al recibir ACK nuevos o al recibir una ventana de recepción mayor. Mantiene timers y reacciones de congestión independientes del valor anunciado por el otro host.
+
+**Receptor:** acepta bytes en su buffer según el espacio disponible, los confirma acumulativamente y anuncia nueva capacidad. La aplicación consumidora hace que se liberen bytes del buffer; si no lee a tiempo, rwnd puede hacerse cero.
+
+**Red intermedia:** recibe datagramas IP y los pone en cola para el enlace siguiente. Sus buffers pueden saturarse incluso si el receptor tiene una ventana grande. La red no «obedece rwnd»: es el emisor TCP el que ajusta cuánto ofrece al camino.
+
+### Tres diagnósticos de captura que no son equivalentes
+
+1. **Win calculada cercana a cero:** hay evidencia de presión sobre el buffer receptor, no prueba de pérdida en el router.
+2. **Tres ACK duplicados y retransmisión:** puede haberse perdido un segmento; el algoritmo de congestión puede modificar cwnd. La ventana anunciada por el receptor no prueba qué versión de TCP está en uso.
+3. **Bytes en vuelo menores que rwnd:** **no** demuestra que la conexión está limitada por cwnd. La aplicación podría no producir suficientes datos y otras restricciones podrían intervenir. Necesitas correlacionar entrega, tasas, pérdidas y RTT.
+
+Al resolver ejercicios, escribe siempre los límites **en la misma unidad** (bytes o MSS convertidos a bytes), anota el vuelo ya ocupado, calcula \(L=\min(rwnd,cwnd)\) y solo después \(Disponible=\max(0,L-FlightSize)\). Es incorrecto identificar \(Disponible\) con cwnd a secas o sumar cwnd y rwnd.
+
+---
+
 ## 3. Método paso a paso
 
 1. Identifica si se satura el buffer receptor o una cola de la red.
