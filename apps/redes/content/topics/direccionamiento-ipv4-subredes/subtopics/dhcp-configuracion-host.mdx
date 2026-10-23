@@ -17,13 +17,7 @@ Discover y Request iniciales salen de 0.0.0.0:68 hacia 255.255.255.255:67. En la
 
 Además de la IP, DHCP puede devolver máscara, dirección del primer router y servidores DNS. La slide permite omitir Discover/Offer si el cliente recuerda la dirección y desea reutilizarla.
 
-## 3. Ejemplo resuelto
-
-El servidor 223.1.2.5 ofrece `yiaddr=223.1.2.4`, xid=654 y lifetime=3600 s. En la slide 28 el intercambio Discover/Offer lleva xid 654 y el par Request/ACK muestra xid 655; se deben comparar **los identificadores dentro del par correspondiente**, no copiar 654 como si fuera el valor de las cuatro flechas. Son datos de la **slide**, no una medición de tu red.
-
-[Ejercicio extra de DHCP](/evaluaciones/laboratorio/dhcp-udp-applayer-extra).
-
-## 4. Desglose de la concesión de la slide 28
+## 3. Paso a paso del intercambio DHCP de la slide 28
 
 DHCP resuelve dos problemas prácticos: el host recién conectado necesita parámetros **antes de poder comunicarse normalmente por IP**, y el administrador desea prestar direcciones para reutilizarlas cuando los dispositivos se desconectan. Un servidor DHCP puede estar ubicado en el router conectado a varias subredes, como en la diapositiva 27.
 
@@ -50,7 +44,7 @@ El campo de vida útil de la oferta de la figura vale **3600 s = 60 min = 1 h**.
 
 **Comprobación conceptual:** si el servidor anuncia 223.1.2.4, la dirección del servidor (223.1.2.5) y la del cliente son **distintas**. Si el cliente aún usa 0.0.0.0 durante la solicitud, eso no contradice la dirección que pide recibir.
 
-## 5. Qué comprobar en una práctica de DHCP e IP/MAC
+## 4. Qué comprobar en una práctica de DHCP e IP/MAC
 
 1. En Wireshark distingue paquetes DHCP/UDP por puertos, opciones, xid y dirección ofrecida; no cuentes los paquetes IP como si fueran el archivo de una conexión TCP.
 2. Verifica IP, prefijo, gateway y DNS de la interfaz tras la concesión. **ifconfig** permite observar interfaces y direcciones en los sistemas donde está disponible; la slide 17 lo utiliza para interfaces.
@@ -60,7 +54,7 @@ El campo de vida útil de la oferta de la figura vale **3600 s = 60 min = 1 h**.
 
 **Errores de análisis:** copiar 223.1.2.4 como IP de tu computadora sin haberla medido; interpretar «gateway» como MAC del host; llamar DHCP ACK al tercer segmento del handshake TCP; suponer que cambiar de Wi-Fi conserva la misma dirección concedida; y afirmar que todo ciclo de renovación obliga a observar las cuatro fases.
 
-## 6. Errores típicos
+## 5. Errores típicos
 
 - Confundir DHCP ACK con un ACK TCP: este intercambio usa UDP.
 - Afirmar que toda renovación repite siempre las cuatro fases.
