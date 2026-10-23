@@ -4,13 +4,36 @@ title: "Congestión: Causas, Costes y Formas de Control"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea: ¿por qué puede fallar una transferencia aunque el receptor tenga espacio?
+## 1. Antes de hablar de congestión: ¿qué está pasando dentro de una red?
 
-Supón que dos computadoras transfieren archivos y el host destino todavía puede recibirlos. Entre ambos hay un router cuyo enlace de salida **transmite a una velocidad finita**. Si llegan paquetes más rápido de lo que ese enlace los envía, se forman colas. La cola aumenta el retardo; cuando la memoria es finita, también puede producir pérdidas.
+Imagina que tú y otras personas envían archivos a través del mismo router. Un **router** es un equipo que recibe paquetes y los reenvía hacia otras redes. Los paquetes no son archivos completos, sino porciones de información que viajan de un lugar a otro.
 
-Esto plantea tres preguntas distintas: **qué ocurre si nunca descartamos paquetes**, **qué coste añaden las retransmisiones si el router sí descarta** y **por qué perder un paquete después de varios saltos es especialmente caro**. Las diapositivas 9–19 responden con tres escenarios. A continuación se reconstruye cada uno, con sus variables, cambios y comprobaciones.
+El router tiene un **enlace de salida**, es decir, la conexión por la que esos paquetes deben continuar. Ese enlace tiene una **capacidad limitada**: por ejemplo, solo puede transmitir 10 megabits por segundo (Mb/s). Si los emisores mandan **12 Mb/s en total**, cada segundo entran dos megabits más de los que pueden salir.
+
+¿Dónde esperan los paquetes sobrantes? En una **cola**, también llamada **buffer**: memoria temporal dentro del router. Cuando la cola crece, los paquetes tardan más en llegar al destino. Si el buffer se llena, el router puede **descartar paquetes** que no tiene dónde guardar.
+
+Este es el significado práctico de **congestión**: demasiados datos compitiendo por un recurso de red que no alcanza a atenderlos al ritmo solicitado. No significa necesariamente que la computadora receptora esté sin memoria; eso sería otro problema, el de **control de flujo**.
+
+### Tres palabras para leer el resto de la clase
+
+**Capacidad (R):** cantidad máxima de bits que puede transmitir el enlace por segundo. No es el tamaño del archivo ni la memoria del router. Las diapositivas utilizan la letra **R** para representarla.
+
+**Retardo:** tiempo que tarda la información en llegar o en completar el viaje que se esté midiendo. Aquí nos interesa especialmente el **retardo de cola**, que aparece cuando un paquete espera mientras el enlace atiende otros.
+
+**Throughput o rendimiento útil:** cantidad de información **nueva** que llega al destino por segundo. No siempre coincide con todos los bits que la red transmitió: también puede haber **retransmisiones** de datos ya enviados.
+
+Una **retransmisión** es un nuevo intento de enviar datos después de que el emisor sospecha que no llegaron. Puede ser necesaria si un paquete se perdió; pero si el paquete original solo estaba muy retrasado, una copia adicional puede **consumir capacidad sin entregar información nueva**.
+
+### Sigue esta pequeña historia antes de las fórmulas
+
+Primero llegan paquetes más rápido de lo que el enlace puede enviarlos. Después la cola crece y el receptor nota demora. Si la cola tiene tamaño finito, algunos paquetes se pierden. El emisor intenta recuperarlos enviando copias. Esas copias usan el **mismo enlace que ya estaba ocupado**, lo que puede empeorar la congestión.
+
+Por eso la gran pregunta de estas slides no es «¿cómo transmitir más paquetes?», sino **«¿cómo conseguir que lleguen más datos útiles sin desperdiciar capacidad en esperas, pérdidas y copias?»**.
+
+Las diapositivas presentan **tres escenarios** para mostrar cada coste. Leeremos primero una cola que nunca se llena, después una que puede descartar y finalmente una red con varios routers. El objetivo es comparar **qué cambia entre un escenario y el siguiente**.
 
 ---
+
 
 ## 2. Escenario 1 — por qué un buffer infinito no resuelve la congestión
 

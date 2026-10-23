@@ -5,22 +5,28 @@ order: 1
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. Antes de calcular: ¿por qué una dirección IP tiene dos partes?
 
-La notación decimal facilita leer una dirección, pero los límites de red están definidos en bits.
+Imagina que en un edificio cada departamento tiene un número propio, pero todos comparten la misma dirección de calle. En IPv4 usamos una idea parecida: una parte de los bits identifica **la subred** y otra parte distingue **direcciones dentro de ella**.
 
-## 2. Conceptos
+Una IP tiene **32 bits**. Un **bit** es un cero o uno. Normalmente la escribimos como cuatro números separados por puntos, por ejemplo **200.23.16.0**, porque leer 32 bits a mano sería incómodo.
+
+La notación **/23**, llamada prefijo CIDR, significa que **los primeros 23 bits** identifican la red y que quedan **32−23=9 bits** para direcciones dentro del bloque. **No** indica que existan 23 computadoras. Un bloque /23 contiene **2^9=512 direcciones** en total.
+
+## 2. La máscara traduce el prefijo a unos y ceros
+
+Una **máscara** marca con **1** cada bit que pertenece a la red y con **0** los que pertenecen a la parte host. Para /23 necesitamos 23 unos seguidos de nueve ceros:
+
+**11111111.11111111.11111110.00000000**, o en decimal **255.255.254.0**.
+
+Para hallar la **dirección de red**, hacemos **AND bit a bit** entre IP y máscara. AND conserva un 1 únicamente donde ambas cifras tienen un 1, de modo que todos los bits host quedan en cero. Para hallar el **broadcast de subred**, conservamos el prefijo y ponemos **a uno todos los bits host**; es la última dirección del bloque.
+
+Aplicado al ejemplo de clase **200.23.16.0/23**, la red empieza en **200.23.16.0**, termina en **200.23.17.255** y tiene **512 direcciones**. Si cuentas hosts habituales en este tipo de subred, se excluyen la dirección de red y el broadcast: quedan **510**. Enseguida verás el cálculo binario completo, no solo el resultado.
+
 
 <Visualization viz={{"type": "packet", "title": "CIDR: 200.23.16.0/23", "steps": [{"note": "Los 23 primeros bits identifican la red; quedan 9 para la parte host. /23 no termina en un límite de octeto.", "fields": {"width": 32, "rows": [[{"label": "prefijo", "bits": 23, "value": "200.23.16.0/23", "state": "active"}, {"label": "host", "bits": 9, "value": "9 bits"}]]}}], "static": true}} />
 
-| Caso del material | Interpretación |
-|---|---|
-| 127.0.0.1 | Loopback: comunicación local |
-| 255.255.255.255 | Broadcast limitado, todos los bits a uno |
-| Dirección de red | Primera dirección del bloque: host a cero |
-| Broadcast de subred | Última dirección del bloque: host a uno |
-
-Para /23, el tercer octeto de la máscara es 254 (`11111110`). Un bloque empieza en un tercer octeto par y abarca dos valores consecutivos. /24 deja ocho bits host y la máscara es 255.255.255.0.
+---
 
 ## 3. Resolución binaria paso a paso: dirección, máscara y subredes
 

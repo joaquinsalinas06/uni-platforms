@@ -5,15 +5,29 @@ order: 2
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Qué sucede cuando pasas de un mensaje a un archivo?
 
-El archivo puede llegar en fragmentos distintos de los escritos por el cliente. La integridad se comprueba sobre todos los bytes reconstruidos, no sobre los límites de paquetes.
+Enviar un archivo grande mediante TCP significa transmitir sus **bytes en orden**. No tienes que inventar un paquete especial por cada línea de texto. El programa cliente lee partes del archivo y las envía; el servidor lee **hasta recibir todos los bytes** y reconstruye un archivo nuevo.
 
-## 2. Conceptos
+Un detalle importante: **una llamada a send no equivale a un segmento de Wireshark**. El sistema puede dividir los datos según el tamaño máximo permitido, agruparlos o mostrarlos de manera diferente por funciones de la tarjeta de red. El hecho de que el archivo se reciba correctamente se comprueba **en los bytes finales**, no contando a ojo los paquetes.
 
-El emisor lee bloques y usa `sendall`. Al terminar, cierra solo su escritura con `shutdown(SHUT_WR)`. El servidor lee hasta `recv` vacío, guarda en un archivo nuevo y devuelve bytes y SHA-256. Si hay una interrupción, no se confirma un hash correcto; un archivo parcial debe retirarse antes de repetir con el mismo destino.
+## 2. Tres ideas que evitan confundirse en este laboratorio
 
-En el modelo ideal de Ex4, con archivo F y carga máxima M por segmento, $N=\lceil F/M\rceil$. El último lleva $F-M(N-1)$ bytes si F es positivo; si F=0 no hay segmentos de datos de archivo. En capturas reales pueden aparecer segmentos no llenos, retransmisiones y efectos de offloading: se cuenta lo observado, no se presenta el modelo como medición.
+**Fin del archivo en el flujo:** el cliente, cuando ya no tiene más datos de archivo, utiliza **shutdown(SHUT_WR)** para cerrar solo su dirección de escritura. El servidor continúa leyendo con recv hasta ver **EOF**, que significa que ya no quedan bytes por recibir de ese lado. El socket aún puede servir para devolver la confirmación.
+
+**Integridad:** se compara el número de bytes enviados y recibidos y la huella **SHA-256** de ambos archivos. SHA-256 transforma el contenido en una huella calculada; si coincide entre original y copia, tenemos una comprobación práctica de que llegó el mismo contenido. Un archivo que termine a mitad del envío **no puede confirmarse como íntegro**.
+
+**MSS y MTU:** **MSS** es la cantidad máxima de bytes de **datos TCP** que se anuncia como tamaño de segmento. **MTU** es el tamaño máximo de un **datagrama IP** transportable por un enlace, en los casos básicos del curso. Con cabeceras de 20 B IPv4 y 20 B TCP, una MTU de 1500 deja **1460 B de datos TCP**; una MTU de 1000 deja **960 B**. Las opciones y la situación real pueden modificar lo observado.
+
+### Un ejemplo antes de medir la captura
+
+Un archivo de **102400 B** con MSS ideal de **1460 B** requeriría como mínimo 71 segmentos de datos si todos los posibles estuvieran llenos: 70 × 1460 = **102200 B**, y el último lleva **200 B**. Es una **predicción del modelo**, no un conteo de una captura real. En Wireshark debes filtrar la conexión, identificar sus datos y contar **lo observado**.
+
+La cuenta general para un archivo positivo de F bytes y carga M por segmento es $N=\lceil F/M\rceil$. El último segmento tendría $F-M(N-1)$ bytes en el modelo ideal. Si aparecen retransmisiones o segmentos de datos más pequeños, el conteo real puede ser distinto.
+
+
+
+
 
 ## 3. Ejemplo resuelto
 

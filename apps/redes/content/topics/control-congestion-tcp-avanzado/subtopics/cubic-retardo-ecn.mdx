@@ -5,17 +5,28 @@ order: 2
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Por qué no basta con esperar a que se pierda un paquete?
 
-Las slides 26–32 presentan maneras de utilizar mejor el cuello de botella sin aumentar indefinidamente las colas.
+Imagina un router que tiene que atender descargas de muchas personas. Aunque todavía no haya perdido un paquete, **su cola puede estar creciendo**. Los archivos llegan con más retardo porque cada paquete debe esperar su turno. Esa pista lleva a una pregunta: **¿podemos regular la velocidad antes de provocar pérdidas?**
 
-## 2. Conceptos
+Antes de seguir, recuerda dos conceptos de TCP. **cwnd**, la ventana de congestión, es la cantidad aproximada de datos que el emisor puede mantener **enviados pero no confirmados**; no es un campo que se transmita directamente en la cabecera. **RTT** es el tiempo de ida y vuelta entre enviar datos y recibir una confirmación llamada **ACK**.
 
-**CUBIC.** Wmax es la ventana previa a la pérdida. Tras reducirla, la curva aumenta rápido lejos del punto K y despacio cerca de Wmax. K sitúa el regreso a ese máximo. Esta forma permite explorar alrededor de una capacidad que posiblemente no cambió. El material describe la relación cúbica, pero no especifica aquí coeficientes numéricos para calcular una traza.
+La semana 9 presenta tres maneras distintas de mejorar el comportamiento de TCP. No son tres nombres para el mismo mecanismo.
 
-**Retardo.** $RTT_{min}$ aproxima el camino sin cola. Se compara el throughput real (bytes enviados en el último RTT divididos por ese intervalo) con $cwnd/RTT_{min}$. Si están cerca, se aumenta linealmente; si el real queda muy por debajo, se reduce. El objetivo de la slide es mantener la tubería llena, sin llenarla de más. BBR se menciona como ejemplo de enfoque basado en retardo, sin desarrollar su algoritmo.
+## 2. Qué intenta resolver cada idea
 
-**ECN.** El router marca los dos bits ECN de IP para indicar congestión; el receptor lo comunica con ECE en un ACK TCP. Intervienen ambas capas. No es un cambio del número de ACK ni una disminución del campo rwnd.
+**CUBIC** se pregunta cómo **volver a explorar** la capacidad después de una pérdida. Supón que antes de perder paquetes TCP tenía una ventana de 20 MSS. **MSS** es una unidad de tamaño de datos de un segmento TCP. CUBIC recuerda una referencia cercana a aquella ventana máxima, llamada **Wmax**, y modifica su velocidad de crecimiento: más rápido lejos de ese punto y más lento cerca de él. La variable **K** representa el instante de regreso al máximo anterior en el modelo de la slide. **No necesitas calcular coeficientes numéricos**, porque esas diapositivas no los proporcionan.
+
+**Control por retardo** se pregunta si la red ya está formando cola. Compara el RTT mínimo observado, **RTTmin**, con el tiempo y el rendimiento actuales. Si el camino tarda bastante más que antes sin entregar proporcionalmente más datos útiles, el problema puede ser **espera en la cola**, y no falta de capacidad física. El objetivo expresado en la slide es mantener el enlace ocupado, **pero no llenar de más su cola**.
+
+**ECN** se pregunta si un router puede **avisar directamente** de congestión. Puede marcar información en la cabecera **IP**; el receptor devuelve un indicador **ECE** dentro de un **ACK TCP**. Así el emisor recibe una advertencia sin depender exclusivamente de perder el datagrama marcado.
+
+Piensa en tres preguntas de examen: CUBIC, **cómo crece la ventana**; retardo, **qué me dice el tiempo de espera**; ECN, **de dónde viene el aviso explícito**. El resto de la página desarrolla las tres con los detalles y ejemplos de las diapositivas.
+
+
+
+
+---
 
 ## 3. CUBIC: interpretar la curvatura sin inventar parámetros
 

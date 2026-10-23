@@ -4,54 +4,133 @@ title: "Direccionamiento IPv4, CIDR, Subredes y DHCP"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. Una IP no es solo un número: te dice dónde buscar
 
-Para reenviar un datagrama, la red debe reconocer a qué conjunto de interfaces pertenece su destino. IPv4 usa 32 bits; CIDR permite que el prefijo tenga longitud arbitraria, sin obligarlo a terminar al final de un octeto.
+Imagina una universidad con varias redes: una para laboratorios, otra para profesores y otra para estudiantes. Tu laptop necesita enviar datos a un servidor, pero primero debe saber **si el servidor está en su misma red local o necesita atravesar un router**.
 
----
+Para responder hace falta una dirección **IPv4** y una forma de distinguir qué bits corresponden a la **red** y cuáles al equipo **dentro de esa red**. Esa separación se llama **prefijo de red**.
 
-## 2. Conceptos
+La presentación explica que una dirección IPv4 identifica una **interfaz**: el punto donde un equipo se conecta a un enlace. Un router tiene varias interfaces porque conecta varias redes. Una laptop puede tener Ethernet y Wi-Fi, también con direcciones distintas.
 
-En `a.b.c.d/p`, los primeros p bits son el prefijo y los restantes la parte host. La figura del curso usa **200.23.16.0/23**: máscara 255.255.254.0 y bloque de 512 direcciones, desde 200.23.16.0 hasta 200.23.17.255.
+### ¿Qué es un octeto?
 
-<Visualization viz={{"type": "packet", "title": "CIDR: 200.23.16.0/23", "steps": [{"note": "Los 23 primeros bits identifican la red; quedan 9 para la parte host. /23 no termina en un límite de octeto.", "fields": {"width": 32, "rows": [[{"label": "prefijo", "bits": 23, "value": "200.23.16.0/23", "state": "active"}, {"label": "host", "bits": 9, "value": "9 bits"}]]}}], "static": true}} />
+IPv4 tiene **32 bits**. Un bit solo puede valer **0 o 1**. Para que las personas no tengan que leer 32 ceros y unos, escribimos la IP como cuatro números decimales separados por puntos, por ejemplo **223.1.1.1**. Cada uno representa **8 bits**, por eso se llama **octeto**.
 
-Una **subred** reúne interfaces que se alcanzan físicamente sin atravesar un router. Para reconocerlas, las slides proponen separar mentalmente las interfaces y observar las islas resultantes.
+La slide 6 muestra:
 
-<Visualization viz={{"type": "net-scene", "title": "Interfaces y subredes de las slides", "steps": [{"note": "Cada interfaz del router pertenece a la subred que conecta. La dirección es de la interfaz, no de la caja completa.", "devices": [{"id": "h1", "kind": "host", "label": "Host 1", "sub": "223.1.1.1", "x": 7, "y": 50}, {"id": "r", "kind": "router", "label": "Router", "sub": ".1.4 / .2.9 / .3.27", "x": 50, "y": 50}, {"id": "h2", "kind": "host", "label": "Host 2", "sub": "223.1.2.1", "x": 93, "y": 12}, {"id": "h3", "kind": "host", "label": "Host 3", "sub": "223.1.3.1", "x": 93, "y": 88}], "cables": [{"from": "h1", "to": "r", "label": "223.1.1.0/24"}, {"from": "r", "to": "h2", "label": "223.1.2.0/24"}, {"from": "r", "to": "h3", "label": "223.1.3.0/24"}]}], "static": true}} />
+$$223.1.1.1=11011111.00000001.00000001.00000001_2.$$
 
-DHCP configura la IP del host, máscara, gateway y DNS mediante concesiones temporales. La asignación jerárquica permite que un ISP anuncie un bloque agregado; una ruta más específica atiende la excepción de una organización que cambia de proveedor.
+No necesitas memorizar esos 32 bits. Lo importante es que **las subredes se calculan comparando bits**, no solo mirando si «se parecen» los números decimales.
 
----
+## 2. CIDR: decidir cuántos bits son de la red
 
-## 3. Método paso a paso
+La clase usa una notación como **200.23.16.0/23**. Esta forma se llama **CIDR**. El **/23** no indica 23 computadoras: indica **23 bits reservados para identificar la red**. Los demás 32 − 23 = **9 bits** quedan para distinguir direcciones dentro del bloque.
 
-1. Traduce /p a máscara de p unos y 32-p ceros.
-2. Calcula red con AND; broadcast poniendo a uno los bits host.
-3. Verifica que direcciones y prefijo describan un bloque alineado.
-4. En una topología, cuenta también las redes de enlaces entre routers.
-5. Para rutas que coinciden, usa el prefijo más específico de la figura.
+Piensa en una dirección postal: «edificio» y «departamento». El prefijo señala el conjunto (red) y la parte host distingue direcciones dentro de ese conjunto. La división no tiene que coincidir con el final de un octeto.
 
----
+La **máscara** expresa esa división poniendo bits **1** en la parte de red y bits **0** en la parte host. Para /23 la máscara binaria es:
 
-## 4. Ejemplo resuelto
+$$11111111.11111111.11111110.00000000.$$
 
-Los ocho bloques /23 de las organizaciones empiezan en 200.23.16.0, .18.0, .20.0, …, .30.0. Juntos cubren 200.23.16.0–200.23.31.255: **200.23.16.0/20**. Si la organización 200.23.18.0/23 cambia de ISP, el nuevo proveedor anuncia ese /23; sigue siendo una excepción más específica que /20.
+Ahora convierte cada octeto a decimal: **255.255.254.0**. Fíjate en el tercero: 11111110 equivale a 254, no a 255. Ese único cero permite que un /23 abarque **dos valores consecutivos del tercer octeto**.
 
----
+<Visualization viz={{
+type:'packet',title:'Una dirección IPv4 dividida entre red y host',
+steps:[{note:'En /23 los 23 primeros bits identifican la red. Quedan 9 para direcciones del bloque. El límite no coincide con el final del tercer octeto.',fields:{width:32,rows:[[{label:'Red: 23 bits',bits:23,value:'200.23.16.0/23',state:'active'},{label:'Host: 9 bits',bits:9,value:'9 bits'}]]}}],static:true}} />
 
-## 5. Errores típicos
+## 3. Hallar la dirección de red: ¿dónde empieza el bloque?
 
-- Obtener broadcast haciendo OR con la máscara: se necesita su **complemento** en la parte host. La etiqueta abreviada de la slide 15 no es una fórmula completa.
-- Creer que DHCP asigna el bloque de todo el ISP.
-- Convertir la mención final de NAT/IPv6 en un capítulo no desarrollado por el material.
+Una dirección de equipo puede tener varios bits host encendidos. Para saber **qué subred representa**, aplicamos un **AND bit a bit** entre IP y máscara: solo queda un 1 donde **ambos bits** son 1. Los bits host se vuelven cero y obtenemos **la primera dirección del bloque**, llamada **dirección de red**.
 
+Tomemos el caso de la clase **200.23.16.0/23**. La máscara es 255.255.254.0. El tercer octeto de la IP es 16, que en binario es 00010000; al hacer AND con 11111110 se mantiene 00010000. El cuarto octeto se vuelve cero. Por tanto, **la red es 200.23.16.0/23**.
 
-## Para profundizar
+¿Y si la IP fuera **200.23.19.140/23**? El tercer octeto 19 es 00010011. Al hacer AND con 11111110, su último bit pasa a cero y queda **18**. El cuarto octeto también se hace cero. Por eso la red correspondiente es **200.23.18.0/23**. No te quedes con el 19 simplemente porque aparece en la IP del equipo.
 
-- [CIDR, máscaras y direcciones especiales](/topics/direccionamiento-ipv4-subredes/subtopics/cidr-mascaras-direcciones-especiales)
-- [DHCP y configuración dinámica del host](/topics/direccionamiento-ipv4-subredes/subtopics/dhcp-configuracion-host)
-- [Subredes y agregación de rutas](/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes)
-- [Tabla de rutas, interfaces y direcciones MAC](/topics/direccionamiento-ipv4-subredes/subtopics/comandos-ip-mac)
+## 4. Broadcast: ¿dónde termina el bloque?
 
-Fuente: `Sem10_NetT-NetLayer_Addressing`.
+En una subred IPv4 ordinaria, la primera dirección identifica la red y la última es la dirección de **broadcast de subred**. Para encontrar esa última, deja igual el prefijo y pon **todos los bits host a 1**.
+
+Si la red era 200.23.16.0/23, hay nueve bits host. Al ponerlos a uno, el tercer octeto pasa de 16 a **17** y el último vale **255**. El broadcast es **200.23.17.255**.
+
+| Resultado para 200.23.16.0/23 | Valor | De dónde salió |
+|---|---|---|
+| Máscara | 255.255.254.0 | 23 bits de red a 1 |
+| Dirección de red | 200.23.16.0 | IP AND máscara |
+| Broadcast | 200.23.17.255 | Todos los bits host a 1 |
+| Direcciones totales | **512** | 2 elevado a 9 bits host |
+| Hosts utilizables en esta subred ordinaria | **510** | 512 menos red y broadcast |
+| Rango habitual de hosts | 200.23.16.1 a 200.23.17.254 | Entre los dos extremos |
+
+La slide 15 incluye también **127.0.0.1**, llamada dirección de **loopback**, para hablar con el propio equipo; y **255.255.255.255**, broadcast limitado. No confundas este último con el broadcast calculado de una subred como /23.
+
+## 5. ¿Qué es exactamente una subred en el dibujo de la clase?
+
+Una **subred** agrupa interfaces que pueden comunicarse por su enlace sin cruzar **un router intermedio**. En la slide 21 hay tres conjuntos: **223.1.1.0/24**, **223.1.2.0/24** y **223.1.3.0/24**. El router tiene una interfaz conectada a cada una.
+
+<Visualization viz={{
+type:'net-scene',title:'Un router no convierte tres subredes en una sola',
+steps:[{note:'Cada host pertenece a su /24. La presencia de un router hace posible la comunicación entre subredes, pero no borra sus límites.',devices:[{id:'a',kind:'host',label:'Host A',sub:'223.1.1.1',x:7,y:50},{id:'r',kind:'router',label:'Router',sub:'Tres interfaces',x:50,y:50},{id:'b',kind:'host',label:'Host B',sub:'223.1.2.1',x:92,y:14},{id:'c',kind:'host',label:'Host C',sub:'223.1.3.1',x:92,y:86}],cables:[{from:'a',to:'r',label:'223.1.1.0/24'},{from:'r',to:'b',label:'223.1.2.0/24'},{from:'r',to:'c',label:'223.1.3.0/24'}]}],static:true}} />
+
+La siguiente figura, con **tres routers**, añade tres enlaces que **también** son subredes. Por eso el total son **seis**, no solo las tres LAN con computadoras. Para contarlas, imagina que desconectas cada interfaz del router: cada grupo de interfaces que permanece unido corresponde a una red.
+
+## 6. ¿Por qué los proveedores agrupan direcciones?
+
+Supón que un proveedor conecta ocho organizaciones, cada una con un bloque de 512 direcciones. En lugar de anunciar ocho rutas independientes a toda la red, puede **agregarlas en una ruta más general** si los bloques son contiguos, tienen el prefijo común adecuado y están alineados.
+
+Las slides muestran los ocho bloques /23:
+
+| Bloque | Terceros octetos cubiertos |
+|---|---|
+| 200.23.16.0/23 | 16 y 17 |
+| 200.23.18.0/23 | 18 y 19 |
+| 200.23.20.0/23 | 20 y 21 |
+| 200.23.22.0/23 | 22 y 23 |
+| 200.23.24.0/23 | 24 y 25 |
+| 200.23.26.0/23 | 26 y 27 |
+| 200.23.28.0/23 | 28 y 29 |
+| 200.23.30.0/23 | 30 y 31 |
+
+Son 8×512 = **4096 direcciones**. Como 4096=2^12, el prefijo común tiene **32−12 = 20 bits**: todo el conjunto puede anunciarse como **200.23.16.0/20**.
+
+Si una organización cambia de proveedor y el nuevo anuncia **200.23.18.0/23**, esa ruta es **más específica** que /20. Para las direcciones de ese /23 el router elige el anuncio más específico que coincida. El resto de organizaciones siguen cubiertas por el /20.
+
+## 7. DHCP: ¿cómo consigue mi laptop una IP al conectarse?
+
+Al entrar a una Wi-Fi, normalmente no eliges a mano todos los números. El protocolo **DHCP** permite que un servidor conceda una dirección **temporal** y otros parámetros, como máscara, primer router y DNS.
+
+El intercambio de la slide 28 se recuerda con **DORA**:
+
+1. **Discover:** el cliente, que todavía no tiene la IP concedida, busca un servidor mediante un mensaje UDP enviado por broadcast.
+2. **Offer:** el servidor propone una dirección, por ejemplo **223.1.2.4** en la figura oficial, y un tiempo de concesión de 3600 segundos.
+3. **Request:** el cliente solicita usar esa dirección propuesta.
+4. **ACK:** el servidor confirma que el cliente puede configurarla.
+
+El ACK de DHCP **no es un ACK de TCP**: DHCP utiliza **UDP**, con puertos 68 para el cliente y 67 para el servidor, tal como muestra la presentación.
+
+<Visualization viz={{
+type:'sequence',title:'Conectarse a una red: el diálogo DHCP',
+steps:[
+{note:'Discover: un cliente sin IP concedida usa origen 0.0.0.0 para descubrir un servidor.',actors:[{id:'c',label:'Cliente'},{id:'s',label:'Servidor DHCP'}],msgs:[{from:'c',to:'s',label:'Discover',flags:'UDP 68 → 67',state:'active'}]},
+{note:'Offer: el servidor ofrece 223.1.2.4 durante 3600 s, pero todavía falta la aceptación.',actors:[{id:'c',label:'Cliente'},{id:'s',label:'Servidor DHCP'}],msgs:[{from:'c',to:'s',label:'Discover',state:'muted'},{from:'s',to:'c',label:'Offer 223.1.2.4',state:'active'}]},
+{note:'Request: el cliente solicita formalmente la dirección que recibió como oferta.',actors:[{id:'c',label:'Cliente'},{id:'s',label:'Servidor DHCP'}],msgs:[{from:'c',to:'s',label:'Discover',state:'muted'},{from:'s',to:'c',label:'Offer',state:'muted'},{from:'c',to:'s',label:'Request',state:'active'}]},
+{note:'ACK de DHCP: queda confirmada la concesión. Este ACK es un mensaje DHCP sobre UDP, no una confirmación TCP.',actors:[{id:'c',label:'Cliente'},{id:'s',label:'Servidor DHCP'}],msgs:[{from:'c',to:'s',label:'Discover',state:'muted'},{from:'s',to:'c',label:'Offer',state:'muted'},{from:'c',to:'s',label:'Request',state:'muted'},{from:'s',to:'c',label:'ACK',state:'answer'}]}
+]}} />
+
+## 8. IP y MAC no responden a la misma pregunta
+
+Una dirección **IP** identifica la interfaz de red para alcanzar un destino a través de subredes. Una dirección **MAC**, normalmente de 48 bits en la LAN que estudian las slides, sirve para entregar una **trama por el enlace local**. Un datagrama puede conservar su destino IP mientras cada enlace utiliza sus propias direcciones de entrega.
+
+Las herramientas de la presentación muestran distintas partes del problema: **ifconfig** permite inspeccionar interfaces, **netstat -nr** la tabla de rutas y **traceroute** los saltos visibles hacia un destino. Ninguna sustituye por sí sola el cálculo de la máscara.
+
+## 9. Qué deberías poder explicar sin memorizar
+
+¿Por qué /23 contiene 512 direcciones? Porque 32−23=9 bits quedan para host y 2^9=512. ¿Por qué el broadcast es 200.23.17.255? Porque esos nueve bits host se pusieron a uno. ¿Por qué la figura de tres routers incluye seis subredes? Porque los enlaces entre routers también cuentan. ¿Por qué DHCP usa 0.0.0.0 al principio? Porque el cliente todavía no tiene confirmada su dirección.
+
+## Para continuar con ejemplos mayores
+
+- [CIDR en binario: máscara, red, broadcast y más ejercicios](/topics/direccionamiento-ipv4-subredes/subtopics/cidr-mascaras-direcciones-especiales).
+- [DHCP paso a paso](/topics/direccionamiento-ipv4-subredes/subtopics/dhcp-configuracion-host).
+- [Cómo contar subredes y agregar rutas](/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes).
+- [Interfaces, tabla de rutas y MAC](/topics/direccionamiento-ipv4-subredes/subtopics/comandos-ip-mac).
+
+Fuente: Sem10_NetT-NetLayer_Addressing, slides 6–29 y ejemplo de bloques de agregación.

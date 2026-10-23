@@ -4,11 +4,52 @@ title: "Laboratorio: TCP, RTT y Gráficas de Wireshark"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. Antes de abrir Wireshark: ¿qué vas a observar?
 
-LAB3 P1 sigue una subida HTTP POST para observar TCP sin confundirlo con HTTP. La captura oficial permite responder con números verificables; la experiencia con tu computadora tendrá otras IP, puertos y tiempos.
+En el laboratorio el navegador de una computadora envía un archivo a un servidor web. La aplicación realiza una **petición HTTP POST**, pero esa petición no se transporta como un único bloque. **TCP** entrega el contenido en segmentos, es decir, porciones de un flujo de bytes. **Wireshark** permite observar los paquetes capturados mientras eso ocurre.
+
+No confundas estas tres cosas:
+
+- **HTTP POST** es el mensaje de **aplicación** que solicita subir el archivo.
+- **Segmento TCP** es una unidad de **transporte**. Muchos segmentos pueden llevar porciones de ese mismo POST.
+- **Trama** es la unidad que registra la interfaz de **enlace**; incluye cabeceras además de los datos TCP.
+
+La captura de clase es un archivo **PCAPNG**: una grabación de paquetes realizada previamente. La plataforma usa la traza oficial **tcp-wireshark-trace1-1.pcapng**, así que sus direcciones y tiempos son **datos del material**, no mediciones de tu computadora.
+
+### ¿Qué significan Seq, Ack y Len?
+
+**Seq (sequence number):** señala **el primer byte de datos** que lleva ese segmento dentro de la conexión. TCP enumera bytes, no archivos ni números de segmento.
+
+**Len:** la **cantidad de bytes de datos TCP** en ese segmento. Una trama puede tener más bytes porque contiene cabeceras.
+
+**Ack (acknowledgment):** el número del **siguiente byte que el receptor espera**. Por ejemplo, si recibe los bytes 1–1448, puede responder **Ack=1449**. Eso significa «tengo todos los anteriores al 1449», no «ya recibí el byte 1449».
+
+**SYN:** señal de inicio de una conexión TCP. **ACK** también es un flag que identifica que el campo de confirmación es válido. En el **handshake** de tres pasos, los extremos intercambian **SYN, SYN/ACK y ACK** antes de empezar a transferir datos normales.
+
+### Cómo leer tu primera pareja de paquetes
+
+En la captura oficial, el primer segmento de datos del POST aparece en la **trama 4**, con **Seq=1 y Len=1448 B**. Por tanto lleva los bytes 1 a 1448. La **trama 7** contiene **Ack=1449**, que confirma el intervalo anterior.
+
+La trama 4 está registrada en **0.024047 segundos** y su ACK en **0.052671 segundos**. La diferencia es **0.028624 segundos = 28.624 milisegundos**. Ese tiempo de ida, recepción y confirmación es una **muestra de RTT**, el *Round-Trip Time* o tiempo de ida y vuelta.
+
+Ahora ya sabes lo que estás mirando: **números de bytes, confirmaciones y tiempos**, no una colección de abreviaturas arbitrarias.
 
 ---
+
+## 2. La captura oficial, traducida a hechos observables
+
+Los extremos son **192.168.86.68:55639** (cliente) y **128.119.245.12:80** (servidor). La cadena IP:puerto identifica quién envía y quién recibe en esta conversación.
+
+Las **tramas 1, 2 y 3** abren la conexión: SYN del cliente, SYN/ACK del servidor y ACK del cliente. La **trama 4** ya contiene datos del POST. Al contar los paquetes, la captura muestra **180 tramas TCP en total**, de las cuales **106** contienen carga enviada por el cliente y **una** contiene carga enviada por el servidor; **73** no transportan datos TCP.
+
+Los **153425 bytes** de carga TCP del cliente incluyen también cabeceras o contenido de la propia petición HTTP. No podemos afirmar que todos esos bytes son el archivo sin separar primero las partes de la aplicación.
+
+### Cómo interpretar el gráfico siguiente
+
+La gráfica **Stevens** utiliza el tiempo de captura en el eje horizontal y el **número de secuencia de los bytes enviados** en el vertical. Si en poco tiempo el emisor avanza muchos bytes, la curva sube con pendiente pronunciada. Si durante un intervalo no aparecen bytes nuevos, puede observarse un tramo plano: eso por sí solo **no prueba** que haya ocurrido una pérdida.
+
+Los puntos se agrupan alrededor de **0.024, 0.053 y 0.081 segundos**. Son ráfagas separadas por tiempos del orden de unos 28 ms, compatibles con los RTT observados; la forma por sí sola no permite leer la ventana interna de congestión **cwnd**, ni identificar inequívocamente Tahoe o Reno.
+
 
 ## 2. Conceptos
 
