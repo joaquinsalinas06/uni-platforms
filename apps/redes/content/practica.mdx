@@ -530,7 +530,17 @@ $$U = \frac{L/R}{\text{RTT} + L/R} = \frac{0{,}008}{30{,}008} = \boxed{0{,}027\,
 
 <ExerciseBlock client:visible exercise={{level:2,statement:'Dos flujos compiten por capacidad C. Muestre en el plano de fases por qué AIMD se acerca al reparto igual y si AIAD hace lo mismo. Elija valores concretos como pide el enunciado.',hints:['Compare x2−x1 antes y después de aumentar ambos flujos igual.','Multiplicar ambas tasas por 1/2 también divide la diferencia por 2.']}}>
 
-Tomemos **C=10 y (2,6)** como ejemplo elegido. AI lleva a (3,7), diferencia 4; MD a (1.5,3.5), diferencia 2. El siguiente AI lleva a (4,6) y MD a (2,3), diferencia 1. Las intersecciones con capacidad se acercan a (5,5), bajo RTT iguales y aumento simétrico. Con AIAD, restar la misma cantidad preserva la diferencia: no garantiza equidad.
+**Datos:** capacidad total $C=10$ Mb/s y punto inicial $(x_1,x_2)=(2,6)$ Mb/s. **Incógnita:** si la trayectoria alcanza reparto aproximadamente igual.
+
+**Paso 1.** Con aumento aditivo ambos flujos ganan 1 Mb/s: $(2,6)\to(3,7)$. La suma es $3+7=10=C$ y se utiliza toda la capacidad, pero la diferencia todavía es $7-3=4$ Mb/s. **Eficiencia no implica equidad**.
+
+**Paso 2.** Ante pérdida y reducción multiplicativa de la mitad, $(3,7)\to(1.5,3.5)$. La diferencia cae a $3.5-1.5=2$ Mb/s y la suma a 5 Mb/s, por lo que vuelve a existir capacidad disponible.
+
+**Paso 3.** Otro aumento aditivo hasta capacidad lleva a $(4,6)$; la diferencia permanece en 2 Mb/s. Nueva reducción: $(4,6)\to(2,3)$; la diferencia cae a 1 Mb/s. Los puntos sobre capacidad se acercan a $(5,5)$.
+
+**Por qué se repite:** sumar la misma cantidad conserva $x_2-x_1$, mientras multiplicar ambos por $1/2$ transforma esa diferencia en $(x_2-x_1)/2$. Después de n reducciones: $|\Delta_n|=(1/2)^n|\Delta_0| \to 0$ bajo los supuestos ideales del enunciado (misma RTT, flujos persistentes y reacción comparable a pérdidas).
+
+**AIAD no garantiza ese resultado:** restar una cantidad fija b da $(x_2-b)-(x_1-b)=x_2-x_1$. El contraejemplo $(3,7)\to(2,6)\to(3,7)$ vuelve al mismo reparto desigual. **Comprobación:** la capacidad suma 10 en los dos puntos de AIMD señalados, pero la diferencia desciende 4, 2, 1; AIAD conserva 4.
 
 [Tabla y diagramas de ambas trayectorias](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-1-equidad-de-aimd-frente-a-aiad).
 </ExerciseBlock>
@@ -565,7 +575,28 @@ Karn impide usar una muestra ambigua después de retransmitir. [Derivación comp
 
 <ExerciseBlock client:visible exercise={{level:3,statement:'Con cwnd inicial de 1 MSS y ssthresh de 8 MSS, trace Tahoe y Reno durante 12 rondas. Hay tres ACK duplicados en la ronda 4 y timeout en la 9.',hints:['Declare si los eventos ocurren al principio o final de ronda.','Con vuelo lleno, calcule el umbral como mitad de cwnd antes de cada evento.']}}>
 
-Convención: valores al inicio, eventos al final; Reno mostrado tras completar fast recovery. Tahoe: **1,2,4,8,1,2,4,5,6,1,2,3**. Reno: **1,2,4,8,4,5,6,7,8,1,2,4**. Tras la ronda 4 ambos umbrales son 4; tras la 9 son 3 para Tahoe y 4 para Reno. El estado transitorio Reno de 7 MSS durante la primera recuperación no se presenta como ventana estable de ronda 5.
+**Supuesto temporal:** la tabla registra cwnd al **inicio** de cada ronda y cada evento de pérdida ocurre al **final** de la ronda indicada. Reno está desinflado después del ACK de recuperación cuando comienza la siguiente ronda.
+
+**Rondas 1–4:** ambos siguen slow start desde 1 MSS hasta el umbral inicial de 8 MSS: $1\to2\to4\to8$. **Al final de la ronda 4** tres ACK duplicados indican llegada de datos posteriores al hueco: nuevo umbral $8/2=4$ MSS. Tahoe vuelve a cwnd=1; Reno retransmite rápidamente y entra temporalmente en fast recovery con $ssthresh+3=7$ MSS, que desinfla a 4 cuando llega el ACK de recuperación.
+
+**Rondas 5–9:** Tahoe hace $1\to2\to4$ por slow start y luego $4\to5\to6$ por congestion avoidance. Reno, que ya está en el umbral, hace $4\to5\to6\to7\to8$ por aumento aditivo. **Al final de ronda 9** hay timeout: Tahoe tiene 6 MSS, de modo que fija umbral $6/2=3$; Reno tiene 8 MSS y fija umbral $8/2=4$. Ambos vuelven a cwnd=1 MSS.
+
+| Ronda | Tahoe cwnd | Tahoe ssthresh | Reno cwnd | Reno ssthresh |
+|---:|---:|---:|---:|---:|
+| 1 | 1 | 8 | 1 | 8 |
+| 2 | 2 | 8 | 2 | 8 |
+| 3 | 4 | 8 | 4 | 8 |
+| 4 | 8 | 8 | 8 | 8 |
+| 5 | 1 | 4 | 4 | 4 |
+| 6 | 2 | 4 | 5 | 4 |
+| 7 | 4 | 4 | 6 | 4 |
+| 8 | 5 | 4 | 7 | 4 |
+| 9 | 6 | 4 | 8 | 4 |
+| 10 | 1 | 3 | 1 | 4 |
+| 11 | 2 | 3 | 2 | 4 |
+| 12 | 3 | 3 | 4 | 4 |
+
+**Comprobación:** cwnd baja **después** de las rondas con evento, no una ronda antes; ssthresh solo cambia por eventos, y la ventana temporal 7 de Reno no reemplaza el valor estable de la ronda 5. Todos los valores están en MSS.
 
 [Tabla de umbrales y gráfica comparativa](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-5-tahoe-y-reno).
 </ExerciseBlock>
@@ -574,7 +605,19 @@ Convención: valores al inicio, eventos al final; Reno mostrado tras completar f
 
 <ExerciseBlock client:visible exercise={{level:2,statement:'Un datagrama IPv4 tiene longitud total 4000 B y cabecera de 20 B. Con MTU de 1500 B, determine las longitudes, MF y offsets de los fragmentos.',hints:['Los datos originales son 3980 B, no 4000.','Los fragmentos no finales llevan un múltiplo de ocho bytes de datos.']}}>
 
-Datos: **1480,1480,1020 B**; longitudes totales: **1500,1500,1040 B**; offsets: **0,185,370**; MF: **1,1,0**. Todos conservan el ID. Las cabeceras extra hacen que el total transmitido sea 4040 B.
+**Datos:** longitud IP total $L=4000$ B, cabecera IPv4 $H=20$ B y MTU $M=1500$ B. **Incógnitas:** carga y longitud de cada fragmento, offset y MF.
+
+**1. Restar la cabecera una sola vez:** la carga original es $4000-20=3980$ B. **2. Determinar la carga no final:** el límite por fragmento es $8\lfloor(1500-20)/8\rfloor=1480$ B; debe ser múltiplo de ocho porque los offsets se expresan en bloques de 8 B. **3. Repartir:** $3980=1480+1480+1020$ B.
+
+| Fragmento | Datos (B) | Longitud IP total (B) | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 1480 | 1500 | 0 | 1 |
+| 2 | 1480 | 1500 | $1480/8=185$ | 1 |
+| 3 | 1020 | 1040 | $(1480+1480)/8=370$ | 0 |
+
+El último lleva MF=0 porque **no hay un fragmento posterior**, no porque todos los anteriores hayan llegado. Todos tienen el mismo ID.
+
+**Comprobación:** los datos suman $1480+1480+1020=3980$ B y reconstruyen exactamente la carga original. Cada longitud IP es menor o igual a 1500 B. Se transmiten $1500+1500+1040=4040$ B en total, **40 B adicionales** por las dos cabeceras extra. No confundas esa fragmentación IP con la segmentación que realiza TCP.
 
 [Diagrama paso a paso](/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado).
 </ExerciseBlock>
@@ -583,7 +626,15 @@ Datos: **1480,1480,1020 B**; longitudes totales: **1500,1500,1040 B**; offsets: 
 
 <ExerciseBlock client:visible exercise={{level:1,statement:'Para 200.23.16.0/23, determine máscara, cantidad de direcciones y broadcast. ¿Qué agregado representa los ocho bloques /23 consecutivos desde 200.23.16.0 hasta 200.23.30.0?',hints:['/23 deja nueve bits host.','Ocho bloques de 512 direcciones cubren 4096 direcciones alineadas.']}}>
 
-Máscara **255.255.254.0**, **512 direcciones**, broadcast **200.23.17.255**. Los ocho bloques cubren hasta 200.23.31.255 y se agregan como **200.23.16.0/20**. El broadcast se obtiene con OR del complemento de la máscara, no con OR de la máscara misma.
+**Datos:** prefijo IPv4 200.23.16.0/23. **1. Máscara:** un /23 tiene 23 bits a uno: 8+8+7. El tercer octeto es $11111110_2=254$, de modo que la máscara vale **255.255.254.0**.
+
+**2. Dirección de red:** AND entre IP y máscara. El tercer octeto de la IP es $00010000_2=16$; $00010000\ AND\ 11111110=00010000$. Red: **200.23.16.0**.
+
+**3. Broadcast:** queda $32-23=9$ bits host. Poniendo esos nueve bits a uno, el tercer octeto pasa de $00010000$ a $00010001=17$, y el cuarto a 255: **200.23.17.255**. Equivale a hacer red OR NOT(máscara), limitando NOT a 32 bits.
+
+**4. Capacidad:** $2^9=512$ direcciones. Para una subred ordinaria, se reservan red y broadcast, por lo que quedan **510 hosts**: 200.23.16.1 a 200.23.17.254.
+
+**5. Agregación:** ocho bloques /23 abarcan $8\times512=4096=2^{12}$ direcciones. Por tanto, pueden expresarse con un prefijo $32-12=20$ si están alineados y son contiguos. Desde 200.23.16.0/20 el rango completo acaba en **200.23.31.255**; el último /23 del conjunto comienza en 200.23.30.0. **Comprobación:** la máscara del /20 es 255.255.240.0 y el tercer octeto cubre exactamente 16–31.
 
 [Subredes y agregación](/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes).
 </ExerciseBlock>
