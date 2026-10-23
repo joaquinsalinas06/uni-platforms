@@ -79,7 +79,24 @@ El enunciado simplifica la reducción como mitad de cwnd al final de la ronda. E
 
 ## 4. Aplicación: gráfica, ventanas y comprobación
 
-<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
+**Tabla de doce rondas.** Cada ventana y umbral está expresado en MSS; los eventos de pérdida ocurren **al final** de las rondas 4 y 9. Esta tabla usa exactamente la misma convención que la gráfica.
+
+| Ronda | Tahoe cwnd | Tahoe ssthresh | Reno cwnd | Reno ssthresh | Evento al final |
+|---:|---:|---:|---:|---:|---|
+| 1 | 1 | 8 | 1 | 8 | — |
+| 2 | 2 | 8 | 2 | 8 | — |
+| 3 | 4 | 8 | 4 | 8 | — |
+| 4 | 8 | 8 | 8 | 8 | Tres ACK duplicados |
+| 5 | 1 | 4 | 4 | 4 | — |
+| 6 | 2 | 4 | 5 | 4 | — |
+| 7 | 4 | 4 | 6 | 4 | — |
+| 8 | 5 | 4 | 7 | 4 | — |
+| 9 | 6 | 4 | 8 | 4 | Timeout |
+| 10 | 1 | 3 | 1 | 4 | — |
+| 11 | 2 | 3 | 2 | 4 | — |
+| 12 | 3 | 3 | 4 | 4 | — |
+
+<Visualization viz={{"type":"xy-chart","title":"Ex4: Tahoe y Reno, evolución explicada","steps":[{"note":"Rondas 1 a 4: ambos suben por slow start desde 1 hasta 8 MSS; aún no hay pérdida.","series":[{"id":"t","label":"Tahoe","points":[[1,1],[2,2],[3,4],[4,8]],"kind":"line"},{"id":"r","label":"Reno","points":[[1,1],[2,2],[3,4],[4,8]],"kind":"line","state":"active"}],"x":{"label":"Ronda (RTT)","min":1,"max":12,"ticks":[1,2,3,4,5,6,7,8,9,10,11,12]},"y":{"label":"cwnd (MSS)","min":0,"max":9},"vlines":[{"at":4,"label":"3 dup ACK"},{"at":9,"label":"timeout"}]},{"note":"Después del triple duplicado: Tahoe reinicia en 1 y Reno conserva 4 MSS tras fast recovery; desde ahí siguen trayectorias distintas.","series":[{"id":"t","label":"Tahoe","points":[[1,1],[2,2],[3,4],[4,8],[5,1],[6,2],[7,4],[8,5],[9,6]],"kind":"line"},{"id":"r","label":"Reno","points":[[1,1],[2,2],[3,4],[4,8],[5,4],[6,5],[7,6],[8,7],[9,8]],"kind":"line","state":"active"}],"x":{"label":"Ronda (RTT)","min":1,"max":12,"ticks":[1,2,3,4,5,6,7,8,9,10,11,12]},"y":{"label":"cwnd (MSS)","min":0,"max":9},"vlines":[{"at":4,"label":"3 dup ACK"},{"at":9,"label":"timeout"}]},{"note":"El timeout ocurre al terminar la ronda 9: ambos reinician en 1 MSS, pero ssthresh resulta 3 para Tahoe y 4 para Reno.","series":[{"id":"t","label":"Tahoe","points":[[1,1],[2,2],[3,4],[4,8],[5,1],[6,2],[7,4],[8,5],[9,6],[10,1],[11,2],[12,3]],"kind":"line"},{"id":"r","label":"Reno","points":[[1,1],[2,2],[3,4],[4,8],[5,4],[6,5],[7,6],[8,7],[9,8],[10,1],[11,2],[12,4]],"kind":"line","state":"active"}],"x":{"label":"Ronda (RTT)","min":1,"max":12,"ticks":[1,2,3,4,5,6,7,8,9,10,11,12]},"y":{"label":"cwnd (MSS)","min":0,"max":9},"vlines":[{"at":4,"label":"3 dup ACK"},{"at":9,"label":"timeout"}]}]}} />
 
 **Lectura después de derivar las rondas.** Los eventos ocurren al final de rondas 4 y 9. En Tahoe la ronda 9 comienza con 6 MSS: su nuevo umbral es 3. En Reno comienza con 8 MSS: su nuevo umbral es 4. Desde ronda 10 ambos reinician en 1, pero alcanzan umbrales distintos. [Tabla de doce rondas](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-5-tahoe-y-reno).
 
