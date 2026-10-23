@@ -3,29 +3,56 @@ kind: subtopic
 title: "Subredes y agregación de rutas"
 order: 3
 ---
-import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Qué es una subred en el dibujo?
 
-Agrupar prefijos reduce cuántas rutas debe anunciar un proveedor. Una excepción más específica permite mover una organización sin cambiar el agregado de las restantes.
+Imagina varias computadoras conectadas a la misma red local. Pueden comunicarse dentro de esa red sin atravesar un **router**. La clase llama **subred** al conjunto de interfaces que pueden alcanzarse sin cruzar un router intermedio.
 
-## 2. Conceptos
+Una **interfaz** es la conexión concreta de un equipo a un enlace. Un router que une varias redes tiene varias interfaces; cada una está conectada a su red correspondiente.
 
-Las slides 20–22 muestran islas de interfaces. En la figura de tres routers hay **seis** subredes /24: 223.1.1.0, 223.1.2.0, 223.1.3.0 y los enlaces 223.1.7.0, 223.1.8.0 y 223.1.9.0. Los enlaces entre routers también cuentan. Algunas etiquetas de la figura terminan en .0; para identificar la subred se conserva su prefijo, sin tomarlas como ejemplo de dirección de host utilizable.
+La slide 21 usa tres redes **/24**: 223.1.1.0/24, 223.1.2.0/24 y 223.1.3.0/24. El /24 quiere decir que **los primeros 24 de los 32 bits IPv4** indican a qué subred pertenece una dirección. Con ese prefijo, los primeros tres números decimales identifican el bloque.
 
-En el ejemplo de agregación hay ocho organizaciones con /23 consecutivos y alineados. Un agregado válido necesita cubrir un bloque contiguo con los mismos bits altos; no basta con sumar cantidades de direcciones.
+## 2. Contar subredes: el detalle que suele olvidarse
 
-## 3. Ejemplo resuelto
+La diapositiva propone un método visual: imagina que **separas las interfaces de los routers**. Cada conjunto que permanece conectado sin pasar por otro router forma una **isla**; cada isla corresponde a una subred.
 
-Ocho bloques de 512 direcciones dan 4096, es decir $2^{12}$: quedan $32-12=20$ bits de prefijo. 200.23.16.0/20 cubre los terceros octetos 16–31. El /23 de 200.23.18.0 conserva prioridad sobre /20 para esa organización cuando se anuncia desde el otro ISP.
+En la slide 22, con tres routers, hay **seis subredes**. No son seis porque haya seis computadoras: son tres redes con hosts (**223.1.1.0**, **223.1.2.0** y **223.1.3.0**, todas /24) más tres redes de **enlaces entre routers** (**223.1.7.0**, **223.1.8.0** y **223.1.9.0**, todas /24).
 
-La presentación atribuye la asignación de bloques a ICANN a través de cinco registros regionales, y menciona agotamiento IPv4, NAT y los 128 bits de IPv6 como contexto final. No desarrolla traducción NAT ni mecanismos IPv6.
+**Regla para un examen:** cuenta las redes donde hay hosts, pero también cada enlace entre routers que constituye su propio segmento de red.
 
-## 4. Errores típicos
+## 3. ¿Por qué querríamos juntar rutas?
 
-- Contar solo las LAN con computadoras.
-- Agregar bloques no alineados en un único prefijo que incluye destinos ajenos.
-- Elegir la ruta menos específica para la organización que se movió.
+Un proveedor de Internet debe informar a otros routers hacia dónde enviar paquetes destinados a sus clientes. Cada información de destino es una **ruta**. Si anuncia un bloque independiente para cada organización, las tablas de rutas pueden volverse grandes.
 
+**Agregación** significa anunciar varios bloques con **un prefijo común**, como decir «todas estas ocho calles pertenecen al mismo distrito». Solo funciona si los bloques son contiguos y su comienzo tiene la alineación correcta en bits.
 
-Fuente: `Sem10_NetT-NetLayer_Addressing`.
+En el ejemplo de la clase, cada una de ocho organizaciones recibe una subred **/23**. Una /23 conserva 23 bits de red y deja 9 de host: $2^9=512$ direcciones. Ocho bloques tienen **8×512=4096 direcciones**.
+
+Como 4096=$2^{12}$, el prefijo común es 32−12=**/20**. El agregado oficial es **200.23.16.0/20**, que cubre de 200.23.16.0 a 200.23.31.255.
+
+| Subred individual | Tercer octeto cubierto |
+|---|---|
+| 200.23.16.0/23 | 16–17 |
+| 200.23.18.0/23 | 18–19 |
+| 200.23.20.0/23 | 20–21 |
+| 200.23.22.0/23 | 22–23 |
+| 200.23.24.0/23 | 24–25 |
+| 200.23.26.0/23 | 26–27 |
+| 200.23.28.0/23 | 28–29 |
+| 200.23.30.0/23 | 30–31 |
+
+**¿Por qué no sirve cualquier grupo de 4096 direcciones?** Porque un /20 necesita **veinte bits iniciales idénticos**. La cifra total es necesaria, pero también hay que comprobar **contigüidad y alineación**.
+
+## 4. Cuando aparece una ruta más específica
+
+Supón que el cliente con bloque **200.23.18.0/23** cambia de proveedor. El nuevo ISP anuncia específicamente ese /23; el antiguo puede seguir anunciando el grupo general /20.
+
+Un router utiliza la coincidencia de **prefijo más largo**: para un destino como 200.23.18.4 coinciden ambos, pero /23 tiene **más bits fijos**, así que se elige el /23. Para 200.23.24.4 solo se utiliza el /20 agregado si no aparece una excepción más específica.
+
+Eso no significa que una ruta /23 transmita más rápido: simplemente **describe con mayor precisión qué destinos cubre**.
+
+## 5. Comprueba el concepto
+
+Si ves tres LAN y tres enlaces router-router, ¿cuántas subredes hay? **Seis**, siempre que los seis grupos correspondan a redes independientes como en la slide. ¿Cuántos /23 caben dentro de un /20? Hay tres bits adicionales para escoger subredes: **2³ = 8**. ¿Qué ruta se elige entre una /20 y una /23 que ambas coinciden? **La /23**, porque tiene el prefijo coincidente más largo.
+
+Fuente: Sem10_NetT-NetLayer_Addressing, diapositivas 20–22 y el ejemplo de asignación jerárquica.

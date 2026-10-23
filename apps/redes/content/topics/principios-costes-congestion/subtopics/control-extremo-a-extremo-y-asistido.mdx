@@ -5,27 +5,50 @@ order: 2
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Cómo sabe el emisor que hay un problema en la red?
 
-El emisor necesita información para ajustar su ritmo. Puede inferirla de los extremos o recibir una señal explícita desde la red.
+Imagina que un servidor envía una foto a tu laptop. Entre ambos existe un router con una cola que empieza a llenarse. El servidor no ve directamente el interior de ese router. ¿Cómo podría darse cuenta de que está enviando demasiado deprisa?
 
-## 2. Conceptos
+La clase presenta **dos respuestas**. La diferencia es **de dónde viene el aviso**, no quién envía la foto.
 
-| Enfoque | Información | Ejemplo del material |
-|---|---|---|
-| Extremo a extremo | Pérdida y retardo observados | TCP clásico |
-| Asistido por la red | Marcas o avisos desde routers | ECN |
+**Extremo a extremo:** el emisor observa **las consecuencias** de la red: confirmaciones que se retrasan o paquetes que necesitan retransmisión. A partir de esas señales deduce que podría existir congestión. El router no le envía una advertencia específica.
 
-Un ACK confirma bytes; si además transporta ECE, comunica la señal de congestión recibida. Una pérdida o un RTT alto requieren interpretación: no identifican por sí solos el router que limita el flujo.
+**Asistido por la red:** un equipo del camino, como el router, **comunica explícitamente** que está experimentando congestión. TCP puede utilizar esa información sin tener que esperar siempre a que se pierda un paquete.
 
-## 3. Ejemplo resuelto
+## 2. Primer caso: solo miro lo que recibe mi computadora
 
-El receptor anuncia espacio disponible, pero el router intermedio empieza a acumular cola. El control de flujo permite seguir porque el receptor tiene buffer; el control de congestión debe reducir la presión sobre la red. Con ECN, el aviso puede llegar mediante una marca antes de necesitar un descarte por desborde.
+El receptor TCP confirma datos mediante **ACK**. Un ACK es un mensaje que indica hasta qué byte se ha recibido correctamente y en orden. El tiempo que tarda en volver una confirmación ayuda a medir el **RTT**, el tiempo de ida y vuelta.
 
-## 4. Errores típicos
+Si la cola del router crece, el RTT puede aumentar. Si hay descarte, pueden faltar datos y aparecer retransmisiones. El emisor detecta estos **efectos**, aunque no sabe qué router exacto los causó.
 
-- Confundir señal explícita de congestión con el campo de ventana.
-- Desarrollar ATM o DECbit como temas nuevos: aquí solo se citan como ejemplos de la slide 21.
+Un RTT alto **no demuestra por sí solo** congestión: también contiene otros tipos de demora. Una pérdida tampoco identifica automáticamente su origen. Por eso el material habla de **inferir** congestión, no de observar directamente la cola.
 
+## 3. Segundo caso: el router puede avisar mediante ECN
 
-Fuente: `Sem9_NetT-TCP2`.
+ECN significa **Explicit Congestion Notification**: notificación explícita de congestión. La slide 32 muestra una conversación entre dos capas distintas:
+
+1. El emisor manda un **datagrama IP** preparado para admitir ECN.
+2. Un router detecta congestión y marca en IP una señal llamada **CE**, sin tener que descartar obligatoriamente ese datagrama.
+3. El receptor ve la marca CE en el paquete recibido.
+4. El receptor envía un **ACK TCP** con el indicador **ECE**.
+5. El emisor recibe la señal y puede modificar su **ventana de congestión**, el límite local de datos que mantiene en vuelo.
+
+<Visualization viz={{
+type:'net-scene',title:'ECN explicado como una advertencia que hace ida y vuelta',
+steps:[
+{note:'El emisor transmite hacia el router un datagrama preparado para ECN.',devices:[{id:'a',kind:'host',label:'Emisor',x:8,y:50},{id:'r',kind:'router',label:'Router',x:50,y:50},{id:'b',kind:'server',label:'Receptor',x:92,y:50}],cables:[{from:'a',to:'r'},{from:'r',to:'b'}],packets:[{from:'a',to:'r',label:'IP ECN',order:1,state:'active'}]},
+{note:'El router detecta congestión y marca CE; el paquete continúa hacia el receptor.',devices:[{id:'a',kind:'host',label:'Emisor',x:8,y:50},{id:'r',kind:'router',label:'Marca CE',x:50,y:50},{id:'b',kind:'server',label:'Receptor',x:92,y:50}],cables:[{from:'r',to:'b',label:'Datagrama marcado',state:'active'},{from:'a',to:'r'}],packets:[{from:'r',to:'b',label:'IP CE',order:2,state:'active'}]},
+{note:'El receptor devuelve ECE en un ACK TCP; el emisor puede reducir la presión de envío.',devices:[{id:'a',kind:'host',label:'Emisor',x:8,y:50},{id:'r',kind:'router',label:'Router',x:50,y:50},{id:'b',kind:'server',label:'Receptor',x:92,y:50}],cables:[{from:'a',to:'r'},{from:'r',to:'b'}],packets:[{from:'b',to:'a',label:'ACK ECE',order:3,state:'answer'}]}
+]}} />
+
+La señal CE vive en **IP** y el indicador ECE vuelve mediante **TCP**. No se debe confundir ECE con el número del ACK ni con **rwnd**, la ventana de recepción que anuncia cuánto puede almacenar el destinatario.
+
+## 4. Mini-ejercicio: reconocer ambos enfoques
+
+**Situación A:** el emisor no recibe confirmaciones a tiempo, detecta una pérdida y reduce su ritmo. ¿Recibió un aviso del router? **No:** infirió un problema por sus consecuencias; es extremo a extremo.
+
+**Situación B:** un router marca CE y el receptor transmite ECE en un ACK. ¿Quién originó la información de congestión? **El router:** es asistencia desde la red, aunque el ACK TCP llegue desde el receptor.
+
+La slide 21 menciona también ATM y DECbit como ejemplos de asistencia de red. No desarrolla sus protocolos: para esta comparación basta con identificar la idea del aviso explícito.
+
+Fuente: Sem9_NetT-TCP2, diapositivas 20–21 y 32.

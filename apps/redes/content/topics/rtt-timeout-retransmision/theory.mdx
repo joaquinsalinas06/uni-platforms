@@ -4,11 +4,27 @@ title: "Estimación de RTT, Timeout y Fast Retransmit en TCP"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. ¿Por qué TCP necesita medir el tiempo que tardan los datos?
 
-Un timeout corto retransmite sin necesidad; uno largo tarda en recuperar pérdidas. Las primeras semanas permiten medir RTT. **Ex4, pregunta 4**, amplía el cálculo con DevRTT, TimeoutInterval y la ambigüedad de las retransmisiones que explica Karn.
+Imagina que envías un bloque de información. El destinatario lo recibe y manda un **ACK**, un mensaje de confirmación que indica el siguiente byte esperado. ¿Cuánto tiempo debe esperar tu computadora antes de sospechar que algo se perdió?
+
+Si espera **muy poco**, puede volver a enviar un bloque que simplemente estaba retrasado; esa copia gasta capacidad innecesariamente. Si espera **demasiado**, tarda en recuperar una pérdida real. Por eso TCP estima el tiempo de regreso y también **cuánto varía ese tiempo**.
+
+**RTT** significa *Round-Trip Time*, el tiempo de **ida y vuelta** de los datos y su confirmación. Una medición concreta se llama **SampleRTT**. Como cada paquete puede experimentar una cola distinta, las mediciones no son idénticas.
+
+La clase utiliza **EstimatedRTT** como un promedio que cambia gradualmente, y **DevRTT** como una medida de cuánto se alejan las nuevas observaciones del valor estimado. Después calcula **TimeoutInterval**: el límite de espera que combina estimación y margen por variación. **No son tres protocolos diferentes; son tres cantidades que el emisor calcula para decidir cuánto esperar.**
+
+### Antes de las fórmulas, un ejemplo
+
+En la traza oficial, un segmento aparece a **0.024047 s** y su ACK a **0.052671 s**. La resta es **0.028624 s**, o **28.624 ms**. Esa es una muestra RTT. Si la siguiente muestra es 28.628 ms, no necesitamos cambiar bruscamente la estimación: una **media ponderada** permite darle parte del peso al valor anterior y parte al nuevo.
+
+El enunciado de Ex4 proporciona sus propios valores iniciales y parámetros para que resuelvas exactamente las cuentas. Primero debes identificar la muestra; luego se actualiza EstimatedRTT, DevRTT y TimeoutInterval **en ese orden**.
 
 ---
+
+
+
+
 
 ## 2. Conceptos
 

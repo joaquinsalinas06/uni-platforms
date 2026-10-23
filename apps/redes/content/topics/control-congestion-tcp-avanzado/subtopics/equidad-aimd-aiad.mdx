@@ -5,17 +5,35 @@ order: 3
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. Dos personas comparten un enlace: ¿qué significa que sea justo?
 
-Para dos conexiones, el plano $(x_1,x_2)$ separa **eficiencia** ($x_1+x_2=C$) y **equidad** ($x_1=x_2$). Llegar a capacidad no garantiza repartirla por igual.
+Imagina que dos computadoras descargan archivos usando el mismo enlace de salida de un router. Ese enlace puede transmitir como máximo **10 megabits por segundo**, abreviado Mb/s.
 
-## 2. Conceptos
+Supongamos que la primera conexión obtiene **8 Mb/s** y la segunda **2 Mb/s**. La suma es 10: **se está usando toda la capacidad**. Eso es eficiente, pero ¿es justo? Si el objetivo es repartir por igual entre esas dos conexiones, sería más equitativo **5 y 5 Mb/s**.
 
-Al sumar la misma cantidad a ambos flujos, la diferencia $x_2-x_1$ no cambia. Al multiplicar ambos por $1/2$, esa diferencia también se divide entre dos. Repetir AIMD acerca la trayectoria a la diagonal bajo los supuestos de la slide 34.
+Por eso el ejercicio distingue dos ideas que **no son sinónimos**:
+
+- **Eficiencia:** entre todos los flujos utilizan la capacidad disponible sin dejarla innecesariamente ociosa.
+- **Equidad:** los flujos reciben partes comparables de esa capacidad bajo los supuestos del modelo.
+
+Aquí **flujo** o **conexión** significa una transmisión TCP que compite por el enlace. No tiene por qué equivaler a una persona ni a una aplicación: un navegador puede abrir varias conexiones.
+
+## 2. Primero prueba las dos operaciones sin usar geometría
+
+El curso compara **AIMD** (aumento aditivo y reducción multiplicativa) con **AIAD** (aumento aditivo y reducción aditiva).
+
+**Aumento aditivo (AI):** suma **la misma cantidad** a los dos. Si parten de (2,6) Mb/s y cada uno suma 1 Mb/s, quedan (3,7). La **diferencia** sigue siendo 4. AI permite crecer, pero por sí solo **no arregla una desigualdad**.
+
+**Reducción multiplicativa (MD):** ambos multiplican su tasa por el **mismo factor**, por ejemplo 1/2. Desde (3,7) pasan a (1.5,3.5). La diferencia ahora es **2**, la mitad de antes. Al repetir ciclos de aumento y reducción proporcional, esa diferencia tiende a reducirse **si ambos experimentan la misma regla y los supuestos ideales se cumplen**.
+
+**Reducción aditiva (AD):** resta la misma cantidad a cada flujo. Desde (3,7), restar 1 a ambos da (2,6): la diferencia **permanece en 4**. Por eso AIAD no garantiza acercamiento a un reparto igualitario.
+
+En la gráfica que sigue, **x1** representa la tasa del flujo 1 y **x2** la tasa del flujo 2; cada punto (x1,x2) describe un reparto. La línea donde **x1+x2=C** representa ocupar toda la capacidad **C**. La línea **x1=x2** representa repartir por igual. En la demostración siguiente verás por qué la trayectoria de AIMD se acerca a la segunda sin dejar de oscilar alrededor de la primera.
+
 
 <Visualization viz={{"type": "xy-chart", "title": "AIMD: acercamiento a la equidad", "steps": [{"note": "Ejemplo numérico elegido para Ex4: C=10, inicio (2,6). AI conserva la diferencia; MD la divide entre dos.", "series": [{"id": "eff", "label": "Capacidad", "points": [[0, 10], [10, 0]], "kind": "line", "state": "muted"}, {"id": "fair", "label": "Equidad", "points": [[0, 0], [10, 10]], "kind": "line", "state": "muted"}, {"id": "aimd", "label": "AIMD", "points": [[2, 6], [3, 7], [1.5, 3.5], [4, 6], [2, 3], [4.5, 5.5], [2.25, 2.75], [4.75, 5.25]], "kind": "line", "state": "active"}], "x": {"label": "flujo 1", "min": 0, "max": 10}, "y": {"label": "flujo 2", "min": 0, "max": 10}}], "static": true}} />
 
-En **AIAD**, sumar o restar una misma cantidad conserva la diferencia mientras ningún flujo llegue a cero. Por eso no converge en general a la diagonal.
+---
 
 ## 3. Demostración geométrica y ejemplo completo
 

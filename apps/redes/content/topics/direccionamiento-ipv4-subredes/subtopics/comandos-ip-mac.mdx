@@ -3,31 +3,54 @@ kind: subtopic
 title: "Tabla de rutas, interfaces y direcciones MAC"
 order: 4
 ---
-import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Para qué usar comandos si ya sabemos calcular IP?
 
-Las slides conectan direccionamiento con herramientas para observar el equipo y el camino. Se usan los comandos que aparecen allí, sin convertirlos en un laboratorio nuevo de routing.
+Una dirección y una máscara describen la red **en el papel**. Pero cuando estás conectado a Wi-Fi y quieres saber por qué no llegas a otro equipo, necesitas mirar la configuración **real** de tu computadora.
 
-## 2. Conceptos
+Las diapositivas 16–19 presentan tres herramientas con preguntas distintas: **qué interfaces tengo**, **qué salida elijo para otros destinos** y **qué routers aparecen a lo largo del camino**.
 
-| Herramienta de la presentación | Qué observar |
+## 2. Interfaces: la conexión concreta del equipo
+
+Una **interfaz de red** es el punto de conexión de tu computadora a un enlace, por ejemplo Wi-Fi o Ethernet. La dirección **IPv4** se asigna a una interfaz, no necesariamente a toda la computadora como entidad única.
+
+La presentación menciona **ifconfig** para consultar esas interfaces y las direcciones configuradas. También puedes encontrar la interfaz **loopback**, destinada a comunicación local del propio sistema. La IP **127.0.0.1** no es la dirección que necesariamente debes compartir con otra laptop de la Wi-Fi.
+
+## 3. La tabla de rutas: ¿por dónde sale el paquete?
+
+La herramienta **netstat -nr** permite mirar la tabla de rutas en formato numérico. Esa tabla indica qué salida o **gateway** corresponde a destinos determinados.
+
+Un **gateway** es normalmente un router de primer salto utilizado para alcanzar otra red. Si el destino no tiene una ruta más específica, una **ruta por defecto** puede indicar por dónde enviar el paquete.
+
+La tabla local no es un mapa de todos los routers del mundo. Explica **qué decisión toma tu equipo al dar el siguiente paso**.
+
+## 4. traceroute: seguir los saltos visibles
+
+**traceroute** intenta revelar algunos routers que contestan a lo largo de la ruta hacia un destino. Cada etapa visible se llama **salto**.
+
+No interpretes automáticamente una línea sin respuesta como «Internet está caído». Un router puede no responder a las sondas utilizadas y, aun así, reenviar tráfico ordinario.
+
+## 5. ¿Qué cambia entre IP y MAC?
+
+La slide 19 distingue dos direcciones que viven en capas diferentes:
+
+| Dirección | Para qué sirve |
 |---|---|
-| `netstat -nr` | Tabla de rutas con destinos y gateways numéricos |
-| `ifconfig` | Interfaces y su configuración |
-| `traceroute <destino>` | Saltos visibles a lo largo del camino |
+| **IPv4**, 32 bits | Identificar una interfaz y poder alcanzar su subred a través de routers |
+| **MAC**, normalmente 48 bits en las LAN de las slides | Permitir entregar una trama entre interfaces conectadas por el mismo enlace local |
 
-La slide titulada “MAC and ARP” distingue **IP de 32 bits**, para llegar a la subred destino, y **MAC de 48 bits** en la mayoría de LAN, para transferir una trama entre interfaces conectadas. Indica que la MAC puede ser configurable. No desarrolla en esta presentación la secuencia de mensajes ARP.
+Imagina que envías un paquete IP a un servidor remoto. Su **dirección IP de destino** identifica a ese servidor. Sin embargo, en el **primer enlace** quizás debas entregar la trama al router; en el siguiente salto se usará otro enlace local. Por eso no confundas la dirección IP de extremo a extremo con las direcciones que sirven para mover cada trama en su propio enlace.
 
-## 3. Ejemplo resuelto
+La diapositiva se titula «MAC and ARP», pero no desarrolla allí un intercambio completo ARP; no es necesario inventarlo para entender esta separación.
 
-Observa con `ifconfig` qué interfaz tiene tu IP activa y busca con `netstat -nr` la ruta al destino o el gateway por defecto. `traceroute` muestra respuestas de saltos del camino; un salto sin respuesta no basta para demostrar que toda la comunicación falló. Los valores concretos dependen de tu equipo y red.
+## 6. Un procedimiento con significado, no solo comandos
 
-## 4. Errores típicos
+1. Busca con **ifconfig** la interfaz que realmente estás usando, no solo loopback.
+2. Identifica su **dirección IPv4** y la red a la que pertenece.
+3. Consulta con **netstat -nr** si tienes una ruta apropiada o un **gateway**.
+4. Usa **traceroute** hacia un destino para observar algunos saltos de la red.
+5. Explica qué dato responde cada herramienta y qué cosa **no** demuestra.
 
-- Tratar la IP y la MAC como dos nombres equivalentes del mismo alcance.
-- Interpretar la configuración de loopback como la de Wi-Fi.
-- Añadir un protocolo de enrutamiento o una explicación detallada de ARP que estas slides no desarrollan.
+Los resultados concretos dependerán de tu equipo. No copies la IP o gateway de una captura del profesor como si fuera tu propia configuración.
 
-
-Fuente: `Sem10_NetT-NetLayer_Addressing`.
+Fuente: Sem10_NetT-NetLayer_Addressing, diapositivas 16–19.

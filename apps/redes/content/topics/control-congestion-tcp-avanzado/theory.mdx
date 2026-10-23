@@ -4,51 +4,153 @@ title: "TCP: AIMD, Tahoe/Reno, CUBIC y Equidad"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. Imagina una descarga: ¿qué está tratando de controlar TCP?
 
-TCP no sabe de antemano qué tasa admite el camino. Ajusta **cwnd** según la respuesta de la red. La ventana anunciada **rwnd** protege al receptor; **cwnd** limita los bytes pendientes de ACK para no saturar la red.
+Abres una página y descargas un archivo. Los datos salen de un servidor, atraviesan **routers** y enlaces compartidos con otras personas, y llegan a tu computadora.
 
----
+Un **router** es el equipo que recibe paquetes y los dirige hacia otra red. Tiene una velocidad máxima para enviarlos por cada enlace de salida. Si llegan demasiados paquetes a la vez, algunos esperan en una **cola**. Si esa cola se llena, puede haber **pérdidas**.
 
-## 2. Conceptos
+A eso llamamos **congestión de red**: se intenta introducir más información de la que el camino puede transportar cómodamente. El problema de TCP es descubrir **cuántos datos conviene mantener en camino** sin conocer de antemano la capacidad que queda libre en todos los routers.
 
-Con datos disponibles, la aproximación de la slide 25 es $\text{tasa}\approx cwnd/RTT$. En congestión evitada, **AIMD** suma aproximadamente 1 MSS por RTT y reduce multiplicativamente ante pérdida. No significa sumar 1 MSS completo por cada ACK.
+No necesitamos aprender un algoritmo todavía. Primero veamos qué envía TCP y cómo sabe si va avanzando.
 
-Ex4 incorpora **slow start**, **ssthresh**, Tahoe y Reno. Slow start duplica aproximadamente la ventana por RTT hasta el umbral; después, congestion avoidance la aumenta linealmente. Tahoe vuelve a 1 MSS ante tres ACK duplicados o timeout. Reno reduce a la mitad ante tres duplicados y vuelve a 1 ante timeout. En ambos se actualiza el umbral con la mitad de los bytes en vuelo; para las tablas del ejercicio se supone vuelo lleno, igual a cwnd.
+## 2. Segmentos, ACK y RTT: el vocabulario mínimo
 
-<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
+Un archivo grande no viaja de una sola vez. TCP transmite sus **bytes** en varias porciones denominadas **segmentos**. Los segmentos pueden atravesar routers y llegar a su destino en momentos distintos.
 
-La presentación también cubre **CUBIC** (crecimiento cúbico respecto del instante K en que se vuelve a Wmax), control por **retardo** (comparar throughput medido con $cwnd/RTT_{min}$) y **ECN** (router marca IP; receptor devuelve ECE en TCP). No hacen falta fórmulas ni parámetros de CUBIC que no estén en las slides.
+El receptor envía mensajes llamados **ACK** (*acknowledgment*, confirmación). El número de ACK expresa el **siguiente byte que espera recibir en orden**. Por ejemplo, si llegaron los bytes 1–1000, el ACK puede ser **1001**: el receptor espera el 1001 y ha confirmado los anteriores.
 
----
+El tiempo que transcurre desde un envío hasta recibir la confirmación se llama **RTT** (*Round-Trip Time*, tiempo de ida y vuelta). Si envías datos y vuelve un ACK tras 50 milisegundos, el RTT observado es aproximadamente **50 ms**.
 
-## 3. Método paso a paso
+También usaremos **MSS** (*Maximum Segment Size*), que indica el tamaño máximo de **datos TCP** que puede tener un segmento según las condiciones de la conexión. En los ejercicios se usa como **unidad de ventana**. Si suponemos MSS=1000 bytes, «4 MSS» equivale a **4000 bytes de datos**; eso no quiere decir que en todas las redes el MSS real sea 1000 bytes.
 
-1. Fija unidades: bytes o MSS, sin mezclarlos.
-2. Marca umbral, ventana inicial y momento de cada evento.
-3. Separa slow start, aumento aditivo y recuperación por pérdida.
-4. Distingue los valores transitorios de Reno durante fast recovery de la ventana después de recuperarse.
-5. Para equidad, analiza conexiones con los mismos RTT y aumentos: no aplicaciones enteras.
+## 3. La ventana: cuántos bytes puedes tener pendientes
 
----
+Imagina que TCP envía tres segmentos, pero todavía no recibe confirmación de ninguno. Esos datos están **en vuelo**: se enviaron pero siguen pendientes de ACK.
 
-## 4. Ejemplo resuelto
+Una **ventana** es un límite para esa cantidad pendiente. Cuando llega el ACK de un segmento, el emisor sabe que esos bytes ya se confirmaron y puede usar el **espacio liberado** para mandar datos nuevos. **Liberar espacio dentro de la ventana no significa necesariamente hacer más grande la ventana.**
 
-En Ex4, $cwnd=8$ MSS al inicio de ronda 4. El triple ACK duplicado al final deja $ssthresh=4$. Tahoe comienza la ronda 5 con 1 MSS; Reno, una vez reconocido lo retransmitido, con 4 MSS. La tabla completa y las hipótesis están en [Ex4](/evaluaciones/laboratorio/ejercicios-4-tcp).
+TCP utiliza dos límites diferentes:
 
----
+**rwnd (ventana de recepción):** la anuncia el **receptor** y representa cuánto espacio está dispuesto a aceptar en su buffer. Protege a esa computadora.
 
-## 5. Errores típicos
+**cwnd (ventana de congestión):** la mantiene el **emisor** y limita cuántos datos puede tener pendientes de ACK para adaptarse a la red. Protege el camino frente a un exceso de tráfico.
 
-- Llamar cwnd al campo Win de Wireshark: ese campo anuncia recepción.
-- Tratar las curvas de Tahoe/Reno del ejercicio como identificación del algoritmo de una captura real.
-- Prometer equidad universal: las slides asumen RTT iguales, número fijo de conexiones y congestion avoidance.
+Ejemplo: el receptor anuncia rwnd=10 MSS, pero cwnd=3 MSS. El emisor no puede tratar los 10 como permiso para llenar la red: se aplica **el menor límite, 3 MSS**. Si ya hay 2 MSS en vuelo, queda sitio para **1 MSS más** antes de nuevos ACK.
 
+En Wireshark existe un campo **Window / Win**, relacionado con la **ventana de recepción**. No es cwnd; esta última es estado interno del emisor.
 
-## Para profundizar
+## 4. La conexión necesita explorar la capacidad
 
-- [Slow start, AIMD y recuperación Tahoe/Reno](/topics/control-congestion-tcp-avanzado/subtopics/slow-start-aimd-tahoe-reno)
-- [CUBIC, control por retardo y ECN](/topics/control-congestion-tcp-avanzado/subtopics/cubic-retardo-ecn)
-- [Equidad: AIMD frente a AIAD](/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad)
+Cuando una conexión empieza, el emisor todavía no sabe qué cantidad de datos podrá circular sin problemas. TCP suele comenzar con una ventana reducida y aumentarla a medida que recibe ACK de bytes nuevos.
 
-Fuente: `Sem9_NetT-TCP2`, `Sem10_Excercises4-TCP`.
+La fase inicial del modelo de clase se llama **slow start**, aunque el crecimiento es **rápido**: en la idealización por rondas RTT la ventana puede duplicarse. Si empieza en 1 MSS, observa la secuencia **1 → 2 → 4 → 8 MSS**.
+
+Un valor llamado **ssthresh** (*slow-start threshold*) sirve como **umbral**. Cuando la ventana llega a él, TCP pasa a crecer más lentamente, mediante **congestion avoidance** (evitación de congestión). Si ssthresh=8, **no significa que cwnd tenga prohibido llegar a 9**. Significa que al llegar a 8 deja de crecer con duplicaciones por RTT.
+
+En congestion avoidance la clase utiliza una aproximación de crecimiento de **1 MSS por RTT**. Si estás en 8, los siguientes valores sin pérdidas pueden ser 9, 10 y 11. **No** hay que sumar 1 MSS por cada ACK individual: en un RTT pueden llegar muchos ACK.
+
+La slide 25 expresa una intuición de velocidad mediante:
+
+$$\text{tasa aproximada}\approx\frac{cwnd}{RTT}.$$
+
+¿Qué divide esa fórmula? La cantidad de datos en vuelo permitidos entre el tiempo aproximado de ida y vuelta. Si cwnd=4000 B y RTT=0.05 s, la tasa ideal es **4000/0.05=80000 B/s** (640000 bits/s). Es una **aproximación** cuando siempre hay datos y no intervienen otros límites; no es una promesa de throughput real.
+
+## 5. AIMD: aumentar poco a poco, bajar cuando hay problema
+
+**AIMD** significa *Additive Increase, Multiplicative Decrease*, o **aumento aditivo y disminución multiplicativa**. Se refiere a dos formas distintas de modificar la cantidad que TCP tiene permitido enviar:
+
+- **Aumento aditivo:** en congestion avoidance, la ventana sube lentamente, aproximadamente **una MSS por RTT**.
+- **Disminución multiplicativa:** cuando se detecta congestión, se reduce la ventana en **proporción** a su valor anterior; una simplificación clásica es reducir a la mitad.
+
+Una conexión podría pasar de 4 a 5, 6, 7 y 8 MSS, y luego reducirse a 4 MSS cuando aparece una pérdida. Repetirlo produce un **diente de sierra**. La curva describe al emisor **probando capacidad y retrocediendo cuando el camino da señales de saturación**.
+
+## 6. ¿Cómo se da cuenta de que falta un segmento?
+
+Supón que TCP envió cinco partes de datos, pero **la segunda se perdió**. El receptor recibe la primera y pide la segunda. Cuando llegan la tercera y la cuarta, todavía **falta la segunda**; el receptor puede repetir el mismo ACK porque sigue esperando esos bytes.
+
+Esos avisos repetidos son **ACK duplicados**. En la pregunta 5 de Ex4, la llegada de **tres ACK duplicados** es una señal para retransmitir rápido el segmento faltante, **sin esperar al temporizador**. Esta respuesta se denomina **fast retransmit**.
+
+Otra posibilidad es que no llegue a tiempo la confirmación esperada. Entonces vence un temporizador: es un **timeout**. Ambos sucesos pueden provocar recuperación por pérdida, pero no tienen el mismo significado sobre lo que está pasando en la red.
+
+## 7. Tahoe y Reno: reaccionar de maneras distintas
+
+**Tahoe** es conservador: ante tres ACK duplicados reduce su umbral y reinicia la ventana a **1 MSS**. Ante timeout también reinicia en **1 MSS**.
+
+**Reno** aprovecha que los ACK duplicados indican que **otros segmentos posteriores al hueco han llegado**. Retransmite el perdido y realiza **fast recovery** (recuperación rápida). Al terminar esa recuperación, la ventana queda en el **nuevo ssthresh**, no necesariamente en 1 MSS. **Ante timeout sí reinicia en 1 MSS**.
+
+Reno clásico puede inflar temporalmente la ventana a **ssthresh+3 MSS** durante fast recovery. Esa cantidad es **transitoria**, mientras procesa los ACK duplicados. Cuando el ACK cubre la recuperación, la ventana se desinfla. No se debe usar el valor transitorio como si fuera la ventana estable de todas las rondas siguientes.
+
+### El ejercicio oficial de doce rondas
+
+La pregunta 5 de Ex4 fija **cwnd=1 MSS**, **ssthresh=8 MSS**, tres ACK duplicados **al final de la ronda 4** y timeout **al final de la ronda 9**.
+
+**Rondas 1–4:** ambos algoritmos comienzan con **1, 2, 4, 8 MSS**. Al terminar ronda 4, el vuelo idealizado era 8; nuevo ssthresh = **8/2=4 MSS**.
+
+**Rondas 5–9:** Tahoe vuelve a 1 y sigue **1,2,4,5,6**. Reno queda en 4 tras fast recovery y sigue **4,5,6,7,8**.
+
+**Después de ronda 9:** el timeout hace que ambos vuelvan a 1. Tahoe tenía 6 MSS y fija nuevo umbral **3**; Reno tenía 8 y fija **4**. En rondas 10–12 Tahoe sigue **1,2,3** y Reno **1,2,4**.
+
+| Ronda | Tahoe cwnd | Reno cwnd | Qué ocurrió |
+|---:|---:|---:|---|
+| 1 | 1 | 1 | Inicio |
+| 2 | 2 | 2 | Slow start |
+| 3 | 4 | 4 | Slow start |
+| 4 | 8 | 8 | Tres duplicados al final |
+| 5 | 1 | 4 | Tahoe reinicia; Reno se recupera |
+| 6 | 2 | 5 | Diferente modo de crecimiento |
+| 7 | 4 | 6 | Tahoe alcanza su umbral |
+| 8 | 5 | 7 | Aumento aditivo |
+| 9 | 6 | 8 | Timeout al final |
+| 10 | 1 | 1 | Ambos reinician |
+| 11 | 2 | 2 | Slow start |
+| 12 | 3 | 4 | Llegan a sus nuevos umbrales |
+
+<Visualization viz={{
+type:'xy-chart',title:'Ex4: Tahoe y Reno, cada caída tiene una causa',
+steps:[
+{note:'Al principio ambos crecen igual: 1, 2, 4, 8. La primera pérdida sucede al final de ronda 4.',series:[{id:'t',label:'Tahoe',points:[[1,1],[2,2],[3,4],[4,8]],kind:'line'},{id:'r',label:'Reno',points:[[1,1],[2,2],[3,4],[4,8]],kind:'line',state:'active'}],x:{label:'Ronda RTT',min:1,max:12,ticks:[1,2,3,4,5,6,7,8,9,10,11,12]},y:{label:'cwnd MSS',min:0,max:9},vlines:[{at:4,label:'3 dup ACK'},{at:9,label:'timeout'}]},
+{note:'Tras tres duplicados, Tahoe reinicia en 1; Reno continúa desde el umbral 4 una vez completada la recuperación.',series:[{id:'t',label:'Tahoe',points:[[1,1],[2,2],[3,4],[4,8],[5,1],[6,2],[7,4],[8,5],[9,6]],kind:'line'},{id:'r',label:'Reno',points:[[1,1],[2,2],[3,4],[4,8],[5,4],[6,5],[7,6],[8,7],[9,8]],kind:'line',state:'active'}],x:{label:'Ronda RTT',min:1,max:12,ticks:[1,2,3,4,5,6,7,8,9,10,11,12]},y:{label:'cwnd MSS',min:0,max:9},vlines:[{at:4,label:'3 dup ACK'},{at:9,label:'timeout'}]},
+{note:'Después del timeout de la ronda 9 ambos vuelven a 1, pero sus nuevos umbrales son distintos.',series:[{id:'t',label:'Tahoe',points:[[1,1],[2,2],[3,4],[4,8],[5,1],[6,2],[7,4],[8,5],[9,6],[10,1],[11,2],[12,3]],kind:'line'},{id:'r',label:'Reno',points:[[1,1],[2,2],[3,4],[4,8],[5,4],[6,5],[7,6],[8,7],[9,8],[10,1],[11,2],[12,4]],kind:'line',state:'active'}],x:{label:'Ronda RTT',min:1,max:12,ticks:[1,2,3,4,5,6,7,8,9,10,11,12]},y:{label:'cwnd MSS',min:0,max:9},vlines:[{at:4,label:'3 dup ACK'},{at:9,label:'timeout'}]}
+]}} />
+
+La [lección de Tahoe/Reno](/topics/control-congestion-tcp-avanzado/subtopics/slow-start-aimd-tahoe-reno) desarrolla lentamente cada ronda, los ACK y la ventana transitoria de Reno.
+
+## 8. Otros enfoques: CUBIC, retardo y ECN
+
+Hasta ahora vimos aumentar la ventana hasta detectar una señal de pérdida. La clase también pregunta si podemos explorar mejor o recibir advertencias **antes** de perder datos.
+
+**CUBIC:** recuerda una ventana máxima anterior, **Wmax**, y modifica su crecimiento según la distancia temporal al momento **K** en que regresaría a ella. Se acerca **más cautelosamente** a ese máximo y explora de otra forma al alejarse. Las diapositivas explican la curva, pero no proporcionan todos los parámetros para una simulación numérica completa.
+
+**Control por retardo:** observa cuánto tardan en volver los ACK. Si el enlace ya está lleno, inyectar más datos puede llenar las **colas** y elevar RTT sin mejorar el throughput útil. Se compara la tasa observada con una referencia basada en el **RTT mínimo** de la conexión.
+
+**ECN:** un **router** puede marcar en **IP** una notificación de congestión llamada **CE**; el receptor la comunica mediante el indicador **ECE** de un **ACK TCP**. Así la red ayuda a avisar antes de depender exclusivamente de un descarte.
+
+Los tres enfoques hacen preguntas distintas: **cómo crezco**, **qué me indica la espera** y **si el router me puede avisar**. Ver [CUBIC, control por retardo y ECN](/topics/control-congestion-tcp-avanzado/subtopics/cubic-retardo-ecn).
+
+## 9. Equidad: usar toda la capacidad no implica repartirla bien
+
+Imagina dos conexiones compartiendo un enlace de **10 Mb/s**. Si una recibe **8** y otra **2**, están usando toda la capacidad. El resultado es **eficiente**, pero no igualitario. **5 y 5** también usa toda la capacidad y es equitativo entre esas dos conexiones.
+
+La slide 33 plantea como ideal que, si **K conexiones** comparten capacidad **R**, cada una obtenga en promedio cerca de **R/K**, bajo supuestos como RTT iguales y número fijo de sesiones.
+
+¿Por qué AIMD puede ayudar? **Sumar la misma cantidad** a dos flujos deja igual la diferencia de tasas; **dividir ambos por el mismo factor** reduce la diferencia en esa proporción. Con (8,2) la diferencia es 6; si ambos se dividen por dos, pasan a (4,1) y la diferencia baja a **3**. Repetir esas operaciones permite acercarse al reparto equilibrado en el modelo ideal.
+
+El modelo describe **equidad por conexión**, no necesariamente por usuario o aplicación. La [lección de equidad](/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad) desarrolla el ejemplo geométrico.
+
+## 10. ¿Qué deberías poder explicar después de leer esta página?
+
+- Si rwnd permite 10 MSS y cwnd solo 3, ¿cuántos puedes mantener pendientes? **Como máximo 3 MSS** en el modelo, no 10.
+- Si llega un ACK, ¿obligatoriamente aumenta cwnd? **No**: puede liberar espacio de la ventana que ya existía.
+- Si ssthresh vale 8, ¿la ventana nunca puede pasar de 8? **Sí puede**; es un umbral entre maneras de crecer.
+- Si ves tres ACK duplicados, ¿ha ocurrido necesariamente un timeout? **No**: permiten fast retransmit antes del temporizador.
+- Si Wireshark muestra Win=65535, ¿es cwnd? **No**: es la ventana de recepción, no el estado interno de congestión.
+
+## Para seguir aprendiendo
+
+- [Tahoe y Reno desde cero](/topics/control-congestion-tcp-avanzado/subtopics/slow-start-aimd-tahoe-reno).
+- [CUBIC, retardo y ECN explicados](/topics/control-congestion-tcp-avanzado/subtopics/cubic-retardo-ecn).
+- [Equidad con AIMD y AIAD](/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad).
+- [Ejercicios Ex4 de la semana 10](/evaluaciones/laboratorio/ejercicios-4-tcp).
+
+Fuentes: Sem9_NetT-TCP2, slides 23–35, y Sem10_Excercises4-TCP, pregunta 5. Los ejemplos de 1000 B, 50 ms y 10 Mb/s son didácticos.

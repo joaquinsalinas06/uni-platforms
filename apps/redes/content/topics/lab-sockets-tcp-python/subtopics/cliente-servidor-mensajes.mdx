@@ -5,17 +5,28 @@ order: 1
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. Dos programas que se hablan: qué hace cada uno
 
-Una conexión permite varios intercambios sin repetir el handshake. El límite de cada mensaje pertenece al protocolo de aplicación.
+En este laboratorio no estamos programando Internet entero. Vamos a crear **dos programas** que se comunican mediante TCP.
 
-## 2. Conceptos
+El **servidor** es el que prepara un puerto y espera. El **cliente** es el que conoce la dirección y el puerto del servidor y pide abrir la conexión. Un **puerto** es un número usado para identificar el servicio o proceso que recibirá la comunicación.
 
-En [tcp_lab.py](/labs/tcp/tcp_lab.py), `send_message` escribe longitud en formato de red y datos; `recv_exact` lee hasta completar el tamaño esperado. Se limita cada mensaje a 1 MiB y un mensaje vacío termina la sesión. Un EOF antes de completar el encabezado o cuerpo es error, no un mensaje correcto.
+El servidor usa **socket()** para crear su extremo, **bind()** para asociarlo a una dirección y puerto, **listen()** para quedar preparado, y **accept()** para recibir una conexión. El cliente utiliza **connect()**. El sistema operativo realiza los tres mensajes de apertura TCP —**SYN, SYN/ACK, ACK**— mientras esos programas cooperan; no los dibujamos ni los enviamos manualmente desde Python.
 
-`socket`, `bind` y `listen` preparan el servidor; `accept` devuelve un socket conectado. El `connect` del cliente inicia el handshake TCP con la pila del servidor que escucha. Python no construye a mano los SYN/ACK.
+## 2. La dificultad real: TCP no separa los mensajes por ti
 
-### Lectura completa y delimitación
+Supón que el cliente llama a send para transmitir «Hola» y después «Mundo». El receptor no tiene garantizado que su primera llamada a **recv()** entregue exactamente «Hola». TCP entrega una **secuencia ordenada de bytes**, y cada recv puede devolver menos datos de los pedidos o reunir bytes de varios envíos.
+
+Por eso el programa necesita una regla propia: **antes de cada mensaje, enviar cuatro bytes que indican su longitud**. Si el mensaje tiene 5 bytes, el receptor primero lee cuatro bytes, descubre el número 5 y después sigue leyendo hasta completar esos **cinco**. La función **recv_exact** repite recv hasta lograrlo. Si la conexión se cierra antes de tiempo, se informa que el mensaje está incompleto.
+
+**sendall()** intenta completar el envío de los bytes indicados o devuelve error. Tampoco significa «crea exactamente un segmento TCP». Los segmentos son una decisión del transporte, mientras que el tamaño del mensaje pertenece a nuestra aplicación.
+
+El servidor recibe cada mensaje, espera **dos segundos** y después envía el texto «ACK aplicacion». Ese texto **no es un ACK TCP**. Los ACK TCP los genera automáticamente la pila del sistema para confirmar bytes; por eso pueden verse en Wireshark antes de que el programa termine de esperar sus dos segundos.
+
+**¿Qué mide el cliente?** Inicia un cronómetro antes del mensaje y lo detiene tras la respuesta de aplicación: ese **RTT de aplicación** incluye la pausa artificial. Luego espera **un segundo** antes de enviar el siguiente mensaje. No debes sumar ese segundo al RTT de cada intercambio si el cronómetro comienza después de él.
+
+### El código importante, con la regla de longitud visible
+
 
 ```python
 def recv_exact(conn, count):
@@ -40,6 +51,7 @@ def receive_message(conn):
         raise ValueError('Longitud de mensaje mayor que 1 MiB')
     return recv_exact(conn, size)
 ```
+
 
 ## 3. Ejemplo resuelto
 

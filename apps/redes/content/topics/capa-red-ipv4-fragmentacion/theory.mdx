@@ -4,49 +4,133 @@ title: "Capa de Red: Datagramas IPv4 y Fragmentación"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. Imagina que un archivo debe cruzar varias redes
 
-La capa de transporte comunica procesos; la capa de red lleva sus segmentos entre hosts a través de routers. El emisor encapsula en datagramas y el receptor entrega la carga al protocolo de transporte.
+Envías un archivo desde tu laptop a un servidor de otra universidad. El archivo no viaja directamente por un cable que une ambas computadoras: atraviesa **varias redes** y equipos que conectan unas con otras.
 
----
+En TCP aprendimos que los datos pueden dividirse en **segmentos**. Pero TCP por sí solo no explica **por dónde deben viajar** esos segmentos. Aquí aparece la **capa de red**, que se encarga de transportar paquetes desde el host de origen hacia el host destino a través de routers.
 
-## 2. Conceptos
+Tres palabras te acompañarán durante la lectura:
 
-**Forwarding** decide la salida local de un paquete usando la cabecera y una tabla. **Routing** determina el camino de origen a destino. La analogía de las slides distingue atravesar un intercambio vial de planificar todo el viaje.
+- **Host:** el equipo de origen o destino que ejecuta una aplicación, como tu laptop o un servidor.
+- **Router:** el equipo que une redes y decide hacia qué salida enviar el paquete que acaba de recibir.
+- **Datagrama IP:** el paquete de capa de red. Contiene una **cabecera IP**, con información como las direcciones de origen y destino, y dentro lleva los datos entregados por la capa superior, por ejemplo un segmento TCP.
 
-La slide de sobrecarga usa 20 B IP y 20 B TCP: 40 B antes de contar aplicación. Es el caso sin opciones. Cada interfaz tiene una MTU: tamaño máximo del paquete IP transportable en ese enlace, sin sumar la cabecera Ethernet.
+La diapositiva 4 muestra **hosts y routers** con capa de red. Solo los extremos necesitan ejecutar la aplicación que originó el mensaje; un router puede decidir la siguiente salida leyendo la cabecera IP.
 
-Un datagrama IPv4 demasiado grande puede fragmentarse si se permite. Cada fragmento lleva cabecera IP, conserva el ID y usa offset y MF para ubicar sus datos. El reensamblado ocurre en el destino.
+## 2. Cómo se mete un segmento TCP dentro de IP
 
-<Visualization viz={{"type": "packet", "title": "Fragmentación de la slide: 4000 B, MTU 1500 B", "steps": [{"note": "Original: 20 B de cabecera y 3980 B de datos.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 0"}], [{"label": "longitud total", "bits": 32, "value": "4000 B"}]]}}, {"note": "Primer fragmento: 1480 B de datos; quedan más.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 0"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Segundo fragmento: empieza en 1480/8.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 185"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Último: 1020 B de datos; mismo ID.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 370"}], [{"label": "longitud total", "bits": 32, "value": "1040 B"}]]}}]}} />
+Vamos a seguir **un solo fragmento de información**. Una aplicación produce datos; TCP prepara su segmento y añade su cabecera; IPv4 toma **todo ese segmento** como carga y le pone otra cabecera delante. Este proceso se llama **encapsulación**: cada capa envuelve la unidad recibida de la capa superior.
 
----
+La diapositiva 5 usa el caso sencillo de **20 bytes para la cabecera TCP y otros 20 para IPv4**, sin opciones. Si la aplicación entrega 1000 B:
 
-## 3. Método paso a paso
+| Qué se añade | Cuenta de bytes | Resultado |
+|---|---|---:|
+| Datos de aplicación | 1000 | 1000 B |
+| Cabecera TCP básica | 1000 + 20 | 1020 B, segmento TCP |
+| Cabecera IPv4 básica | 1020 + 20 | **1040 B, datagrama IP** |
 
-1. Resta la cabecera IP a la longitud original para conocer los datos.
-2. Resta la cabecera a MTU; redondea hacia abajo a múltiplo de 8 para fragmentos no finales.
-3. Reparte datos y calcula offsets a partir de datos acumulados, divididos entre 8.
-4. Añade una cabecera a cada fragmento y marca MF=1 salvo el último.
+**¿Por qué importa?** Porque cuando calculas cuántos bytes caben en un enlace, no basta con contar solo el texto del archivo: también viajan cabeceras. Los 40 bytes son **un ejemplo sin opciones**, no un número fijo en cualquier captura. La capa de enlace puede añadir todavía más información alrededor del datagrama.
 
----
+## 3. Dos trabajos distintos del router: routing y forwarding
 
-## 4. Ejemplo resuelto
+En las slides 10–11 se distinguen dos tareas. Imagina un viaje en automóvil:
 
-La slide 8 usa longitud total 4000 B, cabecera de 20 B y MTU 1500 B: datos originales 3980 B. Se reparten $1480+1480+1020$. Longitudes totales: **1500, 1500 y 1040 B**; offsets **0, 185 y 370**. La suma de longitudes fragmentadas es 4040 B: hay dos cabeceras adicionales.
+**Routing** es planificar **la ruta general** hasta la ciudad de destino. En una red, consiste en determinar por dónde se debería llegar a otras redes.
 
----
+**Forwarding** es llegar a una intersección concreta y tomar **la salida correspondiente**. En un router, es mirar el destino de un datagrama recién recibido, consultar la tabla local y seleccionar la interfaz de salida.
 
-## 5. Errores típicos
+Para verlo con direcciones de la slide 21: un host **223.1.1.2** necesita enviar a **223.1.3.2**. En el ejercicio, las redes usan /24, que significa que los primeros 24 bits identifican cada red. La primera IP pertenece a **223.1.1.0/24** y la segunda a **223.1.3.0/24**. Como son subredes diferentes, el host se dirige primero a un router de su red.
 
-- Fragmentar 4000 B de datos cuando el enunciado da longitud total.
-- Medir el offset en bytes o incluir cabeceras en él.
-- Confundir segmentación TCP con fragmentación IP: TCP puede producir segmentos pequeños sin que IP fragmente.
+<Visualization viz={{
+type:'net-scene',title:'Un paquete cruza del host A al B por un router',
+steps:[
+{note:'Las direcciones 223.1.1.2 y 223.1.3.2 pertenecen a redes /24 distintas. El host A envía al router su primer salto.',devices:[{id:'a',kind:'host',label:'Host A',sub:'223.1.1.2',x:8,y:50},{id:'r',kind:'router',label:'Router',x:50,y:50},{id:'b',kind:'host',label:'Host B',sub:'223.1.3.2',x:92,y:50}],cables:[{from:'a',to:'r',label:'Red 223.1.1.0/24'},{from:'r',to:'b',label:'Red 223.1.3.0/24'}],packets:[{from:'a',to:'r',label:'Destino B',order:1,state:'active'}]},
+{note:'El router lee el destino IP, consulta su tabla y reenvía por la salida que conecta con la red de B.',devices:[{id:'a',kind:'host',label:'Host A',sub:'223.1.1.2',x:8,y:50},{id:'r',kind:'router',label:'Router',x:50,y:50},{id:'b',kind:'host',label:'Host B',sub:'223.1.3.2',x:92,y:50}],cables:[{from:'a',to:'r',label:'Red 223.1.1.0/24'},{from:'r',to:'b',label:'Red 223.1.3.0/24'}],packets:[{from:'a',to:'r',label:'Primer salto',order:1,state:'muted'},{from:'r',to:'b',label:'Hacia B',order:2,state:'answer'}]}
+]}} />
 
+El paquete **sigue teniendo como IP de destino la dirección de B**. Cambia la entrega por el enlace utilizado en cada salto. En el siguiente tema aprenderás a calcular formalmente qué redes representan esos prefijos /24.
 
-## Para profundizar
+## 4. El obstáculo de la MTU
 
-- [Forwarding, routing y encapsulación IP](/topics/capa-red-ipv4-fragmentacion/subtopics/forwarding-datagrama-ip)
-- [MTU, offsets y reensamblado](/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado)
+Ahora imagina que el datagrama necesita cruzar un enlace que **no admite paquetes tan grandes**. Cada enlace tiene una **MTU** (*Maximum Transmission Unit*), un límite de tamaño de la unidad que puede transportar. En el modelo de las diapositivas se utiliza la MTU como tamaño máximo del datagrama IP que puede pasar por ese enlace.
 
-Fuente: `Sem10_NetT-NetLayer_Addressing`, `Sem10_LAB3_TCP_P2 (1)-1`.
+Ejemplo: tenemos un datagrama IP de **4000 B**, pero el siguiente enlace admite una **MTU de 1500 B**. **4000 no cabe en 1500**. Si se permite, IPv4 puede dividir ese datagrama en paquetes más pequeños llamados **fragmentos**. Cada uno llevará su propia cabecera IP.
+
+La diapositiva 7 aclara que **el destino** reúne los fragmentos para reconstruir el datagrama original. No significa que cada router intermedio deba reconstruirlo antes de volver a enviarlo.
+
+## 5. Antes de calcular: tres campos de fragmentación
+
+Para entender el ejercicio de la slide 8 solo necesitas estas piezas de la cabecera IPv4:
+
+**Identification (ID).** Todos los fragmentos de ese datagrama original llevan el mismo identificador para que el destino pueda reconocer que pertenecen al mismo envío.
+
+**MF (More Fragments).** Es un indicador: **MF=1** quiere decir que después de este fragmento quedan más; **MF=0** indica que es el último de esa secuencia de fragmentos.
+
+**Fragment Offset.** Dice dónde van los datos de ese fragmento dentro de los datos originales. **No se mide en bytes, sino en grupos de ocho bytes**. Si antes de un fragmento había 1480 bytes de carga, su offset será **1480/8 = 185**.
+
+Una aclaración fundamental: el offset cuenta **solo bytes de datos IP**, no incluye las cabeceras de los fragmentos.
+
+## 6. Ejercicio de clase resuelto con calma: 4000 B, MTU 1500 B
+
+El enunciado presenta un datagrama de **4000 B de longitud total**. Esa palabra «total» importa: dentro de los 4000 ya están incluidos los **20 B de cabecera IPv4 básica**.
+
+**Paso 1.** Separar la cabecera: 4000 − 20 = **3980 B de datos** que hay que repartir entre los fragmentos.
+
+**Paso 2.** Calcular cuánto cabe en cada fragmento: 1500 B de MTU − 20 B de nueva cabecera = **1480 B de datos**. Este número es múltiplo de 8, así que sirve para fragmentos que no sean el último.
+
+**Paso 3.** Llenar el primero y segundo con 1480 B cada uno. Quedan **3980 − 1480 − 1480 = 1020 B** para el tercero.
+
+**Paso 4.** Hallar los offsets contando datos anteriores. Primer fragmento: 0. Segundo: 1480/8 = **185**. Tercero: (1480+1480)/8 = **370**.
+
+**Paso 5.** Añadir la cabecera y MF a cada uno:
+
+| Fragmento | Datos que lleva | Cabecera | Longitud total | Offset | MF |
+|---|---:|---:|---:|---:|---:|
+| 1 | 1480 B | 20 B | 1500 B | 0 | 1 |
+| 2 | 1480 B | 20 B | 1500 B | 185 | 1 |
+| 3 | 1020 B | 20 B | 1040 B | 370 | 0 |
+
+**Comprobación importante:** los datos recuperables suman 1480 + 1480 + 1020 = **3980 B**, exactamente los datos originales. Pero la suma de longitudes enviadas es 1500+1500+1040 = **4040 B**. ¿Por qué sobran 40? Porque antes había **una** cabecera de 20 B y ahora hay **tres**: dos cabeceras adicionales.
+
+<Visualization viz={{
+type:'packet',title:'Los campos IPv4 cambian al fragmentar el mismo datagrama',
+steps:[
+{note:'Datagrama original: 4000 B de longitud IP total, 3980 B de datos y una única cabecera de 20 B.',fields:{width:32,rows:[[{label:'ID',bits:16,value:'x'},{label:'MF / offset',bits:16,value:'0 / 0'}],[{label:'Longitud total IP',bits:32,value:'4000 B'}]]}},
+{note:'Primer fragmento: 1480 B de datos y 20 B de cabecera, offset 0, MF=1 porque faltan más.',fields:{width:32,rows:[[{label:'ID',bits:16,value:'x'},{label:'MF / offset',bits:16,value:'1 / 0'}],[{label:'Longitud total IP',bits:32,value:'1500 B'}]]}},
+{note:'Segundo fragmento: comienza tras 1480 B de datos; el offset es 185, no 1480.',fields:{width:32,rows:[[{label:'ID',bits:16,value:'x'},{label:'MF / offset',bits:16,value:'1 / 185'}],[{label:'Longitud total IP',bits:32,value:'1500 B'}]]}},
+{note:'Último fragmento: sus 1020 B comienzan tras 2960 B de datos; offset=370, MF=0.',fields:{width:32,rows:[[{label:'ID',bits:16,value:'x'},{label:'MF / offset',bits:16,value:'0 / 370'}],[{label:'Longitud total IP',bits:32,value:'1040 B'}]]}}
+]}} />
+
+## 7. Qué cambia si la MTU baja a 1000
+
+Con una MTU de **1000 B**, la carga máxima antes de redondear sería 1000 − 20 = **980 B**. El offset obliga a que la carga de **todos los fragmentos no finales** sea múltiplo de ocho; el mayor múltiplo de ocho que cabe es **976 B**, no 980.
+
+Cuatro fragmentos pueden llevar 976 B cada uno: 4×976 = **3904 B**. Quedan 3980 − 3904 = **76 B** para el último. Los offsets son 0, 122, 244, 366 y 488 porque cada bloque anterior de 976 B equivale a 122 unidades de ocho bytes. En total habrá **cinco fragmentos**, ninguno mayor a la MTU de 1000 B.
+
+No memorices «si la MTU es 1000, divide por 1000»: cada fragmento vuelve a necesitar cabecera IP y sus desplazamientos usan unidades especiales.
+
+## 8. Esto NO es lo mismo que segmentar TCP
+
+Un archivo grande puede convertirse en **muchos segmentos TCP** pequeños **sin ningún fragmento IP**. TCP normalmente intenta adaptar el tamaño de sus segmentos a lo que se puede transportar. En el laboratorio de semana 10 se pide bajar la MTU y mirar si cambia el **MSS anunciado en el handshake TCP**.
+
+Con cabeceras básicas de 20 B IPv4 y 20 B TCP, la relación ideal es:
+
+- Si la MTU es 1500 B, MSS base = 1500 − 20 − 20 = **1460 B**.
+- Si la MTU es 1000 B, MSS base = 1000 − 20 − 20 = **960 B**.
+
+En el laboratorio debes **observar el MSS real en el SYN** y contar los segmentos realmente capturados. Más segmentos TCP no significan por sí solos «fragmentación IPv4».
+
+## 9. Comprobación rápida para resolver otro ejercicio
+
+¿La longitud dada incluye cabecera IP? ¿Ya restaste esa cabecera una vez? ¿Cada nuevo fragmento recibe su propia cabecera? ¿Los fragmentos no finales llevan una carga múltiplo de ocho? ¿El offset se calculó desde **datos anteriores** y no desde longitudes totales? ¿MF es cero solamente en el último fragmento?
+
+Si puedes responder esas preguntas, tienes un método para resolver una MTU diferente sin copiar una tabla.
+
+## Para continuar
+
+- [Forwarding, routing y encapsulación IP](/topics/capa-red-ipv4-fragmentacion/subtopics/forwarding-datagrama-ip).
+- [MTU, offset y reensamblado: otros casos de fragmentación](/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado).
+- [Laboratorio TCP de semana 10: bajar la MTU y observar MSS](/evaluaciones/laboratorio/lab3-tcp-p2).
+
+Fuente: Sem10_NetT-NetLayer_Addressing, slides 4–11 y ejemplo oficial de la slide 8. El caso de MTU 1000 se desarrolla como variación didáctica.

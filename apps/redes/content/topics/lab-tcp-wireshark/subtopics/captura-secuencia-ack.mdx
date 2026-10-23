@@ -5,15 +5,30 @@ order: 1
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. Abre una captura y olvida las siglas durante un momento
 
-Un ACK acumulativo expresa el **siguiente byte esperado**. Un mismo ACK puede confirmar varios segmentos; por eso la comparación correcta es con el extremo del intervalo, no con el número de trama.
+Wireshark te muestra muchos paquetes con números, pero el problema de clase es muy concreto: **¿qué envió el cliente, qué recibió el servidor y cómo lo confirmó?**
 
-## 2. Conceptos
+Una **trama** es una unidad capturada en la interfaz de red. Dentro puede haber un **segmento TCP**, que transporta una porción de datos de la aplicación. El mismo archivo HTTP puede ocupar varios segmentos.
 
-En la captura oficial: SYN de trama 1 con `Seq=0`; SYN/ACK de trama 2 con `Seq=0 Ack=1`; ACK de trama 3 con `Seq=1 Ack=1`. El SYN consume un número de secuencia. La trama 4 comienza en 1 y lleva 1448 bytes; la 5 empieza en 1449.
+**Seq** significa *sequence number*, número de secuencia: identifica el **primer byte** de datos del segmento. **Len** es la cantidad de bytes de carga TCP. **Ack** significa confirmación: indica el **siguiente byte que el receptor espera en orden**.
 
-Para un segmento $[Seq,Seq+Len)$, un ACK posterior con $Ack\geq Seq+Len$ cubre todo su contenido. Si varios envíos quedaron sin reconocer, la diferencia temporal incluye la política de ACK acumulativo o diferido: no es necesariamente una muestra independiente por cada segmento. Tras retransmisión, la ambigüedad motiva [Karn](/topics/rtt-timeout-retransmision).
+Si un segmento tiene **Seq=1** y **Len=1448 B**, sus datos van desde el byte 1 hasta el 1448. Un posterior **Ack=1449** quiere decir «recibí hasta 1448», **no** «ya recibí el 1449».
+
+## 2. Seguir el primer mensaje de la captura oficial
+
+Antes de los datos, TCP abre la conexión con tres mensajes llamados **handshake**: **SYN → SYN/ACK → ACK**. Las tramas oficiales **1, 2 y 3** muestran ese intercambio. El SYN consume un número de secuencia, razón por la que la primera carga del cliente empieza en **Seq relativo=1**.
+
+En la **trama 4** el cliente manda el comienzo del HTTP POST con **Seq=1 y Len=1448**. La **trama 7** del servidor anuncia **Ack=1449**. Esa es la confirmación esperada.
+
+La siguiente carga de 1448 B empieza en **Seq=1449** y el ACK posterior avanza a **2897**. No es necesario memorizar 2897: **1449+1448=2897**.
+
+A partir de aquí, cuando un ACK salta varios bloques, recuerda que TCP confirma **acumulativamente**: un solo Ack puede confirmar varios segmentos consecutivos. La tabla del laboratorio utiliza esa propiedad para emparejar datos y confirmaciones.
+
+
+
+
+---
 
 ## 3. Ejemplo resuelto
 
