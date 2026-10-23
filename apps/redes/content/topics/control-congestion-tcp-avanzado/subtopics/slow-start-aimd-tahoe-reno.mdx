@@ -36,18 +36,18 @@ La tabla anterior fija la **ventana al inicio de cada ronda RTT**, no un registr
 
 Para separar tres restricciones se necesitan estas variables:
 
-- \(LastByteSent\): número del último byte emitido.
-- \(LastByteAcked\): número del último byte acumulativamente confirmado.
-- \(FlightSize=LastByteSent-LastByteAcked\): bytes emitidos y todavía no confirmados.
-- \(rwnd\): ventana anunciada por el receptor en bytes, dependiente del buffer disponible.
-- \(cwnd\): ventana de congestión mantenida por el emisor, en bytes; cuando la dividimos por MSS obtenemos unidades de segmentos de tamaño máximo.
-- \(ssthresh\): umbral entre crecimiento rápido y aumento cauteloso. **No** es un límite físico del enlace ni un límite máximo de cwnd.
+- $LastByteSent$: número del último byte emitido.
+- $LastByteAcked$: número del último byte acumulativamente confirmado.
+- $FlightSize=LastByteSent-LastByteAcked$: bytes emitidos y todavía no confirmados.
+- $rwnd$: ventana anunciada por el receptor en bytes, dependiente del buffer disponible.
+- $cwnd$: ventana de congestión mantenida por el emisor, en bytes; cuando la dividimos por MSS obtenemos unidades de segmentos de tamaño máximo.
+- $ssthresh$: umbral entre crecimiento rápido y aumento cauteloso. **No** es un límite físico del enlace ni un límite máximo de cwnd.
 
-La restricción aproximada de envío es \(FlightSize\leq \min(rwnd,cwnd)\). Si el receptor anuncia 20 MSS, la red permite 6 MSS y ya hay 4 MSS en vuelo, solo podrían colocarse **2 MSS adicionales** antes de recibir un ACK. La tasa de envío sostenible puede aproximarse por \(cwnd/RTT\) cuando la conexión está siempre alimentada, el receptor no limita y no intervienen pausas o pérdidas; no equivale al throughput útil bajo cualquier condición.
+La restricción aproximada de envío es $FlightSize\leq \min(rwnd,cwnd)$. Si el receptor anuncia 20 MSS, la red permite 6 MSS y ya hay 4 MSS en vuelo, solo podrían colocarse **2 MSS adicionales** antes de recibir un ACK. La tasa de envío sostenible puede aproximarse por $cwnd/RTT$ cuando la conexión está siempre alimentada, el receptor no limita y no intervienen pausas o pérdidas; no equivale al throughput útil bajo cualquier condición.
 
 ### Rondas 1–4: por qué la ventana crece 1, 2, 4 y 8
 
-Con \(cwnd_1=1\) MSS y \(ssthresh=8\) MSS, se está en **slow start** mientras \(cwnd<ssthresh\). Cada ACK de datos nuevos incrementa aproximadamente un MSS por RTT acumulado, lo que duplica la ventana en la idealización por rondas: \(1\to2\to4\to8\). Alcanzar el umbral conduce a **congestion avoidance**. En esta fase, el crecimiento agregado es aproximadamente \(+1\) MSS por RTT, no \(+1\) MSS **por cada ACK**.
+Con $cwnd_1=1$ MSS y $ssthresh=8$ MSS, se está en **slow start** mientras $cwnd<ssthresh$. Cada ACK de datos nuevos incrementa aproximadamente un MSS por RTT acumulado, lo que duplica la ventana en la idealización por rondas: $1\to2\to4\to8$. Alcanzar el umbral conduce a **congestion avoidance**. En esta fase, el crecimiento agregado es aproximadamente $+1$ MSS por RTT, no $+1$ MSS **por cada ACK**.
 
 Las diapositivas expresan el incremento aditivo y la reducción multiplicativa como un patrón de sierra. La magnitud exacta de cada incremento a nivel de ACK depende de la implementación y del tamaño de los bytes reconocidos; la tabla sigue el modelo discreto exigido por Ex4.
 
@@ -55,25 +55,25 @@ Las diapositivas expresan el incremento aditivo y la reducción multiplicativa c
 
 Una pérdida de datos puede generar ACK duplicados porque el receptor sigue recibiendo segmentos **posteriores al hueco**. El ACK acumulativo no avanza, por lo que se repite el número del primer byte que falta. Con tres duplicados, el emisor tiene evidencia de que otros segmentos atravesaron la red: no necesita esperar al temporizador para **fast retransmit**.
 
-Con ventana completa de \(8\) MSS justo antes del evento, el umbral se obtiene como \(ssthresh\gets8/2=4\) MSS. Tahoe retransmite el segmento faltante, fija \(cwnd=1\) MSS y retorna a slow start. Reno clásico retransmite, fija temporalmente \(cwnd=ssthresh+3=7\) MSS porque los tres ACK duplicados representan datos que han abandonado la red; un ACK duplicado adicional puede incrementar en un MSS esa inflación. Cuando llega un ACK que cubre la retransmisión, Reno **desinfla** la ventana a \(ssthresh=4\) MSS y continúa en congestion avoidance. Por eso la ronda 5 muestra 1 para Tahoe y 4 para Reno, no 7.
+Con ventana completa de $8$ MSS justo antes del evento, el umbral se obtiene como $ssthresh\gets8/2=4$ MSS. Tahoe retransmite el segmento faltante, fija $cwnd=1$ MSS y retorna a slow start. Reno clásico retransmite, fija temporalmente $cwnd=ssthresh+3=7$ MSS porque los tres ACK duplicados representan datos que han abandonado la red; un ACK duplicado adicional puede incrementar en un MSS esa inflación. Cuando llega un ACK que cubre la retransmisión, Reno **desinfla** la ventana a $ssthresh=4$ MSS y continúa en congestion avoidance. Por eso la ronda 5 muestra 1 para Tahoe y 4 para Reno, no 7.
 
-No hay contradicción entre la ventana transitoria 7 MSS y la ventana estable 4 MSS: corresponden a **instantes distintos**. Tampoco se debe deducir \(ssthresh\) del valor antiguo del umbral (8): en este ejercicio resulta 4 porque se parte de un vuelo lleno de 8 MSS.
+No hay contradicción entre la ventana transitoria 7 MSS y la ventana estable 4 MSS: corresponden a **instantes distintos**. Tampoco se debe deducir $ssthresh$ del valor antiguo del umbral (8): en este ejercicio resulta 4 porque se parte de un vuelo lleno de 8 MSS.
 
 ### Rondas 5–9: dos trayectorias que se vuelven a comparar
 
-Tahoe: ronda 5 \(1\), ronda 6 \(2\), ronda 7 \(4\). Desde el umbral igual a 4, aplica crecimiento aditivo: ronda 8 \(5\), ronda 9 \(6\).
+Tahoe: ronda 5 $1$, ronda 6 $2$, ronda 7 $4$. Desde el umbral igual a 4, aplica crecimiento aditivo: ronda 8 $5$, ronda 9 $6$.
 
-Reno: tras recuperación comienza ronda 5 con 4; al estar ya en el umbral, añade aproximadamente un MSS por RTT: rondas 6, 7, 8, 9 con \(5,6,7,8\), respectivamente. Por eso **no** se puede copiar la trayectoria Tahoe después del triple duplicado.
+Reno: tras recuperación comienza ronda 5 con 4; al estar ya en el umbral, añade aproximadamente un MSS por RTT: rondas 6, 7, 8, 9 con $5,6,7,8$, respectivamente. Por eso **no** se puede copiar la trayectoria Tahoe después del triple duplicado.
 
 ### Final de ronda 9 y rondas 10–12
 
-El **timeout** es una señal más severa: no se recibió progreso suficiente antes del límite temporal. En el modelo de Ex4, ambos reinician \(cwnd\) a 1 MSS para slow start. Pero calculan umbrales distintos a partir del vuelo previo: Tahoe \(ssthresh=6/2=3\) MSS y Reno \(ssthresh=8/2=4\) MSS. Para Tahoe se obtienen las rondas 10–12 \(1,2,3\); para Reno \(1,2,4\). Que Tahoe alcance 3 y cambie de régimen a partir de allí no implica que su ventana no pueda seguir aumentando en rondas futuras.
+El **timeout** es una señal más severa: no se recibió progreso suficiente antes del límite temporal. En el modelo de Ex4, ambos reinician $cwnd$ a 1 MSS para slow start. Pero calculan umbrales distintos a partir del vuelo previo: Tahoe $ssthresh=6/2=3$ MSS y Reno $ssthresh=8/2=4$ MSS. Para Tahoe se obtienen las rondas 10–12 $1,2,3$; para Reno $1,2,4$. Que Tahoe alcance 3 y cambie de régimen a partir de allí no implica que su ventana no pueda seguir aumentando en rondas futuras.
 
 **Comprobación de las doce filas:** el valor del umbral solo cambia inmediatamente después de las rondas 4 y 9; no se recalcula cada RTT. Las bajadas de cwnd comienzan en las rondas 5 y 10 porque los eventos se modelan **al final** de la ronda anterior.
 
 ### ¿Y si la pérdida no ocurre con ventana llena?
 
-El enunciado simplifica la reducción como mitad de cwnd al final de la ronda. En una implementación real interesa también la cantidad de datos efectivamente en vuelo. Si \(rwnd\) restringe el envío, podría haber solo 3 MSS en vuelo aunque cwnd marque 8 MSS. La tabla presentada **presupone** un emisor siempre con datos, vuelo lleno y ACK de recuperación antes de la siguiente ronda; sin esas hipótesis no sería válido afirmar exactamente las mismas secuencias por RTT.
+El enunciado simplifica la reducción como mitad de cwnd al final de la ronda. En una implementación real interesa también la cantidad de datos efectivamente en vuelo. Si $rwnd$ restringe el envío, podría haber solo 3 MSS en vuelo aunque cwnd marque 8 MSS. La tabla presentada **presupone** un emisor siempre con datos, vuelo lleno y ACK de recuperación antes de la siguiente ronda; sin esas hipótesis no sería válido afirmar exactamente las mismas secuencias por RTT.
 
 ### Errores de examen que cambian la respuesta
 
