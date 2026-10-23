@@ -5,11 +5,17 @@ order: 1
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. Idea: ¿por qué TCP necesita cambiar su ritmo de envío?
 
-Slow start acelera la búsqueda inicial; congestion avoidance explora con mayor cautela. Ex4 pide dibujar la reacción a dos señales de pérdida distintas.
+Imagina una transferencia grande: el receptor tiene memoria disponible, pero entre ambos equipos un router comparte un enlace con otras conexiones. Si tu emisor coloca demasiados datos en la red, la cola de ese router crece y los paquetes pueden perderse. **rwnd protege el buffer del receptor; cwnd intenta proteger la red.** Una rwnd grande no significa que puedas enviar sin límite.
 
-## 2. Conceptos
+El algoritmo debe resolver dos decisiones distintas: **cómo explorar gradualmente la capacidad** mientras recibe ACK y **cuánto retroceder** cuando aparece una señal de pérdida. En la semana 9 se estudia AIMD: primero aumenta la tasa; luego la reduce por multiplicación. En Ex4, pregunta 5, se pide aplicar esta idea durante doce rondas a Tahoe y Reno. La meta no es memorizar una gráfica, sino reconstruir cada cambio a partir de su causa.
+
+**Ruta de lectura:** primero identifica las variables; luego recorre las rondas 1–4, el triple duplicado, las rondas 5–9 y el timeout. Solo después compara tu razonamiento con la gráfica y la tabla del ejercicio.
+
+---
+
+## 2. Mecanismo: qué significa cada estado
 
 | Evento | Tahoe | Reno |
 |---|---|---|
@@ -18,19 +24,13 @@ Slow start acelera la búsqueda inicial; congestion avoidance explora con mayor 
 | Tres ACK duplicados | Umbral a mitad, cwnd=1 MSS | Fast retransmit; recuperada la pérdida, cwnd=ssthresh |
 | Timeout | Umbral a mitad, cwnd=1 MSS | Umbral a mitad, cwnd=1 MSS |
 
+**Antes de usar la tabla**, recuerda que el crecimiento se interpreta por RTT, pero los ACK son eventos del flujo de bytes. En slow start se aproxima a duplicar cwnd por RTT; al alcanzar ssthresh se aproxima a aumentar 1 MSS por RTT. Los ACK duplicados no reconocen nuevos bytes; revelan que llegaron datos posteriores al hueco. Un timeout indica que no se logró progreso suficiente a tiempo.
+
 En Reno clásico, al entrar a fast recovery la ventana se infla temporalmente a $ssthresh+3$ MSS. Cada duplicado adicional permite ajustar esa inflación. Al llegar un ACK que cubre la recuperación, se desinfla al umbral. La gráfica por rondas muestra este último estado; no omite el transitorio al explicar el mecanismo.
 
-## 3. Ejemplo resuelto
+## 3. Reconstrucción paso a paso: qué sucede en el emisor y por qué
 
-<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
-
-Eventos al final de rondas 4 y 9. En Tahoe la ronda 9 comienza con 6 MSS: su nuevo umbral es 3. En Reno comienza con 8 MSS: su nuevo umbral es 4. Desde ronda 10 ambos reinician en 1, pero alcanzan umbrales distintos. [Tabla de doce rondas](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-5-tahoe-y-reno).
-
-<Visualization viz={{"type": "window", "static": true, "title": "Después de recuperar la pérdida de ronda 4", "steps": [{"note": "Cada celda representa un bloque de un MSS, no números de byte de una captura. En la ronda 5 Tahoe permite 1 MSS y Reno 4 MSS tras salir de fast recovery.", "windows": [{"role": "sender", "label": "Tahoe: cwnd=1 MSS", "base": 0, "size": 1, "cells": [{"n": 0, "state": "usable"}, {"n": 1, "state": "unusable"}, {"n": 2, "state": "unusable"}, {"n": 3, "state": "unusable"}, {"n": 4, "state": "unusable"}, {"n": 5, "state": "unusable"}, {"n": 6, "state": "unusable"}, {"n": 7, "state": "unusable"}]}, {"role": "sender", "label": "Reno: cwnd=4 MSS", "base": 0, "size": 4, "cells": [{"n": 0, "state": "usable"}, {"n": 1, "state": "usable"}, {"n": 2, "state": "usable"}, {"n": 3, "state": "usable"}, {"n": 4, "state": "unusable"}, {"n": 5, "state": "unusable"}, {"n": 6, "state": "unusable"}, {"n": 7, "state": "unusable"}]}]}]}} />
-
-## 4. Reconstrucción de la dinámica: qué sucede entre rondas
-
-La tabla anterior fija la **ventana al inicio de cada ronda RTT**, no un registro de cada ACK. Esa convención es imprescindible: el enunciado ubica eventos en las rondas 4 y 9, pero no especifica el instante exacto del tercer duplicado ni cuánto dura la recuperación. La gráfica representa el estado **una vez reconocido el segmento retransmitido**; la evolución transitoria de Reno ocurre entre la ronda 4 y el inicio de la 5.
+El ejercicio de doce rondas fija la **ventana al inicio de cada ronda RTT**, no un registro de cada ACK. Esa convención es imprescindible: el enunciado ubica eventos en las rondas 4 y 9, pero no especifica el instante exacto del tercer duplicado ni cuánto dura la recuperación. En la gráfica final se representa el estado **una vez reconocido el segmento retransmitido**; la evolución transitoria de Reno ocurre entre la ronda 4 y el inicio de la 5.
 
 ### Bytes en vuelo, límites de envío y umbral
 
@@ -75,15 +75,17 @@ El **timeout** es una señal más severa: no se recibió progreso suficiente ant
 
 El enunciado simplifica la reducción como mitad de cwnd al final de la ronda. En una implementación real interesa también la cantidad de datos efectivamente en vuelo. Si $rwnd$ restringe el envío, podría haber solo 3 MSS en vuelo aunque cwnd marque 8 MSS. La tabla presentada **presupone** un emisor siempre con datos, vuelo lleno y ACK de recuperación antes de la siguiente ronda; sin esas hipótesis no sería válido afirmar exactamente las mismas secuencias por RTT.
 
-### Errores de examen que cambian la respuesta
+---
 
-1. **Dibujar 7 MSS en toda la ronda 5 de Reno.** Ese número es la inflación transitoria durante fast recovery, no la ventana posterior al ACK de recuperación.
-2. **Interpretar ssthresh como tope de cwnd.** La ventana sigue creciendo linealmente por encima de ese umbral.
-3. **Restablecer ssthresh a 8 después del timeout.** Los nuevos umbrales son 3 y 4 según la ventana inmediatamente anterior, no el valor inicial.
-4. **Usar un ACK duplicado como reconocimiento de datos nuevos.** No avanza el límite inferior del flujo; su información relevante es la persistencia del hueco.
-5. **Confundir eventos con rondas completas.** Se debe declarar siempre si los valores representan el comienzo, el final o el interior de un RTT.
+## 4. Aplicación: gráfica, ventanas y comprobación
 
-## 5. Errores típicos
+<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
+
+**Lectura después de derivar las rondas.** Los eventos ocurren al final de rondas 4 y 9. En Tahoe la ronda 9 comienza con 6 MSS: su nuevo umbral es 3. En Reno comienza con 8 MSS: su nuevo umbral es 4. Desde ronda 10 ambos reinician en 1, pero alcanzan umbrales distintos. [Tabla de doce rondas](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-5-tahoe-y-reno).
+
+<Visualization viz={{"type": "window", "static": true, "title": "Después de recuperar la pérdida de ronda 4", "steps": [{"note": "Cada celda representa un bloque de un MSS, no números de byte de una captura. En la ronda 5 Tahoe permite 1 MSS y Reno 4 MSS tras salir de fast recovery.", "windows": [{"role": "sender", "label": "Tahoe: cwnd=1 MSS", "base": 0, "size": 1, "cells": [{"n": 0, "state": "usable"}, {"n": 1, "state": "unusable"}, {"n": 2, "state": "unusable"}, {"n": 3, "state": "unusable"}, {"n": 4, "state": "unusable"}, {"n": 5, "state": "unusable"}, {"n": 6, "state": "unusable"}, {"n": 7, "state": "unusable"}]}, {"role": "sender", "label": "Reno: cwnd=4 MSS", "base": 0, "size": 4, "cells": [{"n": 0, "state": "usable"}, {"n": 1, "state": "usable"}, {"n": 2, "state": "usable"}, {"n": 3, "state": "usable"}, {"n": 4, "state": "unusable"}, {"n": 5, "state": "unusable"}, {"n": 6, "state": "unusable"}, {"n": 7, "state": "unusable"}]}]}]}} />
+
+## 5. Errores típicos y cómo comprobar tu respuesta
 
 - Reducir cwnd en la fila anterior al evento.
 - Dividir el umbral anterior en lugar del vuelo actual.
