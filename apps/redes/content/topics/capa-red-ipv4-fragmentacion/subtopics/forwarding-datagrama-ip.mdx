@@ -20,11 +20,7 @@ Los hosts y routers tienen capa de red. Los routers inspeccionan cabeceras y tra
 
 Una dirección IPv4 de 32 bits identifica una **interfaz**. El router de la figura tiene varias, cada una conectada a una subred diferente. Un host también puede tener Wi-Fi y Ethernet con direcciones distintas.
 
-## 3. Ejemplo resuelto
-
-Un dato de aplicación con TCP/IP sin opciones incorpora 20 B TCP y 20 B IPv4. No puede suponerse que todos los paquetes tengan exactamente esa sobrecarga: las opciones TCP de un SYN o de un segmento con timestamps pueden cambiarla. En LAB3 hay que leer los tamaños de cabecera en la captura antes de comparar MSS y MTU.
-
-## 4. Del segmento TCP al datagrama y de una interfaz a otra
+## 3. Del segmento TCP al datagrama y de una interfaz a otra
 
 La capa de transporte entrega un **segmento**; la capa de red lo encapsula como **carga de un datagrama IPv4**. En un router, se examina la cabecera IP para decidir la siguiente salida y se reencapsula para el **enlace de salida**. La aplicación original no necesita ejecutarse dentro de cada router. En el destino, la capa de red identifica qué protocolo de transporte recibirá los datos.
 
@@ -84,7 +80,7 @@ En un enlace con MTU inferior al tamaño de un datagrama y DF=0, IPv4 puede requ
 
 **Errores de examen:** calcular red de origen y destino con máscaras diferentes sin indicarlo; concluir que dos IP similares siempre comparten enlace sin conocer sus prefijos; confundir la cabecera IP de 20 B con 20 B de payload; tratar routing y forwarding como el mismo cálculo; o dibujar una sola interfaz para un router que une tres subredes.
 
-## 5. Errores típicos
+## 4. Errores típicos
 
 - Contar 40 B como carga de aplicación.
 - Llamar routing a cada decisión de salida, sin distinguir la tabla local del cálculo del camino.
