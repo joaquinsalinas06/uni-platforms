@@ -25,27 +25,27 @@ El reparto $R/K$ es **por conexión**. Si existen nueve conexiones y una aplicac
 
 ## 4. Demostración geométrica de convergencia
 
-Ex4 pregunta 1 pide justificar **por qué** el algoritmo converge hacia una distribución justa desde un punto arbitrario \(P_0=(x_1,x_2)\), no solamente dibujar líneas. Para interpretar la figura de Chiu–Jain usa estos dos lugares geométricos:
+Ex4 pregunta 1 pide justificar **por qué** el algoritmo converge hacia una distribución justa desde un punto arbitrario $P_0=(x_1,x_2)$, no solamente dibujar líneas. Para interpretar la figura de Chiu–Jain usa estos dos lugares geométricos:
 
 | Condición | Ecuación | Interpretación |
 |---|---|---|
-| Frontera de eficiencia | \(x_1+x_2=C\) | Los dos flujos juntos llenan la capacidad del enlace |
-| Recta de equidad | \(x_1=x_2\) | Reciben exactamente el mismo caudal |
-| Intersección | \((C/2,C/2)\) | Reparto simultáneamente eficiente y equitativo |
+| Frontera de eficiencia | $x_1+x_2=C$ | Los dos flujos juntos llenan la capacidad del enlace |
+| Recta de equidad | $x_1=x_2$ | Reciben exactamente el mismo caudal |
+| Intersección | $(C/2,C/2)$ | Reparto simultáneamente eficiente y equitativo |
 
-**Aumento aditivo (AI):** si cada conexión incrementa \(a>0\), el punto se desplaza \((x_1,x_2)\rightarrow(x_1+a,x_2+a)\). El vector de movimiento es \((a,a)\), paralelo a la línea \(x_1=x_2\). Por tanto, el aumento aditivo **no reduce directamente** la diferencia: \((x_2+a)-(x_1+a)=x_2-x_1\). Acerca a la capacidad, pero por sí solo no corrige una distribución injusta.
+**Aumento aditivo (AI):** si cada conexión incrementa $a>0$, el punto se desplaza $(x_1,x_2)\rightarrow(x_1+a,x_2+a)$. El vector de movimiento es $(a,a)$, paralelo a la línea $x_1=x_2$. Por tanto, el aumento aditivo **no reduce directamente** la diferencia: $(x_2+a)-(x_1+a)=x_2-x_1$. Acerca a la capacidad, pero por sí solo no corrige una distribución injusta.
 
-**Reducción multiplicativa (MD):** cuando los flujos detectan congestión, \((x_1,x_2)\rightarrow(\beta x_1,\beta x_2)\) con \(0<\beta<1\). En TCP Reno clásico se idealiza \(\beta=1/2\). Es una contracción hacia el origen, no un desplazamiento paralelo a la frontera de eficiencia. La diferencia después de una reducción es \(\delta'=\beta x_2-\beta x_1=\beta\delta\), donde \(\delta=x_2-x_1\).
+**Reducción multiplicativa (MD):** cuando los flujos detectan congestión, $(x_1,x_2)\rightarrow(\beta x_1,\beta x_2)$ con $0<\beta<1$. En TCP Reno clásico se idealiza $\beta=1/2$. Es una contracción hacia el origen, no un desplazamiento paralelo a la frontera de eficiencia. La diferencia después de una reducción es $\delta'=\beta x_2-\beta x_1=\beta\delta$, donde $\delta=x_2-x_1$.
 
-Si después de cada aumento se produce una reducción común, entonces \(\delta_n=\beta^n\delta_0\). Como \(0<\beta<1\), se tiene \(\lim_{n\to\infty}\delta_n=0\). Esta es una demostración de **acercamiento a la línea de equidad**, no de que ambas velocidades se queden fijas exactamente en \(C/2\): las ventanas siguen oscilando entre incrementos y pérdidas.
+Si después de cada aumento se produce una reducción común, entonces $\delta_n=\beta^n\delta_0$. Como $0<\beta<1$, se tiene $\lim_{n\to\infty}\delta_n=0$. Esta es una demostración de **acercamiento a la línea de equidad**, no de que ambas velocidades se queden fijas exactamente en $C/2$: las ventanas siguen oscilando entre incrementos y pérdidas.
 
 ### Ejemplo numérico completo con la figura de Ex4
 
-Se elige, como ejemplo **derivado**, \(C=10\) Mb/s, \(P_0=(2,6)\) Mb/s, \(a=0.5\) Mb/s por paso de aumento y \(\beta=1/2\). La capacidad inicial ocupada es \(2+6=8<10\) Mb/s y la desventaja del flujo 1 es de 4 Mb/s.
+Se elige, como ejemplo **derivado**, $C=10$ Mb/s, $P_0=(2,6)$ Mb/s, $a=0.5$ Mb/s por paso de aumento y $\beta=1/2$. La capacidad inicial ocupada es $2+6=8<10$ Mb/s y la desventaja del flujo 1 es de 4 Mb/s.
 
-| Etapa | \(x_1\) (Mb/s) | \(x_2\) (Mb/s) | Suma (Mb/s) | Diferencia \(x_2-x_1\) (Mb/s) | Motivo |
+| Etapa | $x_1$ (Mb/s) | $x_2$ (Mb/s) | Suma (Mb/s) | Diferencia $x_2-x_1$ (Mb/s) | Motivo |
 |---|---:|---:|---:|---:|---|
-| \(P_0\) | 2 | 6 | 8 | 4 | Debajo de capacidad |
+| $P_0$ | 2 | 6 | 8 | 4 | Debajo de capacidad |
 | AI hasta capacidad | 3 | 7 | 10 | 4 | Dos aumentos de 0.5 por flujo |
 | Primera MD | 1.5 | 3.5 | 5 | 2 | Ambos multiplican por 0.5 |
 | AI hasta capacidad | 4 | 6 | 10 | 2 | Cinco aumentos de 0.5 |
@@ -58,15 +58,15 @@ Se elige, como ejemplo **derivado**, \(C=10\) Mb/s, \(P_0=(2,6)\) Mb/s, \(a=0.5\
 
 ### Inciso 1.b: por qué AIAD no tiene la misma garantía
 
-Si al detectar pérdida se resta una constante \(b>0\) a cada flujo, se obtiene \((x_1-b,x_2-b)\), siempre que ninguno quede bajo cero. La diferencia nueva es \((x_2-b)-(x_1-b)=x_2-x_1\). Como la suma aditiva también preserva esa diferencia, una secuencia de aumentos y disminuciones comunes recorre rectas **paralelas** a la equidad y no se acerca necesariamente a ella. Un contraejemplo basta: \((3,7)\rightarrow(2,6)\rightarrow(3,7)\) conserva una desigualdad de 4 Mb/s. No hay una fuerza geométrica que la reduzca.
+Si al detectar pérdida se resta una constante $b>0$ a cada flujo, se obtiene $(x_1-b,x_2-b)$, siempre que ninguno quede bajo cero. La diferencia nueva es $(x_2-b)-(x_1-b)=x_2-x_1$. Como la suma aditiva también preserva esa diferencia, una secuencia de aumentos y disminuciones comunes recorre rectas **paralelas** a la equidad y no se acerca necesariamente a ella. Un contraejemplo basta: $(3,7)\rightarrow(2,6)\rightarrow(3,7)$ conserva una desigualdad de 4 Mb/s. No hay una fuerza geométrica que la reduzca.
 
-La conclusión depende de los supuestos. Las diapositivas consideran flujos con **RTT iguales, número fijo de conexiones, fase de congestion avoidance y reacción comparable a la congestión**. Si un flujo aumenta más veces por unidad de tiempo, si se encuentra limitado por rwnd, si un flujo entra/sale continuamente o si las pérdidas son asimétricas, la derivación \(\delta_n=\beta^n\delta_0\) no prueba equidad de ese sistema real. Además, los navegadores pueden abrir conexiones paralelas: la equidad por **conexión** no implica equidad por **aplicación**.
+La conclusión depende de los supuestos. Las diapositivas consideran flujos con **RTT iguales, número fijo de conexiones, fase de congestion avoidance y reacción comparable a la congestión**. Si un flujo aumenta más veces por unidad de tiempo, si se encuentra limitado por rwnd, si un flujo entra/sale continuamente o si las pérdidas son asimétricas, la derivación $\delta_n=\beta^n\delta_0$ no prueba equidad de ese sistema real. Además, los navegadores pueden abrir conexiones paralelas: la equidad por **conexión** no implica equidad por **aplicación**.
 
 ### Técnica rápida para un examen con otros valores
 
-1. Identifica \(C\), el punto inicial \(P_0\), el aumento \(a\) y el factor de reducción \(\beta\).
-2. Mientras \(x_1+x_2<C\), aplica aumentos \((+a,+a)\) hasta la frontera; si usas el modelo continuo, el aumento adicional por flujo que falta es \([C-(x_1+x_2)]/2\).
-3. Aplica la disminución \(\beta(x_1,x_2)\) y anota la nueva diferencia.
+1. Identifica $C$, el punto inicial $P_0$, el aumento $a$ y el factor de reducción $\beta$.
+2. Mientras $x_1+x_2<C$, aplica aumentos $(+a,+a)$ hasta la frontera; si usas el modelo continuo, el aumento adicional por flujo que falta es $[C-(x_1+x_2)]/2$.
+3. Aplica la disminución $\beta(x_1,x_2)$ y anota la nueva diferencia.
 4. Repite hasta observar la progresión geométrica de la diferencia; señala en cada vuelta dónde se cumple eficiencia.
 5. Para AIAD, calcula la diferencia antes y después de sumar o restar la misma constante y da un contraejemplo si se pide negar convergencia garantizada.
 
