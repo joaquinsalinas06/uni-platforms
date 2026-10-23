@@ -21,13 +21,7 @@ Fragmentar conserva los datos originales, pero repite cabeceras y requiere recon
 
 El offset del tercero es $(1480+1480)/8=370$. MF=0 solo dice que no quedan fragmentos posteriores; no significa que los anteriores ya llegaron.
 
-## 3. Ejemplo resuelto
-
-En el experimento de LAB3 P2, MTU=1000 y cabeceras base de 20 B IPv4 y 20 B TCP dan MSS anunciada de 960 B, frente a 1460 B con MTU=1500. Se debe iniciar una **conexión nueva** y leer su SYN; la MSS observada también depende del camino y las opciones. Con opciones, la carga efectiva puede ser menor.
-
-Si un datagrama con DF=1 supera una MTU posterior, el router no puede fragmentarlo: puede devolver ICMP “Fragmentation Needed”. Reducir la MTU local y dejar que TCP ajuste segmentos no garantiza observar ese ICMP; la parte 6.3 del laboratorio es opcional y su ausencia debe explicarse, no inventarse.
-
-## 4. Algoritmo de fragmentación y por qué se divide entre ocho
+## 3. Procedimiento y ejemplos resueltos: fragmentación real
 
 Una **MTU** es el tamaño máximo del paquete de capa superior que puede llevar una trama del enlace correspondiente (no el tamaño de los datos TCP). Un datagrama IPv4 tiene cabecera de longitud $H$ y carga de longitud $P=D-H$, donde $D$ es su longitud total IP. Si necesita atravesar un enlace de MTU $M<D$ y se permite fragmentación, se crean varios **datagramas IPv4**, cada uno con cabecera propia. Sus partes de datos deben recomponerse en el destino.
 
@@ -98,7 +92,7 @@ Si DF=1 y un router necesita superar la MTU de la siguiente interfaz, no fragmen
 5. Asignar MF=1 a todos salvo el último; preservar Identification y verificar que la suma de **solo datos** recupera P.
 6. Diferenciar el reensamblado en destino de los ACK TCP: IPv4 no tiene ACK por fragmento.
 
-## 5. Errores típicos
+## 4. Errores típicos
 
 - Suponer que bajar la MTU siempre causa fragmentación.
 - Cambiar MTU sin anotar y restaurar el valor original.
