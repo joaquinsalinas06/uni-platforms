@@ -90,13 +90,31 @@ def send_file(conn, source):
     return count, digest.hexdigest()
 
 
+def port_from_id(identifier):
+    digits = ''.join(c for c in str(identifier) if c.isdigit())
+    if len(digits) < 5:
+        raise ValueError('El codigo/DNI debe tener al menos cinco digitos')
+    port = int(digits[-5:])
+    if port > 65535:
+        port = int(digits[-4:])
+    if not 1 <= port <= 65535:
+        raise ValueError('Los digitos terminan en puerto 0: elegir puerto valido con el docente')
+    return port
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=['server', 'client', 'receive', 'send'])
     parser.add_argument('--host', default='127.0.0.1', help='IP local al escuchar; IP del servidor al conectar')
     parser.add_argument('--port', type=int, default=5000)
+    parser.add_argument('--student-id', help='Ultimos cinco digitos; si excede 65535 usa cuatro')
     parser.add_argument('--file', type=Path, help='Archivo origen (send) o destino nuevo (receive)')
     args = parser.parse_args()
+    if args.student_id:
+        try:
+            args.port = port_from_id(args.student_id)
+        except ValueError as error:
+            parser.error(str(error))
     if not 1 <= args.port <= 65535:
         parser.error('El puerto debe estar entre 1 y 65535')
     if args.mode in ('receive', 'send') and args.file is None:
