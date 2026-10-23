@@ -4,11 +4,53 @@ title: "Laboratorio: Sockets TCP, Archivos y MTU"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. Qué vas a programar y por qué TCP no hace todo solo
 
-TCP entrega un flujo de bytes confiable: no preserva los límites de cada llamada a `send`. Un programa correcto debe establecer sus propios mensajes o leer hasta un final definido.
+Imagina que tu laptop necesita enviar tres mensajes a otra computadora. Un programa se llamará **cliente**: inicia la comunicación. El otro será **servidor**: mantiene un puerto abierto y espera conexiones.
+
+Usaremos **TCP**, un protocolo que establece una conexión y transporta **un flujo ordenado de bytes** entre ambos programas. «Flujo de bytes» significa que TCP no recuerda dónde terminaba cada mensaje de tu aplicación: si envías «Hola» y después «Mundo», el receptor puede recibir ambos juntos o en varias lecturas, aunque los bytes lleguen correctamente.
+
+Esto explica la parte del programa que parece extraña al principio: **debemos decidir cómo empieza y termina cada mensaje**. No basta con una llamada a send y otra a recv para garantizar un intercambio completo.
+
+### Seis funciones de sockets, traducidas al español
+
+- **socket()**: crea un extremo de comunicación en el sistema operativo.
+- **bind()**: en el servidor, asocia ese extremo con una dirección y un **puerto**. El puerto identifica a qué programa le llegará la conexión.
+- **listen()**: indica que el servidor está preparado para aceptar solicitudes TCP.
+- **accept()**: espera una conexión y entrega al programa un socket conectado con ese cliente.
+- **connect()**: en el cliente, solicita la conexión TCP con la IP y puerto del servidor.
+- **sendall() / recv()**: transmiten bytes e intentan leer bytes, respectivamente. Un solo **recv()** no garantiza recibir todo el mensaje solicitado.
+
+### ¿Y el famoso three-way handshake?
+
+La conexión TCP empieza con **SYN → SYN/ACK → ACK**, tres paquetes de control que intercambian las pilas TCP de los sistemas operativos. Python no construye manualmente esos paquetes en nuestro ejercicio. El **connect()** del cliente provoca el inicio de la negociación y el servidor está esperando mediante **listen() y accept()**. Wireshark permite observar ese intercambio.
+
+Una **IP** indica a qué interfaz de la red dirigirnos; un **puerto** identifica al servicio dentro de ese equipo. En la primera prueba, **127.0.0.1** significa que cliente y servidor se encuentran **en la misma computadora** (loopback). Para usar dos laptops debes conectar ambas a una red común y colocar en el cliente la **IP privada real del servidor**.
 
 ---
+
+## 2. Antes del código: distinguir mensajes, confirmaciones y archivos
+
+### Por qué el código agrega un encabezado de cuatro bytes
+
+TCP solo proporciona un flujo. Para saber dónde termina un mensaje de la aplicación, el protocolo didáctico de esta plataforma antepone **cuatro bytes con la longitud del mensaje**. Si la carga tiene 5 bytes, primero se indica «5» en cuatro bytes y luego se transmiten exactamente esos cinco bytes.
+
+El receptor tiene una función **recv_exact**: si pidió cuatro bytes y recv devolvió solo dos, vuelve a leer hasta completar los cuatro. Después lee la longitud de datos anunciada. El código usa **sendall** para no ignorar envíos parciales y rechaza mensajes excesivamente grandes.
+
+### Un ACK TCP no es la respuesta que imprime Python
+
+Un **ACK TCP** confirma recepción de bytes y lo genera la pila TCP del sistema operativo. La cadena de texto **«ACK aplicacion»** del laboratorio la prepara el **programa Python**, después de una espera de dos segundos. Que Wireshark vea un ACK TCP rápido no contradice que la respuesta de aplicación tarde dos segundos.
+
+El **RTT** medido por el cliente con un reloj propio va desde que envía un mensaje hasta recibir la **respuesta de aplicación**. Incluye la espera artificial de dos segundos. Una medición de **tcp.analysis.ack_rtt** en Wireshark se refiere a un ACK **de transporte** y puede ser muchísimo menor.
+
+### Cómo termina un archivo y cómo verificamos sus bytes
+
+Para enviar un archivo, el script lee y transmite sus datos por partes. Al terminar puede cerrar **solo la dirección de escritura** con **shutdown(SHUT_WR)**; el servidor entonces lee hasta **EOF** (fin de los datos enviados) y devuelve una confirmación con el tamaño y un **SHA-256**.
+
+SHA-256 es una huella calculada a partir de todos los bytes del archivo. Si la huella y el número de bytes del archivo recibido coinciden con los del original, tenemos una comprobación práctica de integridad **independiente del tamaño de los segmentos TCP**.
+
+El tamaño **MSS** indica la carga máxima de datos TCP por segmento; la **MTU** indica el tamaño máximo del paquete transportable en un enlace. Con IPv4 y TCP sin opciones, el caso base de la guía es **MSS = MTU − 20 B IP − 20 B TCP**. Cambiar la MTU puede cambiar la segmentación, pero **no significa que TCP e IP sean el mismo protocolo**.
+
 
 ## 2. Conceptos
 

@@ -5,22 +5,32 @@ order: 2
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Qué quieres saber cuando mides RTT?
 
-LAB3 cuenta los seis segmentos de datos desde el POST. Las slides de apoyo fijan $\alpha=0.125$ y el primer estimado igual al primer SampleRTT.
+Imagina que envías datos y miras un reloj. Cuando vuelve la confirmación, puedes medir cuánto tiempo pasó. En TCP esa confirmación se llama **ACK**; en Wireshark el campo **Ack** indica el siguiente byte que el receptor espera.
 
-## 2. Conceptos
+**RTT**, *Round-Trip Time*, es el tiempo de **ida y vuelta**: aproximadamente desde un envío hasta recibir su ACK. Una sola medición concreta se llama **SampleRTT** o muestra RTT.
 
-| Seg. | Trama / Seq / Len | Envío (s) | Trama ACK / Ack | Llegada (s) | SampleRTT (ms) | EstimatedRTT (ms) |
-|---|---|---|---|---|---|---|
-| 1 | 4 / 1 / 1448 | 0.024047 | 7 / 1449 | 0.052671 | 28.624 | 28.624000 |
-| 2 | 5 / 1449 / 1448 | 0.024048 | 8 / 2897 | 0.052676 | 28.628 | 28.624500 |
-| 3 | 6 / 2897 / 1448 | 0.024049 | 13 / 4345 | 0.053626 | 29.577 | 28.743563 |
-| 4 | 9 / 4345 / 1448 | 0.052774 | 16 / 5793 | 0.080768 | 27.994 | 28.649867 |
-| 5 | 10 / 5793 / 1448 | 0.052775 | 17 / 7241 | 0.080771 | 27.996 | 28.568134 |
-| 6 | 11 / 7241 / 1448 | 0.052854 | 18 / 8689 | 0.080772 | 27.918 | 28.486867 |
+El curso también utiliza **EstimatedRTT**, una estimación que **suaviza** las muestras para que una demora aislada no cambie demasiado el valor usado por TCP. No es un segundo reloj, sino un cálculo a partir de muestras anteriores y de la muestra nueva.
 
-Los primeros seis ACK son exactos para esos intervalos; más adelante pueden ser acumulativos. La exportación usa el primer ACK que cubre el extremo y deja su número de trama visible para auditar el emparejamiento.
+## 2. La primera resta antes de la tabla
+
+En la captura oficial, el primer segmento del HTTP POST está en la **trama 4** a **0.024047 s**. Tiene **Seq=1**, **Len=1448 B**. El ACK que confirma esos datos es la **trama 7**, con **Ack=1449**, registrada a **0.052671 s**.
+
+La operación es sencilla: **0.052671 − 0.024047 = 0.028624 s**. Como un segundo tiene 1000 milisegundos, eso equivale a **28.624 ms**.
+
+La guía fija el primer EstimatedRTT igual al primer SampleRTT: **28.624 ms**. Para la segunda muestra, que vale **28.628 ms**, la media exponencial con α = 0.125 es:
+
+$$EstimatedRTT_2=0.875(28.624)+0.125(28.628)=28.6245\;\text{ms}.$$
+
+¿Por qué se multiplican así? Porque **0.875** es el peso de la estimación anterior y **0.125** es el peso de la medición nueva; suman **1**. El valor cambia poco porque la nueva muestra es muy parecida a la anterior.
+
+La tabla que sigue realiza el mismo proceso con **seis segmentos**, todos comenzando desde la carga POST, no desde el SYN del handshake. Después verás la gráfica **Stevens**, cuyos ejes representan **tiempo horizontal** y **número de secuencia vertical**. Una pendiente fuerte indica muchos bytes nuevos de secuencia por unidad de tiempo, **no un valor de cwnd leído directamente de la cabecera**.
+
+
+
+
+---
 
 ## 3. Ejemplo resuelto
 

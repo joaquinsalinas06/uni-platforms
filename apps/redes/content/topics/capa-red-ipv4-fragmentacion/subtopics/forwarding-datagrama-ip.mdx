@@ -5,20 +5,35 @@ order: 1
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. La capa de red responde una pregunta: ¿por dónde sigue el paquete?
 
-Los hosts y routers tienen capa de red. Los routers inspeccionan cabeceras y trasladan datagramas entre interfaces; no necesitan ejecutar el proceso de aplicación que originó el contenido.
+Imagina que un archivo debe viajar desde tu laptop hasta un servidor que está en otra red. TCP lleva los bytes dentro de **segmentos**, pero esos segmentos necesitan cruzar **routers**. Un router es un equipo que conecta redes y decide por qué salida continuar.
 
-## 2. Conceptos
+La capa de red coloca el segmento dentro de un **datagrama IP**. Ese datagrama incluye una cabecera con **dirección de origen y destino**, entre otros campos. Al recibirlo, cada router mira a dónde va y lo reenvía hacia el siguiente tramo.
 
-| Función | Pregunta | Alcance |
-|---|---|---|
-| Routing | ¿Por qué camino llegará? | Origen a destino |
-| Forwarding | ¿Por qué salida sigue aquí? | Un router |
-| Encapsulación | ¿Cómo transporto el segmento? | Emisor IP |
-| Entrega a transporte | ¿Quién recibe la carga? | Host destino |
+En la clase aparecen dos palabras que parecen iguales, pero no lo son:
 
-Una dirección IPv4 de 32 bits identifica una **interfaz**. El router de la figura tiene varias, cada una conectada a una subred diferente. Un host también puede tener Wi-Fi y Ethernet con direcciones distintas.
+**Routing:** elegir o calcular el **camino general** que siguen los paquetes entre origen y destino. Piensa en planificar un viaje por varias ciudades.
+
+**Forwarding:** decidir por qué **puerto o interfaz de salida** enviar el datagrama **en este router particular**. Es la decisión inmediata al llegar a un cruce de carreteras.
+
+## 2. Qué necesita reconocer el router
+
+Una **dirección IPv4** consta de **32 bits** y se asigna a una **interfaz**: el punto donde un equipo se conecta a un enlace. Un router que une tres redes puede tener una interfaz en cada una. No hay una única dirección que represente por obligación todas las conexiones físicas del router.
+
+El emisor encapsula el segmento TCP en IP; el router examina el **destino IP** y consulta una tabla para escoger la salida; el destinatario retira la cabecera IP y entrega la carga al protocolo superior. La aplicación que generó el mensaje no necesita ejecutarse dentro del router.
+
+### Un caso simple de la figura del curso
+
+El host **223.1.1.2** está en la red **223.1.1.0/24** y el host **223.1.3.2** en **223.1.3.0/24**. La notación /24 significa que los primeros 24 bits de la dirección indican la red: en este ejemplo las dos redes tienen distintos **terceros octetos**.
+
+Como no están en la misma subred, el emisor manda el paquete a su **router de primer salto**. Ese router revisa el destino **223.1.3.2**, identifica su salida hacia 223.1.3.0/24 y reenvía el datagrama. **No cambia mágicamente la dirección IP del servidor** solo porque el paquete viaje por otro enlace.
+
+Los campos más importantes de la cabecera IPv4 para la práctica son **Total Length** (cabecera y datos), **Identification**, **Flags** y **Fragment Offset** para fragmentación, además de IP de origen/destino y **Protocol** para indicar el protocolo superior. El siguiente apartado los explica formalmente con la imagen de la clase.
+
+
+
+
 
 ## 3. Del segmento TCP al datagrama y de una interfaz a otra
 

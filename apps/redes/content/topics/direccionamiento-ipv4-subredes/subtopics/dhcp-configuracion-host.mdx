@@ -5,17 +5,28 @@ order: 2
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. Llegas a una Wi-Fi nueva: ¿quién le da dirección a tu laptop?
 
-El host necesita dirección al entrar a la red, pero también parámetros para comunicarse fuera de ella. DHCP permite reutilizar direcciones mediante una concesión o lease renovable.
+Imagina que acabas de conectarte al Wi-Fi de la universidad. Tu laptop necesita una **dirección IP**, que la red usa para dirigir los paquetes hacia su interfaz. También necesita saber **qué parte de esa dirección es la subred** (máscara), por qué router salir hacia otros destinos (gateway) y a qué servidor preguntar por nombres como los de una web (DNS).
 
-## 2. Conceptos
+Podrías configurar esos datos a mano, pero sería incómodo hacerlo para cada estudiante. **DHCP**, *Dynamic Host Configuration Protocol*, permite que un servidor asigne esos parámetros de manera **dinámica** y durante un tiempo de concesión, llamado **lease**.
+
+## 2. Los cuatro mensajes del ejemplo oficial
+
+La clase presenta un pequeño diálogo. Primero **Discover**: el equipo aún no sabe qué dirección va a recibir y busca un servidor mediante un envío a todos en la red local, llamado **broadcast**. Como todavía no tiene la IP concedida, en la slide aparece usando **0.0.0.0** como origen.
+
+Después **Offer**: el servidor **ofrece** una dirección; en la figura es **223.1.2.4**, con una concesión de **3600 segundos**, es decir, una hora. **No está todavía confirmada**.
+
+Luego **Request**: el cliente pide utilizar esa dirección. Finalmente llega **ACK de DHCP**: el servidor **confirma la concesión** y el cliente puede configurarla.
+
+Estas cuatro palabras se recuerdan como **DORA: Discover, Offer, Request, ACK**. DHCP funciona sobre **UDP**, con puerto **68** para el cliente y **67** para el servidor. Su mensaje **ACK no es el ACK de una conexión TCP**: aquí sirve para confirmar una configuración IP.
+
+En la diapositiva aparecen identificadores de transacción **654 y 655** para los pares ilustrados. Son cifras de **esa imagen**, no las que debes poner obligatoriamente en una captura de tu propia laptop. La secuencia visual y la tabla que siguen explican qué cambia en cada paso.
+
 
 <Visualization viz={{"type": "sequence", "title": "DHCP: concesión de la slide 28", "steps": [{"note": "Ejemplo de las slides: Discover/Offer usan xid=654; Request/ACK se ilustran con xid=655; la oferta es 223.1.2.4 durante 3600 s. La renovación puede omitir Discover y Offer.", "actors": [{"id": "c", "label": "Cliente nuevo"}, {"id": "s", "label": "223.1.2.5"}], "msgs": [{"from": "c", "to": "s", "label": "Discover", "flags": "0.0.0.0:68 → broadcast:67"}, {"from": "s", "to": "c", "label": "Offer 223.1.2.4", "flags": "lease 3600 s"}, {"from": "c", "to": "s", "label": "Request", "flags": "xid 655"}, {"from": "s", "to": "c", "label": "ACK", "flags": "confirma concesión"}]}], "static": true}} />
 
-Discover y Request iniciales salen de 0.0.0.0:68 hacia 255.255.255.255:67. En la figura del curso, Offer y ACK se muestran broadcast hacia el puerto 68. No debe imponerse un destino Ethernet unicast a todas las capturas: se inspecciona el que efectivamente aparece.
-
-Además de la IP, DHCP puede devolver máscara, dirección del primer router y servidores DNS. La slide permite omitir Discover/Offer si el cliente recuerda la dirección y desea reutilizarla.
+---
 
 ## 3. Paso a paso del intercambio DHCP de la slide 28
 

@@ -5,21 +5,41 @@ order: 2
 ---
 import Visualization from '../../../../src/components/Visualization.astro';
 
-## 1. Idea
+## 1. ¿Por qué partiríamos un paquete que ya estaba armado?
 
-Fragmentar conserva los datos originales, pero repite cabeceras y requiere reconstruir el datagrama en el destino.
+Un programa quiere transmitir datos. TCP puede crear un **segmento** y la capa de red puede colocarlo dentro de un **datagrama IPv4**, que lleva una cabecera con direcciones y campos de control.
 
-## 2. Conceptos
+Pero el camino no es necesariamente uniforme: un enlace puede transportar datagramas de cierto tamaño máximo y el siguiente admitir menos. Ese límite se llama **MTU**, *Maximum Transmission Unit*.
 
-| Fragmento | Datos (B) | Total (B) | ID | MF | Offset |
-|---|---|---|---|---|---|
-| 1 | 1480 | 1500 | x | 1 | 0 |
-| 2 | 1480 | 1500 | x | 1 | 185 |
-| 3 | 1020 | 1040 | x | 0 | 370 |
+La slide 8 nos propone exactamente el problema: un **datagrama de 4000 bytes de longitud total** necesita pasar por un enlace de **MTU 1500 bytes**. Como no cabe, IPv4 puede convertirlo en varios **fragmentos**, siempre que la fragmentación esté permitida.
+
+## 2. Tres números para no perderse
+
+**Longitud total IP:** incluye **cabecera IPv4 y datos**. Si el problema dice 4000 B totales y usamos 20 B de cabecera sin opciones, quedan **3980 B de datos**.
+
+**MF (*More Fragments*):** es un indicador. **MF=1** significa «después de este fragmento todavía quedan otros». **MF=0** se usa para el último. Los fragmentos comparten un **Identification** para que el destino sepa que pertenecen al mismo datagrama.
+
+**Fragment offset:** indica dónde empiezan los **datos** del fragmento dentro de los datos originales. Su unidad son bloques de **8 bytes**, no bytes sueltos. Si antes se entregaron 1480 bytes de datos, el offset del siguiente fragmento es **1480/8=185**.
+
+El offset **no cuenta las cabeceras**. Cada fragmento añade una nueva cabecera de 20 B, pero su posición depende de **los bytes útiles de datos precedentes**.
+
+### Primero resuelve el tamaño; luego las posiciones
+
+Para MTU=1500, en cada fragmento completo caben **1500−20=1480 B de datos**. Los datos originales se separan así: **1480 + 1480 + 1020 = 3980**.
+
+| Fragmento | Datos que contiene | Longitud IP | Offset | MF |
+|---|---:|---:|---:|---:|
+| 1 | 1480 B | 1500 B | 0 | 1 |
+| 2 | 1480 B | 1500 B | 185 | 1 |
+| 3 | 1020 B | 1040 B | 370 | 0 |
+
+**¿De dónde sale 370?** Antes del tercero hay 1480+1480 = **2960 bytes de datos**, y 2960/8 = **370**. ¿Por qué la suma de las longitudes es **4040** y no 4000? Porque el datagrama original tenía **una cabecera** y los tres fragmentos tienen **tres**: agregamos dos cabeceras de 20 B.
+
+A continuación se muestra el procedimiento general, incluida la regla de redondear los fragmentos no finales a múltiplos de ocho. No es necesario memorizar los offsets de la tabla: basta con recordar qué representan.
+
+
 
 <Visualization viz={{"type": "packet", "title": "Fragmentación de la slide: 4000 B, MTU 1500 B", "steps": [{"note": "Original: 20 B de cabecera y 3980 B de datos.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 0"}], [{"label": "longitud total", "bits": 32, "value": "4000 B"}]]}}, {"note": "Primer fragmento: 1480 B de datos; quedan más.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 0"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Segundo fragmento: empieza en 1480/8.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 185"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Último: 1020 B de datos; mismo ID.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 370"}], [{"label": "longitud total", "bits": 32, "value": "1040 B"}]]}}]}} />
-
-El offset del tercero es $(1480+1480)/8=370$. MF=0 solo dice que no quedan fragmentos posteriores; no significa que los anteriores ya llegaron.
 
 ## 3. Procedimiento y ejemplos resueltos: fragmentación real
 
