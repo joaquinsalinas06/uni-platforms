@@ -23,7 +23,7 @@ El offset del tercero es $(1480+1480)/8=370$. MF=0 solo dice que no quedan fragm
 
 ## 3. Procedimiento y ejemplos resueltos: fragmentación real
 
-Una **MTU** es el tamaño máximo del paquete de capa superior que puede llevar una trama del enlace correspondiente (no el tamaño de los datos TCP). Un datagrama IPv4 tiene cabecera de longitud $H$ y carga de longitud $P=D-H$, donde $D$ es su longitud total IP. Si necesita atravesar un enlace de MTU $M<D$ y se permite fragmentación, se crean varios **datagramas IPv4**, cada uno con cabecera propia. Sus partes de datos deben recomponerse en el destino.
+Una **MTU** es el tamaño máximo del paquete de capa superior que puede llevar una trama del enlace correspondiente (no el tamaño de los datos TCP). Un datagrama IPv4 tiene cabecera de longitud $H$ y carga de longitud $P=D-H$, donde $D$ es su longitud total IP. Si necesita atravesar un enlace de MTU $M\lt D$ y se permite fragmentación, se crean varios **datagramas IPv4**, cada uno con cabecera propia. Sus partes de datos deben recomponerse en el destino.
 
 Los campos involucrados son:
 
