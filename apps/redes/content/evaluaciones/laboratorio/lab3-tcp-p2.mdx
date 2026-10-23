@@ -20,6 +20,165 @@ La guía continúa en los puntos **5 y 6**. Incluye implementación reproducible
 
 El código descargable tiene cuatro modos: `server`, `client`, `receive` y `send`. Para esta parte usa los dos primeros: conexión persistente con tres mensajes, cada uno delimitado por longitud de 4 bytes en orden de red. El servidor espera dos segundos antes de cada respuesta; esto permite reutilizarlo para Ex4. `recv_exact` completa encabezado y cuerpo; `sendall` evita ignorar envíos parciales. Una longitud mayor que 1 MiB o cierre a mitad de mensaje produce error.
 
+
+### Código completo de cliente, servidor y transferencia
+
+No es necesario abrir otro enlace para estudiar la implementación. El mismo archivo incluye los cuatro modos del laboratorio; los comandos posteriores deciden cuál ejecutar. En la fase de mensajes, un prefijo de 4 bytes en orden de red indica la longitud: una llamada a `recv` puede devolver **menos bytes** que los solicitados, por lo que `recv_exact` repite lecturas hasta completar el encabezado y el mensaje. `sendall` completa los envíos o informa error; tampoco impone segmentos TCP individuales. El `ACK aplicacion` se prepara después de los 2 s de espera, mientras que el **ACK TCP** puede salir antes desde el sistema operativo. En transferencia de archivo no hay prefijo de tamaño: se lee hasta **EOF** al recibir el cierre de la dirección de envío; se comprueban SHA-256 y número de bytes antes de aceptar integridad.
+
+```python
+#!/usr/bin/env python3
+"""LAB3 / Ex4: mensajes delimitados y transferencia por EOF; solo biblioteca estándar."""
+import argparse
+import hashlib
+from pathlib import Path
+import socket
+import struct
+import time
+
+MAX_MESSAGE = 1024 * 1024
+
+
+def recv_exact(conn, count):
+    data = bytearray()
+    while len(data) < count:
+        chunk = conn.recv(count - len(data))
+        if not chunk:
+            raise EOFError('Conexión cerrada antes de completar el mensaje')
+        data.extend(chunk)
+    return bytes(data)
+
+
+def send_message(conn, data):
+    if len(data) > MAX_MESSAGE:
+        raise ValueError('Mensaje mayor que 1 MiB')
+    conn.sendall(struct.pack('!I', len(data)) + data)
+
+
+def receive_message(conn):
+    size = struct.unpack('!I', recv_exact(conn, 4))[0]
+    if size > MAX_MESSAGE:
+        raise ValueError('Longitud de mensaje mayor que 1 MiB')
+    return recv_exact(conn, size)
+
+
+def serve_messages(conn, delay=2):
+    # El cliente anuncia el final con un mensaje vacío, no con un recv parcial.
+    while True:
+        message = receive_message(conn)
+        if not message:
+            return
+        time.sleep(delay)
+        send_message(conn, b'ACK aplicacion')
+
+
+def exchange_messages(conn, messages, pause=1):
+    elapsed = []
+    for message in messages:
+        start = time.perf_counter()
+        send_message(conn, message)
+        reply = receive_message(conn)
+        duration = time.perf_counter() - start
+        elapsed.append(duration)
+        print(f'{reply.decode("utf-8")} | RTT aplicacion={duration:.6f} s')
+        time.sleep(pause)
+    send_message(conn, b'')
+    return elapsed
+
+
+def receive_file(conn, destination):
+    destination = Path(destination)
+    digest = hashlib.sha256()
+    count = 0
+    # xb impide sobrescribir un archivo existente por accidente.
+    with destination.open('xb') as target:
+        while chunk := conn.recv(65536):
+            target.write(chunk)
+            digest.update(chunk)
+            count += len(chunk)
+    checksum = digest.hexdigest()
+    send_message(conn, f'{count} {checksum}'.encode('ascii'))
+    return count, checksum
+
+
+def send_file(conn, source):
+    digest = hashlib.sha256()
+    count = 0
+    with Path(source).open('rb') as origin:
+        while chunk := origin.read(65536):
+            conn.sendall(chunk)
+            digest.update(chunk)
+            count += len(chunk)
+    # Termina solo el envío: aún podemos recibir la confirmación del servidor.
+    conn.shutdown(socket.SHUT_WR)
+    expected = f'{count} {digest.hexdigest()}'
+    actual = receive_message(conn).decode('ascii')
+    if actual != expected:
+        raise ValueError(f'Integridad incorrecta: esperado {expected}, recibido {actual}')
+    print(f'Verificado: {actual}')
+    return count, digest.hexdigest()
+
+
+def port_from_id(identifier):
+    digits = ''.join(c for c in str(identifier) if c.isdigit())
+    if len(digits) < 5:
+        raise ValueError('El codigo/DNI debe tener al menos cinco digitos')
+    port = int(digits[-5:])
+    if port > 65535:
+        port = int(digits[-4:])
+    if not 1 <= port <= 65535:
+        raise ValueError('Los digitos terminan en puerto 0: elegir puerto valido con el docente')
+    return port
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('mode', choices=['server', 'client', 'receive', 'send'])
+    parser.add_argument('--host', default='127.0.0.1', help='IP local al escuchar; IP del servidor al conectar')
+    parser.add_argument('--port', type=int, default=5000)
+    parser.add_argument('--student-id', help='Ultimos cinco digitos; si excede 65535 usa cuatro')
+    parser.add_argument('--file', type=Path, help='Archivo origen (send) o destino nuevo (receive)')
+    args = parser.parse_args()
+    if args.student_id:
+        try:
+            args.port = port_from_id(args.student_id)
+        except ValueError as error:
+            parser.error(str(error))
+    if not 1 <= args.port <= 65535:
+        parser.error('El puerto debe estar entre 1 y 65535')
+    if args.mode in ('receive', 'send') and args.file is None:
+        parser.error('--file es obligatorio para transferir archivos')
+    try:
+        if args.mode in ('server', 'receive'):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                listener.bind((args.host, args.port))
+                listener.listen(1)
+                listener.settimeout(120)
+                print(f'Escuchando en {args.host}:{args.port}', flush=True)
+                conn, address = listener.accept()
+                with conn:
+                    conn.settimeout(30)
+                    print(f'Cliente: {address}', flush=True)
+                    if args.mode == 'server':
+                        serve_messages(conn)
+                    else:
+                        print(receive_file(conn, args.file))
+        else:
+            with socket.create_connection((args.host, args.port), timeout=30) as conn:
+                if args.mode == 'client':
+                    exchange_messages(conn, [b'Mensaje 1', b'Mensaje 2', b'Mensaje 3'])
+                else:
+                    send_file(conn, args.file)
+    except (OSError, EOFError, ValueError) as error:
+        parser.exit(1, f'Error: {error}\n')
+
+
+if __name__ == '__main__':
+    main()
+```
+
+**Ejecutar con un identificador:** también puedes usar `--student-id TU_CODIGO` en cliente y servidor en lugar de calcular el puerto a mano; el programa toma cinco dígitos y, si exceden 65535, usa los últimos cuatro. En la comparación de dos laptops se mantiene `--port 5000` conforme a Ex4 pregunta 8. **No incluyas el identificador personal completo en las capturas compartidas.**
+
 Puerto solicitado: últimos cinco dígitos del código/DNI si forman un número de 1 a 65535; si exceden 65535, últimos cuatro. Si el resultado es 0, acuerda con el docente un puerto válido; 0 no identifica un puerto fijo de escucha para esta experiencia.
 
 Dos terminales, sustituyendo 5000 por tu puerto asignado:
