@@ -29,10 +29,10 @@ DHCP resuelve dos problemas prácticos: el host recién conectado necesita pará
 
 | Fase | Quién habla y a quién | Datos destacados de la figura | Cambio de estado |
 |---|---|---|---|
-| Discover | Cliente \(0.0.0.0:68\) → broadcast \(255.255.255.255:67\) | xid 654, dirección aún 0.0.0.0 | Busca servidores; todavía no posee IP definitiva |
-| Offer | Servidor \(223.1.2.5:67\) → broadcast puerto 68 | oferta \(223.1.2.4\), xid 654, lease 3600 s | Aparece una dirección **propuesta**, aún no confirmada |
-| Request | Cliente puerto 68 → broadcast puerto 67 | solicita \(223.1.2.4\); la figura muestra xid 655 | El cliente elige y solicita usar la dirección |
-| ACK | Servidor puerto 67 → broadcast puerto 68 | confirma \(223.1.2.4\), xid 655 y lifetime 3600 s | El cliente ya puede configurar la concesión confirmada |
+| Discover | Cliente $0.0.0.0:68$ → broadcast $255.255.255.255:67$ | xid 654, dirección aún 0.0.0.0 | Busca servidores; todavía no posee IP definitiva |
+| Offer | Servidor $223.1.2.5:67$ → broadcast puerto 68 | oferta $223.1.2.4$, xid 654, lease 3600 s | Aparece una dirección **propuesta**, aún no confirmada |
+| Request | Cliente puerto 68 → broadcast puerto 67 | solicita $223.1.2.4$; la figura muestra xid 655 | El cliente elige y solicita usar la dirección |
+| ACK | Servidor puerto 67 → broadcast puerto 68 | confirma $223.1.2.4$, xid 655 y lifetime 3600 s | El cliente ya puede configurar la concesión confirmada |
 
 La diapositiva usa **identificadores 654 y 655** en los dos pares ilustrados. En un análisis real no debes obligar a que cada uno de los cuatro paquetes tenga los mismos valores mostrados aquí: son los datos específicos de **esa figura**. La captura propia debe documentar su identificador real, el servidor y la duración observados.
 
