@@ -4,7 +4,7 @@ title: "Protocolo TCP: Estructura del Segmento y Gestión de Conexión"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-> **Alcance del material.** La clase de TCP (deck Sem7) llega solo hasta la **estructura del segmento**: una slide de supuestos (sockets, buffers, pipelining) y una con la cabecera. El handshake aparece en los ejercicios y en una traza de Wireshark del parcial; el cierre solo se menciona (FIN/RST). No hay más en las slides.
+> **Alcance del material.** La clase de TCP (deck Sem7) llega solo hasta la **estructura del segmento**: una slide de supuestos (sockets, buffers, pipelining) y una con la cabecera. El handshake aparece en los ejercicios y en una traza de Wireshark del parcial; el cierre solo se menciona (FIN/RST). El material nuevo amplía MSS y cierre en LAB3 P2 y Ex4; véase la continuación al final.
 
 ## 1. Idea y motivación
 
@@ -127,4 +127,10 @@ La traza del parcial 2025-II (pregunta 6) se analiza en los subtemas: el handsha
 
 - Pensar que TCP numera segmentos: numera **bytes**.
 - Confundir el flag `ACK` (bit de la cabecera) con el número de acuse (campo de 32 bits).
-- Atribuir a las slides mecanismos que no están (cierre en detalle, congestión): ver el tema de [control de flujo y congestión](/topics/control-flujo-congestion-tcp).
+- Confundir lo que muestra una captura con un mecanismo inferido: ver el tema de [control de flujo y congestión](/topics/control-flujo-congestion-tcp).
+
+## 6. Continuación: MSS, opciones y cierre
+
+LAB3 P2 pide leer MSS en SYN y relacionarla con MTU. Para IPv4 y TCP sin opciones, MSS=MTU−20−20; los bytes efectivos de datos pueden disminuir por opciones. WS indica escalado de la ventana anunciado durante la apertura; `tcp.window_size_value` conserva el campo bruto y `tcp.window_size` el valor calculado. La presencia de SACK_PERM se observa en la captura, sin desarrollar aquí SACK.
+
+Ex4 pide identificar FIN/ACK y experimentar con un cierre abrupto. Cada dirección puede terminar con FIN, que consume un número de secuencia; los ACK y FIN pueden combinarse. Un cierre abrupto puede producir FIN o RST según el sistema y los datos pendientes: se registra lo capturado. La traza oficial entregada no incluye FIN ni RST. [LAB3 P2](/evaluaciones/laboratorio/lab3-tcp-p2).

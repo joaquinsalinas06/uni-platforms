@@ -1,0 +1,25 @@
+{
+  "id": "lab-sockets-tcp-python",
+  "type": "lab",
+  "title": "Laboratorio: Sockets TCP, Archivos y MTU",
+  "unit": "s10",
+  "prerequisites": [
+    "lab-tcp-wireshark",
+    "capa-red-ipv4-fragmentacion"
+  ],
+  "buildsOn": [
+    "lab-tcp-wireshark",
+    "capa-red-ipv4-fragmentacion"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "sequence",
+  "formulas": [
+    {
+      "name": "Segmentos ideales de un archivo",
+      "tex": "N=\\left\\lceil F/M\\right\\rceil",
+      "reasoning": "Sin retransmisiones y con segmentos llenos de carga M, un archivo de F bytes necesita el techo de F dividido entre M.",
+      "source": "Sem10_Excercises4-TCP#8.8 (modelo ideal)"
+    }
+  ]
+}

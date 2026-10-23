@@ -1,9 +1,9 @@
 # Redes y Comunicaciones (CS4054, UTEC) — Plataforma de Estudio
 
-Astro 7 + React 19 + Tailwind v4 + KaTeX. Curso de redes de computadoras centrado en capas de aplicación, transporte, métricas de retardo, protocolos RDT, UDP, TCP y análisis de tráfico con Wireshark.
+Astro 7 + React 19 + Tailwind v4 + KaTeX. Curso de redes de computadoras centrado en capas de aplicación, transporte, métricas de retardo, protocolos RDT, UDP, TCP, congestión, direccionamiento IPv4 y análisis de tráfico con Wireshark.
 
 ## Principio Rector
-Una sola fuente de verdad: **`content/knowledge-map.json`** (semanas `s1..s7`, 21 temas, 42 subtemas). Ningún modelo inventa temas ni modifica el mapa sin justificación. El material fuente proviene de:
+Una sola fuente de verdad: **`content/knowledge-map.json`** (semanas `s1..s7`, `s9`, `s10`; 27 temas, 57 subtemas). Ningún modelo inventa temas ni modifica el mapa sin justificación. El material fuente proviene de:
 - `raw-materials/text/<deck>.txt`: el texto extraído de las diapositivas oficiales (`pdftotext -layout`).
 - `raw-materials/text/EP-2025II-1.txt`, `EP-2026I-1.txt`: exámenes parciales resueltos.
 - `raw-materials/text/CS4054_ExcercisesExtra.txt`: ejercicios avanzados de sockets y laboratorios.
@@ -11,7 +11,7 @@ Una sola fuente de verdad: **`content/knowledge-map.json`** (semanas `s1..s7`, 2
 ## Comandos Clave
 ```sh
 pnpm dev              # Modo desarrollo local
-pnpm build            # Compilación estática de producción (77 rutas)
+pnpm build            # Compilación estática de producción (rutas generadas según el contenido vigente)
 pnpm check            # Verifica consistencia de knowledge-map.json contra archivos en disco
 ```
 Siempre usar `pnpm` desde la raíz del monorepo (`pnpm --filter redes-platform <cmd>`) o dentro de `apps/redes/`.
@@ -27,8 +27,8 @@ Este proyecto ya está creado y vinculado a Vercel bajo:
 ## Estructura de Contenidos
 ```
 content/
-  knowledge-map.json        ← Fuente de verdad (unidades s1..s7, temas y subtemas)
-  units/s1..s7.md           ← Portada y resumen ejecutivo de cada semana
+  knowledge-map.json        ← Fuente de verdad (unidades s1..s7, s9, s10, temas y subtemas)
+  units/s1..s7.md, s9.md, s10.md           ← Portada y resumen ejecutivo de cada semana
   topics/<id>/
     meta.yaml               ← id, title, type, unit, prereqs, formulas[]
     theory.md|mdx           ← Exposición teórica con secciones ## (mdx si lleva diagramas)
@@ -45,3 +45,12 @@ content/
 - **Solo material del curso**: Si algo no está en `raw-materials/text/` o en los PDFs de `raw-materials/pdfs/` (slides, labs, ejercicios, parciales), no va. Nada de contenido de libro de texto ni relleno (RFCs, productos, extensiones no vistas).
 - **Diagramas con la librería de Redes**: `net-scene`, `spacetime`, `window`, `packet`, `fsm` (+ `xy-chart`, `flow`, `sequence`). Contrato y apariencia en `templates/viz-redes.md`. Se usan inline en archivos `.mdx`; nada de mermaid ni imágenes sintéticas.
 - **Fórmulas documentadas**: Todo objeto en `formulas[]` de `meta.yaml` debe incluir `name`, `tex` y un `reasoning` explicativo de al menos 20 caracteres.
+
+## Material incorporado de semanas 9–10
+
+- Teoría: `Sem9_NetT-TCP2.pdf` y `Sem10_NetT-NetLayer_Addressing.pdf`.
+- Laboratorios: `Sem09_LAB3_P1-2.pdf`, `Sem09_LAB3_TCP_PPT.pptx.pdf`, `Sem10_LAB3_TCP_P2 (1)-1.pdf`.
+- Ejercicios: `Sem10_Excercises4-TCP.pdf` (preguntas 1–9).
+- Evidencia: `content/source-coverage.json` enlaza páginas/secciones con contenido. `public/labs/tcp/` contiene código y resultados reproducibles de la captura oficial; `scripts/analyze-tcp-trace.py` regenera CSV/JSON con tshark.
+- Validación adicional: `python3 -m unittest discover -s tests -v`.
+- No se crean semanas 8 u 11 sin una fuente identificada. `RFC_TCP.txt` no fue proporcionado; sus mediciones no se inventan.

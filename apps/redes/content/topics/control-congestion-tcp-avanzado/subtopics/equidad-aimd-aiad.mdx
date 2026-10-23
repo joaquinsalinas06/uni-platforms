@@ -1,0 +1,33 @@
+---
+kind: subtopic
+title: "Equidad: AIMD frente a AIAD"
+order: 3
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Para dos conexiones, el plano $(x_1,x_2)$ separa **eficiencia** ($x_1+x_2=C$) y **equidad** ($x_1=x_2$). Llegar a capacidad no garantiza repartirla por igual.
+
+## 2. Conceptos
+
+Al sumar la misma cantidad a ambos flujos, la diferencia $x_2-x_1$ no cambia. Al multiplicar ambos por $1/2$, esa diferencia también se divide entre dos. Repetir AIMD acerca la trayectoria a la diagonal bajo los supuestos de la slide 34.
+
+<Visualization viz={{"type": "xy-chart", "title": "AIMD: acercamiento a la equidad", "steps": [{"note": "Ejemplo numérico elegido para Ex4: C=10, inicio (2,6). AI conserva la diferencia; MD la divide entre dos.", "series": [{"id": "eff", "label": "Capacidad", "points": [[0, 10], [10, 0]], "kind": "line", "state": "muted"}, {"id": "fair", "label": "Equidad", "points": [[0, 0], [10, 10]], "kind": "line", "state": "muted"}, {"id": "aimd", "label": "AIMD", "points": [[2, 6], [3, 7], [1.5, 3.5], [4, 6], [2, 3], [4.5, 5.5], [2.25, 2.75], [4.75, 5.25]], "kind": "line", "state": "active"}], "x": {"label": "flujo 1", "min": 0, "max": 10}, "y": {"label": "flujo 2", "min": 0, "max": 10}}], "static": true}} />
+
+En **AIAD**, sumar o restar una misma cantidad conserva la diferencia mientras ningún flujo llegue a cero. Por eso no converge en general a la diagonal.
+
+## 3. Ejemplo resuelto
+
+Con C=10 y $(2,6)$: AI lleva a $(3,7)$; MD a $(1.5,3.5)$; AI a $(4,6)$; MD a $(2,3)$. Las diferencias iniciales 4, 2 y 1 se reducen. Con AIAD y disminución de 1, se alternaría entre $(3,7)$ y $(2,6)$: diferencia 4.
+
+El reparto $R/K$ es **por conexión**. Si existen nueve conexiones y una aplicación abre una más, recibe aproximadamente $R/10$. Si abre once, controla once de veinte y recibe aproximadamente $11R/20$; la slide lo redondea a $R/2$.
+
+## 4. Errores típicos
+
+- Probar equidad solo con un punto ya sobre la diagonal.
+- Interpretar el modelo ideal como garantía con RTT distintos.
+- Confundir igualdad entre conexiones con igualdad entre aplicaciones que abren cantidades diferentes de conexiones.
+
+
+Fuente: `Sem9_NetT-TCP2`, `Sem10_Excercises4-TCP`.

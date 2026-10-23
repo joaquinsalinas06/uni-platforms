@@ -1,0 +1,13 @@
+id: principios-costes-congestion
+type: concept
+title: "Congestión: Causas, Costes y Formas de Control"
+unit: s9
+prerequisites:
+  - control-flujo-congestion-tcp
+buildsOn:
+  - control-flujo-congestion-tcp
+usedBy:
+  - control-congestion-tcp-avanzado
+hasVisualization: true
+visualizationType: net-scene
+formulas: []

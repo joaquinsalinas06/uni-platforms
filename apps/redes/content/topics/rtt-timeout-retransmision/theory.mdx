@@ -4,48 +4,53 @@ title: "Estimación de RTT, Timeout y Fast Retransmit en TCP"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-> **Alcance del material.** De este tema solo está en el curso: (1) el **RTT medido en una traza de Wireshark** y (2) la fórmula del **EstimatedRTT** (parcial 2025-II, pregunta 6). No hay desviación del RTT (DevRTT), fórmula de timeout de TCP ni retransmisión rápida. Lo único sobre temporizadores es el de rdt3.0.
-
 ## 1. Idea y motivación
 
-Un emisor que espera un ACK necesita decidir cuánto esperar. En rdt3.0, un temporizador **menor que el RTT** provoca retransmisiones innecesarias (caso del timeout prematuro) y uno muy largo tarda en reparar pérdidas ([rdt3.0](/topics/transferencia-confiable-rdt/subtopics/rdt3-temporizadores-stop-and-wait)). Medir el RTT es el primer paso para ajustarlo.
+Un timeout corto retransmite sin necesidad; uno largo tarda en recuperar pérdidas. Las primeras semanas permiten medir RTT. **Ex4, pregunta 4**, amplía el cálculo con DevRTT, TimeoutInterval y la ambigüedad de las retransmisiones que explica Karn.
 
 ---
 
 ## 2. Conceptos
 
-- **SampleRTT:** tiempo entre el envío de un segmento y la recepción de su ACK.
-- **EstimatedRTT:** promedio móvil de las muestras, con la fórmula del examen:
+- **SampleRTT:** intervalo entre un envío y el ACK que confirma sus bytes.
+- **EstimatedRTT:** media móvil de las muestras.
+- **DevRTT:** media móvil de la desviación absoluta respecto del estimado.
+- **TimeoutInterval:** estimado más cuatro desviaciones, según las ecuaciones de Ex4.
 
-$$\text{EstimatedRTT}_n = 0{,}875 \cdot \text{EstimatedRTT}_{n-1} + 0{,}125 \cdot \text{SampleRTT}_n$$
+$$EstimatedRTT_n=0.875\,EstimatedRTT_{n-1}+0.125\,SampleRTT_n$$
+$$DevRTT_n=0.75\,DevRTT_{n-1}+0.25\,|SampleRTT_n-EstimatedRTT_n|$$
+$$TimeoutInterval_n=EstimatedRTT_n+4\,DevRTT_n$$
 
-Cada muestra nueva pesa 12,5 %; las anteriores van perdiendo peso de forma exponencial. El primer valor no está definido en el enunciado: se toma $\text{EstimatedRTT}_1 = \text{SampleRTT}_1$ *(convención adoptada)*.
+Se utiliza el **EstimatedRTT recién actualizado** en DevRTT, siguiendo el orden del enunciado. No se redondean resultados intermedios.
 
-Cálculo completo y gráfica: [EWMA con la traza del parcial](/topics/rtt-timeout-retransmision/subtopics/calculo-ewma-estimated-rtt-devrtt). Qué hay (y qué no) sobre retransmisión: [Retransmisión](/topics/rtt-timeout-retransmision/subtopics/retransmision-rapida-tres-acks).
+**Karn:** un ACK posterior a una retransmisión no revela si reconoce el envío original o la copia. Por eso no se toma esa muestra ambigua para actualizar el estimador. No se agrega aquí una regla de backoff que el ejercicio no pide.
+
+**Fast retransmit:** Ex4, pregunta 2, fija retransmitir al recibir **tres ACK duplicados**, además del ACK original. Es posible recuperar la pérdida antes de que venza el timeout. Los ACK acumulativos permiten reconocer de una vez los segmentos ya almacenados tras el hueco.
 
 ---
 
 ## 3. Método paso a paso
 
-1. Empareja cada segmento de datos con el ACK que lo confirma (el `Ack` es el `Seq` del segmento más su longitud).
-2. $\text{SampleRTT} = t_{\text{ACK}} - t_{\text{envío}}$.
-3. Aplica la fórmula en orden, usando el estimado anterior.
-4. Convierte unidades al final (las marcas de Wireshark están en segundos).
+1. Identifica qué intervalo de bytes confirma cada ACK. Puede cubrir más de un segmento.
+2. Excluye muestras ambiguas por retransmisión y calcula las demás en una sola unidad.
+3. Si el enunciado aporta estado inicial, úsalo. Ex4 comienza con Est=100 ms y Dev=5 ms.
+4. Actualiza Est, luego Dev y al final timeout.
+5. Para LAB3, que no da Dev inicial, calcula solo lo solicitado: primer Est igual al primer SampleRTT.
 
 ---
 
 ## 4. Ejemplo resuelto
 
-Primeros dos segmentos de datos de la traza (tramas 4 y 5, ACK en las tramas 7 y 8):
+Primera muestra de Ex4: 106 ms. $Est_1=0.875(100)+0.125(106)=100.75$ ms; $Dev_1=0.75(5)+0.25|106-100.75|=5.0625$ ms; $Timeout_1=121$ ms.
 
-$$\text{SampleRTT}_1 = 0{,}052671 - 0{,}024047 = 0{,}028624\text{ s} \qquad \text{SampleRTT}_2 = 0{,}052676 - 0{,}024048 = 0{,}028628\text{ s}$$
-
-$$\text{EstimatedRTT}_2 = 0{,}875 \cdot 0{,}028624 + 0{,}125 \cdot 0{,}028628 = \boxed{0{,}0286245\text{ s}}$$
+La tabla de las tres muestras está en [Ex4, pregunta 4](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-4-rtt-devrtt-timeout-y-karn). Para la captura real, [LAB3 P1](/evaluaciones/laboratorio/lab3-tcp-p1) incluye seis muestras con sus tramas y gráficas.
 
 ---
 
 ## 5. Errores típicos
 
-- Emparejar un segmento con cualquier ACK: tiene que ser el que lo confirma (`Ack` = `Seq` + longitud).
-- Usar milisegundos y segundos mezclados.
-- Dar por sentadas fórmulas de DevRTT o de timeout de TCP: no están en el material.
+- Usar el estimado viejo en DevRTT sin advertir que cambia la convención del ejercicio.
+- Confundir tres ACK iguales en total con tres **duplicados** después del original.
+- Inicializar Ex4 con su primer SampleRTT: ya proporciona un estado anterior.
+
+Fuentes: `Sem10_Excercises4-TCP`, preguntas 2 y 4; `Sem09_LAB3_P1-2`, sección 3; parcial 2025-II, pregunta 6.

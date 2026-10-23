@@ -4,51 +4,44 @@ title: "Control de Flujo (rwnd) y Control de Congestión en TCP"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-> **Alcance del material.** El curso solo **nombra** el control de flujo y el de congestión como servicios de TCP, muestra el campo *Receive window* en la cabecera y el buffer de recepción, y los contrasta con UDP (que no los tiene) en el laboratorio. **No hay** `cwnd`, slow start, AIMD, Tahoe ni Reno, ni fórmulas de ventana: este tema queda corto a propósito.
-
 ## 1. Idea y motivación
 
-Dos problemas distintos que TCP resuelve y UDP no:
-
-- **Control de flujo:** que el emisor no desborde el *buffer* del receptor.
-- **Control de congestión:** que el emisor no sature la red.
-
-La prueba de estrés del laboratorio de UDP (3 emisores × 10 000 paquetes hacia un receptor) muestra qué pasa sin ellos: paquetes descartados en silencio y ningún mensaje de vuelta pidiendo que se baje el ritmo.
+TCP debe proteger dos recursos diferentes: el **buffer del receptor** y la **capacidad de la red**. Control de flujo y control de congestión se aplican a la vez; una ventana de recepción grande no elimina un cuello de botella intermedio.
 
 ---
 
 ## 2. Conceptos
 
-| | TCP | UDP |
+| Mecanismo | Protege | Límite |
 |---|---|---|
-| Control de flujo | Sí | No |
-| Control de congestión | Sí | No (puede "enviar tan rápido como quiera") |
-| Aviso al emisor si el receptor se satura | Mediante la ventana (campo *Receive window* de la cabecera) | Ninguno |
+| Control de flujo | Receptor | rwnd anunciada en la cabecera TCP |
+| Control de congestión | Red | cwnd calculada por el emisor |
 
-- El **buffer de recepción** de TCP (slide de supuestos) es donde se acumulan los datos hasta que el proceso los lee.
-- Cuando se necesita confiabilidad y control de congestión sobre UDP (caso HTTP/3 con QUIC), la aplicación los agrega por su cuenta.
+La slide 4 de `Sem9_NetT-TCP2` explica que el receptor reconoce datos y anuncia los bytes libres del buffer. Con ventana cero, el emisor no puede seguir mandando datos nuevos bajo una ventana positiva. La slide 25 limita los bytes pendientes por cwnd. En conjunto, el vuelo está limitado por $\min(rwnd,cwnd)$; cuánto puede enviarse **adicionalmente** depende de lo que ya está en vuelo.
 
-Detalle: [Control de flujo y ventana de recepción](/topics/control-flujo-congestion-tcp/subtopics/control-flujo-ventana-recepcion) y [Congestión: qué cubre el material](/topics/control-flujo-congestion-tcp/subtopics/fases-congestion-aimd-tahoe-reno).
+La diferencia con UDP sigue siendo útil: UDP no ofrece estos mecanismos de transporte. Su prueba de estrés puede saturar al receptor sin un aviso de ventana de vuelta.
 
 ---
 
 ## 3. Método paso a paso
 
-Para las preguntas del laboratorio sobre este tema:
-
-1. Identifica si el receptor puede perder datos por desborde (UDP) o si el protocolo le avisa al emisor (TCP).
-2. Para TCP, la respuesta es el control de flujo con el tamaño de ventana.
-3. Para UDP, justifica que la aplicación debe resolverlo.
+1. Identifica si se satura el buffer receptor o una cola de la red.
+2. Lee Win como recepción; no lo confundas con cwnd.
+3. Separa el límite total de vuelo del espacio restante para nuevos bytes.
+4. Para crecimiento y reacción a pérdidas, continúa con [TCP avanzado](/topics/control-congestion-tcp-avanzado).
 
 ---
 
 ## 4. Ejemplo resuelto
 
-Lab de la semana 5, pregunta 4 de la prueba de estrés: *si fuera TCP, ¿qué mecanismo evitaría que el receptor descarte miles de paquetes por desborde del buffer?* — El **control de flujo** (tamaño de ventana de TCP). El enunciado lo deja como investigación; el material no desarrolla el mecanismo.
+La captura del parcial muestra que Win crece en los ACK del servidor. Eso acredita cambios de la ventana **anunciada**, no una curva de cwnd. El detalle con tramas está en [ventana de recepción](/topics/control-flujo-congestion-tcp/subtopics/control-flujo-ventana-recepcion). Las curvas de slow start, AIMD, Tahoe y Reno se desarrollan ahora con el material nuevo de semanas 9–10.
 
 ---
 
 ## 5. Errores típicos
 
-- Confundir control de flujo (emisor vs receptor) con control de congestión (emisor vs red).
-- Responder con AIMD o `cwnd`: no se ven en el curso.
+- Decir que Win mide congestión en routers.
+- Asumir que la aplicación siempre llena toda la ventana disponible.
+- Atribuir al receptor el cálculo de cwnd del emisor.
+
+Fuentes: `Sem7_NetT-TCP`, `Sem9_NetT-TCP2` (slides 4 y 25), `Sem10_Excercises4-TCP`.

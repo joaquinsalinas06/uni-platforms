@@ -1,0 +1,31 @@
+id: capa-red-ipv4-fragmentacion
+type: concept
+title: "Capa de Red: Datagramas IPv4 y Fragmentación"
+unit: s10
+prerequisites:
+  - arquitectura-capas-internet
+  - protocolo-tcp-mecanismos
+buildsOn:
+  - arquitectura-capas-internet
+  - protocolo-tcp-mecanismos
+usedBy:
+  - direccionamiento-ipv4-subredes
+  - lab-sockets-tcp-python
+hasVisualization: true
+visualizationType: packet
+formulas:
+  - name: Datos por fragmento no final
+    tex: D=8\left\lfloor\frac{MTU-H_{IP}}8\right\rfloor
+    reasoning: La carga de un fragmento no final debe caber en la MTU y ser múltiplo
+      de ocho para expresar el siguiente offset.
+    source: Sem10_NetT-NetLayer_Addressing#8 (derivado)
+  - name: Offset de fragmentación
+    tex: offset=\frac{\text{bytes de datos previos}}8
+    reasoning: El offset ubica la carga dentro del datagrama original en bloques de
+      ocho bytes y no incluye cabeceras repetidas.
+    source: Sem10_NetT-NetLayer_Addressing#8
+  - name: MSS y MTU sin opciones
+    tex: MSS=MTU-H_{IP}-H_{TCP}
+    reasoning: Para el caso base IPv4/TCP de 20 bytes cada uno, se resta su
+      sobrecarga a la MTU del enlace.
+    source: Sem10_LAB3_TCP_P2 (1)-1#6.2

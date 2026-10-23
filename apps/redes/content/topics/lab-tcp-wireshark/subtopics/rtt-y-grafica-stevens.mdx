@@ -1,0 +1,40 @@
+---
+kind: subtopic
+title: "Seis muestras RTT y lectura de Stevens"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+LAB3 cuenta los seis segmentos de datos desde el POST. Las slides de apoyo fijan $\alpha=0.125$ y el primer estimado igual al primer SampleRTT.
+
+## 2. Conceptos
+
+| Seg. | Trama / Seq / Len | Envío (s) | Trama ACK / Ack | Llegada (s) | SampleRTT (ms) | EstimatedRTT (ms) |
+|---|---|---|---|---|---|---|
+| 1 | 4 / 1 / 1448 | 0.024047 | 7 / 1449 | 0.052671 | 28.624 | 28.624000 |
+| 2 | 5 / 1449 / 1448 | 0.024048 | 8 / 2897 | 0.052676 | 28.628 | 28.624500 |
+| 3 | 6 / 2897 / 1448 | 0.024049 | 13 / 4345 | 0.053626 | 29.577 | 28.743563 |
+| 4 | 9 / 4345 / 1448 | 0.052774 | 16 / 5793 | 0.080768 | 27.994 | 28.649867 |
+| 5 | 10 / 5793 / 1448 | 0.052775 | 17 / 7241 | 0.080771 | 27.996 | 28.568134 |
+| 6 | 11 / 7241 / 1448 | 0.052854 | 18 / 8689 | 0.080772 | 27.918 | 28.486867 |
+
+Los primeros seis ACK son exactos para esos intervalos; más adelante pueden ser acumulativos. La exportación usa el primer ACK que cubre el extremo y deja su número de trama visible para auditar el emparejamiento.
+
+## 3. Ejemplo resuelto
+
+Para la sexta muestra, tramas 11 y 18: $80.772-52.854=27.918$ ms. Entonces $EstimatedRTT_6=0.875(28.568133789)+0.125(27.918)=28.486867065$ ms.
+
+<Visualization viz={{"type": "xy-chart", "title": "Stevens: secuencia frente al tiempo, captura oficial", "steps": [{"note": "Cada punto es el inicio de un segmento enviado por el cliente. Ráfagas separadas aproximadamente por un RTT; no es una medición directa de cwnd.", "series": [{"id": "seq", "label": "Seq cliente", "points": [[0.024047, 1], [0.024048, 1449], [0.024049, 2897], [0.052774, 4345], [0.052775, 5793], [0.052854, 7241], [0.052855, 8689], [0.05371, 10137], [0.053711, 11585], [0.080845, 13033], [0.080846, 14481], [0.080847, 15929], [0.080848, 17377], [0.08085, 18825], [0.080851, 20273], [0.080929, 21721], [0.08093, 23169], [0.081167, 24617], [0.081168, 26065], [0.081178, 27513], [0.08118, 28961], [0.099141, 30409], [0.099142, 31857], [0.100296, 33305], [0.100297, 34753], [0.105445, 36201], [0.105446, 37649], [0.105446, 39097], [0.105447, 40545], [0.105519, 41993], [0.10552, 43441], [0.10552, 44889], [0.105521, 46337], [0.105522, 47785], [0.105522, 49233], [0.105523, 50681], [0.105523, 52129], [0.106467, 53577], [0.106467, 55025], [0.106481, 56473], [0.106482, 57921], [0.106482, 59369], [0.106483, 60817], [0.106483, 62265], [0.106483, 63713], [0.117127, 65161], [0.117127, 66609], [0.117972, 68057], [0.117972, 69505], [0.123379, 70953], [0.123379, 72401], [0.124618, 73849], [0.124619, 75297], [0.124619, 76745], [0.12462, 78193], [0.124688, 79641], [0.124688, 81089], [0.131908, 82537], [0.131908, 83985], [0.131909, 85433], [0.131909, 86881], [0.13191, 88329], [0.13191, 89777], [0.1325, 91225], [0.132501, 92673], [0.132502, 94121], [0.132502, 95569], [0.132535, 97017], [0.132536, 98465], [0.132536, 99913], [0.132537, 101361], [0.132539, 102809], [0.132562, 104257], [0.132563, 105705], [0.132564, 107153], [0.132565, 108601], [0.132584, 110049], [0.132585, 111497], [0.132586, 112945], [0.132587, 114393], [0.132587, 115841], [0.132588, 117289], [0.132589, 118737], [0.13259, 120185], [0.13259, 121633], [0.132591, 123081], [0.13262, 124529], [0.132621, 125977], [0.133428, 127425], [0.133429, 128873], [0.13343, 130321], [0.13343, 131769], [0.139762, 133217], [0.139762, 134665], [0.141167, 136113], [0.141168, 137561], [0.141168, 139009], [0.141169, 140457], [0.141235, 141905], [0.141236, 143353], [0.146769, 144801], [0.146769, 146249], [0.14762, 147697], [0.147621, 149145], [0.14768, 150593], [0.147682, 152041]], "kind": "samples", "state": "active"}], "x": {"label": "tiempo (s)", "min": 0, "max": 0.2}, "y": {"label": "Seq (bytes)", "min": 0, "max": 160000}}], "static": true}} />
+
+Las ráfagas iniciales aparecen cerca de 0.024, 0.053 y 0.081 s: separación del orden de 28 ms, compatible con el RTT medido. El crecimiento de ráfagas es compatible con arranque, pero no demuestra Tahoe, Reno o CUBIC. La pendiente de Seq frente a tiempo aproxima bytes de secuencia enviados por segundo, no directamente goodput de aplicación.
+
+## 4. Errores típicos
+
+- Inferir cwnd exacta desde Win o desde cada ráfaga.
+- Medir desde el SYN cuando el enunciado pide comenzar con POST.
+- Redondear el estimado antes de actualizar la fila siguiente.
+
+
+Fuente: `Sem09_LAB3_P1-2`, `Sem09_LAB3_TCP_PPT.pptx`.

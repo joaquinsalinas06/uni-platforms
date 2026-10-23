@@ -1,0 +1,57 @@
+---
+kind: subtopic
+title: "Cliente-servidor persistente y delimitación de mensajes"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Una conexión permite varios intercambios sin repetir el handshake. El límite de cada mensaje pertenece al protocolo de aplicación.
+
+## 2. Conceptos
+
+En [tcp_lab.py](/labs/tcp/tcp_lab.py), `send_message` escribe longitud en formato de red y datos; `recv_exact` lee hasta completar el tamaño esperado. Se limita cada mensaje a 1 MiB y un mensaje vacío termina la sesión. Un EOF antes de completar el encabezado o cuerpo es error, no un mensaje correcto.
+
+`socket`, `bind` y `listen` preparan el servidor; `accept` devuelve un socket conectado. El `connect` del cliente inicia el handshake TCP con la pila del servidor que escucha. Python no construye a mano los SYN/ACK.
+
+### Lectura completa y delimitación
+
+```python
+def recv_exact(conn, count):
+    data = bytearray()
+    while len(data) < count:
+        chunk = conn.recv(count - len(data))
+        if not chunk:
+            raise EOFError('Conexión cerrada antes de completar el mensaje')
+        data.extend(chunk)
+    return bytes(data)
+
+
+def send_message(conn, data):
+    if len(data) > MAX_MESSAGE:
+        raise ValueError('Mensaje mayor que 1 MiB')
+    conn.sendall(struct.pack('!I', len(data)) + data)
+
+
+def receive_message(conn):
+    size = struct.unpack('!I', recv_exact(conn, 4))[0]
+    if size > MAX_MESSAGE:
+        raise ValueError('Longitud de mensaje mayor que 1 MiB')
+    return recv_exact(conn, size)
+```
+
+## 3. Ejemplo resuelto
+
+El cliente envía tres mensajes secuenciales. El servidor espera 2 s antes de cada respuesta; el cliente espera 1 s después de cada respuesta antes del siguiente envío. El reloj usa `perf_counter` y mide desde antes de enviar hasta recibir la respuesta completa. No se resta el segundo entre intercambios: ese segundo queda fuera de cada medición.
+
+En Wireshark, compara el RTT de aplicación con `tcp.analysis.ack_rtt`. El primero incluye espera y procesamiento de Python; el ACK de transporte puede llegar mucho antes. Es la pila del sistema, no Wireshark, la que envía ese ACK.
+
+## 4. Errores típicos
+
+- Medir desde antes de `connect` y atribuir el handshake a cada mensaje.
+- Interpretar PSH como separador fiable de mensajes.
+- Afirmar que Ctrl+C siempre produce RST: el resultado depende del cierre, datos pendientes y sistema; hay que capturarlo.
+
+
+Fuente: `Sem10_LAB3_TCP_P2 (1)-1`, `Sem10_Excercises4-TCP`.

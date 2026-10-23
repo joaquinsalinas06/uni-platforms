@@ -1,0 +1,31 @@
+---
+kind: subtopic
+title: "Subredes y agregación de rutas"
+order: 3
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Agrupar prefijos reduce cuántas rutas debe anunciar un proveedor. Una excepción más específica permite mover una organización sin cambiar el agregado de las restantes.
+
+## 2. Conceptos
+
+Las slides 20–22 muestran islas de interfaces. En la figura de tres routers hay **seis** subredes /24: 223.1.1.0, 223.1.2.0, 223.1.3.0 y los enlaces 223.1.7.0, 223.1.8.0 y 223.1.9.0. Los enlaces entre routers también cuentan. Algunas etiquetas de la figura terminan en .0; para identificar la subred se conserva su prefijo, sin tomarlas como ejemplo de dirección de host utilizable.
+
+En el ejemplo de agregación hay ocho organizaciones con /23 consecutivos y alineados. Un agregado válido necesita cubrir un bloque contiguo con los mismos bits altos; no basta con sumar cantidades de direcciones.
+
+## 3. Ejemplo resuelto
+
+Ocho bloques de 512 direcciones dan 4096, es decir $2^{12}$: quedan $32-12=20$ bits de prefijo. 200.23.16.0/20 cubre los terceros octetos 16–31. El /23 de 200.23.18.0 conserva prioridad sobre /20 para esa organización cuando se anuncia desde el otro ISP.
+
+La presentación atribuye la asignación de bloques a ICANN a través de cinco registros regionales, y menciona agotamiento IPv4, NAT y los 128 bits de IPv6 como contexto final. No desarrolla traducción NAT ni mecanismos IPv6.
+
+## 4. Errores típicos
+
+- Contar solo las LAN con computadoras.
+- Agregar bloques no alineados en un único prefijo que incluye destinos ajenos.
+- Elegir la ruta menos específica para la organización que se movió.
+
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`.

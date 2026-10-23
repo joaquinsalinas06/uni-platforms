@@ -1,0 +1,30 @@
+---
+kind: subtopic
+title: "Captura TCP: segmentos, secuencias y ACK"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Un ACK acumulativo expresa el **siguiente byte esperado**. Un mismo ACK puede confirmar varios segmentos; por eso la comparación correcta es con el extremo del intervalo, no con el número de trama.
+
+## 2. Conceptos
+
+En la captura oficial: SYN de trama 1 con `Seq=0`; SYN/ACK de trama 2 con `Seq=0 Ack=1`; ACK de trama 3 con `Seq=1 Ack=1`. El SYN consume un número de secuencia. La trama 4 comienza en 1 y lleva 1448 bytes; la 5 empieza en 1449.
+
+Para un segmento $[Seq,Seq+Len)$, un ACK posterior con $Ack\geq Seq+Len$ cubre todo su contenido. Si varios envíos quedaron sin reconocer, la diferencia temporal incluye la política de ACK acumulativo o diferido: no es necesariamente una muestra independiente por cada segmento. Tras retransmisión, la ambigüedad motiva [Karn](/topics/rtt-timeout-retransmision).
+
+## 3. Ejemplo resuelto
+
+Filtros de visualización: `tcp.stream == 0 && tcp.len > 0`, `tcp.flags.syn == 1`, `tcp.flags.fin == 1 || tcp.flags.reset == 1`. El primero incluye datos de ambas direcciones: agrega `ip.src == 192.168.86.68` para contar los 106 segmentos del cliente.
+
+Desactivar HTTP no elimina la carga del paquete; cambia su decodificación y presentación. “TCP segment of a reassembled PDU” indica que un mensaje superior ocupa varios segmentos, no un protocolo “HTTP Continuation”.
+
+## 4. Errores típicos
+
+- Interpretar `Ack=1449` como “recibió el byte 1449”: espera ese byte; confirmó hasta 1448.
+- Atribuir todos los bytes TCP a alice.txt, olvidando HTTP.
+
+
+Fuente: `Sem09_LAB3_P1-2`, `Sem09_LAB3_TCP_PPT.pptx`.

@@ -6,7 +6,8 @@ prerequisites:
   - "rtt-timeout-retransmision"
 buildsOn:
   - "rtt-timeout-retransmision"
-usedBy: []
+usedBy:
+  - "principios-costes-congestion"
 formulas: []
 hasVisualization: true
 visualizationType: "xy-chart"

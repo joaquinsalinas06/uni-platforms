@@ -8,6 +8,7 @@ buildsOn:
   - "protocolo-tcp-mecanismos"
 usedBy:
   - "control-flujo-congestion-tcp"
+  - "lab-tcp-wireshark"
 formulas:
   - name: "SampleRTT"
     tex: "\\text{SampleRTT} = t_{\\text{ACK recibido}} - t_{\\text{segmento enviado}}"
@@ -15,5 +16,13 @@ formulas:
   - name: "EstimatedRTT (media móvil exponencial)"
     tex: "\\text{EstimatedRTT}_n = 0{,}875 \\cdot \\text{EstimatedRTT}_{n-1} + 0{,}125 \\cdot \\text{SampleRTT}_n"
     reasoning: "Suaviza las mediciones: el 87,5 % del valor viene del estimado anterior y solo el 12,5 % de la última muestra (fórmula dada en el parcial 2025-II, pregunta 6)."
+  - name: "DevRTT"
+    tex: "DevRTT_n=0.75\\,DevRTT_{n-1}+0.25\\,|SampleRTT_n-EstimatedRTT_n|"
+    reasoning: "Sigue la dispersión absoluta con el estimado recién actualizado, según el orden de las ecuaciones de Ex4."
+    source: "Sem10_Excercises4-TCP#4"
+  - name: "TimeoutInterval"
+    tex: "TimeoutInterval=EstimatedRTT+4\\,DevRTT"
+    reasoning: "Agrega un margen de cuatro desviaciones al estimado de RTT para calcular el temporizador solicitado en Ex4."
+    source: "Sem10_Excercises4-TCP#4"
 hasVisualization: true
 visualizationType: "xy-chart"

@@ -1,0 +1,33 @@
+---
+kind: subtopic
+title: "DHCP y configuración dinámica del host"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+El host necesita dirección al entrar a la red, pero también parámetros para comunicarse fuera de ella. DHCP permite reutilizar direcciones mediante una concesión o lease renovable.
+
+## 2. Conceptos
+
+<Visualization viz={{"type": "sequence", "title": "DHCP: concesión de la slide 28", "steps": [{"note": "Ejemplo de las slides: xid=654; oferta 223.1.2.4 durante 3600 s. La renovación puede omitir Discover y Offer.", "actors": [{"id": "c", "label": "Cliente nuevo"}, {"id": "s", "label": "223.1.2.5"}], "msgs": [{"from": "c", "to": "s", "label": "Discover", "flags": "0.0.0.0:68 → broadcast:67"}, {"from": "s", "to": "c", "label": "Offer 223.1.2.4", "flags": "lease 3600 s"}, {"from": "c", "to": "s", "label": "Request", "flags": "xid 654"}, {"from": "s", "to": "c", "label": "ACK", "flags": "confirma concesión"}]}], "static": true}} />
+
+Discover y Request iniciales salen de 0.0.0.0:68 hacia 255.255.255.255:67. En la figura del curso, Offer y ACK se muestran broadcast hacia el puerto 68. No debe imponerse un destino Ethernet unicast a todas las capturas: se inspecciona el que efectivamente aparece.
+
+Además de la IP, DHCP puede devolver máscara, dirección del primer router y servidores DNS. La slide permite omitir Discover/Offer si el cliente recuerda la dirección y desea reutilizarla.
+
+## 3. Ejemplo resuelto
+
+La oferta de 223.1.2.5 entrega `yiaddr=223.1.2.4`, xid=654 y lifetime=3600 s. El cliente relaciona la respuesta con su solicitud por ese identificador. Son datos de la **slide**, no una medición de tu red.
+
+[Ejercicio extra de DHCP](/evaluaciones/laboratorio/dhcp-udp-applayer-extra).
+
+## 4. Errores típicos
+
+- Confundir DHCP ACK con un ACK TCP: este intercambio usa UDP.
+- Afirmar que toda renovación repite siempre las cuatro fases.
+- Copiar el lease de la slide como si fuera el de tu captura.
+
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`.

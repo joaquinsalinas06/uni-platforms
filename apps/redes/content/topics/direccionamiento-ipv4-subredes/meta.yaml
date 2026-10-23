@@ -1,0 +1,37 @@
+{
+  "id": "direccionamiento-ipv4-subredes",
+  "type": "concept",
+  "title": "Direccionamiento IPv4, CIDR, Subredes y DHCP",
+  "unit": "s10",
+  "prerequisites": [
+    "capa-red-ipv4-fragmentacion",
+    "dns-arquitectura-resolucion"
+  ],
+  "buildsOn": [
+    "capa-red-ipv4-fragmentacion",
+    "dns-arquitectura-resolucion"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": [
+    {
+      "name": "Dirección de red",
+      "tex": "\\text{red}=IP\\ \\mathrm{AND}\\ \\text{máscara}",
+      "reasoning": "El AND conserva los bits del prefijo y pone a cero la parte host para identificar la subred.",
+      "source": "Sem10_NetT-NetLayer_Addressing#15"
+    },
+    {
+      "name": "Broadcast de subred",
+      "tex": "\\text{broadcast}=\\text{red}\\ \\mathrm{OR}\\ (\\mathrm{NOT}\\ \\text{máscara})",
+      "reasoning": "Se ponen a uno los bits de host, tomando el complemento de la máscara sobre exactamente 32 bits.",
+      "source": "Sem10_NetT-NetLayer_Addressing#15 (derivado)"
+    },
+    {
+      "name": "Tamaño de un bloque CIDR",
+      "tex": "\\text{direcciones}=2^{32-p}",
+      "reasoning": "Un prefijo de p bits deja 32-p bits libres que enumeran todas las direcciones del bloque.",
+      "source": "Sem10_NetT-NetLayer_Addressing#14 (derivado)"
+    }
+  ]
+}

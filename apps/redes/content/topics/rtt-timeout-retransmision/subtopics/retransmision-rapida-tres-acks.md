@@ -1,29 +1,29 @@
 ---
 kind: subtopic
-title: "Retransmisión: qué cubre el material"
+title: "Retransmisión rápida con tres ACK duplicados"
 order: 2
 ---
 
 ## 1. Idea
 
-El nombre del subtema promete retransmisión rápida con tres ACK duplicados. **Eso no está en el material.** Aquí va lo que sí hay sobre retransmitir.
-
----
+TCP puede detectar un hueco antes de agotar el temporizador: varios segmentos posteriores llegan, pero el ACK acumulativo sigue pidiendo el mismo byte. Ex4 pregunta 2 exige fast retransmit al tercer duplicado.
 
 ## 2. Conceptos
 
-- **Por temporizador (timeout):** en rdt3.0 el emisor retransmite el paquete actual cuando vence el temporizador sin llegar el ACK ([rdt3.0](/topics/transferencia-confiable-rdt/subtopics/rdt3-temporizadores-stop-and-wait)). En los ejercicios, un resolver DNS que no recibe respuesta por UDP espera un tiempo (2,0 s en el enunciado) y reenvía la consulta (Ejercicios 3, pregunta 9).
-- **Por ACK de otro número (rdt2.2):** en un protocolo sin NAK, un ACK con el número del paquete anterior ("ACK duplicado") equivale a un NAK y el emisor retransmite.
-- **Timeout prematuro:** si el temporizador es menor que el RTT el emisor retransmite aunque el ACK venga en camino; el receptor detecta el duplicado por el número de secuencia.
+Tras perder S2, el receptor recibe S1 y responde con el siguiente dato esperado. Al recibir S3, S4 y S5 fuera de orden, repite ese ACK tres veces. Son **cuatro ACK con el mismo número**: original más tres duplicados. TCP retransmite S2; si el receptor conservó S3–S5, el siguiente ACK cubre los cinco segmentos.
 
----
+Los ACK duplicados señalan un posible hueco, no prueban por sí solos la causa física de la pérdida. El enunciado fija la pérdida de S2 y que no hay delayed ACK, por lo que sí permite contar los intercambios.
 
 ## 3. Ejemplo resuelto
 
-No hay ejemplo de retransmisión TCP en las slides ni en los exámenes. La traza del parcial 2025-II no contiene retransmisiones.
+Con números de segmento 1–5 y ACK TCP expresado como siguiente segmento esperado, los ACK son 2, 2, 2, 2 y 6. Total: seis envíos de datos (cinco iniciales más S2) y cinco ACK. En bytes, si cada segmento tiene M bytes y el primero empieza en Seq=1, los cuatro primeros ACK valen M+1 y el último 5M+1.
 
----
+[Comparación con GBN y SR](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-2-gbn-sr-y-tcp).
 
 ## 4. Errores típicos
 
-- Atribuir a TCP la regla de "tres ACK duplicados": no está en el material.
+- Retransmitir S2 después del segundo duplicado.
+- Reiniciar todos los segmentos como GBN: TCP puede conservar lo que llegó fuera de orden.
+- Medir RTT de la copia sin resolver la ambigüedad descrita por Karn.
+
+Fuente: `Sem10_Excercises4-TCP`, preguntas 2 y 4.

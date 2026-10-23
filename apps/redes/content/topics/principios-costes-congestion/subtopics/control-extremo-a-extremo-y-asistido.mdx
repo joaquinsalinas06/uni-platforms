@@ -1,0 +1,31 @@
+---
+kind: subtopic
+title: "Control extremo a extremo y asistido por la red"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+El emisor necesita información para ajustar su ritmo. Puede inferirla de los extremos o recibir una señal explícita desde la red.
+
+## 2. Conceptos
+
+| Enfoque | Información | Ejemplo del material |
+|---|---|---|
+| Extremo a extremo | Pérdida y retardo observados | TCP clásico |
+| Asistido por la red | Marcas o avisos desde routers | ECN |
+
+Un ACK confirma bytes; si además transporta ECE, comunica la señal de congestión recibida. Una pérdida o un RTT alto requieren interpretación: no identifican por sí solos el router que limita el flujo.
+
+## 3. Ejemplo resuelto
+
+El receptor anuncia espacio disponible, pero el router intermedio empieza a acumular cola. El control de flujo permite seguir porque el receptor tiene buffer; el control de congestión debe reducir la presión sobre la red. Con ECN, el aviso puede llegar mediante una marca antes de necesitar un descarte por desborde.
+
+## 4. Errores típicos
+
+- Confundir señal explícita de congestión con el campo de ventana.
+- Desarrollar ATM o DECbit como temas nuevos: aquí solo se citan como ejemplos de la slide 21.
+
+
+Fuente: `Sem9_NetT-TCP2`.

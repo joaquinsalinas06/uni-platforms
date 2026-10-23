@@ -1,0 +1,33 @@
+---
+kind: subtopic
+title: "Tabla de rutas, interfaces y direcciones MAC"
+order: 4
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Las slides conectan direccionamiento con herramientas para observar el equipo y el camino. Se usan los comandos que aparecen allí, sin convertirlos en un laboratorio nuevo de routing.
+
+## 2. Conceptos
+
+| Herramienta de la presentación | Qué observar |
+|---|---|
+| `netstat -nr` | Tabla de rutas con destinos y gateways numéricos |
+| `ifconfig` | Interfaces y su configuración |
+| `traceroute <destino>` | Saltos visibles a lo largo del camino |
+
+La slide titulada “MAC and ARP” distingue **IP de 32 bits**, para llegar a la subred destino, y **MAC de 48 bits** en la mayoría de LAN, para transferir una trama entre interfaces conectadas. Indica que la MAC puede ser configurable. No desarrolla en esta presentación la secuencia de mensajes ARP.
+
+## 3. Ejemplo resuelto
+
+Observa con `ifconfig` qué interfaz tiene tu IP activa y busca con `netstat -nr` la ruta al destino o el gateway por defecto. `traceroute` muestra respuestas de saltos del camino; un salto sin respuesta no basta para demostrar que toda la comunicación falló. Los valores concretos dependen de tu equipo y red.
+
+## 4. Errores típicos
+
+- Tratar la IP y la MAC como dos nombres equivalentes del mismo alcance.
+- Interpretar la configuración de loopback como la de Wi-Fi.
+- Añadir un protocolo de enrutamiento o una explicación detallada de ARP que estas slides no desarrollan.
+
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`.

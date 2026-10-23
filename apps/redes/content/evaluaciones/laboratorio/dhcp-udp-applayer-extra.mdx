@@ -115,7 +115,7 @@ Se libera y renueva la dirección (`ipconfig /release` y `/renew` en Windows; `s
 
 **3) Parámetros y lease.** En el Offer y el ACK, en la sección de opciones de DHCP, anota la IP ofrecida (*Your (client) IP address*), el *IP Address Lease Time* y al menos dos parámetros más (máscara de subred, router/gateway, servidores DNS). Los valores dependen de tu red.
 
-**4) Capa 2 frente a capa 3.** Aunque el cliente aún no tiene IP, el Offer le llega por la dirección **MAC**: el servidor conoce la MAC del cliente (viene en el Discover) y la usa como destino Ethernet; revisa en la trama del Offer la MAC y la IP de destino que se usaron.
+**4) Capa 2 frente a capa 3.** El servidor conoce la MAC indicada en el Discover, pero Offer puede llegar por broadcast o unicast según el intercambio. La slide 28 de semana 10 muestra broadcast IP. Revisa en tu trama las direcciones Ethernet e IP: la MAC permite entrega local aun sin configuración IP completa; no se debe imponer un destino unicast a toda captura.
 
 ---
 

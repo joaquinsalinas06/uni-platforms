@@ -106,7 +106,7 @@ Qué se ve en la traza real del parcial 2025-II:
 | 2 | `[SYN, ACK]` | `Seq=0 Ack=1 Win=28960 Len=0 MSS=1460 SACK_PERM` |
 | 3 | `[ACK]` | `Seq=1 Ack=1 Win=131712 Len=0` |
 
-`MSS`, `WS` y `SACK_PERM` aparecen como opciones en los segmentos; **el material no las explica**. Sí es observable que el `SYN` y el `SYN,ACK` ocupan el número de secuencia 0 y que el `Ack=1` los confirma.
+`MSS`, `WS` y `SACK_PERM` aparecen como opciones en los segmentos; MSS y la relación con MTU se amplían en LAB3 P2; WS se observa con el valor de ventana calculado por Wireshark; SACK_PERM queda como opción identificable, sin desarrollar SACK. Sí es observable que el `SYN` y el `SYN,ACK` ocupan el número de secuencia 0 y que el `Ack=1` los confirma.
 
 ### Por qué el orden importa (ejercicio de la semana 3 y 7)
 
@@ -114,7 +114,7 @@ En una navegación típica, la consulta DNS ocurre **antes** del handshake (hace
 
 ### Cierre
 
-El material **no desarrolla** el cierre de la conexión. Lo que sí aparece:
+Ex4, preguntas 6–8, pide reconocer el cierre de la conexión. FIN termina una dirección y consume un número de secuencia; el otro extremo lo confirma y puede cerrar la suya con otro FIN. Es posible combinar FIN y ACK. Además:
 
 - Los bits **FIN** y **RST** están en la cabecera.
 - En el laboratorio de la semana 5 (UDP vs TCP): al cerrar el receptor con Ctrl+C, en TCP se ven paquetes de cierre (FIN/RST) y la terminal del emisor se corta de inmediato; con UDP no hay ningún paquete de despedida.
@@ -131,5 +131,9 @@ Tiempo hasta enviar el primer dato en la traza: el SYN sale en $t = 0$, el SYN,A
 ## 4. Errores típicos
 
 - Contar el handshake como 2 RTT: el material lo cuenta como 1 RTT.
-- Atribuirle a las slides la explicación de MSS, WS o el cierre en cuatro pasos: no están.
+- Imponer cuatro paquetes separados para todo cierre: FIN y ACK pueden combinarse; la captura oficial no incluye el cierre.
 - Hablar de "conexión" en UDP.
+
+## 5. MSS y captura del cierre
+
+La MSS se anuncia por dirección en SYN. LAB3 P2 compara MTU 1500 y 1000: con cabeceras base de 20 B IPv4 y 20 B TCP, resultan 1460 y 960 B. Las opciones y la MTU del camino pueden reducir la carga efectiva. [Experimento y preguntas](/evaluaciones/laboratorio/lab3-tcp-p2).

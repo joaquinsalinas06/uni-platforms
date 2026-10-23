@@ -9,6 +9,7 @@ buildsOn:
 usedBy:
   - "registros-rr-seguridad-dns"
   - "lab-dns-wireshark-nslookup"
+  - "direccionamiento-ipv4-subredes"
 formulas:
   - name: "Retardo de resolución DNS sin caché"
     tex: "T_{\\text{DNS}} = \\text{RTT}_{\\text{local}} + \\sum_{i=1}^{n} \\text{RTT}_i"

@@ -1,0 +1,57 @@
+---
+kind: theory
+title: "Congestión: Causas, Costes y Formas de Control"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+Un receptor puede tener espacio y, aun así, la red perder paquetes: el buffer que se llenó puede ser el de un **router**. La congestión aparece cuando demasiadas fuentes envían demasiado rápido para la capacidad disponible. Sus señales son retardo de cola y pérdidas; no debe confundirse con control de flujo.
+
+---
+
+## 2. Conceptos
+
+Las slides 9–19 presentan tres escenarios. Con dos emisores y buffers infinitos, el throughput por flujo se aproxima a $R/2$, pero el retardo crece al acercarse a la capacidad. Con buffers finitos hay pérdidas y retransmisiones; además, los timeouts prematuros generan duplicados. Con cuatro emisores y varios saltos, un descarte tardío desperdicia también el trabajo de enlaces anteriores.
+
+<Visualization viz={{"type": "net-scene", "title": "Un cuello de botella, dos emisores", "steps": [{"note": "El buffer absorbe ráfagas; no aumenta la capacidad R del enlace de salida. Al llenarse, se descartan paquetes.", "devices": [{"id": "a", "kind": "host", "label": "Host A", "x": 8, "y": 18}, {"id": "b", "kind": "host", "label": "Host B", "x": 8, "y": 82}, {"id": "r", "kind": "router", "label": "Buffer finito", "x": 50, "y": 50}, {"id": "d", "kind": "server", "label": "Destino", "x": 92, "y": 50}], "cables": [{"from": "a", "to": "r"}, {"from": "b", "to": "r"}, {"from": "r", "to": "d", "rate": "R"}], "packets": [{"from": "a", "to": "r", "label": "datos", "state": "active"}, {"from": "r", "to": "d", "label": "salida", "state": "answer"}]}], "static": true}} />
+
+| Escenario | Qué cambia | Coste |
+|---|---|---|
+| 1: un router, buffer infinito | La cola puede seguir creciendo | Retardo elevado aunque no haya pérdida |
+| 2: buffer finito | Se descarta y retransmite | Más tráfico para entregar los mismos datos útiles |
+| 2: timeout prematuro | Llegan dos copias del mismo dato | Capacidad consumida sin nuevo throughput útil |
+| 3: múltiples saltos | El descarte ocurre después de otros enlaces | Se pierde capacidad y buffering aguas arriba |
+
+El control **extremo a extremo** infiere congestión por pérdida o retardo. El control **asistido por la red** recibe información explícita de routers; la presentación cita ECN, ATM y DECbit, sin desarrollar estos dos últimos.
+
+---
+
+## 3. Método paso a paso
+
+1. Localiza el recurso compartido y su capacidad de salida.
+2. Distingue datos originales de retransmisiones: la carga real incluye ambas.
+3. Identifica dónde se pierde el paquete y qué recursos ya utilizó.
+4. Explica si el problema está en el receptor o en la red antes de elegir el mecanismo.
+
+---
+
+## 4. Ejemplo resuelto
+
+En el escenario de dos emisores, ambos podrían intentar usar $R/2$. Si parte de esa tasa son duplicados, cada receptor obtiene **menos de $R/2$ de información nueva**. Retransmitir más no aumenta la capacidad del enlace: puede disminuir el rendimiento útil.
+
+---
+
+## 5. Errores típicos
+
+- Igualar tráfico transmitido con datos nuevos entregados.
+- Pensar que un buffer infinito elimina el problema: elimina el descarte por llenado, pero permite retardos arbitrariamente grandes.
+- Usar una ventana de recepción grande como prueba de ausencia de congestión.
+
+
+## Para profundizar
+
+- [Buffers, pérdidas y retransmisiones](/topics/principios-costes-congestion/subtopics/buffers-perdidas-retransmisiones)
+- [Control extremo a extremo y asistido por la red](/topics/principios-costes-congestion/subtopics/control-extremo-a-extremo-y-asistido)
+
+Fuente: `Sem9_NetT-TCP2`.

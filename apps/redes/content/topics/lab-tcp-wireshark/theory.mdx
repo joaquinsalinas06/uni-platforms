@@ -1,0 +1,54 @@
+---
+kind: theory
+title: "Laboratorio: TCP, RTT y Gráficas de Wireshark"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+LAB3 P1 sigue una subida HTTP POST para observar TCP sin confundirlo con HTTP. La captura oficial permite responder con números verificables; la experiencia con tu computadora tendrá otras IP, puertos y tiempos.
+
+---
+
+## 2. Conceptos
+
+La conversación de `tcp-wireshark-trace1-1.pcapng` es **192.168.86.68:55639 → 128.119.245.12:80**, stream 0. Las tramas 1, 2 y 3 forman el handshake. La trama 4 contiene el inicio del POST, `Seq=1`, y 1448 bytes de carga TCP.
+
+Hay **180 tramas TCP**: 106 segmentos de datos del cliente, uno de datos del servidor y 73 sin carga TCP. Los 153425 bytes de carga del cliente incluyen cabeceras HTTP y contenido de la petición; no deben atribuirse todos al archivo alice.txt. La captura termina sin FIN/RST y no permite describir un cierre observado.
+
+<Visualization viz={{"type": "xy-chart", "title": "Stevens: secuencia frente al tiempo, captura oficial", "steps": [{"note": "Cada punto es el inicio de un segmento enviado por el cliente. Ráfagas separadas aproximadamente por un RTT; no es una medición directa de cwnd.", "series": [{"id": "seq", "label": "Seq cliente", "points": [[0.024047, 1], [0.024048, 1449], [0.024049, 2897], [0.052774, 4345], [0.052775, 5793], [0.052854, 7241], [0.052855, 8689], [0.05371, 10137], [0.053711, 11585], [0.080845, 13033], [0.080846, 14481], [0.080847, 15929], [0.080848, 17377], [0.08085, 18825], [0.080851, 20273], [0.080929, 21721], [0.08093, 23169], [0.081167, 24617], [0.081168, 26065], [0.081178, 27513], [0.08118, 28961], [0.099141, 30409], [0.099142, 31857], [0.100296, 33305], [0.100297, 34753], [0.105445, 36201], [0.105446, 37649], [0.105446, 39097], [0.105447, 40545], [0.105519, 41993], [0.10552, 43441], [0.10552, 44889], [0.105521, 46337], [0.105522, 47785], [0.105522, 49233], [0.105523, 50681], [0.105523, 52129], [0.106467, 53577], [0.106467, 55025], [0.106481, 56473], [0.106482, 57921], [0.106482, 59369], [0.106483, 60817], [0.106483, 62265], [0.106483, 63713], [0.117127, 65161], [0.117127, 66609], [0.117972, 68057], [0.117972, 69505], [0.123379, 70953], [0.123379, 72401], [0.124618, 73849], [0.124619, 75297], [0.124619, 76745], [0.12462, 78193], [0.124688, 79641], [0.124688, 81089], [0.131908, 82537], [0.131908, 83985], [0.131909, 85433], [0.131909, 86881], [0.13191, 88329], [0.13191, 89777], [0.1325, 91225], [0.132501, 92673], [0.132502, 94121], [0.132502, 95569], [0.132535, 97017], [0.132536, 98465], [0.132536, 99913], [0.132537, 101361], [0.132539, 102809], [0.132562, 104257], [0.132563, 105705], [0.132564, 107153], [0.132565, 108601], [0.132584, 110049], [0.132585, 111497], [0.132586, 112945], [0.132587, 114393], [0.132587, 115841], [0.132588, 117289], [0.132589, 118737], [0.13259, 120185], [0.13259, 121633], [0.132591, 123081], [0.13262, 124529], [0.132621, 125977], [0.133428, 127425], [0.133429, 128873], [0.13343, 130321], [0.13343, 131769], [0.139762, 133217], [0.139762, 134665], [0.141167, 136113], [0.141168, 137561], [0.141168, 139009], [0.141169, 140457], [0.141235, 141905], [0.141236, 143353], [0.146769, 144801], [0.146769, 146249], [0.14762, 147697], [0.147621, 149145], [0.14768, 150593], [0.147682, 152041]], "kind": "samples", "state": "active"}], "x": {"label": "tiempo (s)", "min": 0, "max": 0.2}, "y": {"label": "Seq (bytes)", "min": 0, "max": 160000}}], "static": true}} />
+
+---
+
+## 3. Método paso a paso
+
+1. Abre la captura; aplica `tcp.stream == 0`.
+2. Lee IP, puerto, Seq, Ack, Len y flags. Wireshark muestra secuencias relativas por defecto.
+3. Desactiva HTTP en Analyze → Enabled Protocols si quieres ver TCP en Protocol; los paquetes no cambian.
+4. Para localizar POST, vuelve a habilitar HTTP y desactiva “Allow Subdissector to reassemble TCP Streams” como indica la guía.
+5. Desde el primer POST, empareja cada segmento con el primer ACK posterior que cubra su último byte.
+6. Abre Statistics → TCP Stream Graphs → Time Sequence (Stevens); verifica la dirección cliente → servidor.
+
+---
+
+## 4. Ejemplo resuelto
+
+La trama 4 sale en 0.024047 s; la trama 7 reconoce `Ack=1449` en 0.052671 s. Como $1+1448=1449$, confirma el intervalo enviado. $SampleRTT=28.624$ ms. LAB3 fija el primer EstimatedRTT igual a esa muestra; no se incluye el SYN como primer segmento de datos.
+
+[LAB3 P1 completo](/evaluaciones/laboratorio/lab3-tcp-p1) · [CSV de tramas](/labs/tcp/tcp-trace.csv) · [Resultados calculados](/labs/tcp/tcp-trace.json).
+
+---
+
+## 5. Errores típicos
+
+- Contar todos los paquetes como segmentos de datos.
+- Creer que una llamada send equivale a un segmento.
+- Identificar slow start con certeza solo por la forma de una captura corta.
+
+
+## Para profundizar
+
+- [Captura TCP: segmentos, secuencias y ACK](/topics/lab-tcp-wireshark/subtopics/captura-secuencia-ack)
+- [Seis muestras RTT y lectura de Stevens](/topics/lab-tcp-wireshark/subtopics/rtt-y-grafica-stevens)
+
+Fuente: `Sem09_LAB3_P1-2`, `Sem09_LAB3_TCP_PPT.pptx`.

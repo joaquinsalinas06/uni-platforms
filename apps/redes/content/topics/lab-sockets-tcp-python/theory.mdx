@@ -1,0 +1,53 @@
+---
+kind: theory
+title: "Laboratorio: Sockets TCP, Archivos y MTU"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+TCP entrega un flujo de bytes confiable: no preserva los límites de cada llamada a `send`. Un programa correcto debe establecer sus propios mensajes o leer hasta un final definido.
+
+---
+
+## 2. Conceptos
+
+El [código descargable](/labs/tcp/tcp_lab.py) usa dos protocolos pequeños: mensajes con longitud de 4 bytes seguida de carga, y archivos enviados hasta EOF mediante `shutdown(SHUT_WR)`. El receptor del archivo devuelve longitud y SHA-256; el cliente comprueba ambos. Se usan `sendall` y bucles de lectura, con timeout y cierre de sockets.
+
+<Visualization viz={{"type": "sequence", "title": "ACK TCP frente a respuesta de aplicación", "steps": [{"note": "El sistema operativo reconoce datos sin esperar los dos segundos de procesamiento de Python. El número de segmentos depende de la pila y la captura.", "actors": [{"id": "c", "label": "Cliente"}, {"id": "s", "label": "Servidor"}], "msgs": [{"from": "c", "to": "s", "label": "Mensaje 1"}, {"from": "s", "to": "c", "label": "ACK TCP", "flags": "kernel; sin esperar a Python"}, {"from": "s", "to": "c", "label": "ACK aplicacion", "flags": "después de 2 s"}, {"from": "c", "to": "s", "label": "ACK TCP"}]}], "static": true}} />
+
+El ACK TCP lo genera la pila del sistema operativo. La cadena “ACK aplicacion” es un mensaje de Python, posterior al procesamiento. El RTT medido por la aplicación incluye los dos segundos de espera del servidor; `tcp.analysis.ack_rtt` mide otra cosa.
+
+---
+
+## 3. Método paso a paso
+
+1. Descarga `tcp_lab.py`. Abre dos terminales en su carpeta.
+2. Ejecuta `python3 tcp_lab.py server --port 5000` y luego `python3 tcp_lab.py client --port 5000`.
+3. Captura en loopback para 127.0.0.1; para dos equipos, usa su interfaz de red y la IP del servidor.
+4. Para LAB3, cambia el puerto por los últimos cinco dígitos de tu código/DNI; si superan 65535, usa los últimos cuatro. El script exige puerto entre 1 y 65535: si resultara 0, acuerda otro válido con el docente.
+5. Para el archivo, ejecuta `receive --file received.txt` y `send --file message.txt` en terminales separadas. El destino debe ser nuevo; se evita sobrescribirlo.
+
+---
+
+## 4. Ejemplo resuelto
+
+`python3 tcp_lab.py receive --host 0.0.0.0 --port 5000 --file received.txt` escucha conexiones de la LAN; el cliente usa `python3 tcp_lab.py send --host <IP_SERVIDOR> --port 5000 --file message.txt`. Se imprime el mismo conteo de bytes y hash en ambos extremos. En Ex4, crea un archivo de al menos 100 KB; en LAB3 se solicita **RFC_TCP.txt**, que no está entre los archivos proporcionados. No se atribuyen medidas a ese archivo ausente.
+
+[LAB3 P2 completo](/evaluaciones/laboratorio/lab3-tcp-p2) · [Ex4, preguntas 7–9](/evaluaciones/laboratorio/ejercicios-4-tcp).
+
+---
+
+## 5. Errores típicos
+
+- Usar un único `recv` para un archivo o asumir que cada `recv` entrega un mensaje completo.
+- Cerrar ambas direcciones antes de recibir la confirmación del hash.
+- Confundir ACK de aplicación, ACK TCP y el flag PSH.
+
+
+## Para profundizar
+
+- [Cliente-servidor persistente y delimitación de mensajes](/topics/lab-sockets-tcp-python/subtopics/cliente-servidor-mensajes)
+- [Transferencia íntegra, MSS y experimento de MTU](/topics/lab-sockets-tcp-python/subtopics/transferencia-archivos-mss-mtu)
+
+Fuente: `Sem10_LAB3_TCP_P2 (1)-1`, `Sem10_Excercises4-TCP`.

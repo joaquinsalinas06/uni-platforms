@@ -1,0 +1,52 @@
+---
+kind: theory
+title: "Capa de Red: Datagramas IPv4 y Fragmentación"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+La capa de transporte comunica procesos; la capa de red lleva sus segmentos entre hosts a través de routers. El emisor encapsula en datagramas y el receptor entrega la carga al protocolo de transporte.
+
+---
+
+## 2. Conceptos
+
+**Forwarding** decide la salida local de un paquete usando la cabecera y una tabla. **Routing** determina el camino de origen a destino. La analogía de las slides distingue atravesar un intercambio vial de planificar todo el viaje.
+
+La slide de sobrecarga usa 20 B IP y 20 B TCP: 40 B antes de contar aplicación. Es el caso sin opciones. Cada interfaz tiene una MTU: tamaño máximo del paquete IP transportable en ese enlace, sin sumar la cabecera Ethernet.
+
+Un datagrama IPv4 demasiado grande puede fragmentarse si se permite. Cada fragmento lleva cabecera IP, conserva el ID y usa offset y MF para ubicar sus datos. El reensamblado ocurre en el destino.
+
+<Visualization viz={{"type": "packet", "title": "Fragmentación de la slide: 4000 B, MTU 1500 B", "steps": [{"note": "Original: 20 B de cabecera y 3980 B de datos.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 0"}], [{"label": "longitud total", "bits": 32, "value": "4000 B"}]]}}, {"note": "Primer fragmento: 1480 B de datos; quedan más.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 0"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Segundo fragmento: empieza en 1480/8.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 185"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Último: 1020 B de datos; mismo ID.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 370"}], [{"label": "longitud total", "bits": 32, "value": "1040 B"}]]}}]}} />
+
+---
+
+## 3. Método paso a paso
+
+1. Resta la cabecera IP a la longitud original para conocer los datos.
+2. Resta la cabecera a MTU; redondea hacia abajo a múltiplo de 8 para fragmentos no finales.
+3. Reparte datos y calcula offsets a partir de datos acumulados, divididos entre 8.
+4. Añade una cabecera a cada fragmento y marca MF=1 salvo el último.
+
+---
+
+## 4. Ejemplo resuelto
+
+La slide 8 usa longitud total 4000 B, cabecera de 20 B y MTU 1500 B: datos originales 3980 B. Se reparten $1480+1480+1020$. Longitudes totales: **1500, 1500 y 1040 B**; offsets **0, 185 y 370**. La suma de longitudes fragmentadas es 4040 B: hay dos cabeceras adicionales.
+
+---
+
+## 5. Errores típicos
+
+- Fragmentar 4000 B de datos cuando el enunciado da longitud total.
+- Medir el offset en bytes o incluir cabeceras en él.
+- Confundir segmentación TCP con fragmentación IP: TCP puede producir segmentos pequeños sin que IP fragmente.
+
+
+## Para profundizar
+
+- [Forwarding, routing y encapsulación IP](/topics/capa-red-ipv4-fragmentacion/subtopics/forwarding-datagrama-ip)
+- [MTU, offsets y reensamblado](/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado)
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`, `Sem10_LAB3_TCP_P2 (1)-1`.

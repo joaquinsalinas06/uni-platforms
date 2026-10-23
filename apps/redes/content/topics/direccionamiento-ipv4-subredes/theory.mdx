@@ -1,0 +1,57 @@
+---
+kind: theory
+title: "Direccionamiento IPv4, CIDR, Subredes y DHCP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+Para reenviar un datagrama, la red debe reconocer a qué conjunto de interfaces pertenece su destino. IPv4 usa 32 bits; CIDR permite que el prefijo tenga longitud arbitraria, sin obligarlo a terminar al final de un octeto.
+
+---
+
+## 2. Conceptos
+
+En `a.b.c.d/p`, los primeros p bits son el prefijo y los restantes la parte host. La figura del curso usa **200.23.16.0/23**: máscara 255.255.254.0 y bloque de 512 direcciones, desde 200.23.16.0 hasta 200.23.17.255.
+
+<Visualization viz={{"type": "packet", "title": "CIDR: 200.23.16.0/23", "steps": [{"note": "Los 23 primeros bits identifican la red; quedan 9 para la parte host. /23 no termina en un límite de octeto.", "fields": {"width": 32, "rows": [[{"label": "prefijo", "bits": 23, "value": "200.23.16.0/23", "state": "active"}, {"label": "host", "bits": 9, "value": "9 bits"}]]}}], "static": true}} />
+
+Una **subred** reúne interfaces que se alcanzan físicamente sin atravesar un router. Para reconocerlas, las slides proponen separar mentalmente las interfaces y observar las islas resultantes.
+
+<Visualization viz={{"type": "net-scene", "title": "Interfaces y subredes de las slides", "steps": [{"note": "Cada interfaz del router pertenece a la subred que conecta. La dirección es de la interfaz, no de la caja completa.", "devices": [{"id": "h1", "kind": "host", "label": "Host 1", "sub": "223.1.1.1", "x": 7, "y": 50}, {"id": "r", "kind": "router", "label": "Router", "sub": ".1.4 / .2.9 / .3.27", "x": 50, "y": 50}, {"id": "h2", "kind": "host", "label": "Host 2", "sub": "223.1.2.1", "x": 93, "y": 12}, {"id": "h3", "kind": "host", "label": "Host 3", "sub": "223.1.3.1", "x": 93, "y": 88}], "cables": [{"from": "h1", "to": "r", "label": "223.1.1.0/24"}, {"from": "r", "to": "h2", "label": "223.1.2.0/24"}, {"from": "r", "to": "h3", "label": "223.1.3.0/24"}]}], "static": true}} />
+
+DHCP configura la IP del host, máscara, gateway y DNS mediante concesiones temporales. La asignación jerárquica permite que un ISP anuncie un bloque agregado; una ruta más específica atiende la excepción de una organización que cambia de proveedor.
+
+---
+
+## 3. Método paso a paso
+
+1. Traduce /p a máscara de p unos y 32-p ceros.
+2. Calcula red con AND; broadcast poniendo a uno los bits host.
+3. Verifica que direcciones y prefijo describan un bloque alineado.
+4. En una topología, cuenta también las redes de enlaces entre routers.
+5. Para rutas que coinciden, usa el prefijo más específico de la figura.
+
+---
+
+## 4. Ejemplo resuelto
+
+Los ocho bloques /23 de las organizaciones empiezan en 200.23.16.0, .18.0, .20.0, …, .30.0. Juntos cubren 200.23.16.0–200.23.31.255: **200.23.16.0/20**. Si la organización 200.23.18.0/23 cambia de ISP, el nuevo proveedor anuncia ese /23; sigue siendo una excepción más específica que /20.
+
+---
+
+## 5. Errores típicos
+
+- Obtener broadcast haciendo OR con la máscara: se necesita su **complemento** en la parte host. La etiqueta abreviada de la slide 15 no es una fórmula completa.
+- Creer que DHCP asigna el bloque de todo el ISP.
+- Convertir la mención final de NAT/IPv6 en un capítulo no desarrollado por el material.
+
+
+## Para profundizar
+
+- [CIDR, máscaras y direcciones especiales](/topics/direccionamiento-ipv4-subredes/subtopics/cidr-mascaras-direcciones-especiales)
+- [DHCP y configuración dinámica del host](/topics/direccionamiento-ipv4-subredes/subtopics/dhcp-configuracion-host)
+- [Subredes y agregación de rutas](/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes)
+- [Tabla de rutas, interfaces y direcciones MAC](/topics/direccionamiento-ipv4-subredes/subtopics/comandos-ip-mac)
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`.

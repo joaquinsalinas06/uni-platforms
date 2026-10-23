@@ -6,7 +6,7 @@ import Visualization from '../src/components/Visualization.astro';
 
 # Práctica — CS4054 Redes y Comunicaciones
 
-Ejercicios tomados de las hojas del curso (Ex 1, Ex 2, Ex 3), las slides y los parciales, con la solución paso a paso. Las magnitudes y los datos son los del enunciado original.
+Ejercicios tomados de las hojas del curso (Ex 1, Ex 2, Ex 3, Ex 4), las slides y los parciales, con la solución paso a paso. Las magnitudes y los datos son los del enunciado original.
 
 ---
 
@@ -520,3 +520,72 @@ $$U = \frac{L/R}{\text{RTT} + L/R} = \frac{0{,}008}{30{,}008} = \boxed{0{,}027\,
 
 **Comprobación:** el protocolo limita lo que la red ofrece: un enlace de 1 Gbps queda casi ocioso con stop-and-wait; por eso se usan protocolos con ventana (Go-Back-N y selective repeat).
 </ExerciseBlock>
+
+
+---
+
+## Semana 9 — Congestión y análisis TCP
+
+### Ejercicio 9.1: AIMD frente a AIAD (Ex4, pregunta 1)
+
+<ExerciseBlock client:visible exercise={{level:2,statement:'Dos flujos compiten por capacidad C. Muestre en el plano de fases por qué AIMD se acerca al reparto igual y si AIAD hace lo mismo. Elija valores concretos como pide el enunciado.',hints:['Compare x2−x1 antes y después de aumentar ambos flujos igual.','Multiplicar ambas tasas por 1/2 también divide la diferencia por 2.']}}>
+
+Tomemos **C=10 y (2,6)** como ejemplo elegido. AI lleva a (3,7), diferencia 4; MD a (1.5,3.5), diferencia 2. El siguiente AI lleva a (4,6) y MD a (2,3), diferencia 1. Las intersecciones con capacidad se acercan a (5,5), bajo RTT iguales y aumento simétrico. Con AIAD, restar la misma cantidad preserva la diferencia: no garantiza equidad.
+
+[Tabla y diagramas de ambas trayectorias](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-1-equidad-de-aimd-frente-a-aiad).
+</ExerciseBlock>
+
+### Ejercicio 9.2: Seis muestras desde POST (LAB3 P1, 3.1.5)
+
+<ExerciseBlock client:visible exercise={{level:2,statement:'En la captura oficial, el sexto segmento se envía en 0.052854 s y su ACK llega en 0.080772 s. El EstimatedRTT anterior es 28.568133789 ms. Calcule SampleRTT y el nuevo estimado con alpha=0.125.',hints:['Convierta la diferencia de segundos a milisegundos.','Use 0.875 del estimado anterior y 0.125 de la muestra.']}}>
+
+Son las tramas **11 y 18**, Seq=7241 y Ack=8689, carga 1448 B. $SampleRTT=27.918$ ms y $Est_6=0.875(28.568133789)+0.125(27.918)=28.486867065$ ms.
+
+[Seis filas y gráfica de la captura](/topics/lab-tcp-wireshark/subtopics/rtt-y-grafica-stevens).
+</ExerciseBlock>
+
+---
+
+## Semana 10 — TCP avanzado e IPv4
+
+### Ejercicio 10.1: DevRTT y timeout (Ex4, pregunta 4)
+
+<ExerciseBlock client:visible exercise={{level:2,statement:'Parta de EstimatedRTT=100 ms y DevRTT=5 ms. Para las muestras 106, 120 y 140 ms, actualice ambos estimadores y TimeoutInterval con alpha=0.125 y beta=0.25.',hints:['Actualice primero EstimatedRTT y use el nuevo valor en la desviación.','TimeoutInterval suma cuatro desviaciones al estimado.']}}>
+
+| Muestra (ms) | Est (ms) | Dev (ms) | Timeout (ms) |
+|---|---|---|---|
+| 106 | 100.75 | 5.0625 | 121 |
+| 120 | 103.15625 | 8.0078125 | 135.1875 |
+| 140 | 107.76171875 | 14.0654296875 | 164.0234375 |
+
+Karn impide usar una muestra ambigua después de retransmitir. [Derivación completa](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-4-rtt-devrtt-timeout-y-karn).
+</ExerciseBlock>
+
+### Ejercicio 10.2: Tahoe y Reno en doce rondas (Ex4, pregunta 5)
+
+<ExerciseBlock client:visible exercise={{level:3,statement:'Con cwnd inicial de 1 MSS y ssthresh de 8 MSS, trace Tahoe y Reno durante 12 rondas. Hay tres ACK duplicados en la ronda 4 y timeout en la 9.',hints:['Declare si los eventos ocurren al principio o final de ronda.','Con vuelo lleno, calcule el umbral como mitad de cwnd antes de cada evento.']}}>
+
+Convención: valores al inicio, eventos al final; Reno mostrado tras completar fast recovery. Tahoe: **1,2,4,8,1,2,4,5,6,1,2,3**. Reno: **1,2,4,8,4,5,6,7,8,1,2,4**. Tras la ronda 4 ambos umbrales son 4; tras la 9 son 3 para Tahoe y 4 para Reno. El estado transitorio Reno de 7 MSS durante la primera recuperación no se presenta como ventana estable de ronda 5.
+
+[Tabla de umbrales y gráfica comparativa](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-5-tahoe-y-reno).
+</ExerciseBlock>
+
+### Ejercicio 10.3: Fragmentar el datagrama de la slide 8
+
+<ExerciseBlock client:visible exercise={{level:2,statement:'Un datagrama IPv4 tiene longitud total 4000 B y cabecera de 20 B. Con MTU de 1500 B, determine las longitudes, MF y offsets de los fragmentos.',hints:['Los datos originales son 3980 B, no 4000.','Los fragmentos no finales llevan un múltiplo de ocho bytes de datos.']}}>
+
+Datos: **1480,1480,1020 B**; longitudes totales: **1500,1500,1040 B**; offsets: **0,185,370**; MF: **1,1,0**. Todos conservan el ID. Las cabeceras extra hacen que el total transmitido sea 4040 B.
+
+[Diagrama paso a paso](/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado).
+</ExerciseBlock>
+
+### Ejercicio 10.4: Bloque CIDR de las slides 14 y 30
+
+<ExerciseBlock client:visible exercise={{level:1,statement:'Para 200.23.16.0/23, determine máscara, cantidad de direcciones y broadcast. ¿Qué agregado representa los ocho bloques /23 consecutivos desde 200.23.16.0 hasta 200.23.30.0?',hints:['/23 deja nueve bits host.','Ocho bloques de 512 direcciones cubren 4096 direcciones alineadas.']}}>
+
+Máscara **255.255.254.0**, **512 direcciones**, broadcast **200.23.17.255**. Los ocho bloques cubren hasta 200.23.31.255 y se agregan como **200.23.16.0/20**. El broadcast se obtiene con OR del complemento de la máscara, no con OR de la máscara misma.
+
+[Subredes y agregación](/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes).
+</ExerciseBlock>
+
+Los nueve ejercicios de Ex4, incluidos GBN/SR/TCP, NAK y las experiencias de programación y captura, están en [Ex4 completo](/evaluaciones/laboratorio/ejercicios-4-tcp). Las capturas propias y experimentos de LAN/MTU tienen campos por completar; no se inventan mediciones.

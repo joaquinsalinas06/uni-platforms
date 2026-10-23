@@ -1,0 +1,31 @@
+---
+kind: subtopic
+title: "Transferencia íntegra, MSS y experimento de MTU"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+El archivo puede llegar en fragmentos distintos de los escritos por el cliente. La integridad se comprueba sobre todos los bytes reconstruidos, no sobre los límites de paquetes.
+
+## 2. Conceptos
+
+El emisor lee bloques y usa `sendall`. Al terminar, cierra solo su escritura con `shutdown(SHUT_WR)`. El servidor lee hasta `recv` vacío, guarda en un archivo nuevo y devuelve bytes y SHA-256. Si hay una interrupción, no se confirma un hash correcto; un archivo parcial debe retirarse antes de repetir con el mismo destino.
+
+En el modelo ideal de Ex4, con archivo F y carga máxima M por segmento, $N=\lceil F/M\rceil$. El último lleva $F-M(N-1)$ bytes si F es positivo; si F=0 no hay segmentos de datos de archivo. En capturas reales pueden aparecer segmentos no llenos, retransmisiones y efectos de offloading: se cuenta lo observado, no se presenta el modelo como medición.
+
+## 3. Ejemplo resuelto
+
+Con MTU=1500 y cabeceras IPv4/TCP de 20 B, la MSS base es 1460. Con MTU=1000 pasa a 960. Las opciones pueden reducir la carga efectiva. Anota MTU original, realiza el cambio indicado por tu sistema, abre conexión nueva, captura y restaura el valor original. No cambies una interfaz remota de la que dependa tu sesión de trabajo.
+
+El ICMP opcional de LAB3 exige que un datagrama con DF encuentre una MTU insuficiente. Si TCP ya envía pequeños segmentos, puede no aparecer. Registra lo observado y explica la diferencia entre reducir MSS y fragmentar IP.
+
+## 4. Errores típicos
+
+- Suponer que `recv(65536)` obliga a generar paquetes de 65536 B.
+- Identificar tamaño del archivo con todos los bytes TCP si el protocolo añade encabezados.
+- Repetir sin restaurar MTU o intentar sobrescribir un archivo de recepción anterior.
+
+
+Fuente: `Sem10_LAB3_TCP_P2 (1)-1`, `Sem10_Excercises4-TCP`.

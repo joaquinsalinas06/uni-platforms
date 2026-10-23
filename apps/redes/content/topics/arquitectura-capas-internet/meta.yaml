@@ -9,6 +9,7 @@ buildsOn:
 usedBy:
   - "capa-aplicacion-http"
   - "capa-transporte-multiplexacion"
+  - "capa-red-ipv4-fragmentacion"
 formulas: []
 hasVisualization: true
 visualizationType: "packet"

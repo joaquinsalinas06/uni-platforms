@@ -1,0 +1,37 @@
+---
+kind: subtopic
+title: "MTU, offsets y reensamblado"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Fragmentar conserva los datos originales, pero repite cabeceras y requiere reconstruir el datagrama en el destino.
+
+## 2. Conceptos
+
+| Fragmento | Datos (B) | Total (B) | ID | MF | Offset |
+|---|---|---|---|---|---|
+| 1 | 1480 | 1500 | x | 1 | 0 |
+| 2 | 1480 | 1500 | x | 1 | 185 |
+| 3 | 1020 | 1040 | x | 0 | 370 |
+
+<Visualization viz={{"type": "packet", "title": "Fragmentación de la slide: 4000 B, MTU 1500 B", "steps": [{"note": "Original: 20 B de cabecera y 3980 B de datos.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 0"}], [{"label": "longitud total", "bits": 32, "value": "4000 B"}]]}}, {"note": "Primer fragmento: 1480 B de datos; quedan más.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 0"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Segundo fragmento: empieza en 1480/8.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "1 / 185"}], [{"label": "longitud total", "bits": 32, "value": "1500 B"}]]}}, {"note": "Último: 1020 B de datos; mismo ID.", "fields": {"width": 32, "rows": [[{"label": "ID", "bits": 16, "value": "x"}, {"label": "MF / offset", "bits": 16, "value": "0 / 370"}], [{"label": "longitud total", "bits": 32, "value": "1040 B"}]]}}]}} />
+
+El offset del tercero es $(1480+1480)/8=370$. MF=0 solo dice que no quedan fragmentos posteriores; no significa que los anteriores ya llegaron.
+
+## 3. Ejemplo resuelto
+
+En el experimento de LAB3 P2, MTU=1000 y cabeceras base de 20 B IPv4 y 20 B TCP dan MSS anunciada de 960 B, frente a 1460 B con MTU=1500. Se debe iniciar una **conexión nueva** y leer su SYN; la MSS observada también depende del camino y las opciones. Con opciones, la carga efectiva puede ser menor.
+
+Si un datagrama con DF=1 supera una MTU posterior, el router no puede fragmentarlo: puede devolver ICMP “Fragmentation Needed”. Reducir la MTU local y dejar que TCP ajuste segmentos no garantiza observar ese ICMP; la parte 6.3 del laboratorio es opcional y su ausencia debe explicarse, no inventarse.
+
+## 4. Errores típicos
+
+- Suponer que bajar la MTU siempre causa fragmentación.
+- Cambiar MTU sin anotar y restaurar el valor original.
+- Buscar en la captura anterior una MSS negociada después del cambio.
+
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`, `Sem10_LAB3_TCP_P2 (1)-1`.

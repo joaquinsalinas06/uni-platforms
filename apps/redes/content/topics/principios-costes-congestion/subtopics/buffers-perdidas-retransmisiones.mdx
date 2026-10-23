@@ -1,0 +1,28 @@
+---
+kind: subtopic
+title: "Buffers, pérdidas y retransmisiones"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+La cola permite absorber una ráfaga temporal. Si la carga sostenida supera la salida, aumentar memoria solo aplaza el problema. Las slides separan la tasa original $\lambda_{in}$ de $\lambda'_{in}$, que incluye retransmisiones.
+
+## 2. Conceptos
+
+En el escenario 2 se comparan idealizaciones: conocer el espacio libre del router, retransmitir únicamente lo realmente perdido y, finalmente, sufrir duplicados por timeouts demasiado cortos. Cada paso acerca el modelo al caso real y reduce el rendimiento útil alcanzable con la misma carga total.
+
+En varios saltos, un paquete perdido en la última cola ya consumió transmisión y buffer en las anteriores. El escenario 3 muestra que la competencia puede llevar el throughput de un flujo hacia cero, aunque siga consumiendo recursos aguas arriba.
+
+## 3. Ejemplo resuelto
+
+Para justificar por qué la retransmisión no es gratuita: sigue un paquete desde A, marca cada enlace que lo transmite y detente en el router que lo descarta. Reenviarlo repite ese trabajo. Si el timeout era prematuro y el original no se perdió, ambas copias compiten por la salida y solo una aporta datos nuevos.
+
+## 4. Errores típicos
+
+- Sumar dos copias recibidas como el doble de rendimiento útil.
+- Afirmar que toda retransmisión prueba congestión: también puede resultar de un timeout prematuro.
+
+
+Fuente: `Sem9_NetT-TCP2`.

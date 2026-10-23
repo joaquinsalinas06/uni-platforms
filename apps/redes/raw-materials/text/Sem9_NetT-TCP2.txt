@@ -1,0 +1,631 @@
+                  8.Transport Layer:
+                  TCP Congestion Control
+    Computer Networks
+
+
+
+
+CS4054 - 2026II
+      CWILLIAMS   @UTEC.EDU.PE   JGONZALEZ@UTEC.EDU.PE
+
+
+
+
+PROF.: CWILLIAMS@UTEC.EDU.PE, JGONZALEZ@UTEC.EDU.PE
+SRC: HARRIS & HARRIS - DIGITAL DESIGN AND COMPUTER ARCHITECTURE RISC-V
+    Executive Summary
+2
+
+    • Motivation: Network implementation needs control over buffering and
+      congestion.
+    • Problem: How to incorporate buffering and congestion control into a TCP
+      implementation.
+    • Overview:
+       • Key definitions of network congestion.
+       • TCP windowing and buffering mechanisms.
+       • TCP congestion control and fairness.
+    • Conclusion: We extended our understanding of TCP by studying
+      buffering, congestion control, and fairness mechanisms.
+
+
+
+CS4054-COMPUTER NETWORKS
+    Outline
+3
+
+    Introduction
+    Principles of congestion
+
+    TCP Congestion control
+    Conclusions
+
+
+
+
+CS4054-COMPUTER NETWORKS
+    Recall definitions: Window
+4
+
+    • On the receiving system, TCP stores received data in a receive buffer.
+      TCP acknowledges receipt of the data, and advertises (communicates) a
+      new receive window to the sending system. The receive window
+      represents the number of bytes that are available in the receive buffer. If
+      the receive buffer is full, the receiving system advertises a receive window
+      size of zero, and the sending system must wait to send more data.
+
+
+
+
+CS4054-COMPUTER NETWORKS
+    Go-Back-N: sender
+5
+      ▪ sender: “window” of up to N, consecutive transmitted but unACKed pkts
+      •   k-bit seq # in pkt header
+
+
+
+
+      ▪ cumulative ACK: ACK(n): ACKs all packets up to, including seq # n
+       • on receiving ACK(n): move window forward to begin at n+1
+      ▪ timer for oldest in-flight packet
+      ▪ timeout(n): retransmit packet n and all higher seq # packets in window
+    Go-Back-N: receiver
+6
+
+     ▪ ACK-only: always send ACK for correctly-received packet so far, with
+       highest in-order seq #
+      • may generate duplicate ACKs
+      • need only remember rcv_base
+     ▪ on receipt of out-of-order packet:
+      • can discard (don’t buffer) or buffer: an implementation decision
+      • re-ACK pkt with highest in-order seq #
+
+      Receiver view of sequence number
+      space:
+            …                        …
+                       rcv_base
+    Go-Back-N in action
+7
+           sender window (N=4)         sender               receiver
+                                   send pkt0
+                                   send pkt1
+                                   send pkt2                receive pkt0, send ack0
+                                   send pkt3        Xloss   receive pkt1, send ack1
+                                       (wait)
+                                                            receive pkt3, discard,
+                                                                    (re)send ack1
+                                                            receive pkt4, discard,
+                                                                    (re)send ack1
+                             ignore duplicate ACK           receive pkt5, discard,
+                                                                    (re)send ack1
+           012345678               send pkt2
+           012345678               send pkt3
+           012345678               send pkt4                rcv pkt2, deliver, send
+           012345678               send pkt5                ack2
+                                                            rcv pkt3, deliver, send
+                                                            ack3
+                                                            rcv pkt4, deliver, send
+                                                            ack4
+    Outline
+8
+
+    Introduction
+    Principles of congestion
+    TCP Congestion control
+    Conclusions
+
+
+
+
+CS4054-COMPUTER NETWORKS
+    Principles of congestion control
+9
+
+     Congestion:
+     ▪ informally: “too many sources sending too much data too fast for
+       network to handle”
+     ▪ manifestations:
+      • long delays (queueing in router buffers)
+      • packet loss (buffer overflow at routers)
+     ▪ different from flow control!
+                                                                     congestion
+     ▪ a top-10 problem!                                         control: too many
+                                                             senders, sending too fast
+
+                                                          flow control: one sender
+                                                          too fast for one receiver
+     Causes/costs of congestion: scenario 1
+10
+       Simplest scenario:                original data: λin                     throughput: λout
+      ▪ one router, infinite buffers         Host A
+      ▪ input, output link capacity: R
+                                                                   infinite shared
+                                                                  output link buffers
+
+      two flows
+                                                              R                 R
+      ▪ no retransmissions needed
+                                             Host B
+
+
+      Q: What happens as
+         arrival rate λin
+         approaches R/2?
+                                         maximum per-connection         large delays as arrival rate
+                                         throughput: R/2                λin approaches capacity
+     Causes/costs of congestion: scenario 2
+11
+      ▪   one router, finite buffers
+              ▪ sender retransmits lost, timed-out packet
+               • application-layer input = application-layer output: λin = λout
+               • transport-layer input includes retransmissions : λ’in    λin
+
+
+
+
+             Host A                    λin : original data
+                                                                                  λout
+                                       λ'in: original data, plus
+                                             retransmitted data
+
+
+
+
+             Host B                finite shared output
+                                            link buffers
+     Causes/costs of congestion: scenario 2
+12
+     Idealization: perfect knowledge
+      ▪ sender sends only when router buffers available
+
+
+
+
+          Host A                 λin : original data
+                   copy          λ'in: original data, plus   λout
+                                       retransmitted data
+
+
+                                      free buffer space!
+
+
+
+
+         Host B              finite shared output
+                                      link buffers
+     Causes/costs of congestion: scenario 2
+13
+      Idealization: some perfect knowledge
+      ▪ packets can be lost (dropped at router) due to
+        full buffers
+      ▪ sender knows when packet has been dropped:
+        only resends if packet known to be lost
+
+         Host A              λin : original data
+                  copy       λ'in: original data, plus
+                                   retransmitted data
+
+
+                                   no buffer space!
+
+
+
+
+         Host B          finite shared output
+                                  link buffers
+     Causes/costs of congestion: scenario 2
+14
+      Idealization: some perfect knowledge               R/2
+                                                                                   “wasted” capacity due
+      ▪ packets can be lost (dropped at router) due to                             to retransmissions
+
+
+
+
+                                                          throughput: λout
+        full buffers
+                                                                                    when sending at
+      ▪ sender knows when packet has been dropped:                                  R/2, some packets
+                                                                                    are needed
+        only resends if packet known to be lost                                     retransmissions
+
+
+         Host A              λin : original data
+                                                                             R/2
+                             λ'in: original data, plus
+                                   retransmitted data
+
+
+                                  free buffer space!
+
+
+
+
+         Host B          finite shared output
+                                  link buffers
+     Causes/costs of congestion: scenario 2
+15
+      Realistic scenario: un-needed duplicates            R/2
+      ▪ packets can be lost, dropped at router due to                               “wasted” capacity due
+
+
+
+
+                                                           throughput: λout
+                                                                                    to un-needed
+        full buffers – requiring retransmissions                                    retransmissions
+      ▪ but sender times can time out prematurely,
+        sending two copies, both of which are delivered                              when sending at
+                                                                                     R/2, some packets
+                                                                                     are retransmissions,
+                                                                                     including needed
+        Host A               λin : original data                                     and un-needed
+                                                                              R/2    duplicates, that are
+           timeout
+              copy           λ'in: original data, plus                               delivered!
+                                   retransmitted data
+
+
+                                  free buffer space!
+
+
+
+
+        Host B           finite shared output
+                                  link buffers
+     Causes/costs of congestion: scenario 2
+16
+      Realistic scenario: un-needed duplicates            R/2
+      ▪ packets can be lost, dropped at router due to                               “wasted” capacity due
+
+
+
+
+                                                           throughput: λout
+                                                                                    to un-needed
+        full buffers – requiring retransmissions                                    retransmissions
+      ▪ but sender times can time out prematurely,
+        sending two copies, both of which are delivered                              when sending at
+                                                                                     R/2, some packets
+                                                                                     are retransmissions,
+                                                                                     including needed
+                                                                                     and un-needed
+                                                                              R/2    duplicates, that are
+                                                                                     delivered!
+           “costs” of congestion:
+           ▪ more work (retransmission) for given receiver throughput
+           ▪ unneeded retransmissions: link carries multiple copies of a packet
+             • decreasing maximum achievable throughput
+     Causes/costs of congestion: scenario 3
+17
+       ▪ four senders                  Q: what happens as λin and λin’ increase ?
+       ▪ multi-hop paths
+       ▪ timeout/retransmit            A: as red λin increases, all arriving blue pkts at upper
+                                                    ’
+
+                                           queue are dropped, blue throughput → 0
+                              Host A   λin : original data
+                                                                                   Host B
+                                       λ'in: original data, plus
+                                           retransmitted data
+                                                finite shared
+                                             output link buffers
+
+
+                  Host D
+                                                                   λout
+                                                                          Host C
+     Causes/costs of congestion: scenario 3
+18
+
+
+
+
+         another “cost” of congestion:
+         ▪ when packet dropped, any upstream transmission capacity
+           and buffering used for that packet was wasted!
+     Causes/costs of congestion: insights
+19
+
+       ▪ throughput can never exceed capacity
+
+       ▪ delay increases as capacity approached
+
+       ▪ loss/retransmission decreases effective
+         throughput
+
+       ▪ un-needed duplicates further decreases
+         effective throughput
+       ▪ upstream transmission capacity / buffering
+         wasted for packets lost downstream
+     Approaches towards congestion control
+20
+     End-end congestion control:
+     • no explicit feedback from network
+     • congestion inferred from observed
+       loss, delay
+
+                                           data   data
+
+
+        ▪ approach taken by TCP
+     Approaches towards congestion control
+21
+
+     • TCP ECN, ATM, DECbit protocols
+      Network-assisted congestion
+       control:                                     explicit congestion
+      ▪ routers provide direct feedback to          info
+
+        sending/receiving hosts with flows   data                         data
+        passing through congested router
+      ▪ may indicate congestion level or
+        explicitly set sending rate
+     Outline
+22
+
+     Introduction
+     Principles of congestion
+     TCP Congestion control
+     Conclusions
+
+
+
+
+CS4054-COMPUTER NETWORKS
+     TCP congestion control: AIMD
+23
+      ▪ approach: senders can increase sending rate until packet loss
+        (congestion) occurs, then decrease sending rate on loss event
+          Additive Increase                      Multiplicative Decrease
+           increase sending rate by 1              cut sending rate in half at
+          maximum segment size every             each loss event
+          RTT until loss detected
+
+
+
+
+                       TCP sender Sending rate
+                                                                    AIMD sawtooth
+                                                                    behavior: probing
+                                                                       for bandwidth
+     TCP AIMD: more
+24
+
+      Multiplicative decrease detail: sending rate is
+      ▪ Cut in half on loss detected by triple duplicate ACK (TCP Reno)
+      ▪ Cut to 1 MSS (maximum segment size) when loss detected by
+        timeout (TCP Tahoe)
+
+      Why AIMD?
+      ▪ AIMD – a distributed, asynchronous algorithm – has been
+        shown to:
+       • optimize congested flow rates network wide!
+       • have desirable stability properties
+     TCP congestion control: details
+25
+        sender sequence number space
+                            cwnd                        TCP sending behavior:
+                                                        ▪ roughly: send cwnd bytes,
+                                                          wait RTT for ACKS, then
+                                                          send more bytes
+                                        available but              ~ cwnd
+                 sent, but not-                             TCP    ~      bytes/sec
+                 yet ACKed              not used
+                                                                      RTT
+                 (“in-flight”)     last byte sent           rate
+
+       ▪ TCP sender limits transmission: LastByteSent- LastByteAcked < cwnd
+       ▪ cwnd is dynamically adjusted in response to observed
+         network congestion (implementing TCP congestion control)
+     TCP CUBIC
+26
+
+      ▪ Is there a better way than AIMD to “probe” for usable bandwidth?
+      ▪ Insight/intuition:
+       • Wmax: sending rate at which congestion loss was detected
+       • congestion state of bottleneck link probably (?) hasn’t changed much
+      • after cutting rate/window in half on loss, initially ramp to to Wmax faster, but then approach Wmax more slowly
+
+
+
+
+            Wmax
+
+                                                                                        TCP CUBIC - higher
+                                                                                        throughput in this
+           Wmax/2
+                                                                                        example
+     TCP CUBIC
+27
+      ▪ K: point in time when TCP window size will reach Wmax
+       • K itself is tuneable
+
+
+      ▪ increase W as a function of the cube of the distance between current
+        time and K
+         • larger increases when further away from K
+         • smaller increases (cautious) when nearer K
+
+      ▪ TCP CUBIC default in
+        Linux, most popular
+        TCP for popular Web
+        servers
+     TCP and the congested “bottleneck link”
+28
+
+      ▪ TCP (classic, CUBIC) increase TCP’s sending rate until packet loss occurs at
+        some router’s output: the bottleneck link
+
+
+
+                               source                                       destination
+                             application                                    application
+                                TCP                                            TCP
+                              network                                        network
+                                link                                           link
+                              physical                                       physical
+           packet queue almost
+       never empty, sometimes
+         overflows packet (loss)
+
+
+                                           bottleneck link (almost always
+                                           busy)
+     TCP and the congested “bottleneck link”
+29
+
+      ▪ TCP (classic, CUBIC) increase TCP’s sending rate until packet loss occurs at
+        some router’s output: the bottleneck link
+      ▪ understanding congestion: useful to focus on congested bottleneck link
+
+                                         insight: increasing TCP sending rate will
+                             source           not increase end-end throughout      destination
+                                              with congested bottleneck
+                           application                                             application
+                              TCP                                                     TCP
+                            network                                                 network
+                              link                                                    link
+                            physical                                                physical
+        insight: increasing TCP
+              sending rate will
+       increase measured RTT
+                                                           Goal: “keep the end-end pipe just full, but not fuller”
+                                                   RTT
+     Delay-based TCP congestion control
+30
+
+      Keeping sender-to-receiver pipe “just full enough, but no fuller”: keep
+     bottleneck link busy transmitting, but avoid high delays/buffering
+                                                                               # bytes sent in
+                                                                               last RTT interval
+
+
+      Delay-based approach:
+      ▪ RTTmin - minimum observed RTT (uncongested path)
+      ▪ uncongested throughput with congestion window cwnd is cwnd/RTTmin
+                if measured throughput “very close” to uncongested throughput
+                     increase cwnd linearly        /* since path not congested */
+                else if measured throughput “far below” uncongested throughout
+                    decrease cwnd linearly         /* since path is congested */
+     Delay-based TCP congestion control
+31
+
+
+      ▪ congestion control without inducing/forcing loss
+      ▪ maximizing throughout (“keeping the just pipe full… ”) while keeping delay
+        low (“…but not fuller”)
+      ▪ a number of deployed TCPs take a delay-based approach
+       ▪ BBR deployed on Google’s (internal) backbone network
+     Explicit congestion notification (ECN)
+32
+      TCP deployments often implement network-assisted congestion control:
+      ▪ two bits in IP header (ToS field) marked by network router to indicate congestion
+        • policy to determine marking chosen by network operator
+      ▪ congestion indication carried to destination
+      ▪ destination sets ECE bit on ACK segment to notify sender of congestion
+      ▪ involves both IP (IP header ECN bit marking) and TCP (TCP header C,E bit marking)
+                                                    TCP ACK segment
+                       application                                    application
+                          TCP               ECE=1
+                                                                         TCP
+                        network                                        network
+                          link                                           link
+                        physical                                       physical
+
+                               ECN=10        ECN=11
+
+
+                    IP datagram
+     TCP fairness
+33
+
+      Fairness goal: if K TCP sessions share same bottleneck link of
+      bandwidth R, each should have average rate of R/K
+               TCP connection
+               1
+
+
+
+                                  bottleneck
+               TCP connection       router
+                                  capacity R
+               2
+     Q: is TCP Fair?
+34
+       Example: two competing TCP sessions:
+        ▪ additive increase gives slope of 1, as throughout increases
+        ▪ multiplicative decrease decreases throughput proportionally
+
+         R                equal bandwidth share
+                                                                             Is TCP
+                                                                             fair?
+                               loss: decrease window by factor of 2
+                                                                            A: Yes, under idealized
+                               congestion avoidance: additive increase      assumptions:
+                                    loss: decrease window by factor of 2
+                                  congestion avoidance: additive increase
+                                                                            ▪ same RTT
+                                                                            ▪ fixed number of sessions
+                                                                              only in congestion
+                                                                              avoidance
+             Connection 1 throughput   R
+     Fairness: must all network apps be “fair”?
+35
+      Fairness and UDP                   Fairness, parallel TCP
+      ▪ multimedia apps often do not use
+                                         connections
+       TCP                                            ▪ application can open multiple
+       • do not want rate throttled by                  parallel connections between two
+         congestion control                             hosts
+      ▪ instead use UDP:
+       • send audio/video at constant rate,
+                                                      ▪ web browsers do this , e.g., link of
+         tolerate packet loss                           rate R with 9 existing connections:
+      ▪ there is no “Internet police”                   • new app asks for 1 TCP, gets rate R/10
+        policing use of congestion control              • new app asks for 11 TCPs, gets R/2
+
+         Elephants Sharing the Highway: Studying TCP Fairness in Large
+         Transfers over High Throughput Links
+         https://dl.acm.org/doi/fullHtml/10.1145/3624062.3624594
+         https://www.youtube.com/watch?v=rib_ujnMqcs&t=597s
+     Outline
+36
+
+     Introduction
+     Principles of congestion
+     TCP Congestion control
+     Conclusions
+
+
+
+
+ CS4054-COMPUTER NETWORKS
+        Conclusions
+     • We defined the requirements for TCP
+       windowing and buffering.
+     • We introduced congestion scenarios and TCP
+       congestion control mechanisms.
+     • We analyzed the fairness of the TCP
+       protocol.
+
+
+
+
+37
+                  8.Transport Layer:
+                  TCP Congestion Control
+    Computer Networks
+
+
+
+
+CS4054 - 2026II
+      CWILLIAMS   @UTEC.EDU.PE   JGONZALEZ@UTEC.EDU.PE
+
+
+
+
+PROF.: CWILLIAMS@UTEC.EDU.PE, JGONZALEZ@UTEC.EDU.PE
+SRC: HARRIS & HARRIS - DIGITAL DESIGN AND COMPUTER ARCHITECTURE RISC-V
+

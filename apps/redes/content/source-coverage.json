@@ -1,0 +1,435 @@
+{
+  "scope": "Semanas documentadas 9 y 10; rutas anteriores conservadas",
+  "sources": [
+    {
+      "file": "raw-materials/pdfs/Sem9_NetT-TCP2.pdf",
+      "text": "raw-materials/text/Sem9_NetT-TCP2.txt",
+      "sha256": "05952564b2b1c520b6fd053763a3ce1cd0abef8890da6db8c9716d4aad593179",
+      "pageCount": 38,
+      "sections": [
+        {
+          "label": "Portada, resumen y repaso GBN/ventana",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "targets": [
+            "content/topics/principios-costes-congestion/theory.mdx",
+            "content/evaluaciones/laboratorio/ejercicios-4-tcp.mdx"
+          ]
+        },
+        {
+          "label": "Congestión: escenarios 1–3 y costes",
+          "pages": [
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19
+          ],
+          "targets": [
+            "content/topics/principios-costes-congestion/subtopics/buffers-perdidas-retransmisiones.mdx"
+          ]
+        },
+        {
+          "label": "Control extremo a extremo y asistido",
+          "pages": [
+            20,
+            21,
+            22
+          ],
+          "targets": [
+            "content/topics/principios-costes-congestion/subtopics/control-extremo-a-extremo-y-asistido.mdx"
+          ]
+        },
+        {
+          "label": "AIMD y ventana cwnd",
+          "pages": [
+            23,
+            24,
+            25
+          ],
+          "targets": [
+            "content/topics/control-congestion-tcp-avanzado/subtopics/slow-start-aimd-tahoe-reno.mdx"
+          ]
+        },
+        {
+          "label": "CUBIC, cuello de botella, retardo, ECN",
+          "pages": [
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32
+          ],
+          "targets": [
+            "content/topics/control-congestion-tcp-avanzado/subtopics/cubic-retardo-ecn.mdx"
+          ]
+        },
+        {
+          "label": "Equidad, UDP y conexiones paralelas",
+          "pages": [
+            33,
+            34,
+            35
+          ],
+          "targets": [
+            "content/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad.mdx"
+          ]
+        },
+        {
+          "label": "Resumen y cierre",
+          "pages": [
+            36,
+            37,
+            38
+          ],
+          "targets": [
+            "content/units/s9.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/pdfs/Sem10_NetT-NetLayer_Addressing.pdf",
+      "text": "raw-materials/text/Sem10_NetT-NetLayer_Addressing.txt",
+      "sha256": "8b14ed629b6454b346bf873df8fb7473685b969812cc460f0f1cbfcfe6fbb0f4",
+      "pageCount": 37,
+      "sections": [
+        {
+          "label": "Portada, resumen, servicios y datagrama",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "targets": [
+            "content/topics/capa-red-ipv4-fragmentacion/subtopics/forwarding-datagrama-ip.mdx"
+          ]
+        },
+        {
+          "label": "Fragmentación y ejemplo de 4000 B",
+          "pages": [
+            7,
+            8,
+            9
+          ],
+          "targets": [
+            "content/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado.mdx"
+          ]
+        },
+        {
+          "label": "Forwarding, routing e interfaces",
+          "pages": [
+            10,
+            11,
+            12,
+            13
+          ],
+          "targets": [
+            "content/topics/capa-red-ipv4-fragmentacion/subtopics/forwarding-datagrama-ip.mdx"
+          ]
+        },
+        {
+          "label": "CIDR y direcciones especiales",
+          "pages": [
+            14,
+            15
+          ],
+          "targets": [
+            "content/topics/direccionamiento-ipv4-subredes/subtopics/cidr-mascaras-direcciones-especiales.mdx"
+          ]
+        },
+        {
+          "label": "netstat, ifconfig, traceroute, MAC/ARP",
+          "pages": [
+            16,
+            17,
+            18,
+            19
+          ],
+          "targets": [
+            "content/topics/direccionamiento-ipv4-subredes/subtopics/comandos-ip-mac.mdx"
+          ]
+        },
+        {
+          "label": "Subredes e identificación de islas",
+          "pages": [
+            20,
+            21,
+            22,
+            23
+          ],
+          "targets": [
+            "content/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes.mdx"
+          ]
+        },
+        {
+          "label": "Asignación host, DHCP y parámetros",
+          "pages": [
+            24,
+            25,
+            26,
+            27,
+            28
+          ],
+          "targets": [
+            "content/topics/direccionamiento-ipv4-subredes/subtopics/dhcp-configuracion-host.mdx"
+          ]
+        },
+        {
+          "label": "Bloques ISP, agregación y rutas específicas; contexto ICANN/IPv6",
+          "pages": [
+            29,
+            30,
+            31,
+            32,
+            33,
+            34
+          ],
+          "targets": [
+            "content/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes.mdx"
+          ]
+        },
+        {
+          "label": "Resumen y cierre",
+          "pages": [
+            35,
+            36,
+            37
+          ],
+          "targets": [
+            "content/units/s10.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/pdfs/Sem09_LAB3_P1-2.pdf",
+      "text": "raw-materials/text/Sem09_LAB3_P1-2.txt",
+      "sha256": "1c422219bf6c4fd5cb7e179dee816ec93e17b8418fddfe20d17d09c73f91981d",
+      "pageCount": 7,
+      "sections": [
+        {
+          "label": "Entrega académica",
+          "pages": [
+            1
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p1.mdx"
+          ]
+        },
+        {
+          "label": "Sección 1: obtención de traza, sección 2.1 configuración",
+          "pages": [
+            2,
+            3
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p1.mdx"
+          ]
+        },
+        {
+          "label": "Sección 2.2: preguntas 1–9, checkpoint 1",
+          "pages": [
+            4
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p1.mdx",
+            "content/topics/lab-tcp-wireshark/subtopics/captura-secuencia-ack.mdx"
+          ]
+        },
+        {
+          "label": "Sección 3.1: preguntas 1–6, checkpoint 2",
+          "pages": [
+            5,
+            6
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p1.mdx",
+            "content/topics/lab-tcp-wireshark/subtopics/rtt-y-grafica-stevens.mdx"
+          ]
+        },
+        {
+          "label": "Sección 4.1: preguntas 1–3, checkpoint 3",
+          "pages": [
+            7
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p1.mdx"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/pdfs/Sem09_LAB3_TCP_PPT.pptx.pdf",
+      "text": "raw-materials/text/Sem09_LAB3_TCP_PPT.pptx.txt",
+      "sha256": "6bc600ff3cf349b98f9e20bc3f307b1db4a82cb98e54cb79f7263876dc9f4fd2",
+      "pageCount": 14,
+      "sections": [
+        {
+          "label": "TCP, UDP, cabecera, secuencias y ACK",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "targets": [
+            "content/topics/protocolo-tcp-mecanismos/theory.mdx",
+            "content/topics/lab-tcp-wireshark/subtopics/captura-secuencia-ack.mdx"
+          ]
+        },
+        {
+          "label": "RTT y estimación EWMA",
+          "pages": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "targets": [
+            "content/topics/lab-tcp-wireshark/subtopics/rtt-y-grafica-stevens.mdx",
+            "content/evaluaciones/laboratorio/lab3-tcp-p1.mdx"
+          ]
+        },
+        {
+          "label": "Cierre de presentación",
+          "pages": [
+            13,
+            14
+          ],
+          "targets": [
+            "content/units/s9.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/pdfs/Sem10_LAB3_TCP_P2 (1)-1.pdf",
+      "text": "raw-materials/text/Sem10_LAB3_TCP_P2 (1)-1.txt",
+      "sha256": "5488487fb67a5b9bdce746708d80d7e05b2e299427fa9268c55498f516fe557d",
+      "pageCount": 3,
+      "sections": [
+        {
+          "label": "Entrega académica",
+          "pages": [
+            1
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p2.mdx"
+          ]
+        },
+        {
+          "label": "5.1 implementación; 5.2 preguntas 1–4, checkpoint 4",
+          "pages": [
+            2
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p2.mdx",
+            "content/topics/lab-sockets-tcp-python/subtopics/cliente-servidor-mensajes.mdx"
+          ]
+        },
+        {
+          "label": "6.1–6.3: entregables, preguntas 1–7, checkpoint 5",
+          "pages": [
+            3
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/lab3-tcp-p2.mdx",
+            "content/topics/lab-sockets-tcp-python/subtopics/transferencia-archivos-mss-mtu.mdx"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/pdfs/Sem10_Excercises4-TCP.pdf",
+      "text": "raw-materials/text/Sem10_Excercises4-TCP.txt",
+      "sha256": "f19c156eb24b1b780bb3b487436e71dcbae1b27dca8a0b4733b86b3f83f4b8d6",
+      "pageCount": 5,
+      "sections": [
+        {
+          "label": "Pregunta 1 a–b: AIMD/AIAD y plano de fases",
+          "pages": [
+            1
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-4-tcp.mdx",
+            "content/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad.mdx"
+          ]
+        },
+        {
+          "label": "Preguntas 2 a–b, 3 a–b, 4 a–b",
+          "pages": [
+            2
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-4-tcp.mdx",
+            "content/topics/rtt-timeout-retransmision/theory.mdx"
+          ]
+        },
+        {
+          "label": "Pregunta 5 a–b y 6.1–5",
+          "pages": [
+            3
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-4-tcp.mdx"
+          ]
+        },
+        {
+          "label": "Pregunta 6.6–7, 7.1–7, 8.1–8",
+          "pages": [
+            4
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-4-tcp.mdx",
+            "content/topics/lab-sockets-tcp-python/theory.mdx"
+          ]
+        },
+        {
+          "label": "Pregunta 8.1–10 (análisis), 9.1–5",
+          "pages": [
+            5
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-4-tcp.mdx"
+          ]
+        }
+      ]
+    }
+  ],
+  "capture": {
+    "file": "public/labs/tcp/tcp-wireshark-trace1-1.pcapng",
+    "exporter": "scripts/analyze-tcp-trace.py",
+    "results": [
+      "public/labs/tcp/tcp-trace.csv",
+      "public/labs/tcp/tcp-trace.json"
+    ]
+  },
+  "missing": [
+    "RFC_TCP.txt",
+    "Material identificado como semana 8 u 11"
+  ]
+}

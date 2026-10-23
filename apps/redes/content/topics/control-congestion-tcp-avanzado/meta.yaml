@@ -1,0 +1,28 @@
+id: control-congestion-tcp-avanzado
+type: concept
+title: "TCP: AIMD, Tahoe/Reno, CUBIC y Equidad"
+unit: s9
+prerequisites:
+  - principios-costes-congestion
+buildsOn:
+  - principios-costes-congestion
+usedBy:
+  - lab-tcp-wireshark
+hasVisualization: true
+visualizationType: xy-chart
+formulas:
+  - name: Tasa aproximada TCP
+    tex: \text{tasa}\approx\frac{cwnd}{RTT}
+    reasoning: Una ventana de bytes por RTT aproxima la tasa si el emisor tiene
+      datos y no lo limita otra ventana.
+    source: Sem9_NetT-TCP2#25
+  - name: Ventana efectiva
+    tex: \text{bytes en vuelo}\leq\min(cwnd,rwnd)
+    reasoning: La transmisión respeta simultáneamente la capacidad del receptor y el
+      límite de congestión de la red.
+    source: Sem9_NetT-TCP2#4,25 (derivado)
+  - name: Reparto ideal
+    tex: \text{tasa por conexión}\approx R/K
+    reasoning: Bajo RTT iguales y competencia ideal, K conexiones persistentes
+      comparten el cuello de botella de capacidad R.
+    source: Sem9_NetT-TCP2#33-35

@@ -1,0 +1,128 @@
+---
+title: "LAB3 TCP — Parte 1: Captura, RTT y Congestión"
+category: "laboratorio"
+categoryLabel: "Laboratorios y Ejercicios Extra"
+order: 4
+pdf: "/evaluaciones/laboratorio/lab3-tcp-p1.pdf"
+source: "LAB3 TCP P1, semana 9; Sem09_LAB3_TCP_PPT.pptx.pdf"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+# LAB3 TCP — Parte 1 resuelta
+
+Fuente: guía de semana 9, con apoyo de las 14 slides de TCP. Se mantienen las secciones 1–4 y sus preguntas. Los valores siguientes pertenecen a **tcp-wireshark-trace1-1.pcapng**, no a una captura personal.
+
+[CSV de todas las tramas](/labs/tcp/tcp-trace.csv) · [JSON de resultados](/labs/tcp/tcp-trace.json) · [Captura original](/labs/tcp/tcp-wireshark-trace1-1.pcapng).
+
+---
+
+## 1. Capturar una transferencia TCP de tu equipo al servidor
+
+La guía pide guardar el texto alice.txt del servidor gaia.cs.umass.edu, abrir el formulario de subida TCP-wireshark-file1.html, iniciar Wireshark antes de pulsar Upload y detenerlo al terminar. Usa los enlaces del PDF original. Si esa experiencia no está disponible, analiza la traza oficial y etiqueta expresamente esa procedencia; no la presentes como captura de tu equipo.
+
+**Procedimiento:** elige la interfaz activa, inicia la captura, sube el archivo por POST y guarda el PCAPNG. Anota equipo, interfaz, fecha y operación. Conservar el archivo original permite volver a filtros distintos sin perder paquetes.
+
+---
+
+## 2. Primera inspección de la traza
+
+### 2.1. Preparación de Wireshark
+
+Aplica `tcp` como filtro de visualización y selecciona Follow → TCP Stream. En la captura oficial hay un stream: **0**. Desactivar HTTP en Analyze → Enabled Protocols muestra la transferencia como TCP sin cambiar sus bytes. En otras versiones se ve “TCP segment of a reassembled PDU”: un mensaje HTTP ocupa varios segmentos; no existe un protocolo separado “HTTP Continuation”.
+
+### 2.2. Preguntas
+
+**1. Identificar el handshake y aportar captura.** Tramas **1, 2 y 3**, a 0, 0.022414 y 0.022505 s. Para tu informe captura la lista filtrada con `tcp.stream == 0 && frame.number <= 3`, dejando visibles flags, Seq y Ack. El diagrama siguiente reconstruye los datos; no se presenta como screenshot de Wireshark.
+
+<Visualization viz={{type:'spacetime',static:true,title:'Handshake de la captura oficial',steps:[{note:'SYN y SYN/ACK consumen un número de secuencia cada uno; el tercer ACK completa la apertura.',columns:[{id:'c',label:'Cliente'},{id:'s',label:'Servidor'}],time:{unit:'ms',max:50,ticks:[0,10,20,30,40,50]},sends:[{from:'c',to:'s',tStart:0,tTrans:0,tProp:11.207,label:'SYN Seq=0',kind:'data'},{from:'s',to:'c',tStart:11.207,tTrans:0,tProp:11.207,label:'SYN/ACK Ack=1',kind:'ack'},{from:'c',to:'s',tStart:22.505,tTrans:0,tProp:11.207,label:'ACK Seq=1 Ack=1',kind:'ack'}]}]}} />
+
+El tiempo registrado es el de captura en el cliente. Para el diagrama se reparte el RTT de apertura en dos mitades **solo como representación**; no hay medición de tiempos unidireccionales ni de llegada del tercer ACK al servidor.
+
+**2. Qué es y por qué hace falta.** El intercambio SYN → SYN/ACK → ACK establece estado y sincroniza las secuencias de ambas direcciones antes de transferir bytes de la conexión.
+
+**3. Papel del ACK.** Indica el siguiente byte esperado; confirma acumulativamente los anteriores. No equivale a confirmar que la aplicación ya procesó el dato.
+
+**4. Información de los tres segmentos.**
+
+| Trama | Flags | Seq relativo | Ack relativo | Datos TCP | Opciones observadas |
+|---|---|---|---|---|---|
+| 1 | SYN | 0 | No válido como ACK | 0 B | MSS 1460; WS; SACK permitted |
+| 2 | SYN, ACK | 0 | 1 | 0 B | MSS 1460; WS; SACK permitted |
+| 3 | ACK | 1 | 1 | 0 B | Las opciones se inspeccionan en el detalle TCP |
+
+SYN y SYN/ACK anuncian parámetros por dirección; para MSS, cada extremo anuncia qué puede recibir. No se deduce de aquí qué algoritmo de congestión está ejecutando el sistema.
+
+**5. IP y puerto del cliente.** **192.168.86.68:55639**. Son el origen del SYN inicial y del envío de datos.
+
+**6. IP y puerto del servidor.** **128.119.245.12:80**, dirección y puerto de destino de ese SYN. El servidor usa el mismo puerto para responder en esta conexión.
+
+**7. Qué cambia al desactivar HTTP.** Cambia la decodificación/columna Protocol y se facilita ver los segmentos TCP. Se conserva la captura y sus tamaños, secuencias y timestamps.
+
+**8. Cuántos segmentos transfieren alice.txt.** Hay **106 segmentos con carga TCP enviados por el cliente**. Filtro: `tcp.stream == 0 && ip.src == 192.168.86.68 && tcp.len > 0`. Son 153425 bytes TCP, que incluyen el POST, sus cabeceras y cuerpo: el conteo describe los segmentos de la subida, no una medición aislada del tamaño de alice.txt. Hay además un segmento con datos del servidor (trama 179, 777 B). No contar las 180 tramas totales como datos.
+
+**9. Patrones de Seq y ACK.** En los primeros envíos, Seq avanza 1448 bytes por segmento: 1, 1449, 2897, 4345… Los ACK avanzan al siguiente byte esperado: 1449, 2897, 4345… Después pueden cubrir varios intervalos. Que el receptor acumule ACK no implica pérdida de todos los intermedios.
+
+**Checkpoint 1:** mostrar handshake, extremos y conteo con el filtro utilizado.
+
+---
+
+## 3. Fundamentos de TCP
+
+Reactiva HTTP y desactiva “Allow Subdissector to reassemble TCP Streams” en preferencias TCP, como pide la guía. Para ver los valores absolutos desactiva la presentación de números relativos; no mezcles ambas convenciones en una tabla.
+
+### 3.1. Preguntas
+
+**1. Secuencia del SYN del cliente.** Relativa **0**; absoluta **4236649187** (`tcp.seq_raw`), trama 1.
+
+**2. Dónde está el SYN.** Es el primer paquete, cliente → servidor, con SYN=1 y ACK=0. Filtro general: `tcp.flags.syn == 1 && tcp.flags.ack == 0`.
+
+**3. Secuencia del SYN/ACK.** Relativa **0**; absoluta **1068969752**, trama 2. Su Ack absoluto 4236649188 confirma el SYN del cliente; el relativo es 1.
+
+**4. Secuencia del segmento con POST.** **Seq=1 relativa** (absoluta 4236649188), trama **4**, a 0.024047 s. Busca POST en la carga del paquete, no solo en la columna Protocol, que puede variar con la configuración de reensamblado.
+
+**5. Seis primeros segmentos, tiempos, RTT y EstimatedRTT.** Se cuenta desde el POST. LAB3 fija $EstimatedRTT_1=SampleRTT_1$ y las slides de apoyo usan $\alpha=0.125$.
+
+| Seg. | Trama / Seq / Len | Envío (s) | Trama ACK / Ack | Llegada (s) | SampleRTT (ms) | EstimatedRTT (ms) |
+|---|---|---|---|---|---|---|
+| 1 | 4 / 1 / 1448 | 0.024047 | 7 / 1449 | 0.052671 | 28.624 | 28.624000 |
+| 2 | 5 / 1449 / 1448 | 0.024048 | 8 / 2897 | 0.052676 | 28.628 | 28.624500 |
+| 3 | 6 / 2897 / 1448 | 0.024049 | 13 / 4345 | 0.053626 | 29.577 | 28.743563 |
+| 4 | 9 / 4345 / 1448 | 0.052774 | 16 / 5793 | 0.080768 | 27.994 | 28.649867 |
+| 5 | 10 / 5793 / 1448 | 0.052775 | 17 / 7241 | 0.080771 | 27.996 | 28.568134 |
+| 6 | 11 / 7241 / 1448 | 0.052854 | 18 / 8689 | 0.080772 | 27.918 | 28.486867 |
+
+Para cada fila se usa el primer ACK posterior que cubre $Seq+Len$. En estas seis filas el Ack es exactamente ese extremo; en general puede superar el extremo y confirmar varios segmentos. Sin retransmisión en estos intervalos, no aparece la ambigüedad de Karn.
+
+Ejemplo de fila 6: $(0.080772-0.052854)\times1000=27.918$ ms. $Est_6=0.875(28.568133789)+0.125(27.918)=28.486867065$ ms. No se redondea el estado entre filas.
+
+**6. Longitud de los seis segmentos.** **1448 bytes de carga TCP cada uno**, campo `tcp.len`. No es longitud Ethernet ni total IP. Aunque la MSS anunciada fue 1460, estos segmentos tienen cabecera TCP de 32 B; junto con 20 B IP, 1448 B de carga completan 1500 B. Las opciones explican por qué MSS y carga observada no tienen que ser iguales.
+
+**Checkpoint 2:** mostrar la tabla con números de trama y el cálculo reproducible.
+
+---
+
+## 4. Control de congestión en acción
+
+Selecciona un segmento del cliente y abre Statistics → TCP Stream Graphs → Time Sequence (Stevens). Usa Switch direction si aparece la respuesta del servidor.
+
+### 4.1. Preguntas
+
+**1. ¿Slow start, congestion avoidance u otra fase?** La curva muestra ráfagas iniciales cuyo tamaño crece, compatible con arranque. Esta captura corta, por sí sola, no acredita el valor exacto de cwnd, ssthresh ni si corre Tahoe/Reno/CUBIC. Hay que separar la forma observada de la interpretación.
+
+<Visualization viz={{"type": "xy-chart", "title": "Stevens: secuencia frente al tiempo, captura oficial", "steps": [{"note": "Cada punto es el inicio de un segmento enviado por el cliente. Ráfagas separadas aproximadamente por un RTT; no es una medición directa de cwnd.", "series": [{"id": "seq", "label": "Seq cliente", "points": [[0.024047, 1], [0.024048, 1449], [0.024049, 2897], [0.052774, 4345], [0.052775, 5793], [0.052854, 7241], [0.052855, 8689], [0.05371, 10137], [0.053711, 11585], [0.080845, 13033], [0.080846, 14481], [0.080847, 15929], [0.080848, 17377], [0.08085, 18825], [0.080851, 20273], [0.080929, 21721], [0.08093, 23169], [0.081167, 24617], [0.081168, 26065], [0.081178, 27513], [0.08118, 28961], [0.099141, 30409], [0.099142, 31857], [0.100296, 33305], [0.100297, 34753], [0.105445, 36201], [0.105446, 37649], [0.105446, 39097], [0.105447, 40545], [0.105519, 41993], [0.10552, 43441], [0.10552, 44889], [0.105521, 46337], [0.105522, 47785], [0.105522, 49233], [0.105523, 50681], [0.105523, 52129], [0.106467, 53577], [0.106467, 55025], [0.106481, 56473], [0.106482, 57921], [0.106482, 59369], [0.106483, 60817], [0.106483, 62265], [0.106483, 63713], [0.117127, 65161], [0.117127, 66609], [0.117972, 68057], [0.117972, 69505], [0.123379, 70953], [0.123379, 72401], [0.124618, 73849], [0.124619, 75297], [0.124619, 76745], [0.12462, 78193], [0.124688, 79641], [0.124688, 81089], [0.131908, 82537], [0.131908, 83985], [0.131909, 85433], [0.131909, 86881], [0.13191, 88329], [0.13191, 89777], [0.1325, 91225], [0.132501, 92673], [0.132502, 94121], [0.132502, 95569], [0.132535, 97017], [0.132536, 98465], [0.132536, 99913], [0.132537, 101361], [0.132539, 102809], [0.132562, 104257], [0.132563, 105705], [0.132564, 107153], [0.132565, 108601], [0.132584, 110049], [0.132585, 111497], [0.132586, 112945], [0.132587, 114393], [0.132587, 115841], [0.132588, 117289], [0.132589, 118737], [0.13259, 120185], [0.13259, 121633], [0.132591, 123081], [0.13262, 124529], [0.132621, 125977], [0.133428, 127425], [0.133429, 128873], [0.13343, 130321], [0.13343, 131769], [0.139762, 133217], [0.139762, 134665], [0.141167, 136113], [0.141168, 137561], [0.141168, 139009], [0.141169, 140457], [0.141235, 141905], [0.141236, 143353], [0.146769, 144801], [0.146769, 146249], [0.14762, 147697], [0.147621, 149145], [0.14768, 150593], [0.147682, 152041]], "kind": "samples", "state": "active"}], "x": {"label": "tiempo (s)", "min": 0, "max": 0.2}, "y": {"label": "Seq (bytes)", "min": 0, "max": 160000}}], "static": true}} />
+
+**2. Periodicidad de las ráfagas.** Las primeras se concentran aproximadamente en 0.024, 0.053 y 0.081 s: intervalos de unos **28–29 ms**, consistentes con las muestras RTT. La llegada de ACK libera espacio de vuelo y permite una nueva ráfaga; no es un temporizador fijo independiente de la red.
+
+**3. Repetir ambas observaciones en tu captura.** Genera su curva, marca tres ráfagas y resta sus tiempos. Entrega: stream, dirección, intervalos, RTT medido y una interpretación sustentada. Campos por completar: **stream ___; dirección ___; intervalos ___ ms; RTT ___ ms; indicios de fase ___**. No reutilices los números anteriores como si fueran de tu red.
+
+**Checkpoint 3:** comparar curva oficial y curva propia con ejes y dirección visibles.
+
+## Comprobación de alcance de la captura
+
+No aparecen FIN ni RST ni retransmisiones detectadas por el analizador. Eso describe este archivo, no garantiza cómo termina toda sesión ni prueba ausencia de pérdidas fuera de lo capturado. Las tablas se regeneran con `python3 scripts/analyze-tcp-trace.py` desde la carpeta de la app y Wireshark/tshark instalado.
+
+## Requisitos de entrega del laboratorio
+
+La guía exige completar los checkpoints con el docente, guardar la traza y presentar respuestas con capturas anotadas cuando corresponda. El informe incluye introducción, marco teórico, estado del arte, desarrollo y discusión de experiencias, conclusiones/recomendaciones por experiencia y referencias IEEE. Se presenta en LaTeX o Docs, se exporta a PDF y un integrante lo entrega en Canvas, incluyendo nombres, enlace al repositorio y evidencia paso a paso.
+
+Esta página resuelve el material y prepara el procedimiento. La evidencia personal, revisión de checkpoints, investigación exigida para el informe y entrega académica siguen correspondiendo al grupo; no se presentan como experiencias realizadas aquí.

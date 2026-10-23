@@ -1,0 +1,34 @@
+---
+kind: subtopic
+title: "Forwarding, routing y encapsulación IP"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Los hosts y routers tienen capa de red. Los routers inspeccionan cabeceras y trasladan datagramas entre interfaces; no necesitan ejecutar el proceso de aplicación que originó el contenido.
+
+## 2. Conceptos
+
+| Función | Pregunta | Alcance |
+|---|---|---|
+| Routing | ¿Por qué camino llegará? | Origen a destino |
+| Forwarding | ¿Por qué salida sigue aquí? | Un router |
+| Encapsulación | ¿Cómo transporto el segmento? | Emisor IP |
+| Entrega a transporte | ¿Quién recibe la carga? | Host destino |
+
+Una dirección IPv4 de 32 bits identifica una **interfaz**. El router de la figura tiene varias, cada una conectada a una subred diferente. Un host también puede tener Wi-Fi y Ethernet con direcciones distintas.
+
+## 3. Ejemplo resuelto
+
+Un dato de aplicación con TCP/IP sin opciones incorpora 20 B TCP y 20 B IPv4. No puede suponerse que todos los paquetes tengan exactamente esa sobrecarga: las opciones TCP de un SYN o de un segmento con timestamps pueden cambiarla. En LAB3 hay que leer los tamaños de cabecera en la captura antes de comparar MSS y MTU.
+
+## 4. Errores típicos
+
+- Contar 40 B como carga de aplicación.
+- Llamar routing a cada decisión de salida, sin distinguir la tabla local del cálculo del camino.
+- Asignar una sola IP a todo router por definición.
+
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`, `Sem10_LAB3_TCP_P2 (1)-1`.

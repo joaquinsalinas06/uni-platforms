@@ -1,0 +1,239 @@
+---
+title: "LAB3 TCP — Parte 2: Python, Archivos y MTU"
+category: "laboratorio"
+categoryLabel: "Laboratorios y Ejercicios Extra"
+order: 5
+pdf: "/evaluaciones/laboratorio/lab3-tcp-p2.pdf"
+source: "LAB3 TCP P2, semana 10"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+# LAB3 TCP — Parte 2 resuelta
+
+La guía continúa en los puntos **5 y 6**. Incluye implementación reproducible y respuestas conceptuales; las cifras de una captura propia quedan por medir. [Descargar tcp_lab.py](/labs/tcp/tcp_lab.py).
+
+---
+
+## 5. Implementación TCP cliente-servidor en Python
+
+### 5.1. Implementación
+
+El código descargable tiene cuatro modos: `server`, `client`, `receive` y `send`. Para esta parte usa los dos primeros: conexión persistente con tres mensajes, cada uno delimitado por longitud de 4 bytes en orden de red. El servidor espera dos segundos antes de cada respuesta; esto permite reutilizarlo para Ex4. `recv_exact` completa encabezado y cuerpo; `sendall` evita ignorar envíos parciales. Una longitud mayor que 1 MiB o cierre a mitad de mensaje produce error.
+
+Puerto solicitado: últimos cinco dígitos del código/DNI si forman un número de 1 a 65535; si exceden 65535, últimos cuatro. Si el resultado es 0, acuerda con el docente un puerto válido; 0 no identifica un puerto fijo de escucha para esta experiencia.
+
+Dos terminales, sustituyendo 5000 por tu puerto asignado:
+
+```sh
+python3 tcp_lab.py server --port 5000
+```
+
+```sh
+python3 tcp_lab.py client --port 5000
+```
+
+Captura con filtro de **visualización** `tcp.port == 5000`. Si usas un filtro de captura, la sintaxis es `tcp port 5000`. El script muestra RTT de aplicación por intercambio; no supone un número fijo de segmentos por mensaje.
+
+### 5.2. Preguntas de análisis
+
+**1. Interfaz elegida y motivo.** Con ambos procesos en 127.0.0.1, captura loopback (por ejemplo lo0 en macOS). Con dos computadoras, el servidor escucha en su IP LAN o 0.0.0.0 y se captura la interfaz por la que pasa esa conexión. El cliente conecta a la **IP real del servidor**, nunca a 0.0.0.0. Completar: **interfaz ___; IP local ___; motivo ___**.
+
+**2. Configuración de puerto con código/DNI.** Se pasa por `--port`; `bind((host, port))` lo utiliza al escuchar y `create_connection((host, port))` al conectar. Documenta solo el puerto derivado; no hace falta publicar tu identificador completo. Completar: **regla aplicada ___; puerto ___**.
+
+**3. Funciones que disparan el handshake.** `socket(AF_INET, SOCK_STREAM)` crea el socket; `bind` y `listen` preparan el servidor. El `connect` que ejecuta `create_connection` inicia la apertura TCP contra esa escucha; `accept` entrega el socket conectado. El sistema operativo maneja SYN, SYN/ACK y ACK.
+
+**4. Ejecución simultánea.** Arranca primero el servidor, comprueba “Escuchando”, inicia captura y ejecuta cliente en otra terminal. El cliente usa la misma conexión para tres mensajes. Al finalizar envía un mensaje de longitud cero como cierre de su protocolo de aplicación; luego los contextos cierran sockets. Guarda la traza y las salidas de ambas terminales.
+
+**Checkpoint 4:** demostrar conexión, puerto elegido, mensajes y handshake en vivo al docente.
+
+---
+
+## 6. Enviar un archivo sobre TCP
+
+### 6.1. Implementación
+
+La guía solicita **RFC_TCP.txt**. Ese archivo no está entre los materiales entregados. El programa recibe la ruta como argumento; cuando se disponga del archivo oficial se ejecuta con él. Una prueba local con otro archivo se identifica con su nombre real, sin atribuirle los resultados a RFC_TCP.txt.
+
+Servidor (archivo destino nuevo):
+
+```sh
+python3 tcp_lab.py receive --port 5000 --file received.txt
+```
+
+Cliente, cuando se disponga del archivo:
+
+```sh
+python3 tcp_lab.py send --port 5000 --file RFC_TCP.txt
+```
+
+Para dos equipos añade `--host 0.0.0.0` al servidor y `--host <IP_SERVIDOR>` al cliente. Captura desde antes del SYN hasta el cierre. Se lee/escribe en bloques, sin asumir que un bloque corresponde a un paquete.
+
+El cliente termina su dirección de envío con `shutdown(SHUT_WR)`; el receptor lee hasta EOF y devuelve longitud y SHA-256. El cliente verifica ambos. El archivo se abre con `xb`: no sobrescribe uno existente. Ante fallo, conserva la evidencia del error y elimina o renombra un parcial antes de repetir.
+
+### 6.2. Entregables y análisis TCP
+
+**Código y demostración.** Entrega [tcp_lab.py](/labs/tcp/tcp_lab.py), comandos exactos, ambos hashes, longitud y captura. `send_file` y `receive_file` son las funciones de transferencia. Presenta el intercambio en vivo al docente como exige el enunciado.
+
+**1. Número total de segmentos.** Cuenta por separado tramas TCP totales y segmentos con datos del emisor. Filtros: `tcp.stream == N` y `tcp.stream == N && ip.src == <IP_CLIENTE> && tcp.len > 0`. En este protocolo el cliente manda solo bytes del archivo; la respuesta de hash viaja en sentido contrario. Registro: **archivo ___; F ___ B; stream ___; TCP totales ___; datos cliente ___**. No se sustituye por el conteo de alice.txt de P1.
+
+**2. MSS y MTU.** Lee la opción MSS en los SYN de **ambos extremos**: cada uno anuncia la máxima carga que acepta recibir. Con MTU=1500 y cabeceras base de 20 B IP y 20 B TCP, MSS base=1460 B. Con opciones, la carga enviada puede ser menor, como los 1448 B de P1. Registro: **MTU ___; MSS cliente ___; MSS servidor ___; cabeceras observadas ___**.
+
+**3. Patrones Seq/Ack.** Un segmento de L bytes aumenta el siguiente Seq en L; un ACK acumulativo indica el próximo byte esperado. SYN y FIN consumen uno cada uno. Expresa si usaste secuencias relativas o absolutas y muestra al menos tres intervalos. Registro: **tramas ___; Seq ___; Len ___; Ack que cubre cada intervalo ___**.
+
+**4. Entrega y recuperación.** Hash igual comprueba integridad del archivo reconstruido; no prueba que no hubo retransmisiones. Revisa `tcp.analysis.retransmission || tcp.analysis.fast_retransmission || tcp.analysis.duplicate_ack`. Anota tramas y causa sustentada; si no hay, escribe “no observado en esta captura”. Registro: **hash emisor ___; hash receptor ___; tramas de recuperación ___**.
+
+### 6.3. Escenario: MTU e ICMP
+
+Anota la MTU inicial, bájala temporalmente a **1000 B** según el sistema y abre una **conexión nueva**. Repite con el mismo archivo, mide y restaura la MTU original. Esta página no cambia interfaces del equipo.
+
+**5. Cambio de MSS.** Con cabeceras base IPv4/TCP, el valor esperado es $1000-20-20=960$ B. Contrasta el SYN nuevo; no deduzcas automáticamente carga efectiva igual a MSS. Registro: **MSS antes ___; después ___; diferencia ___**.
+
+**6. Cambio del número de segmentos.** Para la misma F y segmentos llenos sin retransmisión, $N_{1500}=\lceil F/1460\rceil$ y $N_{1000}=\lceil F/960\rceil$. Al disminuir la carga por segmento, aumenta el conteo esperado. Compara con datos reales, opciones, segmentos no llenos y offloading antes de afirmar que la cuenta debe coincidir exactamente. Registro: **N antes ___; N después ___; explicación ___**.
+
+**7. Opcional: DF e ICMP.** Si un datagrama con Don't Fragment encuentra una MTU menor que su longitud, el router puede devolver ICMP Destination Unreachable / Fragmentation Needed. Si TCP ya ajustó su segmentación, puede no aparecer ICMP. Documenta cómo generaste el caso y filtra `icmp`; no presentes la ausencia como fallo obligatorio del laboratorio. Registro: **condición DF/MTU ___; ICMP observado ___; tramas ___**.
+
+**Checkpoint 5:** mostrar archivo íntegro, captura y comparación antes/después.
+
+## Requisitos de entrega del laboratorio
+
+La guía exige completar los checkpoints con el docente, guardar la traza y presentar respuestas con capturas anotadas cuando corresponda. El informe incluye introducción, marco teórico, estado del arte, desarrollo y discusión de experiencias, conclusiones/recomendaciones por experiencia y referencias IEEE. Se presenta en LaTeX o Docs, se exporta a PDF y un integrante lo entrega en Canvas, incluyendo nombres, enlace al repositorio y evidencia paso a paso.
+
+Esta página resuelve el material y prepara el procedimiento. La evidencia personal, revisión de checkpoints, investigación exigida para el informe y entrega académica siguen correspondiendo al grupo; no se presentan como experiencias realizadas aquí.
+
+## Código Python completo
+
+El archivo siguiente coincide con la descarga. Usa una conexión por ejecución del servidor; dentro de ella admite los tres mensajes persistentes o la transferencia seleccionada.
+
+```python
+#!/usr/bin/env python3
+"""LAB3 / Ex4: mensajes delimitados y transferencia por EOF; solo biblioteca estándar."""
+import argparse
+import hashlib
+from pathlib import Path
+import socket
+import struct
+import time
+
+MAX_MESSAGE = 1024 * 1024
+
+
+def recv_exact(conn, count):
+    data = bytearray()
+    while len(data) < count:
+        chunk = conn.recv(count - len(data))
+        if not chunk:
+            raise EOFError('Conexión cerrada antes de completar el mensaje')
+        data.extend(chunk)
+    return bytes(data)
+
+
+def send_message(conn, data):
+    if len(data) > MAX_MESSAGE:
+        raise ValueError('Mensaje mayor que 1 MiB')
+    conn.sendall(struct.pack('!I', len(data)) + data)
+
+
+def receive_message(conn):
+    size = struct.unpack('!I', recv_exact(conn, 4))[0]
+    if size > MAX_MESSAGE:
+        raise ValueError('Longitud de mensaje mayor que 1 MiB')
+    return recv_exact(conn, size)
+
+
+def serve_messages(conn, delay=2):
+    # El cliente anuncia el final con un mensaje vacío, no con un recv parcial.
+    while True:
+        message = receive_message(conn)
+        if not message:
+            return
+        time.sleep(delay)
+        send_message(conn, b'ACK aplicacion')
+
+
+def exchange_messages(conn, messages, pause=1):
+    elapsed = []
+    for message in messages:
+        start = time.perf_counter()
+        send_message(conn, message)
+        reply = receive_message(conn)
+        duration = time.perf_counter() - start
+        elapsed.append(duration)
+        print(f'{reply.decode("utf-8")} | RTT aplicacion={duration:.6f} s')
+        time.sleep(pause)
+    send_message(conn, b'')
+    return elapsed
+
+
+def receive_file(conn, destination):
+    destination = Path(destination)
+    digest = hashlib.sha256()
+    count = 0
+    # xb impide sobrescribir un archivo existente por accidente.
+    with destination.open('xb') as target:
+        while chunk := conn.recv(65536):
+            target.write(chunk)
+            digest.update(chunk)
+            count += len(chunk)
+    checksum = digest.hexdigest()
+    send_message(conn, f'{count} {checksum}'.encode('ascii'))
+    return count, checksum
+
+
+def send_file(conn, source):
+    digest = hashlib.sha256()
+    count = 0
+    with Path(source).open('rb') as origin:
+        while chunk := origin.read(65536):
+            conn.sendall(chunk)
+            digest.update(chunk)
+            count += len(chunk)
+    # Termina solo el envío: aún podemos recibir la confirmación del servidor.
+    conn.shutdown(socket.SHUT_WR)
+    expected = f'{count} {digest.hexdigest()}'
+    actual = receive_message(conn).decode('ascii')
+    if actual != expected:
+        raise ValueError(f'Integridad incorrecta: esperado {expected}, recibido {actual}')
+    print(f'Verificado: {actual}')
+    return count, digest.hexdigest()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('mode', choices=['server', 'client', 'receive', 'send'])
+    parser.add_argument('--host', default='127.0.0.1', help='IP local al escuchar; IP del servidor al conectar')
+    parser.add_argument('--port', type=int, default=5000)
+    parser.add_argument('--file', type=Path, help='Archivo origen (send) o destino nuevo (receive)')
+    args = parser.parse_args()
+    if not 1 <= args.port <= 65535:
+        parser.error('El puerto debe estar entre 1 y 65535')
+    if args.mode in ('receive', 'send') and args.file is None:
+        parser.error('--file es obligatorio para transferir archivos')
+    try:
+        if args.mode in ('server', 'receive'):
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                listener.bind((args.host, args.port))
+                listener.listen(1)
+                listener.settimeout(120)
+                print(f'Escuchando en {args.host}:{args.port}', flush=True)
+                conn, address = listener.accept()
+                with conn:
+                    conn.settimeout(30)
+                    print(f'Cliente: {address}', flush=True)
+                    if args.mode == 'server':
+                        serve_messages(conn)
+                    else:
+                        print(receive_file(conn, args.file))
+        else:
+            with socket.create_connection((args.host, args.port), timeout=30) as conn:
+                if args.mode == 'client':
+                    exchange_messages(conn, [b'Mensaje 1', b'Mensaje 2', b'Mensaje 3'])
+                else:
+                    send_file(conn, args.file)
+    except (OSError, EOFError, ValueError) as error:
+        parser.exit(1, f'Error: {error}\n')
+
+
+if __name__ == '__main__':
+    main()
+```

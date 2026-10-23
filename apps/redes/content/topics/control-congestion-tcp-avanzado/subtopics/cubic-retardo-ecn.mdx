@@ -1,0 +1,31 @@
+---
+kind: subtopic
+title: "CUBIC, control por retardo y ECN"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Las slides 26–32 presentan maneras de utilizar mejor el cuello de botella sin aumentar indefinidamente las colas.
+
+## 2. Conceptos
+
+**CUBIC.** Wmax es la ventana previa a la pérdida. Tras reducirla, la curva aumenta rápido lejos del punto K y despacio cerca de Wmax. K sitúa el regreso a ese máximo. Esta forma permite explorar alrededor de una capacidad que posiblemente no cambió. El material describe la relación cúbica, pero no especifica aquí coeficientes numéricos para calcular una traza.
+
+**Retardo.** $RTT_{min}$ aproxima el camino sin cola. Se compara el throughput real (bytes enviados en el último RTT divididos por ese intervalo) con $cwnd/RTT_{min}$. Si están cerca, se aumenta linealmente; si el real queda muy por debajo, se reduce. El objetivo de la slide es mantener la tubería llena, sin llenarla de más. BBR se menciona como ejemplo de enfoque basado en retardo, sin desarrollar su algoritmo.
+
+**ECN.** El router marca los dos bits ECN de IP para indicar congestión; el receptor lo comunica con ECE en un ACK TCP. Intervienen ambas capas. No es un cambio del número de ACK ni una disminución del campo rwnd.
+
+## 3. Ejemplo resuelto
+
+Si el emisor aumenta el ritmo y el throughput no mejora pero sí sube el RTT, la cola del cuello de botella está creciendo. El enfoque por retardo intenta frenar antes de provocar un descarte. ECN puede proporcionar evidencia explícita del router, mientras TCP clásico infiere el problema desde los extremos.
+
+## 4. Errores típicos
+
+- Afirmar que cwnd se transmite como campo TCP.
+- Usar la descripción histórica de la slide sobre Linux como medición del equipo actual.
+- Agregar detalles de BBR o parámetros de CUBIC que no proporciona el curso.
+
+
+Fuente: `Sem9_NetT-TCP2`, `Sem10_Excercises4-TCP`.

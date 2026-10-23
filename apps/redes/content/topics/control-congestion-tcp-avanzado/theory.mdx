@@ -1,0 +1,54 @@
+---
+kind: theory
+title: "TCP: AIMD, Tahoe/Reno, CUBIC y Equidad"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Idea y motivación
+
+TCP no sabe de antemano qué tasa admite el camino. Ajusta **cwnd** según la respuesta de la red. La ventana anunciada **rwnd** protege al receptor; **cwnd** limita los bytes pendientes de ACK para no saturar la red.
+
+---
+
+## 2. Conceptos
+
+Con datos disponibles, la aproximación de la slide 25 es $\text{tasa}\approx cwnd/RTT$. En congestión evitada, **AIMD** suma aproximadamente 1 MSS por RTT y reduce multiplicativamente ante pérdida. No significa sumar 1 MSS completo por cada ACK.
+
+Ex4 incorpora **slow start**, **ssthresh**, Tahoe y Reno. Slow start duplica aproximadamente la ventana por RTT hasta el umbral; después, congestion avoidance la aumenta linealmente. Tahoe vuelve a 1 MSS ante tres ACK duplicados o timeout. Reno reduce a la mitad ante tres duplicados y vuelve a 1 ante timeout. En ambos se actualiza el umbral con la mitad de los bytes en vuelo; para las tablas del ejercicio se supone vuelo lleno, igual a cwnd.
+
+<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
+
+La presentación también cubre **CUBIC** (crecimiento cúbico respecto del instante K en que se vuelve a Wmax), control por **retardo** (comparar throughput medido con $cwnd/RTT_{min}$) y **ECN** (router marca IP; receptor devuelve ECE en TCP). No hacen falta fórmulas ni parámetros de CUBIC que no estén en las slides.
+
+---
+
+## 3. Método paso a paso
+
+1. Fija unidades: bytes o MSS, sin mezclarlos.
+2. Marca umbral, ventana inicial y momento de cada evento.
+3. Separa slow start, aumento aditivo y recuperación por pérdida.
+4. Distingue los valores transitorios de Reno durante fast recovery de la ventana después de recuperarse.
+5. Para equidad, analiza conexiones con los mismos RTT y aumentos: no aplicaciones enteras.
+
+---
+
+## 4. Ejemplo resuelto
+
+En Ex4, $cwnd=8$ MSS al inicio de ronda 4. El triple ACK duplicado al final deja $ssthresh=4$. Tahoe comienza la ronda 5 con 1 MSS; Reno, una vez reconocido lo retransmitido, con 4 MSS. La tabla completa y las hipótesis están en [Ex4](/evaluaciones/laboratorio/ejercicios-4-tcp).
+
+---
+
+## 5. Errores típicos
+
+- Llamar cwnd al campo Win de Wireshark: ese campo anuncia recepción.
+- Tratar las curvas de Tahoe/Reno del ejercicio como identificación del algoritmo de una captura real.
+- Prometer equidad universal: las slides asumen RTT iguales, número fijo de conexiones y congestion avoidance.
+
+
+## Para profundizar
+
+- [Slow start, AIMD y recuperación Tahoe/Reno](/topics/control-congestion-tcp-avanzado/subtopics/slow-start-aimd-tahoe-reno)
+- [CUBIC, control por retardo y ECN](/topics/control-congestion-tcp-avanzado/subtopics/cubic-retardo-ecn)
+- [Equidad: AIMD frente a AIAD](/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad)
+
+Fuente: `Sem9_NetT-TCP2`, `Sem10_Excercises4-TCP`.

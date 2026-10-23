@@ -92,12 +92,43 @@
       "title": "Semana 7 — Protocolo TCP en Profundidad",
       "sourceFiles": [
         "raw-materials/text/Sem7_NetT-TCP.txt",
-        "raw-materials/text/Sem07_Excercises3-1.txt"
+        "raw-materials/text/Sem07_Excercises3-1.txt",
+        "raw-materials/text/Sem9_NetT-TCP2.txt",
+        "raw-materials/text/Sem10_Excercises4-TCP.txt"
       ],
       "topics": [
         "protocolo-tcp-mecanismos",
         "rtt-timeout-retransmision",
         "control-flujo-congestion-tcp"
+      ]
+    },
+    {
+      "id": "s9",
+      "title": "Semana 9 — Congestión TCP y Análisis con Wireshark",
+      "sourceFiles": [
+        "raw-materials/text/Sem9_NetT-TCP2.txt",
+        "raw-materials/text/Sem09_LAB3_P1-2.txt",
+        "raw-materials/text/Sem09_LAB3_TCP_PPT.pptx.txt",
+        "raw-materials/text/Sem10_Excercises4-TCP.txt"
+      ],
+      "topics": [
+        "principios-costes-congestion",
+        "control-congestion-tcp-avanzado",
+        "lab-tcp-wireshark"
+      ]
+    },
+    {
+      "id": "s10",
+      "title": "Semana 10 — Capa de Red, Direccionamiento IPv4 y Laboratorio TCP",
+      "sourceFiles": [
+        "raw-materials/text/Sem10_NetT-NetLayer_Addressing.txt",
+        "raw-materials/text/Sem10_LAB3_TCP_P2 (1)-1.txt",
+        "raw-materials/text/Sem10_Excercises4-TCP.txt"
+      ],
+      "topics": [
+        "capa-red-ipv4-fragmentacion",
+        "direccionamiento-ipv4-subredes",
+        "lab-sockets-tcp-python"
       ]
     }
   ],
@@ -135,7 +166,8 @@
       ],
       "usedBy": [
         "capa-aplicacion-http",
-        "capa-transporte-multiplexacion"
+        "capa-transporte-multiplexacion",
+        "capa-red-ipv4-fragmentacion"
       ],
       "subtopics": [
         "pila-protocolos-5-capas",
@@ -259,7 +291,8 @@
       ],
       "usedBy": [
         "registros-rr-seguridad-dns",
-        "lab-dns-wireshark-nslookup"
+        "lab-dns-wireshark-nslookup",
+        "direccionamiento-ipv4-subredes"
       ],
       "subtopics": [
         "jerarquia-servidores-dns",
@@ -559,14 +592,19 @@
       ],
       "usedBy": [
         "rtt-timeout-retransmision",
-        "control-flujo-congestion-tcp"
+        "control-flujo-congestion-tcp",
+        "lab-tcp-wireshark",
+        "capa-red-ipv4-fragmentacion"
       ],
       "subtopics": [
         "segmento-tcp-secuencia-ack",
         "handshake-tres-vias-y-cierre"
       ],
       "sourceSlides": [
-        "Sem7_NetT-TCP"
+        "Sem7_NetT-TCP",
+        "Sem09_LAB3_P1-2",
+        "Sem09_LAB3_TCP_PPT.pptx",
+        "Sem10_Excercises4-TCP"
       ],
       "hasVisualization": true,
       "visualizationType": "packet",
@@ -583,7 +621,8 @@
         "protocolo-tcp-mecanismos"
       ],
       "usedBy": [
-        "control-flujo-congestion-tcp"
+        "control-flujo-congestion-tcp",
+        "lab-tcp-wireshark"
       ],
       "subtopics": [
         "calculo-ewma-estimated-rtt-devrtt",
@@ -591,7 +630,10 @@
       ],
       "sourceSlides": [
         "Sem7_NetT-TCP",
-        "Sem07_Excercises3-1"
+        "Sem07_Excercises3-1",
+        "Sem09_LAB3_P1-2",
+        "Sem09_LAB3_TCP_PPT.pptx",
+        "Sem10_Excercises4-TCP"
       ],
       "hasVisualization": true,
       "visualizationType": "xy-chart",
@@ -607,17 +649,180 @@
       "buildsOn": [
         "rtt-timeout-retransmision"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "principios-costes-congestion"
+      ],
       "subtopics": [
         "control-flujo-ventana-recepcion",
         "fases-congestion-aimd-tahoe-reno"
       ],
       "sourceSlides": [
         "Sem7_NetT-TCP",
-        "Sem07_Excercises3-1"
+        "Sem07_Excercises3-1",
+        "Sem09_LAB3_P1-2",
+        "Sem09_LAB3_TCP_PPT.pptx",
+        "Sem10_Excercises4-TCP"
       ],
       "hasVisualization": true,
       "visualizationType": "xy-chart",
+      "status": "generated"
+    },
+    "principios-costes-congestion": {
+      "type": "concept",
+      "title": "Congestión: Causas, Costes y Formas de Control",
+      "unit": "s9",
+      "prerequisites": [
+        "control-flujo-congestion-tcp"
+      ],
+      "buildsOn": [
+        "control-flujo-congestion-tcp"
+      ],
+      "usedBy": [
+        "control-congestion-tcp-avanzado"
+      ],
+      "subtopics": [
+        "buffers-perdidas-retransmisiones",
+        "control-extremo-a-extremo-y-asistido"
+      ],
+      "sourceSlides": [
+        "Sem9_NetT-TCP2"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "control-congestion-tcp-avanzado": {
+      "type": "concept",
+      "title": "TCP: AIMD, Tahoe/Reno, CUBIC y Equidad",
+      "unit": "s9",
+      "prerequisites": [
+        "principios-costes-congestion"
+      ],
+      "buildsOn": [
+        "principios-costes-congestion"
+      ],
+      "usedBy": [
+        "lab-tcp-wireshark"
+      ],
+      "subtopics": [
+        "slow-start-aimd-tahoe-reno",
+        "cubic-retardo-ecn",
+        "equidad-aimd-aiad"
+      ],
+      "sourceSlides": [
+        "Sem9_NetT-TCP2",
+        "Sem10_Excercises4-TCP"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "status": "generated"
+    },
+    "lab-tcp-wireshark": {
+      "type": "lab",
+      "title": "Laboratorio: TCP, RTT y Gráficas de Wireshark",
+      "unit": "s9",
+      "prerequisites": [
+        "protocolo-tcp-mecanismos",
+        "rtt-timeout-retransmision",
+        "control-congestion-tcp-avanzado"
+      ],
+      "buildsOn": [
+        "protocolo-tcp-mecanismos",
+        "rtt-timeout-retransmision",
+        "control-congestion-tcp-avanzado"
+      ],
+      "usedBy": [
+        "lab-sockets-tcp-python"
+      ],
+      "subtopics": [
+        "captura-secuencia-ack",
+        "rtt-y-grafica-stevens"
+      ],
+      "sourceSlides": [
+        "Sem09_LAB3_P1-2",
+        "Sem09_LAB3_TCP_PPT.pptx"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "status": "generated"
+    },
+    "capa-red-ipv4-fragmentacion": {
+      "type": "concept",
+      "title": "Capa de Red: Datagramas IPv4 y Fragmentación",
+      "unit": "s10",
+      "prerequisites": [
+        "arquitectura-capas-internet",
+        "protocolo-tcp-mecanismos"
+      ],
+      "buildsOn": [
+        "arquitectura-capas-internet",
+        "protocolo-tcp-mecanismos"
+      ],
+      "usedBy": [
+        "direccionamiento-ipv4-subredes",
+        "lab-sockets-tcp-python"
+      ],
+      "subtopics": [
+        "forwarding-datagrama-ip",
+        "mtu-offset-reensamblado"
+      ],
+      "sourceSlides": [
+        "Sem10_NetT-NetLayer_Addressing",
+        "Sem10_LAB3_TCP_P2 (1)-1"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "packet",
+      "status": "generated"
+    },
+    "direccionamiento-ipv4-subredes": {
+      "type": "concept",
+      "title": "Direccionamiento IPv4, CIDR, Subredes y DHCP",
+      "unit": "s10",
+      "prerequisites": [
+        "capa-red-ipv4-fragmentacion",
+        "dns-arquitectura-resolucion"
+      ],
+      "buildsOn": [
+        "capa-red-ipv4-fragmentacion",
+        "dns-arquitectura-resolucion"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "cidr-mascaras-direcciones-especiales",
+        "dhcp-configuracion-host",
+        "agregacion-rutas-subredes",
+        "comandos-ip-mac"
+      ],
+      "sourceSlides": [
+        "Sem10_NetT-NetLayer_Addressing"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "lab-sockets-tcp-python": {
+      "type": "lab",
+      "title": "Laboratorio: Sockets TCP, Archivos y MTU",
+      "unit": "s10",
+      "prerequisites": [
+        "lab-tcp-wireshark",
+        "capa-red-ipv4-fragmentacion"
+      ],
+      "buildsOn": [
+        "lab-tcp-wireshark",
+        "capa-red-ipv4-fragmentacion"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "cliente-servidor-mensajes",
+        "transferencia-archivos-mss-mtu"
+      ],
+      "sourceSlides": [
+        "Sem10_LAB3_TCP_P2 (1)-1",
+        "Sem10_Excercises4-TCP"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
       "status": "generated"
     }
   }

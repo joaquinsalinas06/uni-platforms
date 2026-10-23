@@ -1,0 +1,36 @@
+---
+kind: subtopic
+title: "CIDR, máscaras y direcciones especiales"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+La notación decimal facilita leer una dirección, pero los límites de red están definidos en bits.
+
+## 2. Conceptos
+
+<Visualization viz={{"type": "packet", "title": "CIDR: 200.23.16.0/23", "steps": [{"note": "Los 23 primeros bits identifican la red; quedan 9 para la parte host. /23 no termina en un límite de octeto.", "fields": {"width": 32, "rows": [[{"label": "prefijo", "bits": 23, "value": "200.23.16.0/23", "state": "active"}, {"label": "host", "bits": 9, "value": "9 bits"}]]}}], "static": true}} />
+
+| Caso del material | Interpretación |
+|---|---|
+| 127.0.0.1 | Loopback: comunicación local |
+| 255.255.255.255 | Broadcast limitado, todos los bits a uno |
+| Dirección de red | Primera dirección del bloque: host a cero |
+| Broadcast de subred | Última dirección del bloque: host a uno |
+
+Para /23, el tercer octeto de la máscara es 254 (`11111110`). Un bloque empieza en un tercer octeto par y abarca dos valores consecutivos. /24 deja ocho bits host y la máscara es 255.255.255.0.
+
+## 3. Ejemplo resuelto
+
+Para 200.23.16.0/23 de la slide: prefijo de 23 bits, nueve host, $2^9=512$ direcciones. Red 200.23.16.0; broadcast 200.23.17.255. En una subred ordinaria que reserva ambos extremos, quedan 510 direcciones intermedias. Esta resta no se generaliza aquí a casos especiales no tratados en las slides.
+
+## 4. Errores típicos
+
+- Leer /23 como 23 direcciones.
+- Confundir máscara con broadcast.
+- Usar un OR con 255.255.254.0 y concluir que produjo el broadcast.
+
+
+Fuente: `Sem10_NetT-NetLayer_Addressing`.

@@ -1,0 +1,38 @@
+---
+kind: subtopic
+title: "Slow start, AIMD y recuperación Tahoe/Reno"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Slow start acelera la búsqueda inicial; congestion avoidance explora con mayor cautela. Ex4 pide dibujar la reacción a dos señales de pérdida distintas.
+
+## 2. Conceptos
+
+| Evento | Tahoe | Reno |
+|---|---|---|
+| cwnd por debajo de ssthresh | Aproximadamente ×2 por RTT | Aproximadamente ×2 por RTT |
+| Congestion avoidance | Aproximadamente +1 MSS/RTT | Aproximadamente +1 MSS/RTT |
+| Tres ACK duplicados | Umbral a mitad, cwnd=1 MSS | Fast retransmit; recuperada la pérdida, cwnd=ssthresh |
+| Timeout | Umbral a mitad, cwnd=1 MSS | Umbral a mitad, cwnd=1 MSS |
+
+En Reno clásico, al entrar a fast recovery la ventana se infla temporalmente a $ssthresh+3$ MSS. Cada duplicado adicional permite ajustar esa inflación. Al llegar un ACK que cubre la recuperación, se desinfla al umbral. La gráfica por rondas muestra este último estado; no omite el transitorio al explicar el mecanismo.
+
+## 3. Ejemplo resuelto
+
+<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
+
+Eventos al final de rondas 4 y 9. En Tahoe la ronda 9 comienza con 6 MSS: su nuevo umbral es 3. En Reno comienza con 8 MSS: su nuevo umbral es 4. Desde ronda 10 ambos reinician en 1, pero alcanzan umbrales distintos. [Tabla de doce rondas](/evaluaciones/laboratorio/ejercicios-4-tcp#pregunta-5-tahoe-y-reno).
+
+<Visualization viz={{"type": "window", "static": true, "title": "Después de recuperar la pérdida de ronda 4", "steps": [{"note": "Cada celda representa un bloque de un MSS, no números de byte de una captura. En la ronda 5 Tahoe permite 1 MSS y Reno 4 MSS tras salir de fast recovery.", "windows": [{"role": "sender", "label": "Tahoe: cwnd=1 MSS", "base": 0, "size": 1, "cells": [{"n": 0, "state": "usable"}, {"n": 1, "state": "unusable"}, {"n": 2, "state": "unusable"}, {"n": 3, "state": "unusable"}, {"n": 4, "state": "unusable"}, {"n": 5, "state": "unusable"}, {"n": 6, "state": "unusable"}, {"n": 7, "state": "unusable"}]}, {"role": "sender", "label": "Reno: cwnd=4 MSS", "base": 0, "size": 4, "cells": [{"n": 0, "state": "usable"}, {"n": 1, "state": "usable"}, {"n": 2, "state": "usable"}, {"n": 3, "state": "usable"}, {"n": 4, "state": "unusable"}, {"n": 5, "state": "unusable"}, {"n": 6, "state": "unusable"}, {"n": 7, "state": "unusable"}]}]}]}} />
+
+## 4. Errores típicos
+
+- Reducir cwnd en la fila anterior al evento.
+- Dividir el umbral anterior en lugar del vuelo actual.
+- Dibujar $ssthresh+3$ como la ventana estable de Reno durante toda la ronda siguiente.
+
+
+Fuente: `Sem9_NetT-TCP2`, `Sem10_Excercises4-TCP`.

@@ -507,7 +507,7 @@ a:hover {
 .net-slide { animation: net-slide 450ms cubic-bezier(.2,.7,.3,1) both; }
 
 /* inline code largo (URLs/hosts) no debe desbordar en móvil */
-.prose :not(pre) > code { overflow-wrap: anywhere; }
+.prose :not(pre) > code { overflow-wrap: anywhere; white-space: normal; }
 /* Entre pasos: los cambios de estado se interpolan (los elementos conservan su
    clave entre pasos); lo nuevo entra, lo que se va se desvanece. */
 .net-layer :is(rect, path, circle, ellipse, polygon, text) { transition: fill 350ms, stroke 350ms, opacity 350ms, stroke-width 350ms, fill-opacity 350ms; }

@@ -14,7 +14,7 @@ El receptor TCP tiene un buffer finito. Con el campo **Receive window** de la ca
 ## 2. Conceptos
 
 - La cabecera TCP incluye el campo *Receive window* (16 bits) ([Segmento TCP](/topics/protocolo-tcp-mecanismos/subtopics/segmento-tcp-secuencia-ack)).
-- El material no explica cómo se calcula ni cómo el emisor la usa.
+- La slide 4 de `Sem9_NetT-TCP2` la define como bytes libres del buffer receptor; al llenarse, anuncia cero. El emisor también debe respetar cwnd (slide 25).
 
 ### Lo que se observa en la traza del parcial 2025-II
 
@@ -31,7 +31,7 @@ En el handshake aparece `Win=65535` (SYN del cliente) y `Win=28960` (SYN,ACK del
 | 19 | 10137 | 49280 |
 
 <Visualization viz={{ type: 'xy-chart', static: true, title: 'Win anunciada por el servidor en sus ACK (traza del parcial 2025-II)', steps: [
-  { note: 'Los valores de Win que muestra Wireshark en los siete primeros ACK. El material no explica por qué crecen ni cómo se escalan con la opción WS.',
+  { note: 'Los valores de Win que muestra Wireshark en los siete primeros ACK. Es la ventana de recepción calculada por Wireshark; no representa cwnd. Para contrastar el valor de 16 bits usa tcp.window_size_value; el escalado se negocia en SYN.',
     series: [{ id: 'w', label: 'Win (bytes) según Wireshark', points: [[1449, 31872], [2897, 34816], [4345, 37760], [5793, 40576], [7241, 43520], [8689, 46336], [10137, 49280]], kind: 'line' }],
     x: { label: 'Ack', min: 0, max: 11000 }, y: { label: 'Win', min: 28000, max: 52000 } },
 ]}} />
@@ -52,3 +52,7 @@ Lab de la semana 5, prueba de estrés: se envían $3 \times 10\,000 = 30\,000$ p
 
 - Interpretar `Win=` como la ventana de congestión: es la ventana de **recepción** que anuncia el receptor.
 - Esperar que UDP avise al emisor de que el receptor está saturado.
+
+## 5. Continuación en semana 9
+
+El vuelo se limita por el menor entre rwnd y cwnd. Una ventana cero impide enviar nuevos datos bajo el límite de recepción; no demuestra pérdida en la red. [Congestión y algoritmos TCP](/topics/control-congestion-tcp-avanzado).

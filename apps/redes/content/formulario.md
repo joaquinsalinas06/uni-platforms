@@ -254,13 +254,66 @@ donde $w_i$ son las palabras de 16 bits, la suma es en complemento a 1 y la barr
 $$\text{SampleRTT} = t_{\text{ACK recibido}} - t_{\text{segmento enviado}}$$
 $$\text{EstimatedRTT}_n = 0{,}875 \cdot \text{EstimatedRTT}_{n-1} + 0{,}125 \cdot \text{SampleRTT}_n$$
 
-El material no incluye DevRTT, fórmula de timeout de TCP, control de flujo ni de congestión (ver [Semana 7](/units/s7)).
+LAB3 fija el primer estimado igual a su primera muestra. Ex4 aporta un estado inicial y añade DevRTT y timeout; úsalo en lugar de reinicializar con la muestra (ver semanas 9–10).
+
+---
+
+
+## Semana 9 — Ventanas y Congestión TCP
+
+### 1. Ventana de recepción y congestión
+
+$$\text{vuelo}\leq\min(rwnd,cwnd)\qquad\text{tasa}\approx\frac{cwnd}{RTT}$$
+
+La ventana está en **bytes**: el cociente da bytes/s. Para bits/s, multiplica por 8. El límite de vuelo no es el permiso restante: hay que descontar los bytes que ya esperan ACK. Win de Wireshark es recepción, no cwnd. Fuente: `Sem9_NetT-TCP2`, slides 4 y 25; combinación de límites derivada.
+
+### 2. Crecimiento y reparto ideal
+
+- Slow start: aproximadamente ×2 por RTT mientras cwnd está por debajo de ssthresh.
+- Congestion avoidance: aproximadamente +1 MSS por RTT.
+- Con tres ACK duplicados, Tahoe vuelve a 1 MSS; Reno queda en ssthresh tras completar fast recovery (incluye un estado transitorio inflado).
+- Con timeout, ambos vuelven a 1 MSS. En Ex4, con vuelo lleno, el nuevo umbral es cwnd previa/2.
+- K conexiones con mismo RTT y competencia ideal: tasa promedio por conexión $R/K$.
+
+Fuentes: `Sem9_NetT-TCP2`, slides 23–25 y 33–35; `Sem10_Excercises4-TCP`, preguntas 1 y 5. El modelo es por conexión, no por aplicación.
+
+---
+
+## Semana 10 — Timeout, IPv4 y Archivos
+
+### 1. DevRTT y TimeoutInterval (Ex4, pregunta 4)
+
+$$DevRTT_n=0.75\,DevRTT_{n-1}+0.25|SampleRTT_n-EstimatedRTT_n|$$
+$$TimeoutInterval_n=EstimatedRTT_n+4\,DevRTT_n$$
+
+Primero actualiza EstimatedRTT con la fórmula de semana 7; después usa ese valor nuevo para DevRTT. Ex4 parte de Est=100 ms y Dev=5 ms. Con muestras 106, 120 y 140 ms, los timeouts son **121, 135.1875 y 164.0234375 ms**. No mezclar unidades. Karn excluye muestras ambiguas por retransmisión.
+
+### 2. Fragmentación IPv4
+
+Con cabecera de H bytes, MTU M y datagrama de longitud total L:
+
+$$D_{no\ final}=8\left\lfloor\frac{M-H}{8}\right\rfloor\qquad offset=\frac{\text{datos previos}}8$$
+
+Resta primero H a L. Cada fragmento repite cabecera; MF=1 salvo el último. En el ejemplo de la slide: L=4000, M=1500, H=20; cargas 1480,1480,1020 B; longitudes 1500,1500,1040 B; offsets 0,185,370. Fuente: `Sem10_NetT-NetLayer_Addressing`, slide 8; expresión general derivada.
+
+### 3. CIDR, red y broadcast
+
+$$\text{direcciones en /p}=2^{32-p}$$
+$$red=IP\ \mathrm{AND}\ mascara\qquad broadcast=red\ \mathrm{OR}\ (\mathrm{NOT}\ mascara)$$
+
+El NOT se limita a 32 bits. /23 corresponde a 255.255.254.0; 200.23.16.0/23 abarca hasta 200.23.17.255 (512 direcciones). Ocho bloques /23 consecutivos desde 200.23.16.0 forman 200.23.16.0/20. Fuentes: slides 14–15 y 30–33. La fórmula de broadcast explicita el complemento omitido en la etiqueta abreviada de la slide.
+
+### 4. MSS y archivo (modelo ideal)
+
+$$MSS=MTU-H_{IP}-H_{TCP}\qquad N=\left\lceil\frac{F}{M}\right\rceil$$
+
+Sin opciones, MTU=1500 da MSS=1460 B; MTU=1000 da 960 B. Para el conteo ideal, M es la carga efectiva por segmento y F el archivo en bytes, sin retransmisiones y con segmentos llenos. El último lleva $F-M(N-1)$ si F>0. En captura, opciones, envíos parciales y offloading pueden cambiar la observación. Fuentes: LAB3 P2 §6 y Ex4 pregunta 8.
 
 ---
 
 ## Resumen de Examen — Todas las Fórmulas en una Tabla
 
-Todo en bits, bps y segundos (ver [Símbolos y Unidad Base](#símbolos-y-unidad-base-un-solo-criterio-para-todo-el-formulario)).
+Retardos y tasas de las primeras semanas en bits, bps y segundos; ventanas, MTU, MSS y archivos TCP/IP en bytes cuando se indica. Para convertir tasas, 1 B = 8 bits (ver [Símbolos y Unidad Base](#símbolos-y-unidad-base-un-solo-criterio-para-todo-el-formulario)).
 
 | Tema | Fórmula |
 |---|---|
@@ -287,3 +340,11 @@ Todo en bits, bps y segundos (ver [Símbolos y Unidad Base](#símbolos-y-unidad-
 | UDP | cabecera 8 B; $\text{length} = 8 + L_{\text{datos}}$; máx $65\,527$ (sin IP), $65\,507$ (IPv4), $1472$ (MTU 1500) |
 | Checksum | suma 16 bits en comp. a 1, invertir; receptor suma todo $= \text{0xFFFF}$ |
 | TCP RTT | $\text{Est}_n = 0{,}875\,\text{Est}_{n-1} + 0{,}125\,\text{Sample}_n$ |
+
+| TCP timeout | $Timeout=EstimatedRTT+4\,DevRTT$; actualizar Dev con el estimado nuevo |
+| TCP vuelo/tasa | $vuelo\leq\min(rwnd,cwnd)$; tasa aproximada $cwnd/RTT$ en B/s |
+| Equidad ideal | $R/K$ por conexión, con los supuestos de la slide |
+| Fragmentación IPv4 | $D=8\lfloor(MTU-H_{IP})/8\rfloor$; offset=datos previos/8 |
+| CIDR | $2^{32-p}$ direcciones; red=IP AND máscara; broadcast=red OR NOT máscara |
+| MSS base IPv4/TCP | $MTU-20-20$ bytes, sin opciones |
+| Archivo ideal | $N=\lceil F/M\rceil$; F y M en bytes |

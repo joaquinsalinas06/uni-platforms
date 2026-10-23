@@ -1,0 +1,212 @@
+---
+title: "Ejercicios 4 — TCP: Teoría, Wireshark y Python"
+category: "laboratorio"
+categoryLabel: "Laboratorios y Ejercicios Extra"
+order: 6
+pdf: "/evaluaciones/laboratorio/ejercicios-4-tcp.pdf"
+source: "Ex 4: Transport Layer – TCP, 17 de octubre de 2026"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+# Ex4 — TCP, resuelto paso a paso
+
+Se conservan las **nueve preguntas** y sus incisos. Las preguntas 1–5 se resuelven con los datos del enunciado; 6–9 incluyen código, procedimiento y respuestas conceptuales. Las mediciones de tu equipo quedan identificadas como pendientes.
+
+---
+
+## Pregunta 1. Equidad de AIMD frente a AIAD
+
+**a. Demostrar convergencia con ejemplo y plano de fases.** Sean dos flujos con igual RTT y el mismo aumento aditivo, número fijo de conexiones y congestión evitada. La línea de eficiencia es $x_1+x_2=C$ y la de equidad $x_1=x_2$. Bajo aumento aditivo, $(x_1,x_2)\to(x_1+a,x_2+a)$: la diferencia no cambia. Bajo disminución multiplicativa por 1/2, esa diferencia se divide entre dos. Por tanto, tras k disminuciones, la diferencia inicial queda dividida entre $2^k$.
+
+El enunciado deja C y el punto inicial abiertos. **Ejemplo elegido:** C=10 unidades de tasa y $P_0=(2,6)$. No son mediciones ni parámetros suministrados por el docente.
+
+| Etapa | Punto | Suma | Diferencia |
+|---|---|---|---|
+| Inicio | (2, 6) | 8 | 4 |
+| AI hasta capacidad | (3, 7) | 10 | 4 |
+| MD a la mitad | (1.5, 3.5) | 5 | 2 |
+| AI hasta capacidad | (4, 6) | 10 | 2 |
+| MD a la mitad | (2, 3) | 5 | 1 |
+| AI hasta capacidad | (4.5, 5.5) | 10 | 1 |
+| MD y siguiente AI | (2.25, 2.75) → (4.75, 5.25) | 5 → 10 | 0.5 |
+
+<Visualization viz={{"type": "xy-chart", "title": "AIMD: acercamiento a la equidad", "steps": [{"note": "Ejemplo numérico elegido para Ex4: C=10, inicio (2,6). AI conserva la diferencia; MD la divide entre dos.", "series": [{"id": "eff", "label": "Capacidad", "points": [[0, 10], [10, 0]], "kind": "line", "state": "muted"}, {"id": "fair", "label": "Equidad", "points": [[0, 0], [10, 10]], "kind": "line", "state": "muted"}, {"id": "aimd", "label": "AIMD", "points": [[2, 6], [3, 7], [1.5, 3.5], [4, 6], [2, 3], [4.5, 5.5], [2.25, 2.75], [4.75, 5.25]], "kind": "line", "state": "active"}], "x": {"label": "flujo 1", "min": 0, "max": 10}, "y": {"label": "flujo 2", "min": 0, "max": 10}}], "static": true}} />
+
+El modelo dispara reducción al llegar a la frontera como idealización de detección de congestión. El ciclo se acerca a un reparto igual; no converge a una tasa constante porque sigue oscilando. Los puntos sobre capacidad se acercan a (5,5).
+
+**b. AIAD con disminución constante.** Restar b a ambos conserva $x_2-x_1$, igual que sumarle a a ambos. Por ejemplo, (3,7) → (2,6) → (3,7) si b=1 y luego AI hasta capacidad. El plano es una trayectoria de ida y vuelta paralela a la diagonal, con diferencia 4: no converge en general a equidad. El argumento vale mientras no intervenga el límite de cero; basta ese contraejemplo para refutar una garantía general.
+
+<Visualization viz={{type:'xy-chart',static:true,title:'AIAD: persiste la desigualdad',steps:[{note:'Con C=10, AI y AD conservan la diferencia 4. La trayectoria vuelve por la misma recta sin alcanzar x1=x2.',series:[{id:'eq',label:'Equidad',points:[[0,0],[10,10]],kind:'line',state:'muted'},{id:'cap',label:'Capacidad',points:[[0,10],[10,0]],kind:'line',state:'muted'},{id:'aiad',label:'AIAD',points:[[2,6],[3,7],[2,6],[3,7]],kind:'line',state:'active'}],x:{label:'flujo 1',min:0,max:10},y:{label:'flujo 2',min:0,max:10}}]}} />
+
+---
+
+## Pregunta 2. GBN, SR y TCP
+
+Se envían cinco segmentos S1–S5 y se pierde **solo S2**. Los timeouts permiten que lleguen los demás datos y ACK antes de vencer. TCP no usa delayed ACK y aplica fast retransmit al tercer duplicado. Para SR y TCP se asume almacenamiento de los segmentos fuera de orden; para la comparación GBN se usa el receptor que los descarta.
+
+**a. Totales y numeración.** En GBN el ACK indica último segmento en orden; en SR, el segmento reconocido; en la notación simplificada TCP, el siguiente segmento esperado. No se mezclan esas convenciones con números de byte reales.
+
+| Protocolo | Datos enviados, en orden | ACK enviados por B | Datos totales | ACK totales |
+|---|---|---|---|---|
+| GBN | 1,2,3,4,5; luego 2,3,4,5 | 1,1,1,1; luego 2,3,4,5 | **9** | **8** |
+| SR | 1,2,3,4,5; luego 2 | 1,3,4,5; luego 2 | **6** | **5** |
+| TCP | 1,2,3,4,5; luego 2 | 2,2,2,2; luego 6 | **6** | **5** |
+
+GBN reconoce S1; cada llegada S3–S5 repite ACK1, pero esos tres datos se descartan. Tras timeout del hueco, retransmite S2–S5 y recibe cuatro ACK adicionales. SR conserva S3–S5 y reconoce cada uno; al expirar el temporizador de S2 retransmite solo ese. TCP recibe un ACK original y tres duplicados, retransmite S2 antes del timeout y recibe el ACK acumulativo que cubre hasta S5.
+
+Si cada segmento tiene M bytes y el primero empieza en Seq=1, sus Seq son $1, M+1, 2M+1, 3M+1, 4M+1$. En TCP, los cuatro ACK iguales valen $M+1$ y el final $5M+1$. Eso evita confundir la simplificación por segmentos con el protocolo real.
+
+<Visualization viz={{type:'sequence',static:true,title:'TCP: pérdida de S2 y fast retransmit',steps:[{note:'El ACK original que pide S2 se repite al recibir S3, S4 y S5. El tercer duplicado activa la retransmisión.',actors:[{id:'a',label:'Host A'},{id:'b',label:'Host B'}],msgs:[{from:'a',to:'b',label:'S1'},{from:'b',to:'a',label:'ACK 2'},{from:'a',to:'b',label:'S2',lost:true},{from:'a',to:'b',label:'S3'},{from:'b',to:'a',label:'ACK 2 (dup 1)'},{from:'a',to:'b',label:'S4'},{from:'b',to:'a',label:'ACK 2 (dup 2)'},{from:'a',to:'b',label:'S5'},{from:'b',to:'a',label:'ACK 2 (dup 3)'},{from:'a',to:'b',label:'S2 retransmitido'},{from:'b',to:'a',label:'ACK 6'}]}]}} />
+
+El diagrama expresa las causas de los ACK; no impone la escala de envío de los cinco segmentos del enunciado.
+
+**b. Si todos los timeouts son mucho mayores que 5 RTT.** **TCP** termina antes: los tres duplicados llegan durante el intercambio inicial y permiten retransmitir sin esperar el largo timer. SR y GBN esperan que venza el temporizador de S2. Sin tasas, propagaciones y valores exactos de timeout no se puede dar un tiempo numérico total; sí comparar el mecanismo que evita esa espera.
+
+---
+
+## Pregunta 3. Protocolo que solo usa NAK
+
+**a. Envíos poco frecuentes.** No es preferible de forma general. Si se pierde un dato aislado, el receptor puede no conocer su existencia y no enviar NAK hasta que un dato futuro revele el hueco. Si no llega otro, ni siquiera lo detecta. Un ACK con timer de emisor permite detectar ausencia de confirmación sin depender del siguiente dato.
+
+**b. Flujo grande, continuo y con pocas pérdidas.** Puede reducir overhead de confirmaciones: solo se envían NAK cuando hay huecos, en vez de ACK por cada recepción. En una secuencia continua el siguiente dato revela pronto un hueco, por lo que puede recuperarse con poco retardo. Es una ventaja bajo esas condiciones, no una solución completa automática: la pérdida final, un NAK perdido o el fin del flujo siguen requiriendo mecanismos adicionales que el ejercicio no especifica.
+
+---
+
+## Pregunta 4. RTT, DevRTT, timeout y Karn
+
+**a. Cálculo de las tres actualizaciones.** Estado previo: Est=100 ms y Dev=5 ms. Muestras **106, 120 y 140 ms**; $\alpha=0.125$, $\beta=0.25$.
+
+$$Est_n=0.875\,Est_{n-1}+0.125\,Sample_n$$
+$$Dev_n=0.75\,Dev_{n-1}+0.25|Sample_n-Est_n|$$
+$$Timeout_n=Est_n+4\,Dev_n$$
+
+Se actualiza Est **antes** de usarlo en la desviación, en el orden indicado por las ecuaciones. Se conservan los decimales intermedios.
+
+| Muestra (ms) | EstimatedRTT (ms) | DevRTT (ms) | TimeoutInterval (ms) |
+|---|---|---|---|
+| 106 | 100.750000000 | 5.062500000 | 121.000000000 |
+| 120 | 103.156250000 | 8.007812500 | 135.187500000 |
+| 140 | 107.761718750 | 14.065429688 | 164.023437500 |
+
+Primera fila: $Est_1=87.5+13.25=100.75$; $Dev_1=3.75+0.25(5.25)=5.0625$; $Timeout_1=100.75+20.25=121$ ms. Segunda: desviación absoluta $120-103.15625=16.84375$ ms. Tercera: $140-107.76171875=32.23828125$ ms.
+
+<Visualization viz={{type:'xy-chart',static:true,title:'Ex4: RTT y margen del timeout',steps:[{note:'El salto de las muestras eleva tanto el promedio como la desviación; el timeout incorpora cuatro desviaciones.',series:[{id:'s',label:'SampleRTT',points:[[1,106],[2,120],[3,140]],kind:'line'},{id:'e',label:'EstimatedRTT',points:[[1,100.75],[2,103.15625],[3,107.76171875]],kind:'line'},{id:'t',label:'Timeout',points:[[1,121],[2,135.1875],[3,164.0234375]],kind:'line',state:'active'}],x:{label:'muestra',min:1,max:3,ticks:[1,2,3]},y:{label:'ms',min:90,max:175}}]}} />
+
+**b. Algoritmo de Karn.** Si un segmento se retransmite, el mismo número de ACK puede reconocer el original o la copia. Medir desde el original podría inflar RTT; medir desde la copia podría subestimarlo si el ACK era del original. TCP evita actualizar con esa muestra ambigua. Las seis muestras de P1 no presentan retransmisión en los intervalos usados.
+
+---
+
+## Pregunta 5. Tahoe y Reno
+
+Inicial: cwnd=1 MSS, ssthresh=8 MSS; tres duplicados en ronda 4 y timeout en ronda 9.
+
+**Convención necesaria:** valores al **inicio de cada ronda**, eventos al final de 4 y 9, vuelo lleno igual a cwnd. Se duplica mientras cwnd está por debajo del umbral; desde la igualdad se suma 1 MSS por RTT. Reno se muestra una vez que el ACK de recuperación permite salir de fast recovery, sin modelar rondas adicionales para ese transitorio. El esquema del enunciado no fija esos detalles temporales.
+
+**a. Tabla comparativa y gráfica.** Todo valor de ventana está en MSS.
+
+| Ronda | Tahoe cwnd | Tahoe ssthresh | Reno cwnd | Reno ssthresh | Evento al final |
+|---|---|---|---|---|---|
+| 1 | 1 | 8 | 1 | 8 | — |
+| 2 | 2 | 8 | 2 | 8 | — |
+| 3 | 4 | 8 | 4 | 8 | — |
+| 4 | 8 | 8 | 8 | 8 | 3 ACK duplicados |
+| 5 | 1 | 4 | 4 | 4 | — |
+| 6 | 2 | 4 | 5 | 4 | — |
+| 7 | 4 | 4 | 6 | 4 | — |
+| 8 | 5 | 4 | 7 | 4 | — |
+| 9 | 6 | 4 | 8 | 4 | Timeout |
+| 10 | 1 | 3 | 1 | 4 | — |
+| 11 | 2 | 3 | 2 | 4 | — |
+| 12 | 3 | 3 | 4 | 4 | — |
+
+<Visualization viz={{"type": "xy-chart", "title": "Ex4: Tahoe frente a Reno", "steps": [{"note": "Ventana al inicio de cada ronda. Eventos al final de 4 y 9; Reno se muestra tras salir de fast recovery.", "series": [{"id": "t", "label": "Tahoe", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 1], [6, 2], [7, 4], [8, 5], [9, 6], [10, 1], [11, 2], [12, 3]], "kind": "line"}, {"id": "r", "label": "Reno", "points": [[1, 1], [2, 2], [3, 4], [4, 8], [5, 4], [6, 5], [7, 6], [8, 7], [9, 8], [10, 1], [11, 2], [12, 4]], "kind": "line", "state": "active"}], "x": {"label": "ronda RTT", "min": 1, "max": 12, "ticks": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]}, "y": {"label": "cwnd (MSS)", "min": 0, "max": 10}, "vlines": [{"at": 4, "label": "3 dup ACK"}, {"at": 9, "label": "timeout"}]}], "static": true}} />
+
+Después del evento de ronda 4: $ssthresh=8/2=4$. Tahoe reinicia en 1; Reno entra transitoriamente con $cwnd=4+3=7$ por fast recovery y, al recibir el ACK de recuperación, se desinfla a 4. La fila 5 representa ese estado posterior. Antes del timeout de ronda 9, Tahoe tiene cwnd=6 y Reno=8; nuevos umbrales 3 y 4, respectivamente. Ambos reinician en 1 en la ronda 10.
+
+**b. Por qué difieren.** Tres duplicados prueban que sigue llegando tráfico posterior al hueco: Reno puede recuperar el dato y conservar parte del vuelo, evitando reiniciar desde 1. Un timeout sugiere una interrupción más fuerte del progreso y Reno vuelve a slow start. Tahoe reinicia desde 1 en ambos casos. No se debe atribuir la diferencia a rwnd del receptor.
+
+---
+
+## Pregunta 6. Conexión real con Wireshark
+
+**Experiencia solicitada:** captura HTTP/HTTPS de una página ligera desde tu equipo. Selecciona interfaz activa, inicia captura antes de navegar, detén al cargar y aísla el stream. Filtro de visualización: `tcp.port == 80 || tcp.port == 443`; filtro de captura equivalente: `tcp port 80 or tcp port 443`.
+
+**1. IP y puertos.** Se leen del SYN inicial. En la traza de referencia: 192.168.86.68:55639 y 128.119.245.12:80. En tu experiencia completar **cliente ___; servidor ___; stream ___**. No presentar la subida oficial como navegación propia.
+
+**2. Tramas del handshake y screenshot.** En la referencia son 1–3; en la propia aplica `tcp.stream == N && tcp.flags.syn == 1` y ubica además el tercer ACK. Captura los tres con sus flags y números. **Tramas propias ___**.
+
+**3. Campos que confirman apertura.** SYN del cliente, SYN/ACK que reconoce su secuencia más uno y ACK que reconoce la secuencia del servidor más uno. Verifica direcciones y puertos invertidos en la respuesta.
+
+**4. Segmentos con datos antes del cierre.** Cuenta `tcp.len > 0` en el stream y separa direcciones. La referencia tiene 106 del cliente y uno del servidor, pero **no muestra el cierre**. Para la experiencia completa: **datos cliente ___; servidor ___; ventana temporal hasta cierre ___**.
+
+**5. FIN/ACK del cierre.** Filtra `tcp.flags.fin == 1 || tcp.flags.reset == 1` y sigue los ACK del mismo stream. Un FIN consume una posición; puede combinarse con ACK. En la referencia no hay FIN/RST; no se inventa una terminación. **Tramas propias ___**.
+
+**6. Ventana inicial y máxima.** Distingue campo bruto de 16 bits y ventana calculada con escala. En la referencia: cliente SYN **65535 B**, máximo calculado **131712 B**; servidor SYN/ACK **28960 B**, máximo calculado **194816 B**. Son direcciones distintas, no una sola ventana global. En tu captura: **bruto inicial C/S ___; máximo calculado C/S ___**.
+
+**7. HTTP frente a HTTPS.** HTTP permite leer petición/cabeceras y contenido transmitido sin cifrado. En HTTPS se observa TCP y después el intercambio TLS; el contenido HTTP de aplicación normalmente está cifrado. El handshake TCP sigue siendo de tres vías; el intercambio TLS añade trabajo antes de datos de aplicación. La captura de puerto 80 no mide por sí sola cuánto cuesta TLS en tu conexión de puerto 443.
+
+---
+
+## Pregunta 7. Cliente-servidor TCP local en Python
+
+**Implementación y ejecución.** Usa [tcp_lab.py](/labs/tcp/tcp_lab.py), modos `server` y `client`: conexión persistente, tres mensajes, espera de 2 s en el servidor y de 1 s entre respuestas y siguientes envíos. Mide con reloj monotónico cada intercambio completo. Primero loopback y después, si se dispone, dos máquinas LAN; captura con `tcp.port == <puerto>`.
+
+**1. Segmentos por mensaje.** Cuenta en tu stream tramas con carga y ACK puros. La solicitud, respuesta de aplicación y ACK TCP son entidades distintas; no hay un número fijo de segmentos por mensaje porque TCP puede agrupar, dividir o reconocer junto con datos. **Mensaje 1/2/3: datos ___; ACK puros ___; tramas ___**.
+
+**2. Evolución Seq/Ack.** Cada mensaje tiene cuatro bytes de longitud más la cadena codificada; las respuestas también tienen su propia longitud. El próximo Seq aumenta por los bytes TCP realmente enviados. El ACK acumulativo reconoce hasta el hueco más temprano. No avanza en uno por cada mensaje de Python.
+
+**3. ACK antes de los dos segundos.** Lo envía el **sistema operativo**, no Wireshark. La recepción de transporte y su confirmación no esperan a que Python termine el procesamiento. Puede aplicarse ACK diferido; no es garantía de respuesta instantánea por cada paquete.
+
+**4. RTT de aplicación frente a TCP.** La medición cliente incluye los 2 s del servidor, transporte y procesamiento. `tcp.analysis.ack_rtt` relaciona datos y ACK de transporte sin esa espera de aplicación. Esperar valores distintos es correcto; registra **RTT aplicación por mensaje ___; RTT TCP y tramas ___**.
+
+**5. Ventana entre mensajes.** Representa espacio de recepción anunciado, no tiempo de procesamiento ni cwnd. Puede cambiar al recibir o leer buffers, o mantenerse; se debe observar. **Win por mensaje ___; interpretación ___**.
+
+**6. Ctrl+C al servidor.** Repite capturando y observa FIN o RST. El resultado depende de cómo se cierre el socket y de los datos pendientes, por lo que no se asegura un único flag. El cliente puede ver EOF/error; si ocurre a mitad de mensaje, este código lo detecta. UDP no tiene una conexión de transporte con FIN/ACK que terminar.
+
+**7. Secuencia cronológica de flags y PSH.** El patrón conceptual comienza SYN → SYN/ACK → ACK, sigue con datos/ACK y termina con cierre cuando se captura. La secuencia **exacta** se obtiene de tu lista ordenada: **trama/flags ___**. PSH indica entrega pronta hacia la aplicación en el receptor; no delimita de forma fiable un mensaje ni sustituye el prefijo de longitud. Datos pueden viajar con ACK sin PSH, como la trama 4 de P1.
+
+---
+
+## Pregunta 8. Enviar un .txt entre dos laptops
+
+**Experiencia e implementación.** Dos equipos en la misma Wi-Fi/hotspot, servidor en puerto 5000 y archivo **message.txt de al menos 100 KB**. Usa `receive --file received.txt --host 0.0.0.0 --port 5000` y `send --file message.txt --host <IP_SERVIDOR> --port 5000`. Comprueba longitud y SHA-256. Los bloques de 65536 B del código no fijan el tamaño de los segmentos TCP.
+
+**1. IP de ambos y screenshot.** Lee el SYN y captura extremos, flags y puerto. **Cliente ___; servidor ___; interfaz ___; screenshot propio ___**.
+
+**2. Segmentos totales y MSS.** Cuenta tramas TCP y, aparte, las que llevan datos del archivo. Lee las MSS de ambos SYN; no presupongas que son iguales. **Total ___; datos cliente ___; MSS C/S ___**.
+
+**3. Carga del último segmento.** Identifica el último segmento nuevo de datos del cliente, excluyendo retransmisiones. Lee `tcp.len`. Si el modelo usara segmentos de M bytes completos y archivo F positivo: $L_{ultimo}=F-M(\lceil F/M\rceil-1)$. La captura puede mostrar fragmentación de llamadas o efectos de offloading. **Trama ___; Len ___**.
+
+**4. Apertura y cierre.** Identifica SYN, SYN/ACK, ACK inicial y FIN/ACK o RST final del mismo stream. El `shutdown(SHUT_WR)` permite EOF al servidor mientras el cliente aún recibe la respuesta de hash. **Tramas ___**.
+
+**5. Retransmisiones o duplicados.** Aplica `tcp.analysis.flags` y confirma tipo e intervalos afectados; una marca de análisis no demuestra por sí sola interferencia Wi-Fi. **Tramas ___; evento observado ___; causa respaldada ___**.
+
+**6. Máxima ventana calculada.** Compara `tcp.window_size` por dirección y no el máximo bruto sin escala. **Máximo cliente ___; servidor ___**.
+
+**7. ACK y bytes acumulados.** Si el archivo empieza en Seq relativo 1, el ACK A confirma A−1 bytes contiguos del archivo antes de FIN. SYN y FIN consumen secuencia, pero no son bytes del archivo. El protocolo de este ejemplo no añade metadatos al flujo de archivo; la respuesta de hash está en sentido opuesto.
+
+**8. Relación F/MSS/N.** En el modelo ideal sin pérdidas y segmentos llenos, $N=\lceil F/MSS\rceil$. Para la observación real, usa la carga efectiva M y explica cabeceras/opciones, segmentos parciales y retransmisiones; la MSS anunciada no garantiza llenar todos los segmentos.
+
+**9. Interferencia o pérdida en hotspot.** Si provoca pérdida o retardo, TCP puede retransmitir y disminuir su ventana de congestión; baja el throughput y aumenta el tiempo de finalización. No se cuantifica sin capturar y medir.
+
+**10. Comparación esperada con Gigabit Ethernet.** Podría haber RTT más estable y menos pérdidas por el medio, pero ni MSS mayor ni ausencia de retransmisiones están garantizadas: dependen de MTU, camino y equipos. Si ambas interfaces tienen MTU=1500, el cambio de medio no obliga a cambiar MSS. Registra **medio, MTU, MSS, muestras RTT y tasa de retransmisión** en ambos ensayos si puedes realizarlos.
+
+---
+
+## Pregunta 9. Throughput, secuencias y congestión en Wireshark
+
+**Experiencia solicitada.** Captura una descarga de **10–50 MB**, elige su stream y abre Statistics → TCP Stream Graphs: Time Sequence (Stevens), Throughput y Window Scaling. Selecciona dirección servidor → cliente para estudiar descarga. La subida de 153425 B de la referencia no reemplaza esta experiencia.
+
+**1. Screenshot Stevens, pendiente y slow start.** La pendiente de secuencia/tiempo aproxima bytes enviados por segundo; multiplícala por 8 para bits/s. Un crecimiento inicial de pendiente o ráfagas es compatible con slow start, pero no identifica por sí solo el algoritmo ni su cwnd. **Screenshot ___; dirección ___; intervalo inicial ___; evidencia ___**.
+
+**2. Mesetas.** Una región horizontal significa que no aparecen nuevos avances de secuencia en ese intervalo de envío. Puede acompañar pérdidas, espera de ACK, limitación del receptor o pausas de la aplicación. Correlaciona retransmisiones, ventana y tráfico antes de atribuir una causa. **Intervalo ___; tramas correlacionadas ___**.
+
+**3. Pérdidas y recuperación.** Filtra `tcp.analysis.retransmission || tcp.analysis.fast_retransmission`; revisa también duplicados. Una etiqueta “fast retransmission” y los duplicados respaldan recuperación rápida; una retransmisión tras espera prolongada puede ser compatible con timeout, sin medir el timer interno directamente. **Eventos/tramas ___; clasificación y evidencia ___**.
+
+**4. rwnd frente a congestión.** Si los bytes en vuelo se aproximan de manera sostenida a rwnd y el emisor dispone de datos, hay evidencia de límite de recepción. Si quedan por debajo, no basta para demostrar congestión: puede limitar la aplicación. Correlaciona RTT, pérdidas y ritmo. **cwnd no es un campo transmitido en TCP**, así que la gráfica no la mide directamente. **rwnd ___; vuelo ___; evidencia de cuello de botella ___**.
+
+**5. Pico en Mbps frente al ISP.** Lee el máximo de la gráfica y anota la ventana de agregación usada. Convierte bytes/s a Mbps mediante $8\,bytes/s\div10^6$. Compara con el ancho de banda nominal aportado por tu servicio, no inventado. Un pico depende del intervalo de medición y puede diferir del promedio de la descarga. **Ventana temporal ___; pico ___ Mbps; promedio ___; ISP nominal ___ Mbps**.
+
+## Comprobación final
+
+Las respuestas analíticas están resueltas; las plantillas de captura requieren los PCAPNG y screenshots del experimento correspondiente. Las tablas y gráficas numéricas usan fuentes y convenciones explícitas. El código comprueba integridad y no supone equivalencia entre mensajes, llamadas `send` y segmentos.

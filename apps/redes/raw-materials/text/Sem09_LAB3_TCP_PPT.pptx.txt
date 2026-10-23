@@ -1,0 +1,239 @@
+  TCP
+  (Transmission
+  Control Protocol)
+  Computer Networks
+
+
+
+
+CS4054 - 2026-1
+PROF.: garias@utec.edu.pe
+SRC: KUROSE – COMPUTER NETWORKS BOOK
+   PETERSON AND DAVIE – COMPUTER NETWORKS BOOK
+     Transport Layer
+       It acts as the liaison between the Application layer and the lower
+       network layers.
+                                                                                     application
+                                                                                      transport
+                                                                                       network
+                                                                             mobile network
+                                                                                      data link
+                                                                                       physical
+                                                                                                       national or global ISP
+
+                                                                                                   log
+                                                                                                        l en
+                                                                                                     ica
+                                                                                                             n
+                                                                                                         d-e
+                                                                                              local or         dt
+                                                                                                                  s
+                                                                                              regional ISP
+                                                                                                               ran
+                                                                                                                 por
+                                                                         home network                               t
+                                                                                                                 content
+                                                                                                                 provider
+                                                                                                                 network       datacenter
+                                                                                                                      application
+                                                                                                                                 network
+                                                                                                                       transport
+                                                                                                                        network
+                                                                                                                       data link
+                                                                                                                        physical
+
+
+                                                                         enterprise
+                                                                              network
+
+Computer Networks - CS4054 - 2026-2             Src. NetworkAcademy.io
+                           garias@utec.edu.pe
+     Transport Layer
+       There are two primary ways to move data across the network:
+        1. TCP: Connection-oriented. Focuses on reliability.
+        2. UDP: Connectionless. Focuses on speed.
+
+
+
+
+Computer Networks - CS4054 - 2026-2             Src. Cheap Ssl Security.
+                           garias@utec.edu.pe
+     TCP vs UDP
+       Reliability vs. Speed
+
+
+
+  Feature                        TCP                          UDP
+  Connection                     Handshake required (3-way)   No handshake (Connectionless)
+  Delivery                       Guaranteed & In-order        Best-effort (No guarantee)
+  Error Recovery                 Retransmits lost packets     No retransmission
+  Overhead                       Heavy header (20 bytes)      Lightweight header (8 bytes)
+
+
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     TCP
+       Transmission Control Protocol
+       RFCs: 793,1122, 2018, 5681, 7323
+              ▪ point-to-point:                      ▪ cumulative ACKs
+                        • one sender, one receiver
+                                                     ▪ pipelining:
+                    ▪ reliable, in-order byte
+                      steam:                           • TCP congestion and ﬂow
+                        • no “message boundaries"        control set window size
+                   ▪ full duplex data:               ▪ connection-oriented:
+                      • bi-directional data ﬂow in    • handshaking (exchange of
+                        same connection                 control messages) initializes
+                      • MSS: maximum segment            sender, receiver state before
+                        size
+                                                        data exchange
+                                                     ▪ ﬂow controlled:
+                                                      • sender will not overwhelm
+                                                        receiver
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     TCP
+                                                                    32 bits
+
+                                                  source port #   dest port #                  segment seq #: counting
+      ACK: seq # of next expected                      sequence number                         bytes of data into bytestream
+           byte; A bit: this is an ACK                                                         (not segments!)
+                                                     acknowledgement number
+                                                head not
+             length (of TCP header)              len used C E U A P R S F   receive window     flow control: # bytes
+               Internet checksum                      checksum              Urg data pointer   receiver willing to accept
+                                                       options (variable length)
+       C, E: congestion notification
+                         TCP options
+                                                                 application                     data sent by
+        RST, SYN, FIN: connection                                   data                         application into
+                          management                          (variable length)                  TCP socket
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     TCP
+                                                outgoing segment from sender
+      Sequence numbers:                          source port #           dest port #
+                                                       sequence number
+        • byte stream “number” of                  acknowledgement number
+
+          ﬁrst byte in segment’s
+                                                                     rwnd
+                                                    checksum             urg pointer
+
+          data                                                         window size
+                                                                            N
+      Acknowledgements:
+        • seq # of next byte
+          expected from other side
+                                                                 sender sequence number space
+
+
+        • cumulative ACK                                sent
+                                                        ACKed
+                                                                      sent,
+                                                                      not-yet
+                                                                                       usable not
+                                                                                       but not usable
+      Q: how receiver handles                                         ACKed
+                                                                      (“in-flight”)
+                                                                                       yet sent
+
+      out-of-order segments                                              outgoing segment from
+                                                                                    receiver
+       • A: TCP spec doesn’t say,
+                                                                          source port #   dest port #
+                                                                               sequence number
+
+         - up to implementor                                                  acknowledgement
+                                                                                    number
+                                                                                     A     rwn
+                                                                              checksum       d pointer
+                                                                                           urg
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     TCP
+                                     Host A                                    Host B
+
+
+                           User types‘C’
+                                                  Seq=42, ACK=79, data = ‘C’
+                                                                               host ACKs receipt of‘C’,
+                                                                               echoes back ‘C’
+                                                  Seq=79, ACK=43, data = ‘C’
+                    host ACKs receipt
+                        of echoed ‘C’
+                                                        Seq=43, ACK=80
+
+
+
+
+                                                simple telnet scenario
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     RTT Calculation and Estimation Methodology
+       To characterize network latency dynamics, the round-trip time for
+       each segment is evaluated through two metrics: the instantaneous
+       measurement (SampleRTT) and a smoothed historical average
+       (EstimatedRTT).
+
+       → SampleRTT: Deﬁned as the elapsed time between the transmission
+       of a given TCP segment (starting with the HTTP POST request) and the
+       reception of its corresponding acknowledgment (ACK):
+
+
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     RTT Calculation and Estimation Methodology
+       → EstimatedRTT: Because instantaneous network conditions are subject
+       to transient ﬂuctuations and jitter, TCP relies on an Exponentially
+       Weighted Moving Average (EWMA) to estimate the expected RTT. For the
+       initial segment, the baseline is set directly to the ﬁrst measured value
+       According to RFC 6298.
+
+       Where alpha=0.125, placing an 87.5% weight on historical estimates and
+       a 12.5% weight on the most recent sample. This smoothing dampens
+       short-term spikes while ensuring the estimator dynamically adapts to
+       persistent latency trends.
+
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     RTT Calculation and Estimation Methodology
+       Where alpha=0.125, placing an 87.5% weight on historical estimates and
+       a 12.5% weight on the most recent sample. This smoothing dampens
+       short-term spikes while ensuring the estimator dynamically adapts to
+       persistent latency trends.
+
+
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     RTT Calculation and Estimation Methodology
+       Where alpha=0.125, placing an 87.5% weight on historical estimates and
+       a 12.5% weight on the most recent sample. This smoothing dampens
+       short-term spikes while ensuring the estimator dynamically adapts to
+       persistent latency trends.
+
+
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+     TCP
+
+
+
+
+Computer Networks - CS4054 - 2026-2
+                           garias@utec.edu.pe
+

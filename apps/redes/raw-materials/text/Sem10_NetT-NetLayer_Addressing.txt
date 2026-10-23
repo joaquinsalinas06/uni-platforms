@@ -1,0 +1,624 @@
+                  9.Network Layer:
+                  IP addressing
+    Computer Networks
+
+
+
+
+CS4054 - 2026II
+      CWILLIAMS   @UTEC.EDU.PE   JGONZALEZ@UTEC.EDU.PE
+
+
+
+
+PROF.: CWILLIAMS@UTEC.EDU.PE, JGONZALEZ@UTEC.EDU.PE
+SRC: HARRIS & HARRIS - DIGITAL DESIGN AND COMPUTER ARCHITECTURE RISC-V
+    Executive Summary
+2
+    • Motivation: Routers are fundamental components of network
+      architectures, enabling communication across interconnected networks.
+    • Problem: How do routers provide packet forwarding and IP addressing in
+      large-scale networks?
+    • Overview:
+    - Internet Protocol (IP) addressing fundamentals.
+    - Router operation and packet forwarding.
+    - Subnetworks and hierarchical addressing.
+     - Dynamic IP address assignment using DHCP.
+    • Conclusion: We introduced the Internet Protocol and studied how
+      routers, hierarchical addressing, subnetting, and DHCP enable scalable
+      network communication.
+CS4054-COMPUTER NETWORKS
+    Outline
+3
+
+    Introduction
+
+    Addressing IPv4
+
+    DHCP and Hierarchical Addressing
+
+    Conclusion
+
+
+
+
+CS4054-COMPUTER NETWORKS
+4   Network-layer services and protocols
+                                                            mobile network
+     transport segment from sending                                                 national or global ISP
+     to receiving host
+     • sender: encapsulates segments into
+       datagrams, passes to link layer    application
+                                           transport
+     • receiver: delivers segments to       network
+                                              link
+       transport layer protocol             physical                     network            network
+     network layer protocols in every                                      link
+                                                                         physical
+                                                                                              link
+                                                                                            physical
+
+     Internet device: hosts, routers
+                                                              network
+     routers:                                                   link
+                                                              physical
+                                                                                      network
+                                                                                        link
+
+     • examines header fields in all IP
+                                                                                      physical         network
+                                                                                                         link     datacenter
+                                                                                                       physical   network
+       datagrams passing through it
+     • moves datagrams from input ports to                                                                application
+       output ports to transfer datagrams                                                                  transport
+                                                                                                            network
+       along end-end path                               enterprise
+                                                                                                              link
+                                                             network
+                                                                                                            physical
+    IP Datagram
+5
+
+    IP Overhead
+    • 20 bytes from TCP
+    • 20 bytes from IP
+    • = 40 bytes + overhead from
+      application layer
+
+
+
+
+CS4054-COMPUTER NETWORKS
+    IP addressing: Introduction
+6
+                                                    223.1.1.1
+    • IP address: 32-bit identifier
+                                                                                            223.1.2.1
+      associated with each host or router
+                                            223.1.1.2
+      interface                                                      223.1.1.4        223.1.2.9
+
+    • interface: connection between
+                                                                            223.1.3.27
+      host/router and physical link                     223.1.1.3
+                                                                                            223.1.2.2
+
+      • router’s typically have multiple
+        interfaces                                                        223.1.3.1       223.1.3.2
+
+      • host typically has one or two
+        interfaces (e.g., wired Ethernet,
+        wireless 802.11)                       dotted-decimal IP address notation:
+                                               223.1.1.1 = 11011111 00000001 00000001 00000001
+
+                                                                    223          1           1          1
+    IP fragmentation/reassembly
+7
+
+    • network links have MTU (max. transfer
+      size) - largest possible link-level frame
+                                                               fragmentation:
+       • different link types, different MTUs     …            in: one large datagram
+                                                               out: 3 smaller datagrams
+    • large IP datagram divided (“fragmented”)
+      within net
+       • one datagram becomes several             reassembly
+         datagrams
+       • “reassembled” only at destination
+                                                      …
+       • IP header bits used to identify, order
+         related fragments
+    IP fragmentation/reassembly
+8
+
+     example:                     length ID   fragflag   offset
+                                  =4000 =x       =0       =0
+     ▪ 4000 byte datagram
+     ▪ MTU = 1500 bytes         one large datagram becomes
+                                several smaller datagrams
+
+                1480 bytes in          length ID   fragflag   offset
+                data field             =1500 =x       =1       =0
+
+                    offset =           length ID   fragflag   offset
+                    1480/8             =1500 =x       =1      =185
+
+                                       length ID   fragflag   offset
+                                       =1040 =x       =0      =370
+    Outline
+9
+
+    Introduction
+
+    Addressing IPv4
+
+    DHCP and Hierarchical Addressing
+
+    Conclusion
+
+
+
+
+CS4054-COMPUTER NETWORKS
+10   Two key network-layer functions
+      network-layer functions:               analogy: taking a trip
+      • forwarding: move packets from a       forwarding: process of getting
+        router’s input link to appropriate    through single interchange
+        router output link                    ▪ routing: process of planning trip
+       ▪ routing: determine route taken         from source to destination
+         by packets from source to
+         destination
+          • routing algorithms
+                                               forwarding
+
+                                                            routing
+                                                                              Network Layer: 4-
+                                                                                            10
+11   Two key network-layer functions
+                    Routing Algorithm
+
+
+
+                           Local Table
+                     H value             Output
+
+
+
+
+                  Header
+                   value
+
+
+
+
+                                                  Network Layer: 4-
+                                                                11
+     IP addressing: introduction
+12
+                                                              223.1.1.1
+
+     • IP address: 32-bit identifier associated
+                                                                                                    223.1.2.1
+       with each host or router interface
+                                                  223.1.1.2
+
+     • interface: connection between                                        223.1.1.4        223.1.2.9
+
+
+       host/router and physical link                                               223.1.3.27
+                                                               223.1.1.3
+       • router’s typically have multiple                                                            223.1.2.2
+
+
+         interfaces
+       • host typically has one or two                                           223.1.3.1        223.1.3.2
+
+         interfaces (e.g., wired Ethernet,
+         wireless 802.11)
+                                                      dotted-decimal IP address notation:
+                                                      223.1.1.1 = 11011111 00000001 00000001 00000001
+
+                                                                           223           1               1       1
+     IP addressing: introduction
+13
+                                                               223.1.1.1
+
+
+        Q: how are                                                                                 223.1.2.1
+
+           interfaces actually                     223.1.1.2
+                                                                            223.1.1.4
+           connected?              A: wired
+                                                                                            223.1.2.9
+
+
+
+       A: we’ll learn about that   Ethernet interfaces
+                                   connected by                                    223.1.3.27
+          in Kurose book                                        223.1.1.3
+                                                                                                    223.1.2.2
+                                   Ethernet switches
+          (chapters 6, 7)
+
+                                                                                223.1.3.1        223.1.3.2
+         For now: don’t need to worry
+         about how one interface is
+         connected to another (with no
+         intervening router)                                        A: wireless WiFi interfaces
+                                                                    connected by WiFi base station
+14   IP addressing: CIDR
+       CIDR: Classless InterDomain Routing (pronounced “cider”)
+         • subnet portion of address of arbitrary length
+         • address format: a.b.c.d/x, where x is # bits in subnet portion
+           of address
+                               subnet              host
+                                part               part
+                    11001000 00010111 00010000 00000000
+                                200.23.16.0/23
+     Special Addresses
+15
+
+     • Loop Back
+       127.0.0.1(localhost)
+       Local communication interface
+     • Global broadcast
+       255.255.255.255(all 1s)
+     • Sub-network broadcast
+       Last sub-network address
+       Mask (OR lógico) IP
+     • Sub-network address
+       First address in the
+     Mask (AND lógico) IP
+     IP routing: Netstat command
+16
+
+     • IP routing table:
+     • Try options -nr
+     IP routing: Ifconfig command
+17
+
+     • Ifconfig and network
+       adapters
+     IP routing: traceroute
+18
+
+     • Traceroute command
+       shows network layer
+       routing
+19   MAC and ARP
+     • 32 bit – IP address:
+       • Network layer addresses
+       • Used to route the datagram to its destination (sub-network)
+     • MAC Address (or LAN or physical layer or Ethernet - eth) :
+       • function: “take frame” from one interface to another physically
+         connected interface (at same network)
+       • 48 bit MAC Adresses (most of LANs) written in ROM of NIC, can be also
+         configurable in software
+     Subnets
+20
+                                                       223.1.1.1
+
+
+       What’s a subnet ?                                                                   223.1.2.1
+
+
+        • device interfaces that can       223.1.1.2
+                                                                    223.1.1.4       223.1.2.9
+          physically reach each other
+          without passing through an                    223.1.1.3
+                                                                           223.1.3.27
+
+          intervening router                                                                223.1.2.2
+
+
+
+      ▪ IP addresses have structure:
+        • subnet part: devices in same subnet
+                                                                        223.1.3.1        223.1.3.2
+
+
+          have common high order bits
+        • host part: remaining low order bits                 network consisting of 3 subnets
+     Subnets
+21                                                     subnet 223.1.1.0/24
+                                                       223.1.1.1                    subnet 223.1.2.0/24
+
+       Recipe for defining subnets:                                                        223.1.2.1
+
+                                           223.1.1.2
+       ▪ detach each interface from its                             223.1.1.4       223.1.2.9
+
+         host or router, creating
+         “islands” of isolated networks                 223.1.1.3
+                                                                           223.1.3.27
+                                                                                            223.1.2.2
+
+
+       ▪ each isolated network is
+                                             subnet
+         called a subnet                223.1.3.0/24                    223.1.3.1        223.1.3.2
+
+
+
+
+                                                        subnet mask: /24
+                                          (high-order 24 bits: subnet part of IP address)
+     Subnets                                                           223.1.1.2
+22
+                                                                                               subnet 223.1.1/24
+                                                   223.1.1.1
+         where are the                                                             223.1.1.4
+
+         subnets?                                                    223.1.1.3
+
+         what are the                                    223.1.9.2           223.1.7.0
+         /24 subnet          subnet 223.1.9/24
+                                                                                           subnet 223.1.7/24
+
+         addresses?
+                                         223.1.9.1                                       223.1.7.1
+                                                           223.1.8.1       223.1.8.0
+
+                 subnet 223.1.2/24           223.1.2.6     subnet 223.1.8/24 223.1.3.27
+                                                                                                     subnet 223.1.3/24
+                                 223.1.2.1                 223.1.2.2         223.1.3.1            223.1.3.2
+     Outline
+24
+
+     Introduction
+
+     Addressing IPv4
+
+     DHCP and Hierarchical Addressing
+
+     Conclusion
+
+
+
+
+CS4054-COMPUTER NETWORKS
+25   IP addresses: how to get one?
+       That’s actually two questions:
+        1. Q: How does a host get IP address within its network (host part of
+           address)?
+        2. Q: How does a network get IP address for itself (network part of
+           address)
+
+       How does host get IP address?
+       ▪ hard-coded by sysadmin in config file (e.g., /etc/rc.config in UNIX)
+       ▪ DHCP: Dynamic Host Configuration Protocol: dynamically get address
+         from as server
+          • “plug-and-play”
+     DHCP: Dynamic Host Configuration Protocol
+26
+
+       goal: host dynamically obtains IP address from network server when it
+        “joins” network
+         ▪ can renew its lease on address in use
+         ▪ allows reuse of addresses (only hold address while connected/on)
+         ▪ support for mobile users who join/leave network
+
+       DHCP overview:
+         ▪ host broadcasts DHCP discover msg [optional]
+         ▪ DHCP server responds with DHCP offer msg [optional]
+         ▪ host requests IP address: DHCP request msg
+         ▪ DHCP server sends address: DHCP ack msg
+     DHCP client-server scenario
+27
+
+                                      DHCP                   Typically, DHCP server will be co-
+                                      server                 located in router, serving all subnets
+                223.1.1.1
+                                                 223.1.2.1
+                                                             to which router is attached
+
+                                    223.1.2.5
+         223.1.1.2
+                        223.1.1.4   223.1.2.9
+
+
+                 223.1.1.3    223.1.3.27                       arriving DHCP client needs
+                                                223.1.2.2      address in this network
+
+                              223.1.3.1 223.1.3.2
+     DHCP client-server scenario
+28
+              DHCP server: 223.1.2.5                      DHCP discover                        Arriving client
+                                                                  src : 0.0.0.0, 68
+                                                              Broadcast:
+                                                            dest.:             is there a
+                                                                   255.255.255.255,67
+                                                            DHCP      server
+                                                                 yiaddr:        out there?
+                                                                            0.0.0.0
+                                                               transaction ID: 654
+
+                                                             DHCP offer
+                                                                   src: 223.1.2.5, 67
+                                                               Broadcast:
+                                                              dest:             I’m a DHCP
+                                                                     255.255.255.255,  68
+                                                                 server!     Here’s an IP
+                                                                   yiaddrr: 223.1.2.4
+                                                                  transactionyou
+                                                                address        ID: 654
+                                                                                    can use
+                                                                  lifetime: 3600 secs
+                                                                                                  The two steps above can be
+                                       DHCP request                                               skipped “if a client
+                                                  src: 0.0.0.0, 68                                remembers and wishes to
+                                        Broadcast:     OK.    I would
+                                           dest:: 255.255.255.255, 67
+                                                                      like                        reuse a previously allocated
+                                                yiaddrr: 223.1.2.4                                network address” [RFC 2131]
+                                          to use     this IPID:address!
+                                               transaction      655
+                                               lifetime: 3600 secs
+
+                                                             DHCP ACK
+                                                                  src: 223.1.2.5, 67
+                                                           Broadcast:     OK. You’ve
+                                                             dest: 255.255.255.255,   68 got
+                                                                  yiaddrr: 223.1.2.4
+                                                                 that IP address!
+                                                                 transaction  ID: 655
+                                                                 lifetime: 3600 secs
+     DHCP: more than IP addresses
+29
+
+       DHCP can return more than just allocated IP address on
+        subnet:
+        ▪ address of first-hop router for client
+        ▪ name and IP address of DNS sever
+        ▪ network mask (indicating network versus host portion of address)
+30   IP addresses
+     Q: how does network get subnet part of IP address?
+     A: gets allocated portion of its provider ISP’s address space
+       ISP's block      11001000 00010111 00010000 00000000   200.23.16.0/20
+
+
+
+       ISP can then allocate out its address space in 8 blocks:
+       Organization 0   11001000 00010111 00010000 00000000   200.23.16.0/23
+       Organization 1   11001000 00010111 00010010 00000000   200.23.18.0/23
+       Organization 2   11001000 00010111 00010100 00000000   200.23.20.0/23
+        ...                       …..                  ….         ….
+       Organization 7   11001000 00010111 00011110 00000000   200.23.30.0/23
+   Hierarchical addressing: route
+31
+   aggregation
+  hierarchical addressing allows efficient advertisement of routing
+  information:
+         Organization 0
+             200.23.16.0/23
+         Organization 1
+                                             “Send me anything
+             200.23.18.0/23                  with addresses
+         Organization 2                      beginning
+             200.23.20.0/23   .      ISP 1   200.23.16.0/20”
+                              .
+                          .   .                                   Internet
+                          .
+         Organization 7   .
+            200.23.30.0/23
+                                              “Send me anything
+                                  ISP 2
+                                              with addresses
+                                              beginning
+                                              199.31.0.0/16”
+   Hierarchical addressing: more specific
+32
+   routes
+  ▪ Organization 1 moves from Fly-By-Night-ISP to ISPs-R-Us
+  ▪ ISPs-R-Us now advertises a more specific route to Organization 1
+        Organization 0
+            200.23.16.0/23
+        Organization 1
+                                               “Send me anything
+            200.23.18.0/23                     with addresses
+        Organization 2                         beginning
+            200.23.20.0/23      .      ISP 1   200.23.16.0/20”
+                                .
+                           .    .                                     Internet
+                           .
+        Organization 7     .
+           200.23.30.0/23
+                                                 “Send me anything
+                                    ISP 2
+                                                 with addresses
+          Organization 1                         beginning
+                                                 199.31.0.0/16”
+               200.23.18.0/23                   “or 200.23.18.0/23”
+   Hierarchical addressing: more specific
+33
+   routes
+  ▪ Organization 1 moves from Fly-By-Night-ISP to ISPs-R-Us
+  ▪ ISPs-R-Us now advertises a more specific route to Organization 1
+        Organization 0
+            200.23.16.0/23
+
+                                              “Send me anything
+                                              with addresses
+        Organization 2                        beginning
+            200.23.20.0/23      .     ISP 1   200.23.16.0/20”
+                                .
+                           .    .
+                           .                                         Internet
+        Organization 7     .
+           200.23.30.0/23
+                                                “Send me anything
+                                    ISP 2
+                                                with addresses
+          Organization 1                        beginning
+                                                199.31.0.0/16”
+               200.23.18.0/23                  “or 200.23.18.0/23”
+34     IP addressing: last words ...
+     Q: how does an ISP get block of
+      addresses?
+     A: ICANN: Internet Corporation for
+       Assigned Names and Numbers
+       http://www.icann.org/
+       • allocates IP addresses, through 5
+         regional registries (RRs) (who may then
+         allocate to local registries)
+      • manages DNS root zone, including
+        delegation of individual TLD (.com,
+        .edu , …) management
+35   IP addressing: last words ...
+                              Q: are there enough 32-bit IP
+                                addresses?
+                              ▪ ICANN allocated last chunk of
+                                IPv4 addresses to RRs in 2011
+                              ▪ NAT (next) helps IPv4 address
+                                space exhaustion
+                              ▪ IPv6 has 128-bit address space
+
+
+
+
+                         Vint Cerf
+     Outline
+36
+
+     Introduction
+
+     Addressing IPv4
+
+     DHCP and Hierarchical Addressing
+
+     Conclusion
+
+
+
+
+CS4054-COMPUTER NETWORKS
+       Conclusions
+     •We introduced the Internet Protocol
+      and IP addressing concepts.
+     •We studied router operation,
+      subnetting, and hierarchical
+      addressing.
+     •We analyzed dynamic IP address
+      assignment using DHCP.
+
+
+
+
+37
+                  9.Network Layer:
+                  IP addressing
+    Computer Networks
+
+
+
+
+CS4054 - 2026II
+      CWILLIAMS   @UTEC.EDU.PE   JGONZALEZ@UTEC.EDU.PE
+
+
+
+
+PROF.: CWILLIAMS@UTEC.EDU.PE, JGONZALEZ@UTEC.EDU.PE
+SRC: HARRIS & HARRIS - DIGITAL DESIGN AND COMPUTER ARCHITECTURE RISC-V
+

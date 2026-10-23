@@ -9,6 +9,8 @@ buildsOn:
 usedBy:
   - "rtt-timeout-retransmision"
   - "control-flujo-congestion-tcp"
+  - "lab-tcp-wireshark"
+  - "capa-red-ipv4-fragmentacion"
 formulas: []
 hasVisualization: true
 visualizationType: "packet"

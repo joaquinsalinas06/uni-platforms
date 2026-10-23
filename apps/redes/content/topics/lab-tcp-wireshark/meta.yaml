@@ -1,0 +1,17 @@
+id: lab-tcp-wireshark
+type: lab
+title: "Laboratorio: TCP, RTT y Gráficas de Wireshark"
+unit: s9
+prerequisites:
+  - protocolo-tcp-mecanismos
+  - rtt-timeout-retransmision
+  - control-congestion-tcp-avanzado
+buildsOn:
+  - protocolo-tcp-mecanismos
+  - rtt-timeout-retransmision
+  - control-congestion-tcp-avanzado
+usedBy:
+  - lab-sockets-tcp-python
+hasVisualization: true
+visualizationType: xy-chart
+formulas: []
