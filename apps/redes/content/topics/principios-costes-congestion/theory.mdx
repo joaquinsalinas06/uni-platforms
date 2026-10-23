@@ -25,11 +25,11 @@ Las slides 9–19 presentan tres escenarios. Con dos emisores y buffers infinito
 
 ### Escenario 1 — por qué un buffer infinito no resuelve la congestión
 
-La slide 10 presenta **dos emisores**, un router con buffers ilimitados y un enlace de salida de capacidad **R**. Cada emisor inyecta \(\lambda_{in}\) bits/s originales. Si ambos ofrecen la misma tasa, la entrada agregada es \(2\lambda_{in}\). Mientras sea inferior a R, el router puede drenar la cola a largo plazo; cuando se aproxima a R, las ráfagas y la variabilidad de llegadas elevan el tiempo de espera. Si se mantiene \(2\lambda_{in}>R\), la cola **crece sin límite** en este modelo, porque entran más bits de los que salen.
+La slide 10 presenta **dos emisores**, un router con buffers ilimitados y un enlace de salida de capacidad **R**. Cada emisor inyecta $\lambda_{in}$ bits/s originales. Si ambos ofrecen la misma tasa, la entrada agregada es $2\lambda_{in}$. Mientras sea inferior a R, el router puede drenar la cola a largo plazo; cuando se aproxima a R, las ráfagas y la variabilidad de llegadas elevan el tiempo de espera. Si se mantiene $2\lambda_{in}>R$, la cola **crece sin límite** en este modelo, porque entran más bits de los que salen.
 
-En equilibrio sin pérdidas y con ambos flujos simétricos, cada uno puede obtener a lo sumo \(R/2\) bits/s. Esto no significa que una cola de tamaño infinito agregue ancho de banda: solo aplaza los paquetes, con retardo cada vez mayor. Tampoco se deduce de una sola medición que el retardo sea infinito; el modelo describe el comportamiento al acercarse a capacidad y, si la entrada la supera de forma sostenida, un crecimiento no acotado.
+En equilibrio sin pérdidas y con ambos flujos simétricos, cada uno puede obtener a lo sumo $R/2$ bits/s. Esto no significa que una cola de tamaño infinito agregue ancho de banda: solo aplaza los paquetes, con retardo cada vez mayor. Tampoco se deduce de una sola medición que el retardo sea infinito; el modelo describe el comportamiento al acercarse a capacidad y, si la entrada la supera de forma sostenida, un crecimiento no acotado.
 
-**Ejemplo derivado:** \(R=10\) Mb/s y cada origen envía \(4.5\) Mb/s. Llegan \(9\) Mb/s, así que quedan \(1\) Mb/s de capacidad media para absorber ráfagas. Si ambos suben a 6 Mb/s, llegan 12 Mb/s, pero salen como máximo 10 Mb/s: la cola acumula **2 megabits adicionales por segundo** de exceso sostenido. Después de 3 s serían 6 Mbit en espera, equivalentes a 0.6 s de servicio a 10 Mb/s si no entrase nada más. Es una **cuenta idealizada de balance de bits**, no una fórmula exacta de retardo promedio de una cola aleatoria.
+**Ejemplo derivado:** $R=10$ Mb/s y cada origen envía $4.5$ Mb/s. Llegan $9$ Mb/s, así que quedan $1$ Mb/s de capacidad media para absorber ráfagas. Si ambos suben a 6 Mb/s, llegan 12 Mb/s, pero salen como máximo 10 Mb/s: la cola acumula **2 megabits adicionales por segundo** de exceso sostenido. Después de 3 s serían 6 Mbit en espera, equivalentes a 0.6 s de servicio a 10 Mb/s si no entrase nada más. Es una **cuenta idealizada de balance de bits**, no una fórmula exacta de retardo promedio de una cola aleatoria.
 
 ### Escenario 2 — distinguir demanda original, carga de red y throughput útil
 
@@ -37,18 +37,18 @@ Las slides 11–16 introducen buffers **finitos**. Ahora sí se descartan paquet
 
 | Símbolo | Qué cuenta | Por qué importa |
 |---|---|---|
-| \(\lambda_{in}\) | Datos originales ofrecidos por la aplicación (bits/s) | Mide el trabajo útil nuevo |
-| \(\lambda'_{in}\) | Datos efectivamente enviados al router, **incluidas retransmisiones** (bits/s) | Mide el tráfico que consume capacidad |
-| \(\lambda_{out}\) | Datos útiles nuevos recibidos por unidad de tiempo (bits/s) | Mide progreso de la transferencia |
-| \(R\) | Capacidad de un enlace compartido (bits/s) | Límite del conjunto de tráfico |
+| $\lambda_{in}$ | Datos originales ofrecidos por la aplicación (bits/s) | Mide el trabajo útil nuevo |
+| $\lambda'_{in}$ | Datos efectivamente enviados al router, **incluidas retransmisiones** (bits/s) | Mide el tráfico que consume capacidad |
+| $\lambda_{out}$ | Datos útiles nuevos recibidos por unidad de tiempo (bits/s) | Mide progreso de la transferencia |
+| $R$ | Capacidad de un enlace compartido (bits/s) | Límite del conjunto de tráfico |
 
-La slide 11 recuerda que, para una aplicación que entrega todos sus datos en régimen estacionario, las **tasas de información útil original** de entrada y salida pueden coincidir. No significa que \(\lambda'_{in}=\lambda_{in}\): cada retransmisión hace crecer la carga inyectada, incluso si la aplicación no generó un byte nuevo.
+La slide 11 recuerda que, para una aplicación que entrega todos sus datos en régimen estacionario, las **tasas de información útil original** de entrada y salida pueden coincidir. No significa que $\lambda'_{in}=\lambda_{in}$: cada retransmisión hace crecer la carga inyectada, incluso si la aplicación no generó un byte nuevo.
 
 En la **idealización con conocimiento perfecto** (slide 12), el emisor transmite cuando el router tiene espacio, evitando llenarlo. En la siguiente idealización (slides 13–14) los paquetes se descartan al llenarse el buffer, pero el emisor solo retransmite cuando sabe que se perdió uno. Esto ya desperdicia capacidad al reenviar bytes **necesarios**, pues se transmitieron una primera vez sin alcanzar el destino.
 
-La situación realista (slides 15–16) agrega **timeouts prematuros**: el original puede seguir retrasado en una cola cuando el temporizador vence. Se transmite una copia; a veces llegan **ambas**. El receptor no obtiene doble información nueva, pero la red gastó tiempo de transmisión y espacio de almacenamiento para dos versiones del mismo dato. Una mejora de \(\lambda'_{in}\) aparente no implica mejorar \(\lambda_{out}\).
+La situación realista (slides 15–16) agrega **timeouts prematuros**: el original puede seguir retrasado en una cola cuando el temporizador vence. Se transmite una copia; a veces llegan **ambas**. El receptor no obtiene doble información nueva, pero la red gastó tiempo de transmisión y espacio de almacenamiento para dos versiones del mismo dato. Una mejora de $\lambda'_{in}$ aparente no implica mejorar $\lambda_{out}$.
 
-**Ejemplo derivado de rendimiento útil:** un enlace de 10 Mb/s transporta 6 Mb/s de datos nuevos entregados, 2 Mb/s de retransmisiones necesarias y 2 Mb/s de duplicados innecesarios. El enlace está al 100% (6+2+2=10), pero su throughput útil es solo **6 Mb/s**. Eficiencia de información útil \(=6/10=60\%\). Si se dejan de enviar duplicados innecesarios y el resto de condiciones se mantiene, se libera hasta 2 Mb/s para tráfico nuevo; **no** aumentó la capacidad física.
+**Ejemplo derivado de rendimiento útil:** un enlace de 10 Mb/s transporta 6 Mb/s de datos nuevos entregados, 2 Mb/s de retransmisiones necesarias y 2 Mb/s de duplicados innecesarios. El enlace está al 100% (6+2+2=10), pero su throughput útil es solo **6 Mb/s**. Eficiencia de información útil $=6/10=60\%$. Si se dejan de enviar duplicados innecesarios y el resto de condiciones se mantiene, se libera hasta 2 Mb/s para tráfico nuevo; **no** aumentó la capacidad física.
 
 <Visualization viz={{
   type: 'net-scene',
@@ -75,7 +75,7 @@ Las slides 17–18 presentan **cuatro emisores y caminos multisalto**. Cuando un
 
 La diapositiva ilustra que, al aumentar la intensidad del flujo rojo, los paquetes azules que llegan a la cola superior pueden descartarse todos y el throughput azul tender a cero. No es que la red haya dejado de recibir tráfico azul: lo recibe, consume trabajo **aguas arriba** y luego lo descarta. Aumentar indiscriminadamente las retransmisiones de ambos flujos empeora la competencia por un recurso que no puede servir todas las llegadas.
 
-**Ejemplo derivado:** supongamos un datagrama de 1000 B que ya atravesó dos enlaces y se pierde al tercero. Como mínimo se han empleado \(2\cdot1000\cdot8=16\,000\) bits de capacidad de transmisión previa para una entrega final de **cero bytes útiles** de ese intento; no se han contado cabeceras ni tiempos de cola. Si se reenvía, las transmisiones anteriores deben repetirse para recuperar los datos.
+**Ejemplo derivado:** supongamos un datagrama de 1000 B que ya atravesó dos enlaces y se pierde al tercero. Como mínimo se han empleado $2\cdot1000\cdot8=16\,000$ bits de capacidad de transmisión previa para una entrega final de **cero bytes útiles** de ese intento; no se han contado cabeceras ni tiempos de cola. Si se reenvía, las transmisiones anteriores deben repetirse para recuperar los datos.
 
 ### De la evidencia al mecanismo de control
 
