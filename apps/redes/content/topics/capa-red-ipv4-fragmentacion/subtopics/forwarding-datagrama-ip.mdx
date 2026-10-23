@@ -24,7 +24,67 @@ Una dirección IPv4 de 32 bits identifica una **interfaz**. El router de la figu
 
 Un dato de aplicación con TCP/IP sin opciones incorpora 20 B TCP y 20 B IPv4. No puede suponerse que todos los paquetes tengan exactamente esa sobrecarga: las opciones TCP de un SYN o de un segmento con timestamps pueden cambiarla. En LAB3 hay que leer los tamaños de cabecera en la captura antes de comparar MSS y MTU.
 
-## 4. Errores típicos
+## 4. Del segmento TCP al datagrama y de una interfaz a otra
+
+La capa de transporte entrega un **segmento**; la capa de red lo encapsula como **carga de un datagrama IPv4**. En un router, se examina la cabecera IP para decidir la siguiente salida y se reencapsula para el **enlace de salida**. La aplicación original no necesita ejecutarse dentro de cada router. En el destino, la capa de red identifica qué protocolo de transporte recibirá los datos.
+
+Es importante separar estas tres unidades: **mensaje de aplicación** (por ejemplo un POST), **segmento TCP** (bytes transportados, sin fronteras obligatorias entre mensajes) y **datagrama IP** (segmento transportado dentro de un encabezado de red). Por eso en la captura LAB3 P1 un solo POST atraviesa muchos segmentos sin que existan mensajes de aplicación separados denominados «HTTP Continuation».
+
+### Cabecera IPv4: qué aporta cada campo mostrado en la slide 5
+
+| Campo de la figura | Uso en los ejercicios |
+|---|---|
+| Version | Identifica el formato del datagrama IPv4 |
+| IHL (Header Length) | Determina cuántos bytes pertenecen a la cabecera; normalmente 20 B sin opciones |
+| Type of Service / bits ECN | Incluye espacio de señalización relacionado con congestión |
+| Total Length | Incluye **cabecera y datos IP**, a diferencia de la longitud de datos TCP |
+| Identification | Permite asociar fragmentos de un mismo datagrama |
+| Flags y Fragment Offset | Incluyen DF, MF y posición de cada fragmento |
+| Time To Live (TTL) | Limita cuánto puede avanzar el datagrama por sucesivos routers |
+| Upper-layer Protocol | Indica a qué protocolo superior entregar la carga en el destino |
+| Header Checksum | Verificación de la cabecera IPv4 |
+| Source / Destination Address | Identifican las **interfaces** de origen y destino de la comunicación |
+| Options (si existen) | Hacen que la cabecera supere los 20 B mínimos |
+
+No confundas «20 B IP + 20 B TCP» de la slide con 40 B **obligatorios** en todo paquete: ambos valores corresponden a cabeceras **base** sin opciones, y los datagramas UDP no poseen la cabecera TCP.
+
+### Dos decisiones que suelen mezclarse
+
+**Routing** determina, a escala de la red, qué caminos se utilizarán para alcanzar prefijos de destino. Su resultado se refleja en tablas de encaminamiento o forwarding. **Forwarding** es una operación local: un datagrama llega por una interfaz concreta, el router consulta el destino en la tabla y decide por qué interfaz debe salir **ahora**. La analogía de la diapositiva 10 es planificar un viaje completo frente a elegir una salida en un intercambio de carreteras.
+
+La diapositiva 11 muestra el valor de cabecera «0111» consultado en una tabla. En el modelo didáctico la tabla asocia valores y **puertos de salida**, no nombres de aplicaciones. En IPv4 real la consulta normalmente busca el prefijo de destino más específico que coincide con la dirección destino. La tabla **no** significa que el router vuelva a ejecutar HTTP o TCP en cada salto.
+
+### Ejemplo explicado de las tres subredes de la slide 21
+
+La topología oficial identifica **223.1.1.0/24**, **223.1.2.0/24** y **223.1.3.0/24**. Las interfaces que comparten el prefijo /24 son parte de la misma subred según el ejercicio; el router une esas redes mediante interfaces distintas.
+
+Tomemos como ejemplo derivado que **223.1.1.2** desea enviar un datagrama a **223.1.3.2**. La máscara /24 es 255.255.255.0. Al hacer AND sobre la primera dirección se obtiene 223.1.1.0 y sobre la segunda, 223.1.3.0. Como **las redes difieren**, el emisor no intenta entregar el paquete IP directamente como si ambos equipos compartieran enlace; lo envía a su router del primer salto en la subred 223.1.1.0/24. El router usa su tabla de salida para alcanzar la interfaz hacia 223.1.3.0/24 y reenvía el datagrama. En el host final, IPv4 lo entrega al protocolo superior que corresponda.
+
+<Visualization viz={{
+ type:'net-scene',
+ title:'Forwarding entre dos subredes: una decisión por salto',
+ steps:[
+  {note:'La máscara /24 demuestra que 223.1.1.2 y 223.1.3.2 no pertenecen a la misma subred. El emisor selecciona su primer router.',
+   devices:[{id:'a',kind:'host',label:'Host A',sub:'223.1.1.2',x:7,y:50},{id:'r',kind:'router',label:'Router',sub:'interfaces /24',x:50,y:50},{id:'b',kind:'host',label:'Host B',sub:'223.1.3.2',x:92,y:50}],
+   cables:[{from:'a',to:'r'},{from:'r',to:'b'}],
+   zones:[{label:'223.1.1.0/24',devices:['a']},{label:'223.1.3.0/24',devices:['b']}],
+   packets:[{from:'a',to:'r',label:'IP dest .3.2',order:1,state:'active'}]},
+  {note:'El router consulta el destino, elige su interfaz hacia 223.1.3.0/24 y reenvía. La IP de destino permanece la de B; cambia el enlace utilizado.',
+   devices:[{id:'a',kind:'host',label:'Host A',sub:'223.1.1.2',x:7,y:50},{id:'r',kind:'router',label:'Router',sub:'interfaces /24',x:50,y:50},{id:'b',kind:'host',label:'Host B',sub:'223.1.3.2',x:92,y:50}],
+   cables:[{from:'a',to:'r'},{from:'r',to:'b'}],
+   zones:[{label:'223.1.1.0/24',devices:['a']},{label:'223.1.3.0/24',devices:['b']}],
+   packets:[{from:'a',to:'r',label:'1er salto',order:1,state:'muted'},{from:'r',to:'b',label:'Mismo destino IP',order:2,state:'answer'}]}
+ ]}} />
+
+**Comprobación:** el emisor no necesita conocer los routers de todo el camino, sino su primer salto. El router no necesita una única «IP del dispositivo»: tiene direcciones asociadas a sus **interfaces**, por ejemplo una en cada /24 de la topología. El paquete no cambia de dirección IP de destino al pasar de la subred 1 a la 3 por el mero hecho de ser reenviado.
+
+### Cómo encaja con la fragmentación y las herramientas
+
+En un enlace con MTU inferior al tamaño de un datagrama y DF=0, IPv4 puede requerir fragmentos con el mismo Identification y offsets distintos. La reconstrucción se hace en el destino; el forwarding debe seguir encaminando esos fragmentos según su destino IP. Por otro lado, **netstat -nr** muestra rutas, **ifconfig** identifica interfaces y direcciones, y **traceroute** permite observar saltos. La dirección MAC corresponde a la entrega de una **trama en el enlace**, no reemplaza la dirección IP usada para decidir la ruta entre subredes.
+
+**Errores de examen:** calcular red de origen y destino con máscaras diferentes sin indicarlo; concluir que dos IP similares siempre comparten enlace sin conocer sus prefijos; confundir la cabecera IP de 20 B con 20 B de payload; tratar routing y forwarding como el mismo cálculo; o dibujar una sola interfaz para un router que une tres subredes.
+
+## 5. Errores típicos
 
 - Contar 40 B como carga de aplicación.
 - Llamar routing a cada decisión de salida, sin distinguir la tabla local del cálculo del camino.
