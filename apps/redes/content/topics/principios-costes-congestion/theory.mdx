@@ -4,34 +4,41 @@ title: "Congestión: Causas, Costes y Formas de Control"
 ---
 import Visualization from '../../../src/components/Visualization.astro';
 
-## 1. Idea y motivación
+## 1. Idea: ¿por qué puede fallar una transferencia aunque el receptor tenga espacio?
 
-Un receptor puede tener espacio y, aun así, la red perder paquetes: el buffer que se llenó puede ser el de un **router**. La congestión aparece cuando demasiadas fuentes envían demasiado rápido para la capacidad disponible. Sus señales son retardo de cola y pérdidas; no debe confundirse con control de flujo.
+Supón que dos computadoras transfieren archivos y el host destino todavía puede recibirlos. Entre ambos hay un router cuyo enlace de salida **transmite a una velocidad finita**. Si llegan paquetes más rápido de lo que ese enlace los envía, se forman colas. La cola aumenta el retardo; cuando la memoria es finita, también puede producir pérdidas.
+
+Esto plantea tres preguntas distintas: **qué ocurre si nunca descartamos paquetes**, **qué coste añaden las retransmisiones si el router sí descarta** y **por qué perder un paquete después de varios saltos es especialmente caro**. Las diapositivas 9–19 responden con tres escenarios. A continuación se reconstruye cada uno, con sus variables, cambios y comprobaciones.
 
 ---
 
-## 2. Conceptos
-
-Las slides 9–19 presentan tres escenarios. Con dos emisores y buffers infinitos, el throughput por flujo se aproxima a $R/2$, pero el retardo crece al acercarse a la capacidad. Con buffers finitos hay pérdidas y retransmisiones; además, los timeouts prematuros generan duplicados. Con cuatro emisores y varios saltos, un descarte tardío desperdicia también el trabajo de enlaces anteriores.
-
-<Visualization viz={{"type": "net-scene", "title": "Un cuello de botella, dos emisores", "steps": [{"note": "El buffer absorbe ráfagas; no aumenta la capacidad R del enlace de salida. Al llenarse, se descartan paquetes.", "devices": [{"id": "a", "kind": "host", "label": "Host A", "x": 8, "y": 18}, {"id": "b", "kind": "host", "label": "Host B", "x": 8, "y": 82}, {"id": "r", "kind": "router", "label": "Buffer finito", "x": 50, "y": 50}, {"id": "d", "kind": "server", "label": "Destino", "x": 92, "y": 50}], "cables": [{"from": "a", "to": "r"}, {"from": "b", "to": "r"}, {"from": "r", "to": "d", "rate": "R"}], "packets": [{"from": "a", "to": "r", "label": "datos", "state": "active"}, {"from": "r", "to": "d", "label": "salida", "state": "answer"}]}], "static": true}} />
-
-| Escenario | Qué cambia | Coste |
-|---|---|---|
-| 1: un router, buffer infinito | La cola puede seguir creciendo | Retardo elevado aunque no haya pérdida |
-| 2: buffer finito | Se descarta y retransmite | Más tráfico para entregar los mismos datos útiles |
-| 2: timeout prematuro | Llegan dos copias del mismo dato | Capacidad consumida sin nuevo throughput útil |
-| 3: múltiples saltos | El descarte ocurre después de otros enlaces | Se pierde capacidad y buffering aguas arriba |
-
-### Escenario 1 — por qué un buffer infinito no resuelve la congestión
+## 2. Escenario 1 — por qué un buffer infinito no resuelve la congestión
 
 La slide 10 presenta **dos emisores**, un router con buffers ilimitados y un enlace de salida de capacidad **R**. Cada emisor inyecta $\lambda_{in}$ bits/s originales. Si ambos ofrecen la misma tasa, la entrada agregada es $2\lambda_{in}$. Mientras sea inferior a R, el router puede drenar la cola a largo plazo; cuando se aproxima a R, las ráfagas y la variabilidad de llegadas elevan el tiempo de espera. Si se mantiene $2\lambda_{in}>R$, la cola **crece sin límite** en este modelo, porque entran más bits de los que salen.
 
 En equilibrio sin pérdidas y con ambos flujos simétricos, cada uno puede obtener a lo sumo $R/2$ bits/s. Esto no significa que una cola de tamaño infinito agregue ancho de banda: solo aplaza los paquetes, con retardo cada vez mayor. Tampoco se deduce de una sola medición que el retardo sea infinito; el modelo describe el comportamiento al acercarse a capacidad y, si la entrada la supera de forma sostenida, un crecimiento no acotado.
 
+<Visualization viz={{
+ type: 'xy-chart',
+ title: 'Escenario 1: tasa de salida útil y límite del enlace',
+ steps: [
+  {note: 'Cuando la entrada de cada flujo está por debajo de R/2, el throughput por flujo sigue aproximadamente a su entrada.',
+   series:[{id:'in',label:'Entrada por flujo',points:[[0,0],[2,2],[4,4],[5,5]],kind:'line',state:'active'},{id:'out',label:'Salida útil por flujo',points:[[0,0],[2,2],[4,4],[5,5]],kind:'line',state:'marked'}],
+   x:{label:'Entrada de cada flujo (Mb/s)',min:0,max:7},y:{label:'Throughput útil por flujo (Mb/s)',min:0,max:7},
+   vlines:[{at:5,label:'R/2'}]},
+  {note: 'Con R=10 Mb/s, al aproximarse a 5 Mb/s por fuente se ocupa toda la capacidad agregada; el throughput no puede crecer por encima de R/2 para cada flujo simétrico. El exceso se acumularía en un buffer infinito.',
+   series:[{id:'in',label:'Entrada por flujo',points:[[0,0],[2,2],[4,4],[5,5],[6,6],[7,7]],kind:'line',state:'muted'},{id:'out',label:'Salida útil por flujo',points:[[0,0],[2,2],[4,4],[5,5],[6,5],[7,5]],kind:'line',state:'active'}],
+   x:{label:'Entrada de cada flujo (Mb/s)',min:0,max:7},y:{label:'Throughput útil por flujo (Mb/s)',min:0,max:7},
+   vlines:[{at:5,label:'R/2'}]}
+ ]}} />
+
+El gráfico es un **ejemplo derivado** con dos flujos simétricos y $R=10$ Mb/s; las diapositivas describen el comportamiento en función de $R/2$ sin fijar un valor numérico de R. No representa por sí solo el tiempo de espera de la cola.
+
 **Ejemplo derivado:** $R=10$ Mb/s y cada origen envía $4.5$ Mb/s. Llegan $9$ Mb/s, así que quedan $1$ Mb/s de capacidad media para absorber ráfagas. Si ambos suben a 6 Mb/s, llegan 12 Mb/s, pero salen como máximo 10 Mb/s: la cola acumula **2 megabits adicionales por segundo** de exceso sostenido. Después de 3 s serían 6 Mbit en espera, equivalentes a 0.6 s de servicio a 10 Mb/s si no entrase nada más. Es una **cuenta idealizada de balance de bits**, no una fórmula exacta de retardo promedio de una cola aleatoria.
 
-### Escenario 2 — distinguir demanda original, carga de red y throughput útil
+---
+
+## 3. Escenario 2 — distinguir demanda original, carga de red y throughput útil
 
 Las slides 11–16 introducen buffers **finitos**. Ahora sí se descartan paquetes al llenarse una cola. Las variables de las diapositivas describen fenómenos distintos:
 
@@ -69,7 +76,9 @@ La situación realista (slides 15–16) agrega **timeouts prematuros**: el origi
   ]
 }} />
 
-### Escenario 3 — perder al final desperdicia también los saltos anteriores
+---
+
+## 4. Escenario 3 — perder al final desperdicia también los saltos anteriores
 
 Las slides 17–18 presentan **cuatro emisores y caminos multisalto**. Cuando un flujo intenso ocupa el buffer de salida del router que comparten varios caminos, los paquetes de otro flujo pueden acabar descartados **después** de haber cruzado uno o más enlaces. La pérdida desperdicia la capacidad de los enlaces de entrada ya recorridos, además de la memoria de los routers que almacenaron temporalmente el datagrama.
 
@@ -77,7 +86,7 @@ La diapositiva ilustra que, al aumentar la intensidad del flujo rojo, los paquet
 
 **Ejemplo derivado:** supongamos un datagrama de 1000 B que ya atravesó dos enlaces y se pierde al tercero. Como mínimo se han empleado $2\cdot1000\cdot8=16\,000$ bits de capacidad de transmisión previa para una entrega final de **cero bytes útiles** de ese intento; no se han contado cabeceras ni tiempos de cola. Si se reenvía, las transmisiones anteriores deben repetirse para recuperar los datos.
 
-### De la evidencia al mecanismo de control
+### ¿Cómo se entera TCP de que hay congestión?
 
 - **Retardo de cola creciente:** puede aparecer antes de un descarte; es señal posible de saturación, pero RTT también contiene propagación, transmisión y otros componentes.
 - **Pérdida y retransmisión:** son evidencias fuertes de problemas de entrega, pero no toda pérdida es causada por congestión (por ejemplo, una pérdida por el medio puede parecerse a una de buffer).
@@ -90,7 +99,9 @@ El control **extremo a extremo** infiere congestión por pérdida o retardo. El 
 
 ---
 
-## 3. Método paso a paso
+---
+
+## 5. Método para resolver problemas de congestión
 
 1. Localiza el recurso compartido y su capacidad de salida.
 2. Distingue datos originales de retransmisiones: la carga real incluye ambas.
@@ -99,13 +110,15 @@ El control **extremo a extremo** infiere congestión por pérdida o retardo. El 
 
 ---
 
-## 4. Ejemplo resuelto
+### Comprobación final con los tres escenarios
 
 En el escenario de dos emisores, ambos podrían intentar usar $R/2$. Si parte de esa tasa son duplicados, cada receptor obtiene **menos de $R/2$ de información nueva**. Retransmitir más no aumenta la capacidad del enlace: puede disminuir el rendimiento útil.
 
 ---
 
-## 5. Errores típicos
+---
+
+## 6. Errores típicos
 
 - Igualar tráfico transmitido con datos nuevos entregados.
 - Pensar que un buffer infinito elimina el problema: elimina el descarte por llenado, pero permite retardos arbitrariamente grandes.
