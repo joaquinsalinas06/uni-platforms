@@ -109,7 +109,7 @@ Con el tamaño del enunciado el problema es tan pequeño (el cómputo total rond
 
 ## Ejemplo
 
-Con $K = 10, 15, 20, 25$, $1024$ puntos y 800 pasos, el valor máximo de $|u|$ al final fue $24.08$, $15.81$, $11.44$ y $9.12$ respectivamente; el análisis de si superan las 20 unidades está en la [resolución de la PD5](/evaluaciones/pd5/2026-i).
+Con $K = 10, 15, 20, 25$, $1024$ puntos y 800 pasos, el valor máximo de $|u|$ al final fue $24.08$, $15.81$, $11.44$ y $9.12$ respectivamente; el análisis de si superan las 20 unidades (depende de la orilla que se tome como costa) está en la [resolución de la PD5](/evaluaciones/pd5/2026-i).
 
 ## Casos especiales
 

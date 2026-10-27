@@ -75,7 +75,7 @@ for (int j = 1; j <= n; j++) {
 
 *Nota de apoyo*: son mediciones de una sola máquina con MPI sobre memoria compartida (sin red), por lo que la latencia de mensaje es mucho menor que en un cluster; los números cualitativos (forma de las curvas y el efecto de los 4 núcleos rápidos) se extrapolan, no los absolutos.
 
-**1.3 Curvas para $K = 10, 15, 20, 25$** (1024 puntos, 800 pasos, estado final; el eje x es la posición normalizada y la costa está a la derecha). El gráfico tiene un paso por cada $K$; las curvas superpuestas del enunciado se leen mejor así, porque oscilan mucho y se tapan entre sí (los valores extremos de las cuatro están en la tabla de abajo):
+**1.3 Curvas para $K = 10, 15, 20, 25$** (1024 puntos, 800 pasos, estado final; el eje x es la posición normalizada; el enunciado 2026-I no dice dónde está la costa y la PD5 2024-II, con el mismo ejercicio, la fija en $x = 0$, así que se analizan ambos extremos). El gráfico tiene un paso por cada $K$; las curvas superpuestas del enunciado se leen mejor así, porque oscilan mucho y se tapan entre sí (los valores extremos de las cuatro están en la tabla de abajo):
 
 <Visualization viz={{
   type: 'xy-chart',
@@ -115,16 +115,22 @@ for (int j = 1; j <= n; j++) {
   ],
 }} />
 
-| $K$ | $\max u$ | $\min u$ | $\max\lvert u\rvert$ (en $x$) | $\max\lvert u\rvert$ para $x > 0.9$ |
-|---|---|---|---|---|
-| 10 | 10.34 | −24.08 | **24.08** ($x = 0.836$) | **24.03** |
-| 15 | 15.81 | −12.07 | 15.81 ($x = 0.965$) | 15.81 |
-| 20 | 8.88 | −11.44 | 11.44 ($x = 0.809$) | 11.39 |
-| 25 | 8.87 | −9.12 | 9.12 ($x = 0.033$) | 8.87 |
+| $K$ | $\max u$ | $\min u$ | $\max\lvert u\rvert$ (en $x$) | $\max\lvert u\rvert$ costa en $x \le 0.1$ | $\max\lvert u\rvert$ costa en $x > 0.9$ |
+|---|---|---|---|---|---|
+| 10 | 10.34 | −24.08 | **24.08** ($x = 0.836$) | 13.67 | **24.03** |
+| 15 | 15.81 | −12.07 | 15.81 ($x = 0.965$) | 12.07 | 15.81 |
+| 20 | 8.88 | −11.44 | 11.44 ($x = 0.809$) | 10.59 | 11.39 |
+| 25 | 8.87 | −9.12 | 9.12 ($x = 0.033$) | 9.12 | 8.87 |
 
-**¿Supera las 20 unidades?** Solo para $K = 10$, y en **valor absoluto**: la ola llega a $-24.08$ (un valle, no una cresta) en $x \approx 0.84$ y, en la franja cercana a la costa ($x > 0.9$), $|u| = 24.03$. La cresta positiva de $K = 10$ es 10.34, es decir, por debajo de 20. Para $K = 15, 20, 25$ la amplitud máxima es 15.8, 11.4 y 9.1: **no** se supera el umbral. Si "amplitud" se entiende como altura de cresta (valores positivos), ninguno de los cuatro casos supera 20; si se entiende como excursión absoluta, solo $K = 10$ es de alto peligro. El enunciado no precisa cuál es, y el análisis debería decirlo.
+**¿Supera las 20 unidades?** Depende de dónde se ponga la costa y de qué se llame amplitud:
 
-**Comentario.** Aunque el enunciado dice que $K$ "mide la amplitud de la ola más alta", en esta forma el **efecto es el contrario**: $K$ es la frecuencia espacial del forzamiento $0.01\sin(K\,i/180)$, y un forzamiento que varía lento (K pequeño) empuja a muchos puntos vecinos en el mismo sentido durante los 800 pasos y acumula más energía; con $K$ grande el signo del forzamiento alterna rápido y se cancela. Además, por la frontera derecha ($u(\text{costa}) \approx 0.1\cos(\text{tpoints})$) el punto **exacto** de la orilla vale siempre $\approx 0.1$; el peligro está en la franja de agua previa a ella.
+- **Costa en $x = 0$** (como en la PD5 2024-II): **ningún** $K$ supera 20 en la franja $x \le 0.1$; el máximo de $\lvert u\rvert$ es 13.67 ($K = 10$), 12.07, 10.59 y 9.12. No hay tsunami de alto peligro en esa orilla.
+- **Costa en $x = 1$:** solo $K = 10$, y en **valor absoluto**: llega a $-24.03$ (un valle) en la franja $x > 0.9$; su cresta máxima es 10.34. Para $K = 15, 20, 25$ la amplitud máxima es 15.8, 11.4 y 8.9.
+- Si "amplitud" se entiende como altura de cresta (valores positivos), ningún caso supera 20 en ninguna orilla.
+
+El análisis debe declarar el criterio: el resultado cambia con la orilla, y el enunciado 2026-I no la precisa. Con la frontera tal como está en el enunciado, el punto mismo de la orilla vale siempre cerca de $0.1$ (en $x = 1/1024$ la onda vale 0.084); el peligro está en la franja de agua previa.
+
+**Comentario.** Aunque el enunciado dice que $K$ "mide la amplitud de la ola más alta", en esta forma el **efecto es el contrario**: $K$ es la frecuencia espacial del forzamiento $0.01\sin(K\,i/180)$, y un forzamiento que varía lento (K pequeño) empuja a muchos puntos vecinos en el mismo sentido durante los 800 pasos y acumula más energía; con $K$ grande el signo del forzamiento alterna rápido y se cancela. 
 
 ## Ejercicio 2 — OMP tasks (2.5 pts)
 

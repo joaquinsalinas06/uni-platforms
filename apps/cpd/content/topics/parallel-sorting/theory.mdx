@@ -107,6 +107,12 @@ $$T_p = O\!\left(\frac{n}{p}\log n + \frac{n}{p}\log p + \log^2 p\right).$$
 
 El cómputo domina, y la isoeficiencia exige $\frac{n}{p}\log n \propto \log^2 p$, es decir, $n\log n \propto p\log^2 p$ (solución del profesor). Como $\log n \approx \log p$ en ese régimen, basta $n \propto p\log p$ y el trabajo $W = n\log n \propto p\log^2 p$ crece de forma **polinomial** en $p$, frente al crecimiento exponencial en $\sqrt{p}$ o en $\log^2 p$ de los bitónicos. Por eso **escala mejor que los anteriores**.
 
+*Isoeficiencia de Hyksort con las constantes de hardware (PD5 2024-II).* El enunciado de esa PD escribe $T_p = t_c\frac{n}{p}\log n + \beta\frac{n}{p}\log p + \alpha\log^2 p$. Con $T_{seq} = t_c\,n\log n$ y $E = T_{seq}/(p\,T_p)$:
+
+$$E = \frac{1}{1 + \dfrac{\beta\log p}{t_c\log n} + \dfrac{\alpha\,p\log^2 p}{t_c\,n\log n}}$$
+
+Para mantener $E$ constante deben mantenerse constantes los dos sumandos: $t_c\log n \propto \beta\log p$ y $t_c\,n\log n \propto \alpha\,p\log^2 p$; la solución del profesor indica que el **primero es dominante**, y que la condición depende de $\alpha$ y $\beta$ solo a través de los cocientes $\beta/t_c$ y $\alpha/t_c$. *(Nota de apoyo: la expresión de $E$ es mi desarrollo a partir del $T_p$ del enunciado; el PDF muestra las fórmulas de Hyksort y de ranking con símbolos mal extraídos, así que para el ranking y para el análisis de granularidad $G$ y el rango recomendado de $n$ y $p$ conviene leer directamente `2024-II CS4052-PD5.pdf`, págs. 3-6.)*
+
 ## Tabla de complejidad
 
 La tabla se genera desde `meta.yaml`: ranking con $n^2$ procesos, quicksort con $n = p$ y con $n > p$ y bitónico. Aquí solo lo que no dice: para el ranking con $n^2$ procesos el span es bajo pero el **trabajo** es $O(n^2)$, mucho más que los $O(n\log n)$ del mejor secuencial; no es *work-optimal*.
