@@ -1,0 +1,286 @@
+---
+title: "PD5 — 2026-I"
+category: pd5
+categoryLabel: "PD5"
+order: 1
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+> **Sobre esta resolución.** El PDF de la PD05 2026-I (EDP–Ordenamiento, 7 pts: PD 5 + Tarea 2) trae solución del profesor solo para las dos preguntas del **ejercicio 3** (análisis de escalabilidad del ordenamiento bitónico y Hyksort); se reproducen y se comentan.
+> El **ejercicio 1** (tsunami) se resuelve aquí con un código MPI **propio** (`cpp/practica/pd5_onda_mpi.cpp`, a partir de `pd5-onda_sec.cpp`) y el **ejercicio 2** con un modelo **propio** de `ejercicio02.cpp` (`cpp/practica/pd5_tareas.cpp`; el archivo del curso está en Canvas). Todo se midió en un Apple M5 (4 núcleos de rendimiento + 6 de eficiencia, GCC 16, `-O2`; MPI con `--oversubscribe` para $p=8$). El PDF no trae fecha de entrega ni cómo se reparten los 7 puntos entre la PD y la Tarea (remite al Anexo de Canvas).
+
+## Ejercicio 1 — Tsunami: ecuación hiperbólica de onda (3 pts)
+
+El código `pd5-onda_sec.cpp` resuelve la ecuación de onda con $f(x) = \sin(2\pi x)$ y condiciones de frontera $values(0) = 0.1\sin(x)$ y $values(tpoints) = 0.1\cos(x)$. Se agrega el término $0.01\,\sin(K\,(i/180))$ ($i$ = índice de la coordenada $x$), para $K = 10, 15, 20, 25$. **1.1** Paralelizar con descomposición de dominio y comunicación P2P (`MPI_Send`/`MPI_Recv`) de fronteras (1 pt). **1.2** Medir $T$ para $p = 1, 2, 4, 8, \dots$ con parámetros constantes y analizar (1 pt). **1.3** Graficar la onda final para cada $K$ (curvas superpuestas), decidir si la amplitud cerca de la costa supera las 20 unidades y comentar (1 pt).
+
+### Solución
+
+**Antes de paralelizar: dos diferencias entre el enunciado y el código entregado.** (a) El código tiene `0.01 * std::sin(K * i / 180)`; con `K` e `i` enteros, `K * i / 180` es una **división entera**, distinta de $K\,(i/180)$ del enunciado. (b) En `update()` las fronteras valen `0.0`, y las condiciones del enunciado ($0.5\sin(j)$ / $0.1\cos(j)$) están comentadas. La versión paralela usa `K * (gi / 180.0)` y las fronteras del enunciado ($0.1\sin(j)$ a la izquierda y $0.1\cos(j)$ a la derecha, con $j$ el índice global); la versión secuencial de referencia incluida en el mismo archivo usa exactamente las mismas fórmulas.
+
+**1.1 Descomposición de dominio.** Los `tpoints` puntos se reparten en bloques iguales de $n = \text{tpoints}/p$; cada proceso guarda dos celdas de halo. En cada paso intercambia **un valor** con cada vecino, y el orden par/impar evita que dos `MPI_Send` bloqueantes se esperen mutuamente:
+
+```cpp
+// halo: tag 0 = hacia la derecha, tag 1 = hacia la izquierda
+if (rank % 2 == 0) {
+  if (der < p) { MPI_Send(&vals[n], 1, MPI_DOUBLE, der, 0, ...);   MPI_Recv(&vals[n+1], 1, MPI_DOUBLE, der, 1, ...); }
+  if (izq >= 0){ MPI_Send(&vals[1], 1, MPI_DOUBLE, izq, 1, ...);   MPI_Recv(&vals[0],   1, MPI_DOUBLE, izq, 0, ...); }
+} else {
+  MPI_Recv(&vals[0], 1, MPI_DOUBLE, izq, 0, ...);   MPI_Send(&vals[1], 1, MPI_DOUBLE, izq, 1, ...);
+  if (der < p) { MPI_Recv(&vals[n+1], 1, MPI_DOUBLE, der, 1, ...); MPI_Send(&vals[n], 1, MPI_DOUBLE, der, 0, ...); }
+}
+for (int j = 1; j <= n; j++) {
+  int gi = rank * n + j;                       // índice global
+  nw[j] = 2.0*vals[j] - old[j] + SQTAU*(vals[j-1] - 2.0*vals[j] + vals[j+1]) + 0.01*sin(K*(gi/180.0));
+}
+```
+
+**Verificación:** para $K = 10, 15, 20, 25$ y $p = 1, 2, 4, 8$ el resultado coincide **exactamente** con la referencia secuencial (diferencia máxima 0). Detalle del algoritmo: [ecuación de onda en MPI](/topics/pde-parallel/algorithms/wave-equation-mpi).
+
+**1.2 Tiempos y análisis.** Tres experimentos con parámetros de simulación constantes dentro de cada uno (mejor de 3 a 5 corridas):
+
+| Caso | $p=1$ | $p=2$ | $p=4$ | $p=8$ |
+|---|---|---|---|---|
+| (a) Tamaño del enunciado: 1024 pts, 800 pasos, $T_p$ (ms) | 2.17 | 3.20 | 2.96 | 4.95 |
+| (b) Escalabilidad fuerte: $2^{20}$ pts, 800 pasos, $T_p$ (s) | 2.667 | 1.174 | 1.089 | 0.854 |
+| (c) Escalabilidad débil: 131072 pts **por proceso**, $T_p$ (s) | 0.282 | 0.295 | 0.329 | 0.892 |
+
+| $p$ | $S = T_1/T_p$ (fuerte) | $E = S/p$ | $E_{\text{débil}} = T_1/T_p$ |
+|---|---|---|---|
+| 1 | 1.00 | 1.00 | 1.00 |
+| 2 | 2.27 | 1.14 | 0.95 |
+| 4 | 2.45 | 0.61 | 0.86 |
+| 8 | 3.12 | 0.39 | 0.32 |
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "Escalabilidad fuerte medida del tsunami con 2 a la 20 puntos (eje x: p, eje y: speedup). Con p = 2 supera la recta ideal, y de ahi en adelante se aleja de ella.",
+      series: [
+        { id: 'medido', label: 'speedup medido', points: [[1, 1], [2, 2.27], [4, 2.45], [8, 3.12]] },
+        { id: 'ideal', label: 'ideal S = p', points: [[1, 1], [2, 2], [4, 4], [8, 8]] },
+      ],
+      highlight: ['medido'],
+      params: {},
+    },
+  ],
+}} />
+
+**Análisis.**
+
+- **(a) Con el tamaño del enunciado, paralelizar empeora el tiempo.** El cómputo total es de apenas 2 ms; cada paso agrega dos mensajes por vecino y esa latencia (el término $2(\alpha+\beta)$ de $T_p \approx n_t[c_0 N/p + 2(\alpha+\beta)]$) supera lo que se ahorra. Es el caso en que el problema es demasiado pequeño para $p$ procesos.
+- **(b) Con $2^{20}$ puntos sí hay ganancia**, pero no lineal. El $S = 2.27$ con $p = 2$ (por encima de 2) se debe a que cada proceso trabaja con la mitad de la memoria (3 vectores de 8 MB en total) y cabe mejor en la caché. De $p = 4$ en adelante $E$ cae a 0.61 y 0.39: la máquina solo tiene **4 núcleos de rendimiento**, así que los procesos 5-8 corren en núcleos de eficiencia (más lentos) y a $p=8$ comparten núcleos con otros procesos. En un cluster con núcleos homogéneos (Khipu) se espera mantener $E$ alta mientras $N/p$ sea grande frente a la latencia.
+- **(c) Escalabilidad débil:** el tiempo ideal es **constante**. Se mantiene casi plano hasta $p=4$ ($E_{\text{débil}} \ge 0.86$) y se dispara a 0.892 s en $p = 8$, por el mismo límite de hardware.
+
+*Nota de apoyo*: son mediciones de una sola máquina con MPI sobre memoria compartida (sin red), por lo que la latencia de mensaje es mucho menor que en un cluster; los números cualitativos (forma de las curvas y el efecto de los 4 núcleos rápidos) se extrapolan, no los absolutos.
+
+**1.3 Curvas para $K = 10, 15, 20, 25$** (1024 puntos, 800 pasos, estado final; el eje x es la posición normalizada y la costa está a la derecha). El gráfico tiene un paso por cada $K$; las curvas superpuestas del enunciado se leen mejor así, porque oscilan mucho y se tapan entre sí (los valores extremos de las cuatro están en la tabla de abajo):
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "K = 10: la curva con mayor excursión. El valle más profundo llega a -24.08 en x = 0.836, por debajo de -20; la cresta máxima es 10.34.",
+      series: [
+  { id: 'k10', label: 'K = 10', points: [[0.001, 0.08], [0.032, 9.08], [0.063, -8.39], [0.095, -10.16], [0.126, 8.07], [0.157, 2.39], [0.188, -13.49], [0.22, -1.24], [0.251, 10.25], [0.282, -3.4], [0.313, -8.63], [0.345, 7.15], [0.376, 5.87], [0.407, -9.41], [0.438, -1.88], [0.47, 10.27], [0.501, -2.29], [0.532, -9.33], [0.563, 6.08], [0.595, 6.74], [0.626, -8.98], [0.657, -3.21], [0.688, 10.11], [0.72, -1.16], [0.751, -9.86], [0.782, 0.06], [0.813, -15.35], [0.845, -22.68], [0.876, -4.26], [0.907, -4.47], [0.938, -22.76], [0.97, -15.0], [1.0, 0.1]] }
+      ],
+      highlight: ['k10'],
+      params: {},
+    },
+    {
+      note: "K = 15: la cresta llega a 15.81 cerca de la costa (x = 0.965) y el valle a -12.07. No supera 20 en ninguno de los dos sentidos.",
+      series: [
+  { id: 'k15', label: 'K = 15', points: [[0.001, 0.08], [0.032, 2.51], [0.063, -9.19], [0.095, 9.27], [0.126, -11.8], [0.157, 7.26], [0.188, -5.54], [0.22, -1.79], [0.251, 5.3], [0.282, -8.21], [0.313, 9.66], [0.345, -8.64], [0.376, 6.0], [0.407, -1.78], [0.438, -2.63], [0.47, 6.6], [0.501, -9.04], [0.532, 9.47], [0.563, -7.88], [0.595, 4.41], [0.626, -0.16], [0.657, -4.38], [0.688, 7.65], [0.72, -9.56], [0.751, 9.0], [0.782, -0.03], [0.813, 15.23], [0.845, 2.53], [0.876, 9.89], [0.907, 9.55], [0.938, 2.85], [0.97, 15.17], [1.0, 0.1]] }
+      ],
+      highlight: ['k15'],
+      params: {},
+    },
+    {
+      note: "K = 20: excursión máxima 11.44 (valle en x = 0.809), cresta 8.88. Lejos de 20 unidades.",
+      series: [
+  { id: 'k20', label: 'K = 20', points: [[0.001, 0.08], [0.032, -5.7], [0.063, 6.91], [0.095, -10.32], [0.126, 8.69], [0.157, -8.84], [0.188, 4.29], [0.22, -2.17], [0.251, -2.32], [0.282, 5.68], [0.313, -7.71], [0.345, 8.78], [0.376, -8.07], [0.407, 6.25], [0.438, -3.17], [0.47, -0.31], [0.501, 3.8], [0.532, -6.65], [0.563, 8.31], [0.595, -8.7], [0.626, 7.42], [0.657, -5.15], [0.688, 1.7], [0.72, 1.7], [0.751, -5.17], [0.782, 0.07], [0.813, -10.51], [0.845, -2.48], [0.876, -6.6], [0.907, -7.04], [0.938, -2.06], [0.97, -10.67], [1.0, 0.1]] }
+      ],
+      highlight: ['k20'],
+      params: {},
+    },
+    {
+      note: "K = 25: el forzamiento alterna rápido y se cancela: cresta 8.87 y valle -9.12, la menor excursión de las cuatro.",
+      series: [
+  { id: 'k25', label: 'K = 25', points: [[0.001, 0.08], [0.032, -9.0], [0.063, 2.92], [0.095, 5.74], [0.126, -7.63], [0.157, -3.33], [0.188, 7.78], [0.22, -2.36], [0.251, -6.9], [0.282, 5.07], [0.313, 4.45], [0.345, -7.21], [0.376, -0.43], [0.407, 7.61], [0.438, -3.46], [0.47, -5.68], [0.501, 6.52], [0.532, 2.23], [0.563, -7.74], [0.595, 1.78], [0.626, 6.67], [0.657, -5.48], [0.688, -3.97], [0.72, 7.36], [0.751, -0.16], [0.782, -0.01], [0.813, 4.57], [0.845, 8.58], [0.876, 1.9], [0.907, 1.46], [0.938, 8.41], [0.97, 5.21], [1.0, 0.1]] }
+      ],
+      highlight: ['k25'],
+      params: {},
+    },
+  ],
+}} />
+
+| $K$ | $\max u$ | $\min u$ | $\max\lvert u\rvert$ (en $x$) | $\max\lvert u\rvert$ para $x > 0.9$ |
+|---|---|---|---|---|
+| 10 | 10.34 | −24.08 | **24.08** ($x = 0.836$) | **24.03** |
+| 15 | 15.81 | −12.07 | 15.81 ($x = 0.965$) | 15.81 |
+| 20 | 8.88 | −11.44 | 11.44 ($x = 0.809$) | 11.39 |
+| 25 | 8.87 | −9.12 | 9.12 ($x = 0.033$) | 8.87 |
+
+**¿Supera las 20 unidades?** Solo para $K = 10$, y en **valor absoluto**: la ola llega a $-24.08$ (un valle, no una cresta) en $x \approx 0.84$ y, en la franja cercana a la costa ($x > 0.9$), $|u| = 24.03$. La cresta positiva de $K = 10$ es 10.34, es decir, por debajo de 20. Para $K = 15, 20, 25$ la amplitud máxima es 15.8, 11.4 y 9.1: **no** se supera el umbral. Si "amplitud" se entiende como altura de cresta (valores positivos), ninguno de los cuatro casos supera 20; si se entiende como excursión absoluta, solo $K = 10$ es de alto peligro. El enunciado no precisa cuál es, y el análisis debería decirlo.
+
+**Comentario.** Aunque el enunciado dice que $K$ "mide la amplitud de la ola más alta", en esta forma el **efecto es el contrario**: $K$ es la frecuencia espacial del forzamiento $0.01\sin(K\,i/180)$, y un forzamiento que varía lento (K pequeño) empuja a muchos puntos vecinos en el mismo sentido durante los 800 pasos y acumula más energía; con $K$ grande el signo del forzamiento alterna rápido y se cancela. Además, por la frontera derecha ($u(\text{costa}) \approx 0.1\cos(\text{tpoints})$) el punto **exacto** de la orilla vale siempre $\approx 0.1$; el peligro está en la franja de agua previa a ella.
+
+## Ejercicio 2 — OMP tasks (2.5 pts)
+
+Paralelizar con OpenMP el pseudocódigo (solo el **primer argumento** de cada `calculo_*()` se modifica):
+
+```cpp
+min_x = minimo(x, n);   max_x = maximo(x, n);
+calculo_z(z, min_x, max_x, n);
+calculo_y(y, x, n);
+calculo_x(x, y, n);
+calculo_v(v, z, x);
+```
+
+**2.1** Diagramar el DAG de dependencias (1 pt). **2.2** Paralelizar con `sections` y con `tasks` (dos versiones), medir y comparar ventajas y desventajas (1.5 pts).
+
+### Solución
+
+**2.1 DAG.** `min_x` y `max_x` leen `x` y son independientes; `calculo_z` necesita ambos (RAW); `calculo_y` solo lee `x`; `calculo_x` **escribe** `x` y lee `y` (RAW con `calculo_y`), y además debe esperar a que `min_x`, `max_x` y `calculo_y` hayan **leído** `x` antes de sobrescribirlo (dependencias WAR, aristas punteadas); `calculo_v` necesita `z` y la `x` ya actualizada.
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Tareas sin predecesor: min_x (mn), max_x (mx) y calculo_y (y). Las tres solo leen el vector x original, así que son independientes entre sí.",
+      nodes: [
+        { id: 'mn', value: 'mn', parent: null, state: 'active' },
+        { id: 'mx', value: 'mx', parent: null, state: 'active' },
+        { id: 'y', value: 'y', parent: null, state: 'active' },
+      ],
+      links: [],
+    },
+    {
+      note: "calculo_z (z) depende de mn y mx por el valor que calculan. calculo_x (x) depende de y por el valor y, y de mn y mx por una dependencia WAR (la arista punteada): x se sobrescribe y min y max aun deben haberlo leido.",
+      nodes: [
+        { id: 'mn', value: 'mn', parent: null },
+        { id: 'mx', value: 'mx', parent: null },
+        { id: 'y', value: 'y', parent: null },
+        { id: 'z', value: 'z', parent: 'mn', state: 'active' },
+        { id: 'x', value: 'x', parent: 'y', state: 'active' },
+      ],
+      links: [
+        { from: 'mn', to: 'z' },
+        { from: 'mx', to: 'z' },
+        { from: 'y', to: 'x' },
+        { from: 'mn', to: 'x', kind: 'shared' },
+        { from: 'mx', to: 'x', kind: 'shared' },
+      ],
+    },
+    {
+      note: "calculo_v (v) es la ultima tarea: necesita z y la x ya actualizada. El camino critico medido es y, luego x, luego v: unos 56 ms de los 85 ms secuenciales, lo que acota el speedup a unas 1.5 veces.",
+      nodes: [
+        { id: 'mn', value: 'mn', parent: null },
+        { id: 'mx', value: 'mx', parent: null },
+        { id: 'y', value: 'y', parent: null },
+        { id: 'z', value: 'z', parent: 'mn' },
+        { id: 'x', value: 'x', parent: 'y' },
+        { id: 'v', value: 'v', parent: 'z', state: 'answer' },
+      ],
+      links: [
+        { from: 'mn', to: 'z' },
+        { from: 'mx', to: 'z' },
+        { from: 'y', to: 'x' },
+        { from: 'mn', to: 'x', kind: 'shared' },
+        { from: 'mx', to: 'x', kind: 'shared' },
+        { from: 'z', to: 'v' },
+        { from: 'x', to: 'v' },
+      ],
+    },
+  ],
+}} />
+
+**2.2 Dos versiones.** Código en `cpp/practica/pd5_tareas.cpp`.
+
+*Con `sections`:* no se pueden expresar dependencias, así que se agrupan las tareas por **niveles** del DAG y cada `sections` termina en una barrera implícita:
+
+```cpp
+#pragma omp parallel
+{
+  #pragma omp sections              // nivel 1: min, max, y
+  { #pragma omp section  mn = minimo(x, n);
+    #pragma omp section  mx = maximo(x, n);
+    #pragma omp section  calculo_y(y, x, n); }   // barrera
+  #pragma omp sections              // nivel 2: z, x
+  { #pragma omp section  calculo_z(z, mn, mx, n);
+    #pragma omp section  calculo_x(x, y, n); }   // barrera
+  #pragma omp single
+  calculo_v(&v, z, x, n);
+}
+```
+
+*Con `task depend`:* cada tarea declara lo que lee y lo que escribe y arranca en cuanto se cumplen **sus** dependencias:
+
+```cpp
+#pragma omp parallel
+#pragma omp single
+{
+  #pragma omp task depend(out: mn)  depend(in: x[0])
+  mn = minimo(x, n);
+  #pragma omp task depend(out: mx)  depend(in: x[0])
+  mx = maximo(x, n);
+  #pragma omp task depend(out: y[0]) depend(in: x[0])
+  calculo_y(y, x, n);
+  #pragma omp task depend(out: z[0]) depend(in: mn, mx)
+  calculo_z(z, mn, mx, n);
+  #pragma omp task depend(inout: x[0]) depend(in: y[0], mn, mx)   // RAW con y, WAR con mn/mx
+  calculo_x(x, y, n);
+  #pragma omp task depend(in: z[0], x[0])
+  calculo_v(&v, z, x, n);
+}
+```
+
+**Mediciones** ($n = 4\,000\,000$; costos por separado: `min+max` 3.7 ms, `y` 52.1 ms, `z` 25.0 ms, `x` 1.0 ms, `v` ≈ 3.0 ms; $T_1 = 84.8$ ms; mejor de 5; resultado idéntico al secuencial en todas):
+
+| Hilos | secuencial (ms) | `sections` (ms) | speedup | `tasks` (ms) | speedup |
+|---|---|---|---|---|---|
+| 1 | 84.3 | 84.6 | 1.00 | 84.6 | 1.00 |
+| 2 | 84.9 | 82.5 | 1.03 | 58.5 | 1.45 |
+| 4 | 84.8 | 80.5 | 1.05 | 56.3 | 1.51 |
+| 8 | 84.8 | 80.8 | 1.05 | 56.5 | 1.50 |
+
+**Comparación.**
+
+- **`tasks` se acerca al límite del DAG.** El camino crítico es `y → x → v` (≈ 56 ms); el speedup máximo posible es $T_1 / T_\infty \approx 84.8/56 \approx 1.5$, y `tasks` lo alcanza con 4 hilos (1.51). Más hilos no ayudan: **el DAG no tiene más paralelismo**, no es un problema del runtime.
+- **`sections` queda en 1.05.** Al agrupar por niveles, el nivel 1 dura lo que dura `y` (52 ms) y recién entonces empieza `z` (25 ms), aunque `z` solo dependía de `mn` y `mx` (3.7 ms): $52 + 25 + 3 \approx 80$ ms. La **barrera implícita** serializa el camino `mn,mx → z` detrás de `y`, que no tiene relación con él.
+- **Ventajas de `sections`:** sintaxis simple, sin declarar dependencias, y no tiene sobrecosto de crear tareas; sirve cuando las secciones son independientes y de costo parecido. **Desventajas:** no expresa dependencias (el programador debe hacer el nivelado a mano), hay una barrera por nivel, el número de secciones fija el paralelismo máximo y no se reparten mejor si una sección es larga.
+- **Ventajas de `task depend`:** el runtime respeta el DAG exacto y no hay barreras innecesarias; escala con el grafo. **Desventajas:** hay que declarar bien las dependencias (olvidar la WAR de `x` con `mn`/`mx` produce una condición de carrera silenciosa), y cada tarea tiene un costo de creación y planificación (irrelevante aquí, con tareas de milisegundos, pero importante con tareas muy pequeñas). Ver [tareas en OpenMP](/topics/omp-tasks-icv).
+
+*Nota de apoyo*: el `ejercicio02.cpp` del curso está en Canvas; este modelo propio tiene las mismas dependencias pero costos escogidos (pasadas sobre el vector) para que `y` sea la función más cara. Con otros costos cambia el camino crítico y el speedup máximo, no la conclusión sobre las barreras.
+
+## Ejercicio 3 — Ordenamiento bitónico (1.5 pts)
+
+**a)** Una red de ordenamiento bitónico es sensible a la topología. El cómputo es $O\!\left(\frac{n}{p}\log n\right)$ y la comunicación resulta en $O\!\left(\frac{n}{\sqrt{p}}\right)$ en una **malla** y $O\!\left(\frac{n}{p}\log^2 p\right)$ en un **hipercubo**. Analice la escalabilidad y decida qué modelo es más escalable (1 pt). **b)** Considere el tiempo en paralelo optimizado del algoritmo **Hyksort** (quicksort en hipercubo),
+$T_p = O\!\left(\frac{n}{p}\log n + \frac{n}{p}\log p + \log^2 p\right)$. ¿Escala mejor que los anteriores? (0.5 pts)
+
+### Solución
+
+**a) (solución del profesor).** Para mantener la eficiencia constante el cómputo debe crecer al ritmo de la comunicación:
+
+- Malla: $\frac{n}{p}\log n \propto \frac{n}{\sqrt{p}} \Rightarrow \log n \propto \sqrt{p} \Rightarrow n \propto 2^{\sqrt{p}}$.
+- Hipercubo: $\frac{n}{p}\log n \propto \frac{n}{p}\log^2 p \Rightarrow \log n \propto \log^2 p \Rightarrow n \propto 2^{\log^2 p}$.
+
+**La malla escala mejor, porque necesita menos trabajo ($W$) para mantener $E$ constante.**
+
+*Nota de apoyo (verificada numéricamente)*: la conclusión depende de $p$. Se compara $\sqrt{p}$ con $(\log_2 p)^2$:
+
+| $p$ | $\sqrt{p}$ | $\log_2^2 p$ | ¿qué topología necesita menos trabajo? |
+|---|---|---|---|
+| 16 | 4 | 16 | malla |
+| 1 024 | 32 | 100 | malla |
+| 16 384 | 128 | 196 | malla |
+| **65 536** | **256** | **256** | **empate** |
+| 262 144 | 512 | 324 | hipercubo |
+| 1 048 576 | 1 024 | 400 | hipercubo |
+
+Para $p < 65\,536$ (laboratorio y clusters usuales) vale la conclusión del profesor; por encima de ese $p$ la comparación se invierte. Un examen que pida "decida cuál escala mejor" se contesta con la solución del profesor, aclarando el rango.
+
+**b) (solución del profesor).** La isoeficiencia exige $\frac{n}{p}\log n \propto \log^2 p$, es decir, $n\log n \propto p\log^2 p$. **Este modelo escala mejor que los anteriores.** *Complemento*: como $\log n \approx \log p$ en ese régimen, basta $n \propto p\log p$ y el trabajo $W = n\log n \propto p\log^2 p$ crece de forma polinomial en $p$, frente al crecimiento exponencial en $\sqrt{p}$ o en $\log^2 p$ de los dos bitónicos. Desarrollo en [ordenamiento en paralelo](/topics/parallel-sorting).
+
+**Verificación experimental del bitónico** (`pd5_bitonico.cpp`, $2^{22}$ enteros, OpenMP): 1.061 s con 1 hilo, 0.557 s con 2, 0.297 s con 4 y 0.186 s con 8 ($S = 5.7$, $E = 0.71$ con 8 hilos), y resultado idéntico a `std::sort` (0.186 s secuencial). Detalle en [Mergesort de Batcher y bitónico](/topics/parallel-sorting/algorithms/batcher-bitonic).

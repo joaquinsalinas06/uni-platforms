@@ -1,0 +1,686 @@
+Computación Paralela y Distribuı́da
+2026-II
+
+
+
+José Fiestas PhD
+October 26, 2026
+Universidad de Ingenierı́a y Tecnologı́a
+jfiestas@utec.edu.pe
+Unidad 5: Análisis y programación de algoritmos paralelos
+
+
+
+
+        Objetivos:
+
+           1. Naturalmente (vergonzosamente) algoritmos paralelos
+           2. Ecuaciones diferenciales parciales
+           3. Algoritmos de ordenamiento en paralelo
+           4. Algoritmos de búsqueda en paralelo
+           5. Algoritmos de grafos en paralelo
+
+
+
+
+José Fiestas PhD                     Computación Paralela y Distribuı́da   1 / 40
+Algoritmos de Ordenamiento
+Algoritmos de Ordenamiento
+
+
+
+        Ordenamiento es uno de los algoritmos fundamentales más usados.
+        a) Ordenamiento
+        de proteinas en la red del
+        Trans-Golgi (Visualization of Protein
+        Sorting at the Trans-Golgi Network and
+        Endosomes Through Super-Resolution
+        Imaging, Huang et.al 2019)
+
+        b) Ordenamiento de
+        capas de renderizado (The Equalizer
+        Parallel Rendering Framework, Eilemann,
+        2007). En animaciones se utiliza para
+        priorizar capas donde hay movimiento.
+
+
+
+José Fiestas PhD                    Computación Paralela y Distribuı́da   2 / 40
+Ordenamiento secuencial: sorting
+
+        En C++:
+        void qsort ( void * base , size_t num , size_t size ,
+        int (* compar )( const void * , const void *));
+
+
+            • base: puntero al primer objeto del array a ser ordenada
+            • num: número de elementos del array apuntada por base
+            • size: tamaño en bytes de cada elemento en el array
+            • compar: puntero a una función que compara dos elementos. Con
+              punteros como argumentos, la función define el orden de los
+              elementos retornando <0, 0 o >0
+          int compar ( const void * p1 , const void * p2 );
+
+        int compareMyType ( const void * a , const void * b ) {
+        if ( *( MyType *) a < *( MyType *) b ) return -1;
+        if ( *( MyType *) a == *( MyType *) b ) return 0;
+        if ( *( MyType *) a > *( MyType *) b )
+          return 1;
+        }
+
+José Fiestas PhD                     Computación Paralela y Distribuı́da    3 / 40
+Ordenamiento secuencial: sorting
+
+
+        Eficiencia del algoritmo, depende del número de elementos a ser
+        ordenados, basado en la comparación de pares de elementos.
+        No hay algoritmo más eficiente que O(n log(n))
+        La eficiencia siempre representa casos promedios, a lo que debe añadirse
+        casos extremos: best/worst case
+        De acuerdo al input, hay casos en que se puede resolver el ordenamiento
+        hasta en O(n), i.e. Bubble sort. Debe considerar la constante en el orden
+        de complejidad O(c*n), la que va a variar de uno a otro algoritmo.
+        Además:
+        Espacio de trabajo, hay algoritmos que requieren espacio adicional de
+        trabajo, y por consiguiente mas memoria.
+        Estabilidad, también puede requerir más tiempo y espacio. Un algoritmo
+        que mantiene el orden de los objetos a través del proceso es más estable.
+
+José Fiestas PhD                   Computación Paralela y Distribuı́da            4 / 40
+Ordenamiento secuencial: complejidad
+
+                    Ordenamiento    Promedio             Mejor                    Peor   Estabilidad
+                     Bubblesort       O(n2 )           O(n)                  O(n2 )        estable
+                    Selectionsort     O(n2 )           O(n2 )                O(n2 )        estable
+                    Insertionsort     O(n2 )           O(n)                  O(n2 )        estable
+                      Heapsort      O(nlog (n))      O(nlog (n))           O(nlog (n))    inestable
+                     Mergesort      O(nlog (n))      O(nlog (n))           O(nlog (n))     estable
+                      Quicksort     O(nlog (n))      O(nlog (n))             O(n2 )        estable
+
+
+
+
+José Fiestas PhD                          Computación Paralela y Distribuı́da                        5 / 40
+Ordenamiento en paralelo
+
+
+
+
+        Caso: p=n
+        - El mejor algoritmo de ordenamiento secuencial tiene un costo O(n log
+        n). Modelo basado en comparaciones
+        Tseq = Tcompr n log n + O(n)
+        - Con un algoritmo paralelo, utilizando n procesos, se obtiene un costo
+        de O(log n)*Tmerging
+        Se puede demostrar que un algoritmo que usa un merging óptimo se
+        resuelve en O(log n) [2] (Ch.4)
+
+
+
+
+José Fiestas PhD                  Computación Paralela y Distribuı́da           6 / 40
+Ordenamiento en paralelo: operaciones básicas
+
+
+
+        Operación básica de comparación de valores e intercambio de sus
+        posiciones en la secuencia.
+        Caso1:
+        P1 envı́a A a P2 . Este compara B y A, y envı́a el mı́nimo de A y B a P1
+
+
+
+
+José Fiestas PhD                   Computación Paralela y Distribuı́da           7 / 40
+Ordenamiento en paralelo: operaciones básicas
+
+
+
+
+        comparación e intercambio en paralelo
+        Caso2:
+        P1 envı́a A a P2 . P2 envı́a B a P1 . P1 calcula A=min(A,B), P2 calcula
+        B=max(A,B)
+
+
+
+
+José Fiestas PhD                   Computación Paralela y Distribuı́da          8 / 40
+Ordenamiento en paralelo
+
+
+
+
+        Caso: p<n
+        n elementos, p procesos, n/p elementos por proceso
+
+
+
+
+        Tpar = O( pn log ( pn )) + Tcomm
+
+
+
+
+José Fiestas PhD                      Computación Paralela y Distribuı́da   9 / 40
+Ordenamiento en paralelo: operaciones básicas
+
+
+
+        p<n:
+        n números y p procesos
+        n/p números en cada proceso
+        Caso1:
+
+
+
+
+José Fiestas PhD                 Computación Paralela y Distribuı́da   10 / 40
+Sorting en paralelo: operaciones básicas
+
+
+
+        p<n:
+        n números y p procesos
+        n/p números en cada proceso
+        Caso2:
+
+
+
+
+José Fiestas PhD                 Computación Paralela y Distribuı́da   11 / 40
+Ordenamiento por ranking en paralelo: algoritmo 1
+
+
+
+        Método rápido, poco eficiente
+
+        n elementos, n2 procesos
+
+        input: A[1,. . . ,n]
+        output: M[1,. . . ,n]
+        forall (i,j) ∈ {1, . . . , n}2 pardo
+           B[i, j] := A[i] ≥ A[j]
+        forall i ∈ { 1,. . . ,n} pardo
+                     Pn
+           M[i] = j=1 B[i, j]
+
+        T∞ = O(log n)
+        W = O(n2 + n log n)
+
+
+José Fiestas PhD                       Computación Paralela y Distribuı́da   12 / 40
+Ordenamiento por ranking en paralelo: algoritmo 2
+
+
+
+
+José Fiestas PhD      Computación Paralela y Distribuı́da   13 / 40
+Ordenamiento por ranking en paralelo: algoritmo 2
+
+
+
+        n elementos, p procesos, √np elementos por proceso
+
+        input: d[1,. . . ,n]
+        output: ranking de d(i,j),k almacenado en b’(in+k) en el proceso (j,j)
+        Gossip el input por columna, i.e. p(i,j) recibe a:= a1,j , . . . , a√p,j
+        Broadcast el input por fila, i.e. p(i,j) recibe a’:= ai,1 , . . . , ai,N
+        sort a
+        for k:=1, p do bk =ranking de ak′ en a
+                                                   P√p
+        Reduce b por fila, i.e. p(i,i) recibe b’:= j=1 b(i, j)
+
+                                        √             n           n log n
+                    Tp (n, p) = O(log       p(α + β( √ )) + Tcompr √ )
+                                                       p              p
+
+
+
+José Fiestas PhD                       Computación Paralela y Distribuı́da       14 / 40
+Ordenamiento por ranking en paralelo: algoritmo 2
+
+
+
+
+                                           √              n           n log n
+                       Tp (n, p) = O(log        p(α + β( √ )) + Tcompr √ )
+                                                           p              p
+
+        Cuantificando:
+        p=1024, α = 10−5 s, β = 10−8 s, Tcompr = 10−8 s, n/p = 32
+
+                                           √             n                n log n
+                    Tp (n, p) = k1 ∗ log       p(α + β( √ )) + k2 ∗ Tcompr √ )
+                                                          p                   p
+
+                                ≈ k1 ∗ 0000357 + k2 ∗ 0.0000011s
+        k1 , k2 ∈ R
+
+
+
+
+José Fiestas PhD                          Computación Paralela y Distribuı́da     15 / 40
+Ordenamiento rápido (quicksort)
+
+
+        Algoritmo recursivo, uno de los más rápidos y simples algoritmos de
+        ordenamiento. Funciona según el principio de divide y conquista.
+        Complejidad con n elementos es O(n logn) o O(n2 )
+
+
+
+
+        Primero se divide la secuencia en elementos menores y mayores que el
+        pivot. Y se llama a la función en forma recursiva.
+
+José Fiestas PhD                   Computación Paralela y Distribuı́da        16 / 40
+Quicksort secuencial
+
+
+
+
+        método QS(d[],p)
+        Entrada: array d de p elementos
+        Salida: array d ordenada
+        if ( p ==1) return
+        k = s e l e cciona_pivot (d , v )
+        // distribuye elementos en d tal que :
+        // $d_0 < ... < d_k = v < ... d_ { k +1} < . . . < d_ {p -1} $
+        QS ([ d_0 , . . . , d_ {k -1}] , k ) \\
+        QS ([ d_ { k +1} , . . . , d_ {p -1}] , p -k -1)
+
+
+
+
+José Fiestas PhD                     Computación Paralela y Distribuı́da   17 / 40
+Quicksort en paralelo (n=p)
+
+
+
+
+        El algoritmo de Peter Sanders es el mejor quicksort paralelo de propósito
+        general [4], [1]
+
+
+
+José Fiestas PhD                   Computación Paralela y Distribuı́da             18 / 40
+Quicksort en paralelo: PRAM + comunicación (n=p)
+
+
+        QS(d,i,p)
+        Entrada: valor del elemento (d) almacenado en el proceso i, de un total de p procesos
+        Salida: array ordenada en el maestro
+
+        if(p=1) return
+        j:= random entre 0 y p-1
+        v:= dj // pivot
+        Broadcast v a todos los procesos para comparación
+        flag:=d ≤ v
+             Pi
+        j:=     k=0 flagk // suma de prefijos
+        p’ := jp−1 // evaluado hasta (p)
+        Broadcast p’ a todos los procesos para comparación
+        if(flag) send d to j-1
+        else send d to p’+i-j
+        receive d
+        if (i < p’) {
+        // i pertenece a la partición izquierda
+        QS(d,i,p’) }
+        else {
+        // i pertenece a la partición derecha
+        QS(d,i-p’,p-p’) }
+
+
+José Fiestas PhD                            Computación Paralela y Distribuı́da               19 / 40
+Quicksort en paralelo (n=p)
+
+
+
+        Los procesos se separan en particiones. En una partición, el proceso j
+        contiene el pivot, el cual es enviado a todos los demás procesos
+        (Broadcast). Se utiliza luego una suma de prefijos para numerar
+        procesos con elementos menores/mayores que el pivot. Se define p’ como
+        el proceso con el pivot y se envia al resto de procesos (Broadcast). Los
+        primeros p’-1 procesos contienen los p’-1 elementos menores que el pivot.
+        Esta partición se vuelve a dividir en dos nuevas particiones, donde se
+        aplica de nuevo el algoritmo en forma recursiva. I.e.
+
+                               T (p) = T (p/2) + log (p)
+
+                                ∴ Tp (n, p) ∈ O(log 2 (p))
+
+
+
+José Fiestas PhD                  Computación Paralela y Distribuı́da         20 / 40
+Quicksort en paralelo (n>p)
+
+
+        En caso de n>>1, cada proceso p
+        recibe n/p elementos y los ordena
+        en un tiempo O( pn log ( pn )). Estos,
+        a su vez, son transportados entre
+        procesos en un tiempo
+        O(log p(α + pn β)). En PRAM,
+        obtuvimos span O(log2 p). Por lo
+        tanto:
+
+
+
+
+                                     n log n            n
+                    Tp (n, p) = O(           + log p(α + β) + α log2 p)
+                                        p               p
+
+José Fiestas PhD                      Computación Paralela y Distribuı́da   21 / 40
+Mergesort
+
+        Método:
+        - Si A=(a1 , a2 , ..., ar ) y B=(b1 , b2 , . . . bs ) son dos secuencias de números
+        ordenadas en orden ascendente
+        - Se busca mezclar A y B, es decir, generar una secuencia
+        C=(c1 , c2 , . . . , cm ), donde m=r+s
+        - C también será una secuencia ordenada ascendente
+        - Se divide la lista de n elementosen n sub-listas (cada una con un
+        elemento)
+        - Se fusionan sublistas para crear nuevas sublistas ordenadas, hasta que
+        solo queda una sublista
+
+
+
+
+José Fiestas PhD                       Computación Paralela y Distribuı́da                   22 / 40
+Mergesort
+
+
+
+        Supuestos:
+        - Ambas secuencias son del mismo tamaño. r = s = n > 1
+        - n es una potencia de 2
+        Si n=1, el procesador tiene como salida una secuencia ordenada.
+
+
+
+
+José Fiestas PhD                  Computación Paralela y Distribuı́da   23 / 40
+Mergesort
+
+        Si n=2, las dos secuencias A=(a1 , a2 ) y B=(b1 , b2 ), se ordenarán de
+        acuerdo al siguiente diagrama
+
+
+
+
+        El proceso P1 compara el menor elemento de A con el menor elemento de
+        B, resultando en el menor elemento de c, i.e. c1 El proceso P2 hace lo
+        mismo, resultado en c4
+        El proceso P3 hace lo mismo para los valores intermedios
+José Fiestas PhD                    Computación Paralela y Distribuı́da          24 / 40
+Mergesort
+
+
+
+        Dos subgrupos de 4 elementos c/u
+        A={3,5,7,9}, B={2,4,6,8}
+
+
+
+
+José Fiestas PhD                Computación Paralela y Distribuı́da   25 / 40
+Odd-Even Mergesort (de Batcher)
+
+
+
+
+José Fiestas PhD     Computación Paralela y Distribuı́da   26 / 40
+Odd-Even Mergesort (de Batcher)
+
+
+
+
+        Algorithm 1: OddEvenMergeSort(A, N)
+        Entrada: Arreglo A de tamaño N
+        Salida: Arreglo A ordenado
+        if N > 1 then
+            AL ← OddEvenMergeSort(AL , N/2): ||
+             AR ← OddEvenMergeSort(AR , N/2);
+            A ← OddEvenMerge(AL , AR , N/2);
+
+        T∞ (n) = T∞ (n/2) + O(log n)
+        T∞ (n) = O(log2 n)
+
+
+
+
+José Fiestas PhD                Computación Paralela y Distribuı́da   27 / 40
+Odd-Even Mergesort (de Batcher)
+
+
+
+        Algorithm 2: OddEvenMerge(A, B, n)
+        Entrada: Secuencias ordenadas A y B de tamaño n
+        Salida: Secuencia ordenada C de tamaño 2n
+        if n = 1 then
+            C ← CompareExchange(A[1], B[1]);
+        else
+            D ← OddEvenMerge(AI , BI , n/2) ||
+             E ← OddEvenMerge(AP , BP , n/2);
+            C [1] ← D[1]; C [2n] ← E [n];
+            for i ← 1 to n − 1 pardo
+                C [2i] ← min(D[i + 1], E [i]);
+                C [2i + 1] ← max(D[i + 1], E [i]);
+
+
+
+
+José Fiestas PhD                Computación Paralela y Distribuı́da   28 / 40
+Odd-Even Mergesort (de Batcher)
+
+
+
+
+        Algoritmo recursivo:
+        Los elementos impares de A y B: a1 , a3 , a5 , ..., an−1 , y b1 , b3 , b5 , ..., bn−1
+        se mezclan utilizando subgrupos ( n2 , n2 ) para producir una secuencia
+        d1 , d2 , ..., dn
+        Simultáneamiente, los elementos pares de A y B : a2 , a4 , a6 , ..., an , y
+        b2 , b4 , b6 , ..., bn se mezclan utilizando subgrupos ( n2 , n2 ) para producir una
+        secuencia e1 , e2 , ..., en
+        La secuencia final c1 , c2 , ..., c2n se obtiene de c1 = d1 , c2n = en ,
+        c2i = min(di+1 , ei ), y c2i+1 = max(di+1 , ei ), para i=1,2,. . . ,n-1
+        Cada subgrupo ( n2 , n2 ) se construye recursivamente utilizando dos ( n4 , n4 )
+        subgrupos
+
+
+
+José Fiestas PhD                       Computación Paralela y Distribuı́da                29 / 40
+Odd-Even Mergesort (de Batcher)
+
+
+
+
+        La complejidad de Mergesort en paralelo se muestra en la tabla (abajo)
+
+
+                                            Span                          Trabajo       Referencia
+                                                    2
+           Odd-Even Mergesort        O(log n)                             O(n log n)
+             Two-way-merge        O(log n log log n)                      O(n log n)   [2] (Ch.4.3.1)
+
+        Se puede realizar en un modelo CREW
+
+
+
+
+José Fiestas PhD                  Computación Paralela y Distribuı́da                              30 / 40
+Ordenamiento bitónico
+
+        Una secuencia bitónica, consiste en dos secuencias. Una creciente y una
+        decreciente
+
+                    a0 < a1 < a2 , . . . , ai−1 < ai > ai+1 , . . . , an−2 > an−1
+
+        Si se realiza una operación de comparación e intercambio de ai con
+        ai+n/2 , para todo i, se obtendrán dos secuencias bitónicas, donde los
+        elementos de una secuencia serán menores que los elementos de la otra.
+
+
+
+
+        Recursivamente, cada secuencia bitónica final consiste de solo dos
+        elementos
+José Fiestas PhD                       Computación Paralela y Distribuı́da        31 / 40
+Ordenamiento bitónico (algoritmo)
+
+
+
+
+        Algorithm 3: BitonicSort(A, l, n, dir )
+        Entrada: Arreglo A; posición inicial l; tamaño n; dirección dir
+        if n > 1 then
+            m ← n/2
+              BitonicSort(A, l, m, ASC ) ||
+              BitonicSort(A, l + m, m, DESC )
+            BitonicMerge(A, l, n, dir )
+
+        T∞ (n) = T∞ (n/2) + O(log n)
+        T∞ (n) = O(log2 n)
+
+
+
+
+José Fiestas PhD                    Computación Paralela y Distribuı́da    32 / 40
+Ordenamiento bitónico (algoritmo)
+
+
+
+
+        Algorithm 4: BitonicMerge(A, l, n, dir )
+        Entrada: Secuencia bitónica A[l : l + n], dirección dir
+        if n > 1 then
+            m ← n/2
+            for i ← 0 to m − 1 pardo
+                CompareExchange(A[l + i], A[l + i + m], dir )
+              BitonicMerge(A, l, m, dir ) ||
+              BitonicMerge(A, l + m, m, dir )
+
+
+
+
+José Fiestas PhD                    Computación Paralela y Distribuı́da   33 / 40
+Ordenamiento bitónico
+
+
+        Se parte de una secuencia bitónica, partiendo de la lista inicial de
+        elementos desordenados. Ya que un par de números son bitónicos, se
+        puede particionar la lista inicial en pares, y unirlos consecutivamente en
+        listas mas grandes.
+
+
+
+
+José Fiestas PhD                    Computación Paralela y Distribuı́da            34 / 40
+Ordenamiento por montı́culos (heapsort)
+
+
+
+
+        Tiene complejidad O(n log n).
+        Utiliza una estructura de datos
+        llamada heap (montı́culo), que se
+        basa en la definición de un árbol
+        binario, en el cual todos sus nodos
+        estan ocupados por los elementos
+        que serán ordenados. Un nodo
+        es raiz de un montı́culo (heap)
+        cuando sus nodos inmediatos
+        tienen valores menores o iguales
+
+
+
+
+José Fiestas PhD                   Computación Paralela y Distribuı́da   35 / 40
+Ordenamiento por montı́culos (heapsort)
+
+
+
+        El conjunto de elementos se
+        estructura en un montı́culo (heap)
+        con las propiedades mencionadas.
+        Asi, el mayor elemento estará
+        en la raiz, y se retira. Luego
+        se lleva el elemento con la mayor
+        profundidad a la raiz y se compara
+        con sus vecinos para tener
+        nuevamente el mayor valor en la
+        raiz. Se continúa con el siguiente
+        elemento hasta que se llega al
+        elemento de mayor profundidad.
+        Este algoritmo es dificil de paralelizar
+
+
+José Fiestas PhD                     Computación Paralela y Distribuı́da   36 / 40
+Ordenamiento secuencial/paralelo
+
+
+
+
+                    Ordenamiento   Secuencial        Paralelo (span)             Paralelo (Brent)
+                                                                                          2
+                     Bubblesort      O(n2 )                  O(n)                    O( np + p)
+                                         2                                                 2
+                     Bucketsort      O(n )                 O(n)                      O( np + p)
+                     Mergesort     O(n log n)           O(log 2 (n))            O( n log
+                                                                                      p
+                                                                                         n
+                                                                                           + log 2 (p))
+                     Quicksort     O(n log n)           O(log 2 (n))            O( n log
+                                                                                      p
+                                                                                         n
+                                                                                           + log 2 (p))
+                       Bitonic     O(n log n)           O(log 2 (n))            O( n log
+                                                                                      p
+                                                                                         n
+                                                                                           + log 2 (p))
+                      Heapsort     O(nlog (n))              –
+
+
+        - Ordenamiento en paralelo debe considerar el calculo local (n<p)
+        - Importante minimizar comunicación (Unidad 6: Performance)
+
+
+
+
+José Fiestas PhD                        Computación Paralela y Distribuı́da                             37 / 40
+Ordenamiento en paralelo
+
+
+
+
+        Figure 1: Complejidad y tiempo de ejecución para diversos algoritmos en 262144 núcleos, bajo
+        condiciones iniciales distintas. De Axtmann & Sanders, 2020
+
+
+
+José Fiestas PhD                           Computación Paralela y Distribuı́da                         38 / 40
+Bibliografı́a i
+
+
+
+                Axtmann, T., Sanders, P. et.al., Practical Massively Parallel Sorting,
+                Proceedings of the 2017 IEEE International Parallel and Distributed
+                Processing Symposium (IPDPS ’17), IEEE, 2017
+                Joseph Jájá An introduction of parallel algorithms. University of
+                Maryland, Addison-Wesley Publishing Company, 1992
+                Michael J. Quinn. Parallel Programming in C with MPI and
+                OpenMP. 1st. McGraw-Hill Education Group, 2003. isbn:
+                0071232656.
+                Sanders P. & Hansch J., Efficient Massively Parallel Quicksort,
+                Proceedings of the 8th Annual ACM Symposium on Parallel
+                Algorithms and Architectures (SPAA ’96), ACM, 1996
+
+
+
+José Fiestas PhD                       Computación Paralela y Distribuı́da          39 / 40
+José Fiestas PhD   Computación Paralela y Distribuı́da   40 / 40
+

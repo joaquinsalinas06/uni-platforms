@@ -6,7 +6,7 @@ prompt sólo añade lo específico de tu porción del curso.
 ## Qué leer antes de escribir
 
 1. `AGENTS.md` — principio rector y restricciones del brief.
-2. **Los PDFs de tu unidad en `raw-materials/UX/`** — no hay `content/analysis/`
+2. **Los PDFs de tu unidad en `raw-materials/U<n>/`** — no hay `content/analysis/`
    pre-digerido en este curso. Empieza por los **apuntes** (LaTeX compilado,
    la fuente más completa) y usa las **slides** para completar detalles y
    figuras que los apuntes no traen. Si existe una transcripción en

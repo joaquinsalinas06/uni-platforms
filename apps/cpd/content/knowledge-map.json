@@ -74,6 +74,18 @@
         "omp-memory-model",
         "hybrid-mpi-openmp"
       ]
+    },
+    {
+      "id": "u5",
+      "title": "Unidad 5 — Ecuaciones diferenciales parciales y ordenamiento en paralelo",
+      "sourceFiles": [
+        "raw-materials/U5/U5.1 Algoritmos-EDP.pdf",
+        "raw-materials/U5/U5.2 Algoritmos-ordenamiento.pdf"
+      ],
+      "topics": [
+        "pde-parallel",
+        "parallel-sorting"
+      ]
     }
   ],
   "topics": {
@@ -520,6 +532,63 @@
       "placeholder": false,
       "status": "generated",
       "complexityStyleFromProfessor": "derivation-based"
+    },
+    "pde-parallel": {
+      "type": "concept",
+      "title": "Ecuaciones diferenciales parciales en paralelo",
+      "unit": "u5",
+      "prerequisites": [
+        "mpi-intro",
+        "mpi-blocking-nonblocking",
+        "mpi-collectives"
+      ],
+      "buildsOn": [
+        "performance-metrics",
+        "hybrid-mpi-openmp"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "jacobi-halo-mpi",
+        "wave-equation-mpi"
+      ],
+      "sourceSlides": [
+        "U5.1 Algoritmos-EDP.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "network-topology",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "derivation-based"
+    },
+    "parallel-sorting": {
+      "type": "concept",
+      "title": "Algoritmos de ordenamiento en paralelo",
+      "unit": "u5",
+      "prerequisites": [
+        "mpi-collectives",
+        "pram-algorithms",
+        "omp-tasks-icv"
+      ],
+      "buildsOn": [
+        "performance-metrics",
+        "prefix-sum-recurrences"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "rank-sort",
+        "parallel-quicksort",
+        "batcher-bitonic"
+      ],
+      "sourceSlides": [
+        "U5.2 Algoritmos-ordenamiento.pdf"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "dag",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated",
+      "complexityStyleFromProfessor": "recurrence-based"
     }
   }
 }

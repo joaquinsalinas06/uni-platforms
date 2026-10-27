@@ -1,0 +1,43 @@
+id: parallel-sorting
+title: "Algoritmos de ordenamiento en paralelo"
+type: concept
+unit: u5
+
+prerequisites: [mpi-collectives, pram-algorithms, omp-tasks-icv]
+buildsOn: [performance-metrics, prefix-sum-recurrences]
+usedBy: []
+
+complexity:
+  ranking-n2-procesos:
+    worst: "T_\\infty = O(\\log n),   W = O(n^2 + n\\log n)"
+    reasoning: >-
+      Con n^2 procesos se calculan todas las comparaciones B[i,j] = (A[i] >= A[j]) en un paso\  el rango de
+      cada elemento es la suma de su fila, que en PRAM se hace en O(log n). El trabajo total es n^2
+      comparaciones mas n sumas de log n: rápido pero poco eficiente.
+    source: "U5.2 Algoritmos-ordenamiento.pdf, diapositiva 12"
+  quicksort-n-igual-p:
+    worst: "T(p) = T(p/2) + \\log p  \\Rightarrow  T_p = O(\\log^2 p)"
+    reasoning: >-
+      Cada nivel de recursión hace un broadcast del pivote y una suma de prefijos, ambos de costo log p, y
+      el problema se parte (en promedio) en dos mitades. La recurrencia T(p) = T(p/2) + log p suma
+      log p + log(p/2) + ... + 1 = O(log^2 p).
+    source: "U5.2 Algoritmos-ordenamiento.pdf, diapositiva 20"
+  quicksort-n-mayor-p:
+    worst: "T_p = O\\!\\left(\\frac{n\\log n}{p} + \\log p\\left(\\alpha + \\frac{n}{p}\\beta\\right) + \\alpha\\log^2 p\\right)"
+    reasoning: >-
+      Cada proceso ordena sus n/p elementos localmente en (n/p) log(n/p)\  luego se añaden las
+      comunicaciones de la versión PRAM (span log^2 p), con mensajes de tamaño n/p a costo alfa + beta n/p
+      por nivel.
+    source: "U5.2 Algoritmos-ordenamiento.pdf, diapositiva 21"
+  bitonico-brent:
+    worst: "T_\\infty = O(\\log^2 n),   T_p = O\\!\\left(\\frac{n\\log n}{p} + \\log^2 p\\right)"
+    reasoning: >-
+      BitonicSort(n) hace dos BitonicSort de n/2 en paralelo y un BitonicMerge de span log n, así que
+      T(n) = T(n/2) + log n = O(log^2 n). Con p procesadores se aplica Brent: el trabajo n log n se
+      reparte entre p y se suma el span.
+    source: "U5.2 Algoritmos-ordenamiento.pdf, diapositivas 32 y 37"
+
+professorAnalysisStyle: recurrence-based
+hasVisualization: true
+visualizationType: dag
+placeholder: false

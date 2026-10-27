@@ -1,0 +1,194 @@
+---
+kind: theory
+title: "Ecuaciones diferenciales parciales en paralelo"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Las **ecuaciones diferenciales parciales (EDP)** miden cambios de funciones continuas en modelos de física, dinámica de fluidos, biología o química, y su evolución en el tiempo; por eso aparecen en toda la ciencia y la ingeniería (ecuaciones de calor, de difusión, de onda). Un ejemplo es $\frac{\partial u}{\partial x}(x,y) + \frac{\partial u}{\partial y}(x,y) = 0$, con solución $u = f(x,y)$.
+
+Casi nunca se resuelven de forma exacta: se **discretiza** el dominio en una malla y se aproxima cada derivada con **diferencias finitas**. El problema es el tamaño: en 2D hay $N_x \cdot N_y$ incógnitas y en 3D una malla de $1000^3$ puede llegar a $10^9$ ecuaciones. Una sola máquina no alcanza, y hay que repartir la malla entre procesos ([MPI](/topics/mpi-intro)) sin que la comunicación se coma lo ganado.
+
+## Intuición
+
+Cada punto de la malla solo depende de sus **vecinos inmediatos**. Entonces la malla se corta en parcelas, una por proceso, y lo único que tiene que viajar entre procesos es **la franja de borde** de cada parcela. El cómputo crece con el área de la parcela y la comunicación solo con su perímetro: cuanto más grande es la parcela, mejor sale la cuenta.
+
+La clasificación de la clase decide cuánto se puede paralelizar:
+
+| Tipo | Ejemplo | Forma | Dependencia del tiempo |
+|---|---|---|---|
+| Elíptica | Laplace, Poisson | $\nabla^2 u = S(x,y)$ | ninguna: el campo es un equilibrio (potencial) |
+| Parabólica | Calor, difusión | $\frac{\partial u}{\partial t} = -D\frac{\partial}{\partial x}\left(\frac{\partial u}{\partial x}\right)$ | evoluciona en $t$ |
+| Hiperbólica | Onda | $\frac{\partial^2 u}{\partial t^2} = c^2\frac{\partial^2 u}{\partial x^2}$ | evoluciona en $t$, con dos pasos atrás |
+
+En las dos últimas el **tiempo debe ser secuencial**: no se puede paralelizar. Se paraleliza el **espacio** (la descomposición de dominio) en cada paso.
+
+<Visualization viz={{
+  type: 'network-topology',
+  steps: [
+    {
+      note: "Dominio 1D de 16 puntos repartido en 4 procesos de 4 puntos cada uno. Cada proceso calcula solo sus puntos.",
+      processes: [
+        { id: 'p0', label: 'P0 x4', state: 'active' },
+        { id: 'p1', label: 'P1 x4', state: 'active' },
+        { id: 'p2', label: 'P2 x4', state: 'active' },
+        { id: 'p3', label: 'P3 x4', state: 'active' },
+      ],
+      dataFlow: [],
+    },
+    {
+      note: "Para actualizar el punto de su borde, cada proceso necesita el valor del vecino: se intercambia un solo punto con cada lado (P2P). Las flechas dobles son esos intercambios de halo.",
+      processes: [
+        { id: 'p0', label: 'P0 x4', state: 'active' },
+        { id: 'p1', label: 'P1 x4', state: 'active' },
+        { id: 'p2', label: 'P2 x4', state: 'active' },
+        { id: 'p3', label: 'P3 x4', state: 'active' },
+      ],
+      dataFlow: [
+        { from: 'p0', to: 'p1', label: '1 punto' },
+        { from: 'p1', to: 'p0', label: '1 punto' },
+        { from: 'p1', to: 'p2', label: '1 punto' },
+        { from: 'p2', to: 'p1', label: '1 punto' },
+        { from: 'p2', to: 'p3', label: '1 punto' },
+        { from: 'p3', to: 'p2', label: '1 punto' },
+      ],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+### Diferencias finitas
+
+La serie de Taylor de $u$ alrededor de $x_0$ justifica aproximar las derivadas con valores de la malla (paso $\delta$):
+
+$$\frac{\partial u}{\partial x} \approx \frac{u(x_0+\delta) - u(x_0-\delta)}{2\delta}, \qquad \frac{\partial^2 u}{\partial x^2} \approx \frac{u(x_0+\delta) - 2u(x_0) + u(x_0-\delta)}{\delta^2}.$$
+
+### Laplace (elíptica)
+
+Es un modelo de flujo de calor y viscosidad. Con la derivada de segundo orden en $x$ y en $y$ y el mismo paso en ambas direcciones, la ecuación $\nabla^2 u = 0$ queda como el **promedio de los cuatro vecinos**:
+
+$$u^{n+1}_{i,j} = \frac{u_{i+1,j} + u_{i-1,j} + u_{i,j+1} + u_{i,j-1}}{4}$$
+
+```cpp
+for (i = 1; i <= NR; i++)
+  for (j = 1; j <= NC; j++)
+    u[i][j] = 0.25 * (uold[i-1][j] + uold[i+1][j] + uold[i][j-1] + uold[i][j+1]);
+```
+
+Los bordes de la malla llevan **condiciones de frontera**: por ejemplo $u(0,y) = 0$, $u(x,0) = u(x,L) = 0$ y $u(L,y) = u_{max}\sin(\pi y/L)$, con $u^0_{i,j} = 0$ adentro. Si un vecino está en la frontera, su valor es conocido y pasa al lado derecho de la ecuación ($-4u_{2,4} + u_{3,4} + u_{2,3} + u_{2,5} = u_{1,4}$). Escribir una ecuación por punto interior da un sistema de $n$ ecuaciones con $n$ incógnitas.
+
+### Poisson (elíptica con fuente)
+
+$\nabla^2 u = S(x,y)$, donde $S$ representa la fuente (masa, carga o fuente de calor); describe el equilibrio en procesos de transmisión de energía y es independiente del tiempo. La solución se especifica en las fronteras con una condición de **Dirichlet** ($u = f(x,y)$) o de **Neumann** (derivada normal $g(x,y)$). En diferencias finitas, con $h_x = h_y = h$:
+
+$$\frac{1}{h^2}\left(u_{i+1,j} + u_{i-1,j} + u_{i,j+1} + u_{i,j-1} - 4u_{i,j}\right) = S_{i,j}$$
+
+Se resuelve **iterando** desde un valor inicial, con $k$ como índice de iteración:
+
+$$u^{k+1}_{i,j} = \frac14\left(u^k_{i+1,j} + u^k_{i-1,j} + u^k_{i,j+1} + u^k_{i,j-1} - h^2 S_{i,j}\right)$$
+
+**Jacobi** guarda los valores estimados de cada iteración y los usa en la siguiente; **Gauss-Seidel** reemplaza el valor nuevo en la misma iteración. Se repite hasta que $\text{diff} = \max|u^{k+1}_{i,j} - u^k_{i,j}| \le \epsilon$.
+
+### Descomposición de dominio
+
+La malla se divide en subdominios y cada proceso resuelve uno. Los dominios cúbicos se descomponen fácilmente; los de **forma arbitraria** son más difíciles, porque el balance de carga exige **igual número de puntos de malla** por proceso. Una opción es encerrar el dominio en un rectángulo, a costa de más memoria (los puntos fuera del dominio deben conocerse); aumentar el número de puntos es menos eficiente, y las simetrías existen solo en algunas zonas. El profesor da como ejemplo el modelo PIC (*Particle in Cell*) del código Smilei para plasmas.
+
+## Operaciones
+
+Los dos subtemas desarrollan los patrones de comunicación:
+
+- [Jacobi con halos en MPI](/topics/pde-parallel/algorithms/jacobi-halo-mpi): Laplace 1D con `MPI_Scatter`, intercambio de bordes P2P y `MPI_Allreduce` del error.
+- [Ecuación de onda en MPI](/topics/pde-parallel/algorithms/wave-equation-mpi): la ecuación hiperbólica con la perturbación del tsunami (PD5), con medición real.
+
+## Análisis de complejidad
+
+**Secuencial.** Cada iteración toca los $N \times N$ nodos con $m$ operaciones por nodo, y se repite $k$ veces hasta converger:
+
+$$T(n) = k\, m\, N^2.$$
+
+**Paralelo con descomposición 1D** (tiras de $N/p$ filas, el caso de Laplace 1D de la clase). Cada proceso calcula su parte y envía/recibe una frontera por lado, así que por iteración:
+
+$$T_p = k\left[m\,\frac{N^2}{p} + 2(\alpha + \beta N)\right] + \text{(reducción del error: } O(\log p)\text{)}.$$
+
+*Nota de apoyo (derivado, no está escrito así en las diapositivas)*: la comunicación por iteración, $2(\alpha+\beta N)$, **no baja con $p$** en una descomposición por tiras, mientras que el cómputo sí. Con bloques 2D el halo es $4N/\sqrt{p}$ ([omp-halo-decomposition](/topics/hybrid-mpi-openmp/algorithms/omp-halo-decomposition)), que sí disminuye: de ahí que se prefieran bloques cuando $p$ crece.
+
+**Parabólica e hiperbólica.** El tiempo es secuencial: con $n_t$ pasos y una malla de $N$ puntos repartida en $p$ procesos,
+
+$$T_p \approx n_t\left[m\,\frac{N}{p} + 2(\alpha+\beta)\right],$$
+
+el cómputo por paso se divide entre $p$ y el halo es un solo punto por lado. *Nota de apoyo (derivado)*: es el modelo que explica la medición de abajo: con $N$ pequeño el término $2(\alpha+\beta)$ domina y agregar procesos empeora el tiempo.
+
+## Tabla de complejidad
+
+La tabla viene de `meta.yaml`. Aquí solo lo que no dice: la cota secuencial $k\,m\,N^2$ depende de $k$ (iteraciones hasta converger), que a su vez depende del método (Jacobi, Gauss-Seidel) y de la tolerancia $\epsilon$; el profesor no da una fórmula para $k$.
+
+## Ejemplos
+
+**Laplace 1D con Jacobi (diapositiva 17).** Una iteración promedia los dos vecinos y se detiene cuando el error máximo baja de la tolerancia:
+
+```cpp
+while (error > tol && iter < max_iter) {
+  u_old = u;
+  error = 0.0;
+  for (int i = 1; i < N - 1; ++i) {
+    u[i] = 0.5 * (u_old[i-1] + u_old[i+1]);
+    error = std::max(error, std::abs(u[i] - u_old[i]));
+  }
+  iter++;
+}
+```
+
+**Versión MPI (diapositiva 18).** El proceso 0 reparte con `MPI_Scatter`; en cada iteración cada proceso intercambia **un punto** con el vecino izquierdo y con el derecho, actualiza sus puntos interiores y todos reducen el error con `MPI_Allreduce(..., MPI_MAX, ...)`; al final `MPI_Gather` reúne el resultado. El detalle completo, con dos observaciones sobre el código de la clase, está en [Jacobi con halos en MPI](/topics/pde-parallel/algorithms/jacobi-halo-mpi).
+
+**Escalabilidad medida del tsunami.** La ecuación de onda 1D con la perturbación de la PD5 ([`pd5_onda_mpi.cpp`](/topics/pde-parallel/algorithms/wave-equation-mpi)), con $2^{20}$ puntos y 800 pasos en un Apple M5 (4 núcleos de rendimiento y 6 de eficiencia), `mpirun --oversubscribe`, mejor de 3 corridas:
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "Speedup medido de la onda 1D con 2 a la 20 puntos. Con p = 2 la curva queda por encima de lo lineal porque cada proceso trabaja con la mitad de la memoria y cabe mejor en caché. Con p = 4 y p = 8 se aplana: la máquina tiene solo 4 núcleos de rendimiento y los demás procesos corren en núcleos de eficiencia.",
+      series: [
+        { id: 'medido', label: 'speedup medido', points: [[1, 1], [2, 2.27], [4, 2.45], [8, 3.12]] },
+        { id: 'ideal', label: 'ideal S = p', points: [[1, 1], [2, 2], [4, 4], [8, 8]] },
+      ],
+      highlight: ['medido'],
+      params: {},
+    },
+  ],
+}} />
+
+| $p$ | $T_p$ (s) | $S = T_1/T_p$ | $E = S/p$ |
+|---|---|---|---|
+| 1 | 2.667 | 1.00 | 1.00 |
+| 2 | 1.174 | 2.27 | 1.14 |
+| 4 | 1.089 | 2.45 | 0.61 |
+| 8 | 0.854 | 3.12 | 0.39 |
+
+## Comparación con temas relacionados
+
+| | Elíptica (Laplace, Poisson) | Parabólica (difusión) | Hiperbólica (onda) |
+|---|---|---|---|
+| ¿Hay tiempo? | no, es un equilibrio | sí | sí |
+| Bucle principal | iterar hasta converger ($\text{diff} \le \epsilon$) | pasos de tiempo fijos | pasos de tiempo fijos |
+| Qué se paraleliza | los puntos de la malla | el espacio (el tiempo es secuencial) | el espacio (el tiempo es secuencial) |
+| Comunicación | halo + reducción del error | halo (P2P) | halo (P2P) |
+| Pasos de tiempo guardados | no aplica | 1 ($u^t$) | 2 ($u^t$ y $u^{t-1}$) |
+
+Frente a [paralelismo híbrido](/topics/hybrid-mpi-openmp): la descomposición de dominio con halos es el caso de uso que justifica combinar MPI entre nodos y OpenMP dentro de cada uno, porque OpenMP elimina las copias de halo entre hilos.
+
+## Prueba de dominio
+
+Debo poder explicar:
+
+- Qué distingue una EDP elíptica, una parabólica y una hiperbólica, y por qué en las dos últimas el tiempo no se paraleliza.
+- Cómo se obtiene el promedio de cuatro vecinos de Laplace a partir de las diferencias finitas de segundo orden.
+- La diferencia entre Jacobi y Gauss-Seidel, y el criterio de parada $\text{diff} \le \epsilon$.
+- Qué es un halo, por qué basta un punto por lado en una malla 1D, y por qué el balance de carga exige igual número de puntos por proceso.
+
+Debo poder hacer:
+
+- Escribir un intercambio de borde con `MPI_Send`/`MPI_Recv` entre vecinos sin crear un interbloqueo.
+- Plantear $T_p$ con el término de cómputo y el de comunicación, y decir cuándo agregar procesos deja de ayudar.

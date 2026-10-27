@@ -1,0 +1,29 @@
+id: pde-parallel
+title: "Ecuaciones diferenciales parciales en paralelo"
+type: concept
+unit: u5
+
+prerequisites: [mpi-intro, mpi-blocking-nonblocking, mpi-collectives]
+buildsOn: [performance-metrics, hybrid-mpi-openmp]
+usedBy: []
+
+complexity:
+  jacobi-secuencial:
+    worst: "T(n) = k\\, m\\, N^2"
+    reasoning: >-
+      Cada iteración de Jacobi o Gauss-Seidel recorre los N x N nodos de la malla y hace m operaciones por
+      nodo; se repite k veces hasta que diff = max |u_nuevo - u_antiguo| baja de epsilon. El costo es
+      iteraciones por nodos por operaciones.
+    source: "U5.1 Algoritmos-EDP.pdf, diapositiva 26"
+  halo-1d-por-paso:
+    worst: "T_p = O\\!\\left(\\frac{N}{p}\\right) + O(\\alpha + \\beta)"
+    reasoning: >-
+      Con una descomposición 1D en p bloques de N/p puntos, cada proceso calcula N/p puntos por paso y
+      envía/recibe solo un valor a cada vecino (dos mensajes de una celda), de modo que la comunicación
+      por paso no depende de N: es una latencia mas un valor, mientras el cómputo si decrece con p.
+    source: "U5.1 Algoritmos-EDP.pdf, diapositivas 18 y 33 (derivado)"
+
+professorAnalysisStyle: derivation-based
+hasVisualization: true
+visualizationType: network-topology
+placeholder: false

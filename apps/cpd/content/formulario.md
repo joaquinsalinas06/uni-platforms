@@ -465,3 +465,43 @@ Dos núcleos a $f/2$ rinden lo mismo que uno a $f$ con $2\gamma(f/2)^3 = \gamma 
 **Ejecución en Slurm:** `--ntasks` = procesos MPI, `--cpus-per-task` = hilos, `export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK`, `mpirun ./programa`.
 
 [ver tema completo](/topics/hybrid-mpi-openmp)
+
+## Unidad 5 — Ecuaciones diferenciales parciales y ordenamiento en paralelo
+
+### Ecuaciones diferenciales parciales en paralelo
+
+**Definición.** Tipos: elíptica (Laplace, Poisson: $\nabla^2 u = S$), parabólica (difusión: $u_t = -D\,(u_x)_x$) e hiperbólica (onda: $u_{tt} = c^2 u_{xx}$). En las dos últimas el tiempo es secuencial: se paraleliza el espacio con descomposición de dominio y halos.
+
+**Fórmula — diferencias finitas.**
+
+$$\frac{\partial^2 u}{\partial x^2} \approx \frac{u(x_0+\delta) - 2u(x_0) + u(x_0-\delta)}{\delta^2}$$
+
+**Fórmula — Laplace (Jacobi) y Poisson.**
+
+$$u^{n+1}_{i,j} = \tfrac14\left(u_{i+1,j} + u_{i-1,j} + u_{i,j+1} + u_{i,j-1}\right), \qquad u^{k+1}_{i,j} = \tfrac14\left(u^k_{i+1,j} + u^k_{i-1,j} + u^k_{i,j+1} + u^k_{i,j-1} - h^2 S_{i,j}\right)$$
+
+Se itera hasta $\max|u^{k+1} - u^k| \le \epsilon$. Costo secuencial: $T(n) = k\,m\,N^2$ ($k$ iteraciones, $m$ operaciones por nodo, $N$ nodos por dimensión). Jacobi usa los valores de la iteración anterior; Gauss-Seidel reemplaza en la misma iteración.
+
+**Fórmula — onda.**
+
+$$u(x,t+1) = 2u(x,t) - u(x,t-1) + \big(u(x+1,t) - 2u(x,t) + u(x-1,t)\big)\frac{c^2\,\delta t^2}{\delta x^2}$$
+
+**Halo:** 1D, un punto por vecino por paso (dos mensajes); $T_p \approx n_t\left[c_0\,N/p + 2(\alpha+\beta)\right]$ (derivado). Si el problema es pequeño, la latencia domina y más procesos empeoran el tiempo.
+
+[ver tema completo](/topics/pde-parallel)
+
+### Algoritmos de ordenamiento en paralelo
+
+**Definición.** Por comparaciones no baja de $O(n\log n)$; con $p<n$: $T_{par} = O\!\left(\frac{n}{p}\log\frac{n}{p}\right) + T_{comm}$. Operación básica: comparar-intercambiar.
+
+**Fórmula — ranking ($n^2$ procesos):** $B[i,j] = A[i] \ge A[j]$, $M[i] = \sum_j B[i,j]$; $T_\infty = O(\log n)$, $W = O(n^2 + n\log n)$.
+
+**Fórmula — quicksort paralelo:** $T(p) = T(p/2) + \log p \Rightarrow O(\log^2 p)$; con $n>p$:
+
+$$T_p = O\!\left(\frac{n\log n}{p} + \log p\left(\alpha + \frac{n}{p}\beta\right) + \alpha\log^2 p\right)$$
+
+**Fórmula — bitónico / odd-even mergesort de Batcher:** $T_\infty(n) = T_\infty(n/2) + O(\log n) = O(\log^2 n)$; Brent: $O\!\left(\frac{n\log n}{p} + \log^2 p\right)$. Heapsort: difícil de paralelizar.
+
+**Escalabilidad del bitónico (isoeficiencia):** malla $n \propto 2^{\sqrt{p}}$ (comunicación $O(n/\sqrt{p})$); hipercubo $n \propto 2^{\log^2 p}$ (comunicación $O\!\left(\frac{n}{p}\log^2 p\right)$); la malla necesita menos trabajo para $p<65\,536$. **Hyksort:** $T_p = O\!\left(\frac{n}{p}\log n + \frac{n}{p}\log p + \log^2 p\right)$; $n\log n \propto p\log^2 p$: escala mejor.
+
+[ver tema completo](/topics/parallel-sorting)

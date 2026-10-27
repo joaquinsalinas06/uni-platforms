@@ -8,7 +8,7 @@ de conceptos/algoritmos/modelos formales en vez de estructuras de datos.
 
 Una única fuente de verdad: **`content/knowledge-map.json`**. Ningún agente
 inventa contenido. Cada agente lee el knowledge map + el material fuente
-(`raw-materials/UX/` — symlink a `../teoria/UX/`) y escribe **sólo** dentro
+(`raw-materials/U1`…`U5`, PDFs de cada unidad) y escribe **sólo** dentro
 del alcance que el mapa le asigna.
 
 Eso es lo que permite paralelizar sin que los agentes se pisen ni inventen temas.
@@ -30,7 +30,7 @@ Siempre **pnpm**. Dev server en segundo plano: `astro dev --background`, y
 ```
 content/
   knowledge-map.json          ← fuente de verdad; SÓLO lo toca el agente de integración
-  units/u{1,2,3,4}.md
+  units/u{1,2,3,4,5}.md
   topics/<id>/
     meta.yaml                 ← interfaz de coordinación entre agentes
     theory.md                 ← 9 secciones fijas
@@ -40,7 +40,7 @@ content/
 cpp/topics/<id>/              ← sólo si un subtema tiene código propio
 cpp/practica/                 ← código de laboratorio del profesor (PDs/PD3/consolidado)
 templates/                    ← lo que recibe cada subagente
-raw-materials/ -> ../teoria/  ← PDFs sin procesar (apuntes + slides), por unidad
+raw-materials/U1..U5/       ← PDFs sin procesar (apuntes + slides), por unidad (ignorado por Vercel: .vercelignore)
 src/
   lib/schemas.ts              ← TODOS los schemas Zod. No duplicarlos en otro lado.
   content.config.ts           ← Content Collections
@@ -86,7 +86,7 @@ scripts/check-knowledge-map.mjs
 ## Cómo se procesa una unidad nueva
 
 ```
-1. Leer raw-materials/UX/ — EMPEZAR por los apuntes (LaTeX compilado, más
+1. Leer raw-materials/U<n>/ — EMPEZAR por los apuntes (LaTeX compilado, más
    completos), después las slides para completar detalles y figuras. No
    asumir que ninguna transcripción externa (p.ej. PDs/PD3/consolidado/md/)
    ya capturó todo — es orientación, no sustituto de leer el PDF.
@@ -168,7 +168,7 @@ falta más de un diagrama o uno a mitad de la prosa, importando
 - **`timeline`**: etiquetas de carril cortas (`hilo 0`, no `hilo 0 (master)`): se pisan con la primera barra.
 - Teoría con código y diagramas intercalados: `theory.mdx` importando `Visualization.astro`; subtemas en `.md` con
   una sola visualización en el frontmatter y `cppSteps` apuntando a `cpp/topics/<id>/`.
-- Evaluaciones nuevas: añadir la categoría a `src/content.config.ts` y a `src/pages/evaluaciones/index.astro` (PD4 ya está).
+- Evaluaciones nuevas: añadir la categoría a `src/content.config.ts` y a `src/pages/evaluaciones/index.astro` (PD1–PD5 ya están).
 
 ## Pendiente
 

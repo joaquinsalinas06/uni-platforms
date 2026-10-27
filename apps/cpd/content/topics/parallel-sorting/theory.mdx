@@ -1,0 +1,159 @@
+---
+kind: theory
+title: "Algoritmos de ordenamiento en paralelo"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Ordenar es una de las operaciones fundamentales más usadas (la clase da como ejemplos el ordenamiento de proteínas en el aparato de Golgi y el de capas de renderizado en animación). En secuencial, un ordenamiento basado en comparaciones de pares **no baja de $O(n\log n)$**; la tabla de la clase resume los clásicos:
+
+| Algoritmo | Promedio | Mejor | Peor | Estabilidad |
+|---|---|---|---|---|
+| Bubblesort | $O(n^2)$ | $O(n)$ | $O(n^2)$ | estable |
+| Selectionsort | $O(n^2)$ | $O(n^2)$ | $O(n^2)$ | estable |
+| Insertionsort | $O(n^2)$ | $O(n)$ | $O(n^2)$ | estable |
+| Heapsort | $O(n\log n)$ | $O(n\log n)$ | $O(n\log n)$ | inestable |
+| Mergesort | $O(n\log n)$ | $O(n\log n)$ | $O(n\log n)$ | estable |
+| Quicksort | $O(n\log n)$ | $O(n\log n)$ | $O(n^2)$ | estable (según la tabla de la clase) |
+
+Además de la cota, el profesor pide mirar la **constante** ($O(c\cdot n)$), el **espacio de trabajo** adicional y la **estabilidad**. En paralelo la pregunta es qué ocurre con $p$ procesos: cuánto se puede acelerar y cuánto cuesta mover los datos.
+
+## Intuición
+
+Todo ordenamiento paralelo se reduce a dos piezas: una **operación básica** de comparar-intercambiar entre dos procesos, y una **forma de organizar** quién se compara con quién (una red). Los algoritmos de esta unidad difieren solo en esa organización:
+
+<Visualization viz={{
+  type: 'dag',
+  steps: [
+    {
+      note: "Cuatro familias (rank, quick, merge, bit): por ranking (cada elemento calcula su posición contando cuantos son menores), por divide y vencerás con partición (quicksort), por fusión (mergesort de Batcher) y por redes de comparación (bitónico). Heapsort queda aparte porque se paraleliza mal.",
+      nodes: [
+        { id: 'sort', value: 'sort', parent: null, state: 'active' },
+        { id: 'rank', value: 'rank', parent: 'sort' },
+        { id: 'qs', value: 'quick', parent: 'sort' },
+        { id: 'merge', value: 'merge', parent: 'sort' },
+        { id: 'bit', value: 'bit', parent: 'sort' },
+        { id: 'heap', value: 'heap', parent: 'sort', state: 'muted' },
+      ],
+      links: [],
+    },
+  ],
+}} />
+
+## Estructura interna
+
+### Operación básica: comparar e intercambiar
+
+- **Caso 1** (un valor por proceso, un solo sentido): $P_1$ envía $A$ a $P_2$; este compara $B$ con $A$ y devuelve el mínimo a $P_1$.
+- **Caso 2** (en paralelo): $P_1$ envía $A$ a $P_2$ y $P_2$ envía $B$ a $P_1$ al mismo tiempo; $P_1$ se queda con $\min(A,B)$ y $P_2$ con $\max(A,B)$.
+
+Con $p < n$ cada proceso guarda $n/p$ elementos: primero los ordena localmente y luego las comparaciones entre procesos se vuelven **mezclas de bloques** (cada par se queda con la mitad menor y la mitad mayor de la unión).
+
+### Caso $p = n$ y caso $p < n$
+
+Con $p = n$ el mejor algoritmo secuencial cuesta $T_{seq} = T_{compr}\,n\log n + O(n)$ y un algoritmo con mezcla óptima resuelve en $O(\log n)\cdot T_{merging}$ (se puede demostrar, Jájá cap. 4). Con $p < n$:
+
+$$T_{par} = O\!\left(\frac{n}{p}\log\frac{n}{p}\right) + T_{comm}.$$
+
+### Mergesort
+
+Se parte de $n$ sublistas de un elemento y se fusionan de a pares hasta quedar una. Para mezclar $A = (a_1,\dots,a_r)$ y $B = (b_1,\dots,b_s)$ ordenadas en una $C$ de $m = r+s$ elementos, la clase supone $r = s$ potencia de 2. La mezcla paralela más conocida es la de Batcher, que se desarrolla en [Mergesort de Batcher y bitónico](/topics/parallel-sorting/algorithms/batcher-bitonic).
+
+### Heapsort
+
+Complejidad $O(n\log n)$. Usa un **heap**, un árbol binario completo donde cada nodo es mayor o igual que sus hijos (en la clase: el mayor elemento queda en la raíz y se retira; el elemento más profundo sube a la raíz y se reacomoda). El profesor lo señala explícitamente: **es difícil de paralelizar**, porque cada extracción depende de la anterior; por eso aparece sin cota de span en la tabla comparativa.
+
+## Operaciones
+
+Tres subtemas:
+
+- [Ordenamiento por ranking](/topics/parallel-sorting/algorithms/rank-sort): rápido y poco eficiente ($n^2$ procesos) y su versión con $\sqrt{p}\times\sqrt{p}$.
+- [Quicksort en paralelo](/topics/parallel-sorting/algorithms/parallel-quicksort): $n = p$ con sumas de prefijos y el caso $n > p$.
+- [Mergesort de Batcher y bitónico](/topics/parallel-sorting/algorithms/batcher-bitonic): redes de ordenamiento, con código OpenMP medido.
+
+## Análisis de complejidad
+
+La tabla de la clase compara el tiempo secuencial con el paralelo en dos formas: el **span** ($T_\infty$, con procesadores ilimitados) y el tiempo con $p$ procesadores por el **teorema de Brent** ($T_p \le W/p + T_\infty$; ver [omp-tasks-icv](/topics/omp-tasks-icv)):
+
+| Ordenamiento | Secuencial | Paralelo (span) | Paralelo (Brent) |
+|---|---|---|---|
+| Bubblesort | $O(n^2)$ | $O(n)$ | $O(n^2/p + p)$ |
+| Bucketsort | $O(n^2)$ | $O(n)$ | $O(n^2/p + p)$ |
+| Mergesort | $O(n\log n)$ | $O(\log^2 n)$ | $O\!\left(\frac{n\log n}{p} + \log^2 p\right)$ |
+| Quicksort | $O(n\log n)$ | $O(\log^2 n)$ | $O\!\left(\frac{n\log n}{p} + \log^2 p\right)$ |
+| Bitónico | $O(n\log n)$ | $O(\log^2 n)$ | $O\!\left(\frac{n\log n}{p} + \log^2 p\right)$ |
+| Heapsort | $O(n\log n)$ | — | — |
+
+Dos advertencias del profesor: el ordenamiento en paralelo debe considerar el **cálculo local**, y es importante **minimizar la comunicación** (se profundiza en la Unidad 6, rendimiento). La figura final de la clase (Axtmann y Sanders, 2020) compara la complejidad y el tiempo de varios algoritmos en 262144 núcleos con distintas condiciones iniciales.
+
+### Escalabilidad del ordenamiento bitónico (PD5, ejercicio 3)
+
+El cómputo es $O\!\left(\frac{n}{p}\log n\right)$ en ambas topologías, pero la comunicación cambia: $O\!\left(\frac{n}{\sqrt{p}}\right)$ en una **malla** y $O\!\left(\frac{n}{p}\log^2 p\right)$ en un **hipercubo**. Para mantener la eficiencia constante el cómputo debe crecer al ritmo de la comunicación (condición de isoeficiencia, como en [performance-metrics](/topics/performance-metrics)):
+
+- **Malla:** $\frac{n}{p}\log n \propto \frac{n}{\sqrt{p}} \Rightarrow \log n \propto \sqrt{p} \Rightarrow n \propto 2^{\sqrt{p}}$.
+- **Hipercubo:** $\frac{n}{p}\log n \propto \frac{n}{p}\log^2 p \Rightarrow \log n \propto \log^2 p \Rightarrow n \propto 2^{\log^2 p}$.
+
+La solución del profesor concluye que **la malla escala mejor, porque necesita menos trabajo $W$ para mantener $E$ constante**.
+
+*Nota de apoyo (derivado, el signo depende de $p$)*: comparar $2^{\sqrt{p}}$ con $2^{\log^2 p}$ es comparar $\sqrt{p}$ con $(\log_2 p)^2$. Con $p = 2^k$: para $p = 1024$ son $32$ contra $100$; para $p = 16384$, $128$ contra $196$; son **iguales en $p = 65536$** ($256$ y $256$) y, para $p$ mayores, $\log^2 p$ es menor, es decir, el hipercubo pasa a necesitar menos trabajo. La conclusión del profesor vale para $p < 65536$ (el rango habitual de un laboratorio); a escala extrema se invierte.
+
+### Hyksort (PD5, ejercicio 3b)
+
+Hyksort es un quicksort en hipercubo con tiempo optimizado
+
+$$T_p = O\!\left(\frac{n}{p}\log n + \frac{n}{p}\log p + \log^2 p\right).$$
+
+El cómputo domina, y la isoeficiencia exige $\frac{n}{p}\log n \propto \log^2 p$, es decir, $n\log n \propto p\log^2 p$ (solución del profesor). Como $\log n \approx \log p$ en ese régimen, basta $n \propto p\log p$ y el trabajo $W = n\log n \propto p\log^2 p$ crece de forma **polinomial** en $p$, frente al crecimiento exponencial en $\sqrt{p}$ o en $\log^2 p$ de los bitónicos. Por eso **escala mejor que los anteriores**.
+
+## Tabla de complejidad
+
+La tabla se genera desde `meta.yaml`: ranking con $n^2$ procesos, quicksort con $n = p$ y con $n > p$ y bitónico. Aquí solo lo que no dice: para el ranking con $n^2$ procesos el span es bajo pero el **trabajo** es $O(n^2)$, mucho más que los $O(n\log n)$ del mejor secuencial; no es *work-optimal*.
+
+## Ejemplos
+
+En el siguiente subtema se resuelven con código y mediciones. La comparación medida del bitónico OpenMP con `std::sort` (2^22 enteros, Apple M5) muestra el costo de las $\frac{\log n(\log n+1)}{2}$ pasadas de la red:
+
+<Visualization viz={{
+  type: 'xy-chart',
+  steps: [
+    {
+      note: "Speedup del ordenamiento bitónico con OpenMP respecto de su propia versión con 1 hilo (2 a la 22 enteros). Escala bien hasta 4 hilos y se aplana a 8, porque la máquina tiene 4 núcleos de rendimiento.",
+      series: [
+        { id: 'bitonico', label: 'bitonico (medido)', points: [[1, 1], [2, 1.9], [4, 3.58], [8, 5.7]] },
+        { id: 'ideal', label: 'ideal S = p', points: [[1, 1], [2, 2], [4, 4], [8, 8]] },
+      ],
+      highlight: ['bitonico'],
+      params: {},
+    },
+  ],
+}} />
+
+*Nota de apoyo*: con 1 hilo el bitónico tarda 1.06 s frente a 0.186 s de `std::sort`, es decir, es unas 5.7 veces **más trabajo** ($W = O(n\log^2 n)$ en la red frente a $O(n\log n)$); recién con 8 hilos (0.186 s) alcanza a `std::sort` secuencial. Es el precio de un span $O(\log^2 n)$.
+
+## Comparación con temas relacionados
+
+| | Ranking | Quicksort | Batcher / Bitónico | Heapsort |
+|---|---|---|---|---|
+| Idea | contar menores | partir por un pivote | red de comparar-intercambiar | árbol de montículo |
+| Span | $O(\log n)$ | $O(\log^2 p)$ | $O(\log^2 n)$ | no se da (difícil) |
+| Trabajo | $O(n^2)$ | $O(n\log n)$ | $O(n\log^2 n)$ en la red | $O(n\log n)$ |
+| Rol de la comunicación | broadcast/gossip/reducción | broadcast + prefijos | pares fijos por topología | — |
+
+Se apoya en los colectivos de [MPI](/topics/mpi-collectives), en las sumas de prefijos de [prefix-sum-recurrences](/topics/prefix-sum-recurrences) y en el modelo PRAM de [pram-algorithms](/topics/pram-algorithms).
+
+## Prueba de dominio
+
+Debo poder explicar:
+
+- Por qué ordenar por comparaciones no baja de $O(n\log n)$ y qué cambia con $p$ procesos.
+- Cómo calcula el ranking cada elemento y por qué el algoritmo de $n^2$ procesos es rápido pero poco eficiente.
+- La recurrencia $T(p) = T(p/2) + \log p$ del quicksort paralelo y su solución $O(\log^2 p)$.
+- Qué es una secuencia bitónica y por qué el bitónico y el odd-even mergesort tienen span $O(\log^2 n)$.
+- Por qué heapsort casi no se paraleliza.
+
+Debo poder hacer:
+
+- Plantear la isoeficiencia de dos topologías y decidir cuál escala mejor (y para qué rango de $p$).
+- Armar $T_p$ con Brent a partir del trabajo y el span.
