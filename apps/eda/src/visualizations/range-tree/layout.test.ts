@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutRangeTree, layout, deriveBridges, type RangeNode, type RangeArray } from './layout.ts';
+import { layoutRangeTree, layout, deriveBridges, layersWidth, rangeTreeWidth, type RangeNode, type RangeArray } from './layout.ts';
 import { NODE_W, NODE_H } from '../canvas-types.ts';
 
 const box = (n: { x: number; y: number; w?: number; h?: number }, defaultW = NODE_W, defaultH = NODE_H) => ({
@@ -126,13 +126,10 @@ test('layers (#32-33): puentes derivados del ejemplo del profesor dan los índic
   const left: RangeArray = { id: 'Ll', row: 1, slot: 'left', cells: [3, 8] };
   const right: RangeArray = { id: 'Lr', row: 1, slot: 'right', cells: [5, 9] };
 
-  // lower_bound de cada valor del padre en el arreglo hijo; cuando no hay
-  // ninguno ≥ (9 en la izquierda, ninguno en la derecha para 8 y 9 no aplica
-  // aquí salvo el último), se acota al último índice existente — no hay un
-  // nodo "sentinela" que dibujar más allá del final del arreglo.
+  // lower_bound puede devolver n: una posición fin, no el último valor.
   const toLeft = deriveBridges(parent, left).map((b) => b.toIndex);
   const toRight = deriveBridges(parent, right).map((b) => b.toIndex);
-  assert.deepEqual(toLeft, [0, 1, 1, 1]);
+  assert.deepEqual(toLeft, [0, 1, 1, 2]);
   assert.deepEqual(toRight, [0, 0, 1, 1]);
 });
 
@@ -189,4 +186,76 @@ test('tree: nodes vacío no revienta', () => {
   const frame = layoutRangeTree({ note: '', nodes: [] });
   assert.deepEqual(frame.nodes, []);
   assert.ok(frame.height > 0);
+});
+
+
+test('layers: el puente al índice n termina en fin y no desaparece', () => {
+  const frame = layout({ note: '', mode: 'layers', arrays: [
+    { id: 'P', row: 0, cells: [1, 4, 7, 9] },
+    { id: 'R', row: 1, cells: [1, 7] },
+  ], bridges: [{ from: 'P', fromIndex: 3, to: 'R', toIndex: 2, active: true }] });
+  assert.equal(frame.edges.length, 1);
+  assert.equal(frame.nodes.find((n) => n.id === 'R:2')?.label, 'fin');
+});
+
+test('layers: rótulos visibles y celdas anchas sin superposición', () => {
+  const step = { note: '', mode: 'layers' as const, arrays: [
+    { id: 'P', label: 'lista aumentada', row: 0, cells: ['origen (1,5)', 'promovido (2,8)', 'vacía'] },
+  ] };
+  const frame = layout(step);
+  assert.ok(frame.annotations.every((a) => a.x >= 0));
+  for (let i = 1; i < frame.nodes.length; i++) {
+    assert.ok(!overlaps(box(frame.nodes[i-1]), box(frame.nodes[i])));
+  }
+  assert.ok(frame.nodes.every((n) => box(n).r <= layersWidth(step)));
+});
+
+
+test('tree: dos satélites no se superponen ni invaden su encabezado', () => {
+  const frame = layoutRangeTree({ note: '', nodes: [
+    { id: 'root', value: 4 },
+    { id: 'a', value: 'D₃: z≤b₃', panel: 'one' },
+    { id: 'b', value: 'D₃′: z≥a₃', panel: 'two' },
+  ], panels: [{ id: 'one', label: 'derecha', anchor: 'root' }, { id: 'two', label: 'izquierda', anchor: 'root' }] });
+  const [a,b] = frame.groups;
+  assert.ok(a.y+a.h < b.y);
+  for (const g of frame.groups) {
+    const n = frame.nodes.find((n) => n.id === (g.id === 'one' ? 'a' : 'b'))!;
+    assert.ok(box(n).t >= g.y+28, 'nodo encima del título del panel');
+  }
+});
+
+
+test('tree: hojas con etiquetas k:13 conservan separación al mostrar satélites', () => {
+  const nodes: RangeNode[] = [{id:'r',value:'k:9'}, ...Array.from({length:8},(_,i) => ({id:'l'+i,value:'k:'+String(i+10),parent:'r'})), {id:'sat',value:'b',panel:'s'}];
+  const step = {note:'',nodes,panels:[{id:'s',label:'Consulta k+1',anchor:'r'}]};
+  const f = layoutRangeTree(step, rangeTreeWidth(step));
+  const leaves = f.nodes.filter((n) => n.id.startsWith('l')).sort((a,b) => a.x-b.x);
+  for (let i=1;i<leaves.length;i++) assert.ok(!overlaps(box(leaves[i-1]),box(leaves[i])));
+});
+
+
+test('tree: encabezados largos se ajustan al panel y reservan espacio vertical', () => {
+  const step = { note:'',nodes:[{id:'r',value:4},{id:'s',value:2,panel:'sec'}],panels:[{id:'sec',label:'RangeQuery1D en k+1 (secundario del subárbol canónico)',anchor:'r'}] };
+  const frame = layoutRangeTree(step,320);
+  const group = frame.groups[0];
+  const labels = frame.annotations.filter((a) => a.id.startsWith('sec-title'));
+  assert.ok(labels.length>1);
+  for (const a of labels) assert.ok(a.x+a.text.length*(a.size??12)*0.6 <= group.x+group.w);
+  assert.ok(box(frame.nodes.find((n) => n.id==='s')!).t>labels.at(-1)!.y);
+});
+
+
+test('layers: cuatro arreglos hoja en una fila tienen carriles independientes', () => {
+  const step = { note:'',mode:'layers' as const, arrays:[4,9,1,7].map((v,i) => ({id:'leaf'+i,label:'ABCD'[i]+` [${v}]`,row:2,cells:[v]})) };
+  for (const width of [layersWidth(step),720]) {
+    const frame = layout(step,width);
+    for (let i=0;i<frame.nodes.length;i++) for(let j=i+1;j<frame.nodes.length;j++) {
+      assert.ok(!overlaps(box(frame.nodes[i]),box(frame.nodes[j])));
+    }
+    const labels = frame.annotations.filter((a) => a.id.endsWith('-label'));
+    for(let i=1;i<labels.length;i++) {
+      assert.ok(labels[i-1].x+labels[i-1].text.length*6.6 < labels[i].x);
+    }
+  }
 });

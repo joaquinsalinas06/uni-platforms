@@ -38,5 +38,5 @@ export default function PersistentVisualization({ steps }: { steps: PersistentSt
     };
   });
 
-  return <VisualizationCanvas steps={canvasSteps} width={width} height={height} />;
+  return <VisualizationCanvas minScale={0.9} steps={canvasSteps} width={width} height={height} />;
 }

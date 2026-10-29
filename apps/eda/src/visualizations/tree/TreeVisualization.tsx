@@ -102,5 +102,5 @@ export default function TreeVisualization({ steps }: { steps: TreeStep[] }) {
   // El lienzo crece con el árbol/panel más profundo de la secuencia.
   const deepest = Math.max(...canvasSteps.flatMap((s) => s.nodes.map((n) => n.y)), 34);
   const hasGroups = canvasSteps.some((s) => (s.groups ?? []).length > 0);
-  return <VisualizationCanvas steps={canvasSteps} width={W} height={deepest + (hasGroups ? 60 : 44)} />;
+  return <VisualizationCanvas minScale={0.9} steps={canvasSteps} width={W} height={deepest + (hasGroups ? 60 : 44)} />;
 }

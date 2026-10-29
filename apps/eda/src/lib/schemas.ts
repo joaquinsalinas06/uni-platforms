@@ -5,7 +5,7 @@ import { NODE_STATES } from '../visualizations/canvas-types.ts';
 // (src/content.config.ts, src/lib/structures.ts) y scripts/check-knowledge-map.mjs.
 // No duplicar ninguno de estos schemas en otro archivo.
 
-export const VISUALIZATION_TYPES = ['tree', 'graph', 'persistent', 'range-tree', 'geometric'] as const;
+export const VISUALIZATION_TYPES = ['tree', 'graph', 'persistent', 'range-tree', 'geometric', 'planar'] as const;
 
 // Los distintos "modos" de layout dentro de una familia. `tree` y `layers`
 // son de range-tree; los otros tres de persistent. hasVisualization/
@@ -106,6 +106,34 @@ const geoSegment = z.object({
   arrow: z.boolean().optional(),
 });
 
+// Geometría plana: coordenadas espaciales, distintas del plano llave × tiempo.
+const xy = z.tuple([z.number().finite(), z.number().finite()]);
+const bounds = z.tuple([z.number().finite(), z.number().finite(), z.number().finite(), z.number().finite()])
+  .refine(([x0,y0,x1,y1]) => x0 < x1 && y0 < y1, 'El plano necesita límites crecientes');
+export const planarSchema = z.object({
+  bounds,
+  points: z.array(z.object({ id: z.string().min(1), x: z.number().finite(), y: z.number().finite(), label: z.string().optional(), state: z.enum(NODE_STATES).optional() })).optional(),
+  segments: z.array(z.object({ id: z.string().min(1), from: xy, to: xy, label: z.string().optional(), state: z.enum(NODE_STATES).optional(), dash: z.boolean().optional(), arrow: z.boolean().optional() })).optional(),
+  polygons: z.array(z.object({ id: z.string().min(1), vertices: z.array(xy).min(3), labelAt: xy.optional(), label: z.string().optional(), state: z.enum(NODE_STATES).optional() })).optional(),
+  query: z.object({ x: z.number().finite(), y: z.number().finite() }).optional(),
+  mode: z.enum(['parity','ray','dominance','range','sweep']).optional(),
+  range: bounds.optional(),
+  sweepX: z.number().finite().optional(),
+  sweepAfter: z.boolean().optional(),
+  rayDirection: z.enum(['up','right']).optional(),
+  showRay: z.boolean().optional(),
+  showHits: z.boolean().optional(),
+  xLabel: z.string().optional(),
+  yLabel: z.string().optional(),
+}).superRefine((p,ctx) => {
+  const need = (ok: boolean, message: string) => { if (!ok) ctx.addIssue({ code: z.ZodIssueCode.custom, message }); };
+  if (['parity','ray','dominance'].includes(p.mode ?? '')) need(!!p.query, 'El modo necesita un punto de consulta');
+  if (p.mode === 'parity') need(!!p.polygons?.length, 'Paridad necesita polígonos');
+  if (p.mode === 'range') need(!!p.range, 'La consulta necesita un rango');
+  const ids = [...(p.points ?? []), ...(p.segments ?? []), ...(p.polygons ?? [])].map(v => v.id);
+  need(new Set(ids).size === ids.length, 'IDs geométricos duplicados');
+});
+
 export const visualizationSchema = z.object({
   type: z.enum(VISUALIZATION_TYPES),
   /** default de todos los pasos; cada paso puede sobreescribirlo. */
@@ -114,6 +142,7 @@ export const visualizationSchema = z.object({
     .array(
       z.object({
         note: z.string(),
+        planar: planarSchema.optional(),
         // `nodes` pasa de requerido a con default: estrictamente más
         // permisivo que antes, así que nada que validaba deja de validar.
         nodes: z.array(vizNode).default([]),
@@ -154,6 +183,10 @@ export const visualizationSchema = z.object({
       }),
     )
     .min(1),
+}).superRefine((viz, ctx) => {
+  if (viz.type === 'planar') viz.steps.forEach((step, i) => {
+    if (!step.planar) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['steps', i, 'planar'], message: 'Falta la escena planar' });
+  });
 });
 
 const complexityCase = z.object({

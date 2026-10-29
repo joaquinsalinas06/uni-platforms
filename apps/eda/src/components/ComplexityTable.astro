@@ -1,6 +1,7 @@
 ---
 import type { Meta } from '../lib/schemas';
 import { growthWeight } from '../lib/complexity';
+import { renderRich } from '@uni/visualizations';
 
 interface Props {
   meta: Meta;
@@ -46,7 +47,7 @@ const comparable = HEAP_FAMILY.includes(meta.id);
                   </td>
                   {/* Celda vacía = el profesor no dio esa cota. No se rellena. */}
                   {[c.best, c.avg].map((v) => (
-                    <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-nowrap">
+                    <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-normal min-w-24 max-w-64">
                       {v ? (
                         <span class="text-[var(--muted)]">{v}</span>
                       ) : (
@@ -57,10 +58,10 @@ const comparable = HEAP_FAMILY.includes(meta.id);
                     </td>
                   ))}
                   {/* El peor caso es el número que importa: va en grande. */}
-                  <td class="px-4 py-3.5 font-mono text-[1.0625rem] font-medium whitespace-nowrap">
+                  <td class="px-4 py-3.5 font-mono text-[1.0625rem] font-medium min-w-40 max-w-[28rem] whitespace-normal break-words">
                     {c.worst}
                   </td>
-                  <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-nowrap">
+                  <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-normal min-w-24 max-w-64">
                     {c.space ? (
                       <span class="text-[var(--muted)]">{c.space}</span>
                     ) : (
@@ -88,8 +89,9 @@ const comparable = HEAP_FAMILY.includes(meta.id);
       <div class="mt-5 space-y-4">
         {rows.map(([op, c]) => (
           <div class="reveal rounded-r border-l-2 border-[var(--accent)] bg-[var(--accent-wash)] py-3 pr-4 pl-4">
-            <p class="tag mb-1">por qué · {op}{c.source && ` · ${c.source}`}</p>
-            <p class="max-w-[72ch] text-[0.9375rem] leading-relaxed">{c.reasoning}</p>
+            {/* La fuente es un nombre de archivo sin espacios: puede no tener dónde cortarse. */}
+            <p class="tag mb-1 break-words">por qué · {op}{c.source && ` · ${c.source}`}</p>
+            <div class="rich max-w-[72ch] text-[0.9375rem] leading-relaxed break-words" set:html={renderRich(c.reasoning)}></div>
           </div>
         ))}
       </div>

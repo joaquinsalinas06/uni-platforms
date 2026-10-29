@@ -99,6 +99,16 @@ export function layout(nodes: TreeNode[]): LaidOut[] {
   for (const root of children.get(null) ?? []) visit(root, 0);
   if (out.length === 0) return out;
 
+  // Un hijo único que se desplaza media columna puede caer sobre una hoja de
+  // otro subárbol de la misma fila. Se separan esos nodos a una columna como
+  // mínimo; sólo cambia los casos que se solaparían.
+  const rows = new Map<number, LaidOut[]>();
+  for (const n of out) rows.set(n.y, [...(rows.get(n.y) ?? []), n]);
+  for (const row of rows.values()) {
+    row.sort((a, b) => a.x - b.x);
+    for (let i = 1; i < row.length; i++) row[i].x = Math.max(row[i].x, row[i - 1].x + 1);
+  }
+
   // Normaliza: los desplazamientos de hijo único pueden dar columnas negativas.
   const min = Math.min(...out.map((n) => n.x));
   const max = Math.max(...out.map((n) => n.x));

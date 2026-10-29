@@ -80,6 +80,7 @@ export const collections = {
             level: z.number().int().min(1).max(6),
             etiqueta: z.string(),
             href: z.string().optional(),
+            visualization: visualizationSchema.optional(),
             statement: z.string(),
             hints: z.array(z.string()).min(1, 'un ejercicio sin pistas no puede revelar solución'),
             solution: z.string().optional(),

@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @source "../../../../packages/ui/src";
+@source "../../../../packages/visualizations/src";
 @import "@fontsource/ibm-plex-sans/400.css";
 @import "@fontsource/ibm-plex-sans/500.css";
 @import "@fontsource/ibm-plex-sans/600.css";
@@ -304,7 +305,13 @@ a:hover {
   border: 1px solid var(--rule);
   border-radius: 3px;
   padding: 0.1em 0.4em;
-  white-space: nowrap;
+  /* Un identificador largo parte por la línea en vez de sacar la prosa de la columna. */
+  overflow-wrap: anywhere;
+}
+
+.prose p,
+.prose li {
+  overflow-wrap: break-word;
 }
 
 /* Los bloques de código son losas oscuras en los dos temas: se distinguen
