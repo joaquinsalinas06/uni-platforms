@@ -33,7 +33,7 @@ items:
         for (int t = 1; t <= (int)acc.size(); t++) {
           int x = acc[t - 1];
           vector<int> fila = {x};
-          int mejor = 0;
+          int mejor = ultimo[x];
           for (int y = x + signo; y >= 1 && y <= n; y += signo)
             if (ultimo[y] > mejor) { fila.push_back(y); mejor = ultimo[y]; }
           for (int y : fila) { ultimo[y] = t; puntos++; }

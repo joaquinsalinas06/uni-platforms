@@ -6,48 +6,104 @@ cppSteps:
   - step-1-referencia.cpp
   - step-2-preferidos.cpp
   - full-implementation.cpp
-visualization:
-  type: tree
-  steps:
-    - note: "Estado: tras acceder a 1 y a 5, los hijos preferidos son 4→6, 6→5 y 2→1: hay tres caminos, {4, 6, 5}, {2, 1} y las hojas sueltas {3} y {7}. Cada camino vive en su propio árbol auxiliar."
-      nodes:
-        - { id: n4, value: 4, state: marked }
-        - { id: n2, value: 2, parent: n4, side: left, state: shared }
-        - { id: n6, value: 6, parent: n4, side: right, state: marked }
-        - { id: n1, value: 1, parent: n2, side: left, state: shared }
-        - { id: n3, value: 3, parent: n2, side: right }
-        - { id: n5, value: 5, parent: n6, side: left, state: marked }
-        - { id: n7, value: 7, parent: n6, side: right }
-    - note: "Búsqueda de 3. Se empieza en el árbol auxiliar del camino de la raíz {4, 6, 5}: 3 < 4, así que hay que bajar por el hijo izquierdo de 4 (la llave 2), que NO es su hijo preferido. Hay que salir del camino: un cruce."
-      highlight: ['n4']
-      nodes:
-        - { id: n4, value: 4, state: active }
-        - { id: n2, value: 2, parent: n4, side: left }
-        - { id: n6, value: 6, parent: n4, side: right, state: marked }
-        - { id: n1, value: 1, parent: n2, side: left, state: shared }
-        - { id: n3, value: 3, parent: n2, side: right }
-        - { id: n5, value: 5, parent: n6, side: left, state: marked }
-        - { id: n7, value: 7, parent: n6, side: right }
-    - note: "Salto al árbol auxiliar del camino {2, 1} (por el puntero de una hoja del auxiliar actual). 3 > 2: se baja al hijo derecho de 2, que tampoco es su preferido (era 1): otro cruce. Se llega a 3."
-      highlight: ['n2', 'n3']
-      nodes:
-        - { id: n4, value: 4, state: shared }
-        - { id: n2, value: 2, parent: n4, side: left, state: active }
-        - { id: n6, value: 6, parent: n4, side: right, state: shared }
-        - { id: n1, value: 1, parent: n2, side: left, state: shared }
-        - { id: n3, value: 3, parent: n2, side: right, state: active }
-        - { id: n5, value: 5, parent: n6, side: left, state: shared }
-        - { id: n7, value: 7, parent: n6, side: right }
-    - note: "Actualización: ahora 4→2 y 2→3 son los hijos preferidos. El camino de la raíz pasa a ser {4, 2, 3}; {6, 5} queda como camino propio y {1} suelto. Se hicieron 2 cruces: 2 alternancias de Wilber-1 más el 1 del acceso mismo."
-      highlight: ['n4', 'n2', 'n3']
-      nodes:
-        - { id: n4, value: 4, state: marked }
-        - { id: n2, value: 2, parent: n4, side: left, state: marked }
-        - { id: n6, value: 6, parent: n4, side: right, state: shared }
-        - { id: n1, value: 1, parent: n2, side: left }
-        - { id: n3, value: 3, parent: n2, side: right, state: marked }
-        - { id: n5, value: 5, parent: n6, side: left, state: shared }
-        - { id: n7, value: 7, parent: n6, side: right }
+visualization: {
+  "type": "tree",
+  "steps": [
+    {
+      "note": "Antes de buscar 3, las flechas pref son 4→6, 6→5 y 2→1. Hay cuatro caminos: {4,6,5}, {2,1}, {3} y {7}. Esta vista muestra P y sus preferencias, no la forma interna de los BBST auxiliares.",
+      "nodes": [
+        {"id": "n4", "value": 4, "tag": "pref: 6"},
+        {"id": "n2", "value": 2, "parent": "n4", "side": "left", "edge": false, "tag": "pref: 1"},
+        {"id": "n6", "value": 6, "parent": "n4", "side": "right", "edge": false, "tag": "pref: 5"},
+        {"id": "n1", "value": 1, "parent": "n2", "side": "left", "edge": false},
+        {"id": "n3", "value": 3, "parent": "n2", "side": "right", "edge": false},
+        {"id": "n5", "value": 5, "parent": "n6", "side": "left", "edge": false},
+        {"id": "n7", "value": 7, "parent": "n6", "side": "right", "edge": false}
+      ],
+      "links": [
+        {"from": "n4", "to": "n2", "kind": "tree"},
+        {"from": "n4", "to": "n6", "kind": "pointer", "label": "pref"},
+        {"from": "n2", "to": "n1", "kind": "pointer", "label": "pref"},
+        {"from": "n2", "to": "n3", "kind": "tree"},
+        {"from": "n6", "to": "n5", "kind": "pointer", "label": "pref"},
+        {"from": "n6", "to": "n7", "kind": "tree"}
+      ],
+      "highlight": []
+    },
+    {
+      "note": "Buscar 3 empieza en el auxiliar del camino {4,6,5}. La búsqueda sale por el hijo izquierdo de 4 (llave 2), que no es el preferido: primer cambio. En P se está inspeccionando el nodo 4.",
+      "nodes": [
+        {"id": "n4", "value": 4, "tag": "pref: 6", "state": "active"},
+        {"id": "n2", "value": 2, "parent": "n4", "side": "left", "edge": false, "tag": "pref: 1"},
+        {"id": "n6", "value": 6, "parent": "n4", "side": "right", "edge": false, "tag": "pref: 5"},
+        {"id": "n1", "value": 1, "parent": "n2", "side": "left", "edge": false},
+        {"id": "n3", "value": 3, "parent": "n2", "side": "right", "edge": false},
+        {"id": "n5", "value": 5, "parent": "n6", "side": "left", "edge": false},
+        {"id": "n7", "value": 7, "parent": "n6", "side": "right", "edge": false}
+      ],
+      "links": [
+        {"from": "n4", "to": "n2", "kind": "tree"},
+        {"from": "n4", "to": "n6", "kind": "pointer", "label": "pref"},
+        {"from": "n2", "to": "n1", "kind": "pointer", "label": "pref"},
+        {"from": "n2", "to": "n3", "kind": "tree"},
+        {"from": "n6", "to": "n5", "kind": "pointer", "label": "pref"},
+        {"from": "n6", "to": "n7", "kind": "tree"}
+      ],
+      "highlight": [
+        "n4"
+      ]
+    },
+    {
+      "note": "En el auxiliar del camino {2,1}, 3>2 exige salir hacia 3. El preferido de 2 era 1: segundo cambio. Se alcanza 3; se visitaron tres auxiliares en total, contando el inicial.",
+      "nodes": [
+        {"id": "n4", "value": 4, "tag": "pref: 6"},
+        {"id": "n2", "value": 2, "parent": "n4", "side": "left", "edge": false, "tag": "pref: 1", "state": "active"},
+        {"id": "n6", "value": 6, "parent": "n4", "side": "right", "edge": false, "tag": "pref: 5"},
+        {"id": "n1", "value": 1, "parent": "n2", "side": "left", "edge": false},
+        {"id": "n3", "value": 3, "parent": "n2", "side": "right", "edge": false, "state": "active"},
+        {"id": "n5", "value": 5, "parent": "n6", "side": "left", "edge": false},
+        {"id": "n7", "value": 7, "parent": "n6", "side": "right", "edge": false}
+      ],
+      "links": [
+        {"from": "n4", "to": "n2", "kind": "tree"},
+        {"from": "n4", "to": "n6", "kind": "pointer", "label": "pref"},
+        {"from": "n2", "to": "n1", "kind": "pointer", "label": "pref"},
+        {"from": "n2", "to": "n3", "kind": "tree"},
+        {"from": "n6", "to": "n5", "kind": "pointer", "label": "pref"},
+        {"from": "n6", "to": "n7", "kind": "tree"}
+      ],
+      "highlight": [
+        "n2",
+        "n3"
+      ]
+    },
+    {
+      "note": "Acceso a 3: cambia 4→6 por 4→2 y cambia 2→1 por 2→3. Son dos alternancias adicionales. Las flechas forman {4,2,3}, {6,5}, {1} y {7}; el árbol de referencia no rotó. Total de cambios para 1,5,3: 0+1+2=3.",
+      "nodes": [
+        {"id": "n4", "value": 4, "tag": "pref: 2", "state": "active"},
+        {"id": "n2", "value": 2, "parent": "n4", "side": "left", "edge": false, "tag": "pref: 3", "state": "active"},
+        {"id": "n6", "value": 6, "parent": "n4", "side": "right", "edge": false, "tag": "pref: 5"},
+        {"id": "n1", "value": 1, "parent": "n2", "side": "left", "edge": false},
+        {"id": "n3", "value": 3, "parent": "n2", "side": "right", "edge": false, "state": "active"},
+        {"id": "n5", "value": 5, "parent": "n6", "side": "left", "edge": false},
+        {"id": "n7", "value": 7, "parent": "n6", "side": "right", "edge": false}
+      ],
+      "links": [
+        {"from": "n4", "to": "n2", "kind": "pointer", "label": "pref"},
+        {"from": "n4", "to": "n6", "kind": "tree"},
+        {"from": "n2", "to": "n1", "kind": "tree"},
+        {"from": "n2", "to": "n3", "kind": "pointer", "label": "pref"},
+        {"from": "n6", "to": "n5", "kind": "pointer", "label": "pref"},
+        {"from": "n6", "to": "n7", "kind": "tree"}
+      ],
+      "highlight": [
+        "n4",
+        "n2",
+        "n3"
+      ]
+    }
+  ]
+}
 ---
 
 ## Qué hace
@@ -87,7 +143,7 @@ El editor trae el árbol de referencia, la actualización de los hijos preferido
 
 ## Complejidad temporal
 
-Cada cruce cuesta $O(\lg\lg n)$ y hay $1 + (\text{alternancias del acceso})$ cruces: $O\big(\lg\lg n \cdot (1 + \text{alt})\big)$ por acceso, y $O(\lg\lg n \cdot (m + \text{Wilber-1}))$ en total. Eso es $O(\lg\lg n)$-competitivo.
+Cada cambio cuesta $O(\lg\lg n)$ y se visitan $1 + (\text{alternancias del acceso})$ árboles auxiliares: $O\big(\lg\lg n \cdot (1 + \text{alt})\big)$ por acceso, y $O(\lg\lg n \cdot (m + \text{Wilber-1}))$ en total. Eso es $O(\lg\lg n)$-competitivo.
 
 ## Complejidad espacial
 

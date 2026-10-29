@@ -56,27 +56,204 @@ Usada como secuencia de accesos sobre un **árbol perfecto**, el número de alte
 El árbol del ejemplo es el perfecto con llaves $0$ a $6$ (raíz 3). El dibujo muestra los accesos $0, 4, 2, 6, 1, 5, 3$ (la secuencia, restringida a las llaves del árbol): en la raíz, las mitades se alternan en **cada** acceso.
 
 <Visualization viz={{
-  type: 'geometric',
-  steps: [
+  "type": "tree",
+  "steps": [
     {
-      note: "Secuencia bit-reversal 0, 4, 2, 6, 1, 5, 3 sobre las llaves 0..6 (el eje muestra las llaves; las columnas 0 a 6 van de izquierda a derecha).",
-      points: [
-        { id: 'a1', x: 1, t: 1 }, { id: 'a2', x: 5, t: 2 }, { id: 'a3', x: 3, t: 3 }, { id: 'a4', x: 7, t: 4 },
-        { id: 'a5', x: 2, t: 5 }, { id: 'a6', x: 6, t: 6 }, { id: 'a7', x: 4, t: 7 },
+      "note": "El árbol de referencia P permanece fijo: raíz 3; el subárbol izquierdo contiene 0,1,2 y el derecho 4,5,6. Las búsquedas cambian de lado; este árbol no rota.",
+      "nodes": [
+        {"id": "n3", "value": 3, "tag": "raíz"},
+        {"id": "n1", "value": 1, "parent": "n3", "side": "left"},
+        {"id": "n5", "value": 5, "parent": "n3", "side": "right"},
+        {"id": "n0", "value": 0, "parent": "n1", "side": "left"},
+        {"id": "n2", "value": 2, "parent": "n1", "side": "right"},
+        {"id": "n4", "value": 4, "parent": "n5", "side": "left"},
+        {"id": "n6", "value": 6, "parent": "n5", "side": "right"}
+      ]
+    }
+  ]
+}} />
+
+La línea discontinua del siguiente plano delimita la llave de la raíz. Las letras **L/R** indican el lado; el azul señala únicamente el acceso que se está leyendo. El tiempo crece hacia arriba.
+
+<Visualization viz={{
+  "type": "geometric",
+  "steps": [
+    {
+      "note": "Tiempo 1: acceso a 0. Cae en el subárbol izquierdo (L). Es el primer lado observado: todavía hay 0 alternancias en la raíz.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L", "state": "active"},
+        {"id": "a2", "x": 5, "t": 2},
+        {"id": "a3", "x": 3, "t": 3},
+        {"id": "a4", "x": 7, "t": 4},
+        {"id": "a5", "x": 2, "t": 5},
+        {"id": "a6", "x": 6, "t": 6},
+        {"id": "a7", "x": 4, "t": 7}
       ],
-      xLabels: ['0', '1', '2', '3', '4', '5', '6'],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 1
     },
     {
-      note: "Respecto de la raíz (llave 3, columna central): L R L R L R. Los accesos caen alternadamente a la izquierda (azul) y a la derecha (ámbar) en cada paso: 5 alternancias en la raíz.",
-      points: [
-        { id: 'a1', x: 1, t: 1, state: 'active' }, { id: 'a2', x: 5, t: 2, state: 'marked' }, { id: 'a3', x: 3, t: 3, state: 'active' },
-        { id: 'a4', x: 7, t: 4, state: 'marked' }, { id: 'a5', x: 2, t: 5, state: 'active' }, { id: 'a6', x: 6, t: 6, state: 'marked' },
-        { id: 'a7', x: 4, t: 7 },
+      "note": "Tiempo 2: acceso a 4. Cae en el subárbol derecho (R). Cambió el lado respecto del acceso anterior: 1 alternancia acumulada en la raíz.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L"},
+        {"id": "a2", "x": 5, "t": 2, "label": "R", "state": "active"},
+        {"id": "a3", "x": 3, "t": 3},
+        {"id": "a4", "x": 7, "t": 4},
+        {"id": "a5", "x": 2, "t": 5},
+        {"id": "a6", "x": 6, "t": 6},
+        {"id": "a7", "x": 4, "t": 7}
       ],
-      segments: [{ id: 'raiz', from: [4, 1], to: [4, 7], dash: true, state: 'answer' }],
-      xLabels: ['0', '1', '2', '3', '4', '5', '6'],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 2
     },
-  ],
+    {
+      "note": "Tiempo 3: acceso a 2. Cae en el subárbol izquierdo (L). Cambió el lado respecto del acceso anterior: 2 alternancias acumuladas en la raíz.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L"},
+        {"id": "a2", "x": 5, "t": 2, "label": "R"},
+        {"id": "a3", "x": 3, "t": 3, "label": "L", "state": "active"},
+        {"id": "a4", "x": 7, "t": 4},
+        {"id": "a5", "x": 2, "t": 5},
+        {"id": "a6", "x": 6, "t": 6},
+        {"id": "a7", "x": 4, "t": 7}
+      ],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 3
+    },
+    {
+      "note": "Tiempo 4: acceso a 6. Cae en el subárbol derecho (R). Cambió el lado respecto del acceso anterior: 3 alternancias acumuladas en la raíz.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L"},
+        {"id": "a2", "x": 5, "t": 2, "label": "R"},
+        {"id": "a3", "x": 3, "t": 3, "label": "L"},
+        {"id": "a4", "x": 7, "t": 4, "label": "R", "state": "active"},
+        {"id": "a5", "x": 2, "t": 5},
+        {"id": "a6", "x": 6, "t": 6},
+        {"id": "a7", "x": 4, "t": 7}
+      ],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 4
+    },
+    {
+      "note": "Tiempo 5: acceso a 1. Cae en el subárbol izquierdo (L). Cambió el lado respecto del acceso anterior: 4 alternancias acumuladas en la raíz.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L"},
+        {"id": "a2", "x": 5, "t": 2, "label": "R"},
+        {"id": "a3", "x": 3, "t": 3, "label": "L"},
+        {"id": "a4", "x": 7, "t": 4, "label": "R"},
+        {"id": "a5", "x": 2, "t": 5, "label": "L", "state": "active"},
+        {"id": "a6", "x": 6, "t": 6},
+        {"id": "a7", "x": 4, "t": 7}
+      ],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 5
+    },
+    {
+      "note": "Tiempo 6: acceso a 5. Cae en el subárbol derecho (R). Cambió el lado respecto del acceso anterior: 5 alternancias acumuladas en la raíz.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L"},
+        {"id": "a2", "x": 5, "t": 2, "label": "R"},
+        {"id": "a3", "x": 3, "t": 3, "label": "L"},
+        {"id": "a4", "x": 7, "t": 4, "label": "R"},
+        {"id": "a5", "x": 2, "t": 5, "label": "L"},
+        {"id": "a6", "x": 6, "t": 6, "label": "R", "state": "active"},
+        {"id": "a7", "x": 4, "t": 7}
+      ],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 6
+    },
+    {
+      "note": "Tiempo 7: acceso a 3. Es la propia raíz: se ignora en su secuencia L/R. Queda L,R,L,R,L,R: 5 alternancias en la raíz; los nodos 1 y 5 aportan una cada uno, total Wilber-1 = 7.",
+      "points": [
+        {"id": "a1", "x": 1, "t": 1, "label": "L"},
+        {"id": "a2", "x": 5, "t": 2, "label": "R"},
+        {"id": "a3", "x": 3, "t": 3, "label": "L"},
+        {"id": "a4", "x": 7, "t": 4, "label": "R"},
+        {"id": "a5", "x": 2, "t": 5, "label": "L"},
+        {"id": "a6", "x": 6, "t": 6, "label": "R"},
+        {"id": "a7", "x": 4, "t": 7, "label": "raíz", "state": "muted"}
+      ],
+      "segments": [
+        {"id": "raiz", "from": [4, 1], "to": [4, 7], "dash": true, "state": "marked"}
+      ],
+      "xLabels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6"
+      ],
+      "row": 7
+    }
+  ]
 }} />
 
 *(Las coordenadas x del dibujo son la llave + 1; el dibujo es una ilustración derivada de la secuencia.)*

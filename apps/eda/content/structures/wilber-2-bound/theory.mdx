@@ -39,7 +39,7 @@ Ejemplo con la secuencia $3, 1, 4, 2$ (los cuatro puntos son la entrada). Para e
     {
       note: "Mirando hacia atrás: el acceso (4, 3) está a la DERECHA de p y su rectángulo con p está vacío: es visible (signo +).",
       points: [
-        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3, state: 'answer' },
+        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3, label: '+', state: 'answer' },
         { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
       ],
       rects: [{ id: 'r3', a: 'p', b: 'c', state: 'answer', fill: true }],
@@ -47,7 +47,7 @@ Ejemplo con la secuencia $3, 1, 4, 2$ (los cuatro puntos son la entrada). Para e
     {
       note: "Siguiente hacia atrás: (1, 2), a la IZQUIERDA de p (signo −). Su rectángulo con p no contiene a (4, 3): también visible. Hay un cambio de signo: una alternancia.",
       points: [
-        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2, state: 'answer' }, { id: 'c', x: 4, t: 3 },
+        { id: 'a', x: 3, t: 1 }, { id: 'b', x: 1, t: 2, label: '−', state: 'answer' }, { id: 'c', x: 4, t: 3 },
         { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
       ],
       rects: [{ id: 'r2', a: 'p', b: 'b', state: 'answer', fill: true }],
@@ -55,10 +55,32 @@ Ejemplo con la secuencia $3, 1, 4, 2$ (los cuatro puntos son la entrada). Para e
     {
       note: "Por último (3, 1), de nuevo a la derecha (signo +): otra alternancia. Los signos, en orden de tiempo decreciente, son + − +: 2 alternancias. Los otros tres puntos no tienen visibles que alternen: Wilber-2 de esta secuencia vale 2.",
       points: [
-        { id: 'a', x: 3, t: 1, state: 'answer' }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3 },
+        { id: 'a', x: 3, t: 1, label: '+', state: 'answer' }, { id: 'b', x: 1, t: 2 }, { id: 'c', x: 4, t: 3 },
         { id: 'p', x: 2, t: 4, label: 'p', state: 'active' },
       ],
       rects: [{ id: 'r1', a: 'p', b: 'a', state: 'answer', fill: true }],
+    },
+    {
+      note: "Contraste con otra secuencia, 1,2,3. Desde p=(3,3), el punto (1,1) NO es visible: el punto (2,2) está dentro del rectángulo. No basta con que el candidato esté a la izquierda; el rectángulo debe estar vacío.",
+      points: [
+        { id: 'a', x: 1, t: 1, label: 'oculto', state: 'muted' },
+        { id: 'b', x: 2, t: 2, label: 'bloquea', state: 'active' },
+        { id: 'p', x: 3, t: 3, label: 'p' },
+      ],
+      rects: [{ id: 'bloqueado', a: 'a', b: 'p', state: 'marked', fill: true }],
+      xMax: 4,
+      tMax: 4,
+    },
+    {
+      note: "En esa secuencia sólo (2,2) es visible desde p=(3,3). Queda un único signo −: no hay cambio de signo y este acceso aporta 0 alternancias. Se descartan los puntos ocultos ANTES de contar las alternancias.",
+      points: [
+        { id: 'a', x: 1, t: 1, state: 'muted' },
+        { id: 'b', x: 2, t: 2, label: 'visible −', state: 'answer' },
+        { id: 'p', x: 3, t: 3, label: 'p', state: 'active' },
+      ],
+      rects: [{ id: 'visible', a: 'b', b: 'p', state: 'answer', fill: true }],
+      xMax: 4,
+      tMax: 4,
     },
   ],
 }} />

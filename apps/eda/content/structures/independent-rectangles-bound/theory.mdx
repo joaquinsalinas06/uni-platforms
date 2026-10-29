@@ -15,8 +15,7 @@ La herramienta (#7) es el **método de rectángulos independientes**: una técni
 ## Intuición
 
 Mira dos puntos de la entrada que definen un rectángulo vacío. Para que el conjunto sea [arboralmente satisfecho](/structures/arborally-satisfied-set), **alguien** tiene que poner un punto en ese
-rectángulo. Si tienes varios rectángulos así y ningún punto puede servir a dos de ellos a la vez, entonces cada rectángulo te cuesta, por separado, un punto extra. Los rectángulos *independientes*
-son justo los que no se pueden arreglar con el mismo punto: cuantos más tengas, más caro es **cualquier** BST.
+rectángulo. La independencia impone una restricción sobre cómo esos rectángulos se pueden satisfacer entre sí. No significa que deban estar separados: pueden solaparse. El teorema de abajo convierte su cantidad en una cota sobre los puntos extra que debe pagar **cualquier** BST.
 
 ## Estructura interna
 
@@ -25,7 +24,7 @@ son justo los que no se pueden arreglar con el mismo punto: cuantos más tengas,
 **Rectángulos independientes (#12).** Dos rectángulos son *independientes* si **no** están arboralmente satisfechos entre sí, y **ninguna esquina de uno está estrictamente dentro del otro**.
 De cualquier par de puntos $a, b$ sale un único rectángulo $ab$; sólo 2 de sus 4 esquinas son puntos reales de la entrada —las otras 2 son "virtuales".
 
-Tres ejemplos de la clase (#15–#17), con coordenadas elegidas para dibujarlos:
+Tres configuraciones ilustrativas de la clase (#15–#17), con coordenadas elegidas para dibujarlas. Los puntos rellenos son esquinas reales; las esquinas restantes del contorno son virtuales:
 
 <Visualization viz={{
   type: 'geometric',
@@ -38,18 +37,18 @@ Tres ejemplos de la clase (#15–#17), con coordenadas elegidas para dibujarlos:
       ],
       rects: [
         { id: 'r1', a: 'a', b: 'b', state: 'active', fill: true },
-        { id: 'r2', a: 'c', b: 'd', state: 'answer', fill: true },
+        { id: 'r2', a: 'c', b: 'd', state: 'marked', fill: true },
       ],
     },
     {
-      note: "Independientes: parcialmente contenidos (una cruz), pero sin que ninguna esquina de uno quede estrictamente dentro del otro. El rectángulo ancho tiene sus esquinas fuera del alto, y viceversa.",
+      note: "Independientes y solapados: una cruz. Ninguna esquina queda estrictamente dentro del otro rectángulo y ninguno de los cuatro puntos de entrada satisface el rectángulo del otro par. La intersección de las áreas, por sí sola, no decide independencia.",
       points: [
-        { id: 'a', x: 1, t: 1 }, { id: 'b', x: 4, t: 2 },
-        { id: 'c', x: 2, t: 1 }, { id: 'd', x: 3, t: 3 },
+        { id: 'a', x: 1, t: 2, label: 'a' }, { id: 'b', x: 5, t: 3, label: 'b' },
+        { id: 'c', x: 2, t: 1, label: 'c' }, { id: 'd', x: 4, t: 4, label: 'd' },
       ],
       rects: [
-        { id: 'r1', a: [1, 1], b: [4, 2], state: 'active', fill: true },
-        { id: 'r2', a: [2, 1], b: [3, 3], state: 'answer', fill: true },
+        { id: 'r1', a: 'a', b: 'b', state: 'active', fill: true, label: 'R1' },
+        { id: 'r2', a: 'c', b: 'd', state: 'marked', fill: true, label: 'R2' },
       ],
     },
     {
@@ -59,7 +58,7 @@ Tres ejemplos de la clase (#15–#17), con coordenadas elegidas para dibujarlos:
       ],
       rects: [
         { id: 'r1', a: 'a', b: 'b', state: 'active', fill: true },
-        { id: 'r2', a: 'b', b: 'c', state: 'answer', fill: true },
+        { id: 'r2', a: 'b', b: 'c', state: 'marked', fill: true },
       ],
     },
   ],

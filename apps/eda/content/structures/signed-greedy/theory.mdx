@@ -47,10 +47,15 @@ Todo queda **emparedado dentro de un factor 4**, confirmando el teorema.
   type: 'geometric',
   steps: [
     {
-      note: "Secuencia 1, 2, 3, 4 (acceso secuencial). Greedy completo: 7 puntos. Las filas tienen una llave extra, la anterior (anillos).",
+      note: "Secuencia 1, 2, 3, 4 (acceso secuencial). Greedy completo: 7 puntos. Cada rectángulo entre dos accesos consecutivos tiene un toque añadido en su borde: 4 accesos pedidos y 3 anillos.",
       points: [
         { id: 'p1', x: 1, t: 1 }, { id: 'p2', x: 2, t: 2 }, { id: 'p3', x: 3, t: 3 }, { id: 'p4', x: 4, t: 4 },
         { id: 'e2', x: 1, t: 2, kind: 'added' }, { id: 'e3', x: 2, t: 3, kind: 'added' }, { id: 'e4', x: 3, t: 4, kind: 'added' },
+      ],
+      rects: [
+        { id: 'r12', a: 'p1', b: 'p2', state: 'answer', fill: true },
+        { id: 'r23', a: 'p2', b: 'p3', state: 'answer', fill: true },
+        { id: 'r34', a: 'p3', b: 'p4', state: 'answer', fill: true },
       ],
     },
     {
@@ -61,10 +66,11 @@ Todo queda **emparedado dentro de un factor 4**, confirmando el teorema.
       ],
     },
     {
-      note: "Greedy−: sólo escalera hacia la derecha. No hay llaves tocadas a la derecha de cada acceso: 4 puntos, ningún extra. Signed-Greedy = máx{7, 4} = 7.",
+      note: "Greedy−: sólo escalera hacia la derecha. No hay llaves tocadas a la derecha de cada acceso: 4 puntos, ningún extra. Signed-Greedy = máx{7, 4} = 7. El rectángulo marcado sigue vacío: esta variante por sí sola no satisface el conjunto completo.",
       points: [
         { id: 'p1', x: 1, t: 1 }, { id: 'p2', x: 2, t: 2 }, { id: 'p3', x: 3, t: 3 }, { id: 'p4', x: 4, t: 4 },
       ],
+      rects: [{ id: 'sin-satisfacer', a: 'p1', b: 'p2', state: 'marked', fill: true }],
     },
   ],
 }} />
@@ -88,7 +94,7 @@ int greedy_signado(int n, const vector<int>& acc, int signo) {
   for (int t = 1; t <= (int)acc.size(); t++) {
     int x = acc[t - 1];
     vector<int> fila = {x};
-    int mejor = 0;
+    int mejor = ultimo[x];
     for (int y = x + signo; y >= 1 && y <= n; y += signo)
       if (ultimo[y] > mejor) { fila.push_back(y); mejor = ultimo[y]; }
     for (int y : fila) { ultimo[y] = t; puntos++; }
