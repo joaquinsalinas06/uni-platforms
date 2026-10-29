@@ -19,43 +19,43 @@ visualization:
       highlight: ["n20"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         En el nodo 30: comparamos 30 contra 30. Son iguales — encontramos
         la llave. Search(30) termina en 2 pasos y devuelve el nodo 30.
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20, state: answer }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, state: answer, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         Ahora Search(25), de nuevo desde la raíz: comparamos 25 contra 20.
         25 > 20, descendemos a la derecha, a 30.
       highlight: ["n20"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         En el nodo 30: comparamos 25 contra 30. 25 < 30, así que la
         búsqueda debe continuar por el hijo izquierdo de 30.
       highlight: ["n30"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         Pero ese hijo izquierdo es nulo (30 sólo tiene hijo derecho, 40).
         La búsqueda termina sin encontrar 25: la llave no está en el árbol.
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20, state: muted }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, state: muted, side: right }
+        - { id: n40, value: 40, parent: n30, side: right }
 ---
 
 <!-- Concepto de apoyo: no hay diapositiva que citar. Search es la operación

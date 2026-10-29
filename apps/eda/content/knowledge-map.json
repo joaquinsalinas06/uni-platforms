@@ -608,7 +608,7 @@
         "Sem4_Planar_Point_Location.pdf#5-23"
       ],
       "hasVisualization": true,
-      "visualizationType": "tree",
+      "visualizationType": "planar",
       "complexityStyleFromProfessor": "análisis por reducción",
       "status": "generated"
     },
@@ -633,7 +633,7 @@
         "Sem4_Planar_Point_Location.pdf#18-23"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree",
+      "visualizationType": "planar",
       "complexityStyleFromProfessor": "reducción",
       "status": "generated"
     },
@@ -661,7 +661,7 @@
         "Sem4_Planar_Point_Location.pdf#24-51"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree",
+      "visualizationType": "planar",
       "complexityStyleFromProfessor": "reducción + herencia de cota",
       "status": "generated"
     },

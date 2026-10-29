@@ -9,7 +9,7 @@ usedBy: ["segment-intersection-sweep-line", "dominance-2d"]
 
 complexity:
   ray-query:
-    worst: "O(log n) por consulta (heredado de la reducción a sweep line)"
+    worst: "O(log n) por consulta"
     reasoning: >-
       El profesor no analiza ray-query por sí sola: la complejidad la hereda
       de la estructura a la que se reduce (segment-intersection-sweep-line,
@@ -19,5 +19,5 @@ complexity:
 
 professorAnalysisStyle: "reducción"
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: planar
 placeholder: false

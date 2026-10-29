@@ -10,10 +10,10 @@ visualization:
         hijo izquierdo 27 y derecho 40.
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         El invariante de BST en la raíz: todo lo que cuelga a la izquierda
         de 20 (aquí, sólo 10) es menor que 20, y todo lo que cuelga a la
@@ -21,10 +21,10 @@ visualization:
       highlight: ["n20"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         El mismo invariante se cumple recursivamente en cada nodo interno:
         dentro del subárbol derecho, 27 (hijo izquierdo de 30) es menor que
@@ -32,10 +32,10 @@ visualization:
       highlight: ["n30"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         El invariante de balance no exige un árbol perfecto: la altura del
         subárbol izquierdo de 20 (sólo la hoja 10, altura 1) y la del
@@ -45,10 +45,10 @@ visualization:
       highlight: ["n10", "n27", "n40"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
 ---
 
 > **Concepto de apoyo, no material del curso.** El profesor nunca explica un

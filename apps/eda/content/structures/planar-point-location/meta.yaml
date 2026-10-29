@@ -33,5 +33,5 @@ complexity:
 
 professorAnalysisStyle: "análisis por reducción"
 hasVisualization: true
-visualizationType: tree
+visualizationType: planar
 placeholder: false

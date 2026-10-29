@@ -78,12 +78,11 @@ visualization:
         - { id: t2-b, value: "B (y=3)", parent: t2-a, side: left, version: t2, state: shared }
         - { id: t3-a, value: "A (y=5)''", parent: null, version: t3, state: idle }
         - { id: t3-c, value: "C (y=7)", parent: t3-a, side: right, version: t3, state: idle }
-        - { id: q, value: "Successor(4)", parent: null, version: t2, state: marked }
       links:
         - { from: t2-a, to: t2-b, kind: tree }
         - { from: t3-a, to: t2-b, kind: shared }
         - { from: t3-a, to: t3-c, kind: tree }
-      highlight: ["t2-a", "t2-b", "q"]
+      highlight: ["t2-a", "t2-b"]
     - note: >-
         En A (y=5), raíz de t2: 4<5, así que A queda como candidato a
         sucesor y la búsqueda desciende por la izquierda, hacia B.
@@ -98,12 +97,11 @@ visualization:
         - { id: t2-b, value: "B (y=3)", parent: t2-a, side: left, version: t2, state: idle }
         - { id: t3-a, value: "A (y=5)''", parent: null, version: t3, state: idle }
         - { id: t3-c, value: "C (y=7)", parent: t3-a, side: right, version: t3, state: idle }
-        - { id: q, value: "Successor(4)", parent: null, version: t2, state: marked }
       links:
         - { from: t2-a, to: t2-b, kind: tree }
         - { from: t3-a, to: t2-b, kind: shared }
         - { from: t3-a, to: t3-c, kind: tree }
-      highlight: ["t2-a", "q"]
+      highlight: ["t2-a"]
     - note: >-
         En B (y=3): 4>3 y B no tiene hijo derecho — no hay dónde seguir
         bajando. El candidato sigue siendo A, el último nodo donde la
@@ -119,12 +117,11 @@ visualization:
         - { id: t2-b, value: "B (y=3)", parent: t2-a, side: left, version: t2, state: active }
         - { id: t3-a, value: "A (y=5)''", parent: null, version: t3, state: idle }
         - { id: t3-c, value: "C (y=7)", parent: t3-a, side: right, version: t3, state: idle }
-        - { id: q, value: "Successor(4)", parent: null, version: t2, state: marked }
       links:
         - { from: t2-a, to: t2-b, kind: tree }
         - { from: t3-a, to: t2-b, kind: shared }
         - { from: t3-a, to: t3-c, kind: tree }
-      highlight: ["t2-b", "q"]
+      highlight: ["t2-b"]
     - note: >-
         `Successor(4)` en la versión t2 (xi=2) es A (y=5): el segmento
         inmediatamente superior en ese instante pasado. La versión t3 —el
@@ -142,12 +139,11 @@ visualization:
         - { id: t2-b, value: "B (y=3)", parent: t2-a, side: left, version: t2, state: muted }
         - { id: t3-a, value: "A (y=5)''", parent: null, version: t3, state: idle }
         - { id: t3-c, value: "C (y=7)", parent: t3-a, side: right, version: t3, state: idle }
-        - { id: q, value: "Successor(4)", parent: null, version: t2, state: answer }
       links:
         - { from: t2-a, to: t2-b, kind: tree }
         - { from: t3-a, to: t2-b, kind: shared }
         - { from: t3-a, to: t3-c, kind: tree }
-      highlight: ["t2-a", "q"]
+      highlight: ["t2-a"]
 ---
 
 ## Qué hace

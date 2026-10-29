@@ -47,5 +47,5 @@ complexity:
 
 professorAnalysisStyle: "reducción + herencia de cota"
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: planar
 placeholder: false

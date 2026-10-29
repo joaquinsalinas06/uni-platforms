@@ -16,7 +16,7 @@ visualization:
       caption: "paso 1 de 6: la operación, enunciada sin algoritmo (#17)"
       nodes:
         - id: eu
-          value: "edge-update: insertar/eliminar arista"
+          value: "actualizar aristas"
           parent: null
           state: active
     - note: >-
@@ -30,11 +30,11 @@ visualization:
       caption: "paso 2 de 6: mapa general — sólo citas de literatura (#60-61)"
       nodes:
         - id: eu
-          value: "edge-update: insertar/eliminar arista"
+          value: "actualizar aristas"
           parent: null
           state: muted
         - id: general
-          value: "mapa general (cita de literatura, #60-61)"
+          value: "general: literatura"
           parent: eu
           state: active
     - note: >-
@@ -46,15 +46,15 @@ visualization:
       caption: "paso 3 de 6: el curso sólo desarrolla el caso ortogonal (#53)"
       nodes:
         - id: eu
-          value: "edge-update: insertar/eliminar arista"
+          value: "actualizar aristas"
           parent: null
           state: muted
         - id: general
-          value: "mapa general (cita de literatura, #60-61)"
+          value: "general: literatura"
           parent: eu
           state: muted
         - id: ortho
-          value: "mapa ortogonal (restringido)"
+          value: "ortogonal"
           parent: eu
           state: active
     - note: >-
@@ -66,15 +66,15 @@ visualization:
       caption: "paso 4 de 6: se reduce a retroactividad parcial (#54)"
       nodes:
         - id: eu
-          value: "edge-update: insertar/eliminar arista"
+          value: "actualizar aristas"
           parent: null
           state: muted
         - id: general
-          value: "mapa general (cita de literatura, #60-61)"
+          value: "general: literatura"
           parent: eu
           state: muted
         - id: ortho
-          value: "mapa ortogonal (restringido)"
+          value: "ortogonal"
           parent: eu
           state: muted
         - id: retro
@@ -90,15 +90,15 @@ visualization:
       caption: "paso 5 de 6: el límite del esquema — sólo horizontal (#53)"
       nodes:
         - id: eu
-          value: "edge-update: insertar/eliminar arista"
+          value: "actualizar aristas"
           parent: null
           state: muted
         - id: general
-          value: "mapa general (cita de literatura, #60-61)"
+          value: "general: literatura"
           parent: eu
           state: muted
         - id: ortho
-          value: "mapa ortogonal (restringido)"
+          value: "ortogonal"
           parent: eu
           state: muted
         - id: retro
@@ -106,7 +106,7 @@ visualization:
           parent: ortho
           state: muted
         - id: limite
-          value: "límite: sólo aristas horizontales"
+          value: "solo horizontales"
           parent: retro
           state: marked
     - note: >-
@@ -117,15 +117,15 @@ visualization:
       caption: "paso 6 de 6: la única cota que el curso fija — restringida (#55)"
       nodes:
         - id: eu
-          value: "edge-update: insertar/eliminar arista"
+          value: "actualizar aristas"
           parent: null
           state: muted
         - id: general
-          value: "mapa general (cita de literatura, #60-61)"
+          value: "general: literatura"
           parent: eu
           state: muted
         - id: ortho
-          value: "mapa ortogonal (restringido)"
+          value: "ortogonal"
           parent: eu
           state: muted
         - id: retro
@@ -133,7 +133,7 @@ visualization:
           parent: ortho
           state: muted
         - id: limite
-          value: "límite: sólo aristas horizontales"
+          value: "solo horizontales"
           parent: retro
           state: muted
         - id: cota

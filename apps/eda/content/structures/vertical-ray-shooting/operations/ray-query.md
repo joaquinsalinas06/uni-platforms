@@ -1,58 +1,93 @@
 ---
 kind: operation
-title: "Ray Query"
+title: Ray Query
 order: 1
 cppSteps:
   - step-1-segment.cpp
   - step-2-brute-force.cpp
   - full-implementation.cpp
 visualization:
-  type: range-tree
-  mode: layers
+  type: planar
   steps:
-    - note: >-
-        Sólo importan los segmentos que cruzan x = x_i. Ordenados por su
-        altura de cruce: B en y=2 y A en y=8. El punto de consulta tiene
-        y_i=4 y el rayo va hacia arriba. *(derivado del diagrama del
-        profesor en theory.md; no aparece con estos números en las
-        diapositivas)*.
-      caption: "y_i = 4 — rayo hacia arriba"
-      mode: layers
-      arrays:
-        - id: alturas
-          label: "cruces en x=x_i"
-          row: 0
-          cells: [2, 8]
-    - note: >-
-        B cruza en y=2, por debajo de y_i=4: no puede ser el primero que
-        toca un rayo que sube — se descarta.
-      caption: "2 < y_i: descartado"
-      mode: layers
-      arrays:
-        - id: alturas
-          row: 0
-          cells: [2, 8]
-          states: [muted, idle]
-    - note: >-
-        A cruza en y=8, que sí es ≥ y_i=4: es el candidato — el sucesor de
-        y_i entre las alturas de cruce.
-      caption: "8 ≥ y_i: candidato (sucesor de y_i)"
-      mode: layers
-      arrays:
-        - id: alturas
-          row: 0
-          cells: [2, 8]
-          states: [muted, marked]
-    - note: >-
-        A es el menor cruce que aún cumple y ≥ y_i: el primer segmento que
-        el rayo toca subiendo desde P. Esa es la respuesta de ray-query.
-      caption: "respuesta: segmento A (y=8)"
-      mode: layers
-      arrays:
-        - id: alturas
-          row: 0
-          cells: [2, 8]
-          states: [muted, answer]
+    - note: "Ejemplo didáctico derivado. Q=(4,4) consulta hacia arriba. Se dibujan los segmentos
+        completos: sus alturas dependen de la columna x."
+      planar:
+        bounds:
+          - -1
+          - 0
+          - 13
+          - 14
+        segments: &a1
+          - id: B
+            label: B
+            from:
+              - 1
+              - 2
+            to:
+              - 10
+              - 2
+          - id: A
+            label: A
+            from:
+              - 2
+              - 7
+            to:
+              - 10
+              - 9
+          - id: C
+            label: C
+            from:
+              - 7
+              - 11
+            to:
+              - 11
+              - 11
+        query:
+          x: 4
+          y: 4
+        mode: ray
+        showRay: false
+        showHits: false
+    - note: El rayo mantiene x=4 y aumenta y. B queda debajo de Q, y C ni siquiera cruza esta columna.
+        Solo A puede ser la respuesta.
+      planar:
+        bounds:
+          - -1
+          - 0
+          - 13
+          - 14
+        segments: *a1
+        query:
+          x: 4
+          y: 4
+        mode: ray
+        showHits: false
+    - note: Primer impacto en A, a y=7.5. Buscamos la menor altura mayor o igual que y de Q; no contamos
+        todos los cruces como en el test de paridad.
+      planar:
+        bounds:
+          - -1
+          - 0
+          - 13
+          - 14
+        segments: *a1
+        query:
+          x: 4
+          y: 4
+        mode: ray
+    - note: Al subir Q por encima de A en la misma columna, el rayo ya no toca ningún segmento. La
+        respuesta es sin impacto, no el segmento más cercano por debajo.
+      planar:
+        bounds:
+          - -1
+          - 0
+          - 13
+          - 14
+        segments: *a1
+        query:
+          x: 4
+          y: 10
+        mode: ray
 ---
 
 ## Qué hace

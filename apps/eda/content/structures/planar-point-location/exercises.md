@@ -36,13 +36,12 @@ items:
         Un número impar de cruces significa "dentro" de esa cara; un
         número par significa "fuera".
     solution: >-
-      Desde (8,4), la horizontal hacia la derecha cruza un número impar de
-      aristas de la cara delimitada por (0,0)-(8,0)-(8,10)-(0,4): cae
-      dentro. Desde (19,4), la horizontal hacia la derecha cruza las
-      aristas de una cara distinta, la que rodea a (14,2)-(21,1)-(19,4)
-      aproximadamente: el conteo impar cae sobre otro contorno, así que la
-      etiqueta de cara es distinta aunque ambos puntos compartan la misma
-      coordenada y=4.
+      Con la conectividad del mapa de #9, (8,4) está en B y (19,4) en C.
+      Las letras son etiquetas didácticas de la teoría. El contorno de B
+      es (0,0)-(8,10)-(14,8)-(16,13)-(20,15)-(14,2)-(8,0).
+      El rayo de (8,4) cruza una vez ese contorno; el de (19,4), cero.
+      La lista de vértices sin aristas no permite reconstruir las caras:
+      utiliza el mapa dibujado en la teoría. Primero comprueba frontera.
   - level: 3
     statement: >-
       Implementa `locate` por fuerza bruta con el test de punto en

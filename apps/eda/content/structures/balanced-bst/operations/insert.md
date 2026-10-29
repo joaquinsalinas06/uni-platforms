@@ -96,7 +96,7 @@ visualization:
       nodes:
         - { id: n20, value: 20, parent: null }
         - { id: n10, value: 10, parent: n20, side: left }
-        - { id: n30, value: 30, parent: n20 }
+        - { id: n30, value: 30, parent: n20, side: right }
 ---
 
 <!-- Concepto de apoyo: no hay diapositiva que citar. Esta es la operación

@@ -1,145 +1,139 @@
 ---
 kind: theory
-title: "Vertical ray shooting"
+title: Vertical ray shooting
 visualization:
-  type: range-tree
-  mode: layers
+  type: planar
   steps:
-    - note: >-
-        El mapa de #8 (el mismo de examples.md, #23): un único segmento
-        techo `R` cruza las tres columnas verticales de consulta —
-        x=4, x=8 y x=19 — siempre a la misma altura, y=8. Las tres consultas
-        son (4,12), (8,4) y (19,4): cada una dispara su rayo hacia arriba
-        por su columna.
-      caption: "R cruza x=4, x=8 y x=19 en y=8"
-      mode: layers
-      arrays:
-        - id: col-x4
-          label: "x=4 (y_i=12)"
-          row: 0
-          cells: [8]
-          states: [idle]
-        - id: col-x8
-          label: "x=8 (y_i=4)"
-          row: 1
-          cells: [8]
-          states: [idle]
-        - id: col-x19
-          label: "x=19 (y_i=4)"
-          row: 2
-          cells: [8]
-          states: [idle]
-    - note: >-
-        Columna x=8: R cruza en y=8, que sí cumple y ≥ y_i=4 — es candidato
-        a ser el primer segmento que toca el rayo desde (8,4).
-      caption: "x=8: 8 ≥ 4 — candidato"
-      mode: layers
-      arrays:
-        - id: col-x4
-          label: "x=4 (y_i=12)"
-          row: 0
-          cells: [8]
-          states: [idle]
-        - id: col-x8
-          label: "x=8 (y_i=4)"
-          row: 1
-          cells: [8]
-          states: [marked]
-        - id: col-x19
-          label: "x=19 (y_i=4)"
-          row: 2
-          cells: [8]
-          states: [idle]
-    - note: >-
-        Columna x=19: el mismo R cruza también en y=8, que igualmente
-        cumple y ≥ y_i=4 — también es candidato desde (19,4), aunque la
-        columna es otra.
-      caption: "x=19: 8 ≥ 4 — también candidato"
-      mode: layers
-      arrays:
-        - id: col-x4
-          label: "x=4 (y_i=12)"
-          row: 0
-          cells: [8]
-          states: [idle]
-        - id: col-x8
-          label: "x=8 (y_i=4)"
-          row: 1
-          cells: [8]
-          states: [marked]
-        - id: col-x19
-          label: "x=19 (y_i=4)"
-          row: 2
-          cells: [8]
-          states: [marked]
-    - note: >-
-        (8,4) y (19,4) tocan el mismo segmento R como primera respuesta,
-        aunque disparan el rayo por columnas distintas: por eso caen en la
-        misma cara, sin que haga falta razonar sobre la forma de esa cara.
-      caption: "mismo segmento en columnas distintas ⇒ misma cara"
-      mode: layers
-      arrays:
-        - id: col-x4
-          label: "x=4 (y_i=12)"
-          row: 0
-          cells: [8]
-          states: [idle]
-        - id: col-x8
-          label: "x=8 (y_i=4)"
-          row: 1
-          cells: [8]
-          states: [answer]
-        - id: col-x19
-          label: "x=19 (y_i=4)"
-          row: 2
-          cells: [8]
-          states: [answer]
-    - note: >-
-        Columna x=4: el mismo R cruza en y=8, pero aquí y_i=12 > 8 — el
-        rayo hacia arriba desde (4,12) deja a R por debajo suyo, así que R
-        no cumple y ≥ y_i y se descarta como respuesta para este punto.
-      caption: "x=4: 8 < 12 — R queda debajo, se descarta"
-      mode: layers
-      arrays:
-        - id: col-x4
-          label: "x=4 (y_i=12)"
-          row: 0
-          cells: [8]
-          states: [muted]
-        - id: col-x8
-          label: "x=8 (y_i=4)"
-          row: 1
-          cells: [8]
-          states: [answer]
-        - id: col-x19
-          label: "x=19 (y_i=4)"
-          row: 2
-          cells: [8]
-          states: [answer]
-    - note: >-
-        La respuesta de (4,12) es entonces otro segmento — el que
-        delimita la cara de arriba en esa columna, fuera de este
-        fragmento del mapa — necesariamente distinto de R. Mismo
-        segmento respuesta ⇒ misma cara; segmento distinto ⇒ cara
-        distinta: exactamente la reformulación de PPL que abre este tema.
-      caption: "distinto segmento respuesta ⇒ distinta cara"
-      mode: layers
-      arrays:
-        - id: col-x4
-          label: "x=4 (y_i=12)"
-          row: 0
-          cells: [8]
-          states: [muted]
-        - id: col-x8
-          label: "x=8 (y_i=4)"
-          row: 1
-          cells: [8]
-          states: [answer]
-        - id: col-x19
-          label: "x=19 (y_i=4)"
-          row: 2
-          cells: [8]
-          states: [answer]
+    - note: "El mapa original (#9/#23), reconstruido por sus aristas. Q=(8,4) lanza un rayo hacia arriba:
+        el primer impacto es la arista que bordea la cara B por encima del punto."
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        segments: &a15
+          - id: e1
+            from:
+              - 0
+              - 0
+            to: &a1
+              - 0
+              - 4
+          - id: e2
+            from: *a1
+            to: &a2
+              - 2
+              - 15
+          - id: e3
+            from: *a2
+            to:
+              - 10
+              - 15
+          - id: e4
+            from: &a4
+              - 14
+              - 8
+            to: &a9
+              - 10
+              - 15
+          - id: e5
+            from: &a3
+              - 8
+              - 10
+            to:
+              - 14
+              - 8
+          - id: e6
+            from: &a8
+              - 0
+              - 0
+            to: *a3
+          - id: e7
+            from: &a5
+              - 16
+              - 13
+            to: *a4
+          - id: e8
+            from: &a6
+              - 20
+              - 15
+            to: *a5
+          - id: e9
+            from: &a11
+              - 14
+              - 2
+            to: *a6
+          - id: e10
+            from:
+              - 14
+              - 2
+            to: &a7
+              - 8
+              - 0
+          - id: e11
+            from: *a7
+            to: *a8
+          - id: e12
+            from: *a9
+            to: &a10
+              - 16
+              - 21
+          - id: e13
+            from: *a10
+            to:
+              - 23
+              - 15
+          - id: e14
+            from: &a14
+              - 21
+              - 1
+            to: &a12
+              - 23
+              - 15
+          - id: e15
+            from:
+              - 21
+              - 1
+            to: *a11
+          - id: e16
+            from: *a12
+            to: &a13
+              - 27
+              - 5
+          - id: e17
+            from: *a13
+            to: *a14
+        query:
+          x: 8
+          y: 4
+        mode: ray
+    - note: "Q=(4,12) toca otra arista: el techo de la cara A. Una misma cara puede tener varias aristas
+        superiores; distinto segmento no implica distinta cara."
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        segments: *a15
+        query:
+          x: 4
+          y: 12
+        mode: ray
+    - note: Q=(19,4) está en la cara C. Tras encontrar el segmento se consulta qué cara queda debajo de
+        él; el identificador de segmento por sí solo no es la etiqueta de cara.
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        segments: *a15
+        query:
+          x: 19
+          y: 4
+        mode: ray
 ---
 
 ## ¿Qué problema resuelve?
@@ -161,23 +155,19 @@ primer segmento que la delimita por arriba.
 
 ## Intuición
 
-Un mapa planar es un conjunto de caras separadas por segmentos. Si desde un
-punto de consulta se dispara un rayo vertical hacia arriba, ese rayo tiene
-que cruzar la frontera de la cara donde está el punto antes de cruzar
-cualquier otra — y esa frontera, en la dirección del rayo, es exactamente un
-segmento del mapa. Ese primer segmento **es** la cara: dos puntos en la misma
-cara siempre dan con el mismo primer segmento al disparar el rayo, y puntos
-en caras distintas dan con segmentos distintos (o el mismo segmento visto
-desde lados opuestos, lo cual también identifica la cara sin ambigüedad).
+El rayo conserva x y avanza hacia y mayor. Solo importan los segmentos que
+cruzan esa columna por encima del punto; se elige el menor y de cruce.
 
-Ver el diagrama paso a paso en
-[ray-query](/structures/vertical-ray-shooting/operations/ray-query): el rayo
-descarta los segmentos que cruzan por debajo de $y_i$ y se queda con el
-sucesor — el primer segmento a su paso.
+Encontrar la arista superior reduce una consulta sobre regiones a una
+búsqueda ordenada. Después se consulta qué cara queda debajo de esa arista.
+**Distintas aristas pueden bordear la misma cara**. En un vértice compartido,
+la coincidencia geométrica requiere tratar el empate y la incidencia.
 
-La pregunta "¿qué cara?" se volvió la pregunta "¿qué segmento cruza primero
-la vertical de mi punto, por encima de él?" — la misma información, pero
-ahora expresada sobre objetos (segmentos) en vez de regiones.
+En [Ray Query](/structures/vertical-ray-shooting/operations/ray-query) puedes
+mover Q y observar tanto el primer impacto como la ausencia de respuesta.
+El tema siguiente muestra [el barrido](/structures/segment-intersection-sweep-line)
+que mantiene los segmentos ordenados; la semana 5 reutiliza rayos en
+[dominancia 2D](/structures/dominance-2d), con otra pregunta: reportar puntos.
 
 ## Estructura interna
 

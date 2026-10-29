@@ -8,56 +8,151 @@ cppSteps:
   - step-3-locate-brute-force.cpp
   - full-implementation.cpp
 visualization:
-  type: tree
-  mode: tree
+  type: planar
   steps:
-    - note: >-
-        `locate` no tiene estructura propia ni algoritmo directo del
-        profesor: es un problema que se resuelve encadenando reducciones.
-        Este diagrama no dibuja el mapa planar (ninguna familia de
-        visualización sabe hacerlo con esta subdivisión arbitraria) — sólo
-        la cadena de "esto se reduce a esto otro" que arma theory.md.
-      caption: "paso 1 de 3: PPL (localizar un punto en el mapa)"
-      nodes:
-        - id: ppl
-          value: "PPL: locate(x,y)"
-          parent: null
-          state: active
-    - note: >-
-        El profesor reduce PPL a lanzar un rayo vertical hacia arriba desde
-        el punto: el primer segmento que golpea acota la cara (#18-23). Esa
-        reformulación es exactamente
-        [vertical-ray-shooting](/structures/vertical-ray-shooting).
-      caption: "paso 2 de 3: se reduce a vertical-ray-shooting"
-      nodes:
-        - id: ppl
-          value: "PPL: locate(x,y)"
-          parent: null
-          state: muted
-        - id: vrs
-          value: "vertical-ray-shooting"
-          parent: ppl
-          state: active
-    - note: >-
-        El rayo vertical se ve, a su vez, como el caso especial de
-        intersección de segmentos con barrido (#24-38): activar/desactivar
-        segmentos horizontales y consultar sobre un BBST persistente —
-        `Query(t_{x_i}, Successor(y_i))` (#50) — deja la consulta en
-        O(log n).
-      caption: "paso 3 de 3: se reduce a BBST persistente (barrido)"
-      nodes:
-        - id: ppl
-          value: "PPL: locate(x,y)"
-          parent: null
-          state: muted
-        - id: vrs
-          value: "vertical-ray-shooting"
-          parent: ppl
-          state: muted
-        - id: bbst
-          value: "BBST persistente"
-          parent: vrs
-          state: answer
+    - note: "Mapa de las diapositivas #9/#23, reconstruido siguiendo sus aristas. Las letras A–D son
+        etiquetas didácticas. Se usan las coordenadas escritas; el dibujo original no está a
+        escala."
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        polygons: &a1
+          - id: A
+            label: A
+            labelAt:
+              - 4
+              - 11
+            vertices:
+              - - 0
+                - 0
+              - - 0
+                - 4
+              - - 2
+                - 15
+              - - 10
+                - 15
+              - - 14
+                - 8
+              - - 8
+                - 10
+            state: idle
+          - id: B
+            label: B
+            labelAt:
+              - 10
+              - 4
+            vertices:
+              - - 0
+                - 0
+              - - 8
+                - 10
+              - - 14
+                - 8
+              - - 16
+                - 13
+              - - 20
+                - 15
+              - - 14
+                - 2
+              - - 8
+                - 0
+            state: idle
+          - id: C
+            label: C
+            labelAt:
+              - 18
+              - 17
+            vertices:
+              - - 10
+                - 15
+              - - 16
+                - 21
+              - - 23
+                - 15
+              - - 21
+                - 1
+              - - 14
+                - 2
+              - - 20
+                - 15
+              - - 16
+                - 13
+              - - 14
+                - 8
+            state: idle
+          - id: D
+            label: D
+            labelAt:
+              - 25
+              - 6
+            vertices:
+              - - 23
+                - 15
+              - - 27
+                - 5
+              - - 21
+                - 1
+            state: idle
+        query:
+          x: 8
+          y: 4
+        showRay: false
+        showHits: false
+    - note: Desde Q=(8,4), el rayo horizontal cruza una vez la frontera de B. Impar significa dentro de B.
+        Contar cruces es un test por cara, no el algoritmo eficiente de barrido.
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        polygons: *a1
+        query:
+          x: 8
+          y: 4
+        mode: parity
+    - note: Q=(4,12) pertenece a A. La prueba usa la misma regla, pero evalúa otro contorno. Compartir una
+        coordenada no determina la cara.
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        polygons: *a1
+        query:
+          x: 4
+          y: 12
+        mode: parity
+    - note: Q=(19,4) está en C, no en B. Puedes mover la consulta en Explorar para ver cómo cambia la
+        cara.
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        polygons: *a1
+        query:
+          x: 19
+          y: 4
+        mode: parity
+    - note: "Q=(28,18) queda fuera de todas las caras acotadas: pertenece a la cara infinita. Paridad par
+        para una cara significa fuera de esa cara."
+      planar:
+        bounds:
+          - -3
+          - -3
+          - 30
+          - 24
+        polygons: *a1
+        query:
+          x: 28
+          y: 18
+        mode: parity
 ---
 
 ## Qué hace
@@ -141,7 +236,6 @@ mazo (#8-9) con los puntos de consulta **(4,12), (8,4) y (19,4)** (#9).
   posible (#64).
 - **Caras disjuntas**: el mapa puede tener regiones separadas entre sí,
   además de la cara infinita (#64).
-- **Punto sobre una arista o un vértice**: el mazo no lo menciona (hueco
-  abierto); la implementación de fuerza bruta de este tema lo trata con la
-  ambigüedad propia del conteo de cruces (un punto exactamente sobre el
-  borde puede caer a cualquier lado según redondeo).
+- **Punto sobre una arista o un vértice**: la implementación didáctica
+  devuelve `frontera` antes de probar interiores. El material no fija una
+  cara única para estos casos; no se inventa esa asignación.

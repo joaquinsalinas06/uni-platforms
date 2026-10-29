@@ -1,6 +1,6 @@
 ---
 kind: operation
-title: "Mantenimiento del orden de cruces (caso general)"
+title: Mantenimiento del orden de cruces (caso general)
 order: 3
 cppSteps:
   - step-1-events.cpp
@@ -9,56 +9,93 @@ cppSteps:
   - step-4-crossing-order.cpp
   - full-implementation.cpp
 visualization:
-  type: tree
-  mode: tree
+  type: planar
   steps:
-    - note: >-
-        Caso "Límite" de examples.md: S1 va de (0,0) a (4,4) y S2 de (0,4) a
-        (4,0). En x=0, S1 cruza más abajo (y=0) que S2 (y=4): ese orden es
-        el que guarda la BBST de cruces.
-      caption: "x=0: orden [S1, S2]"
-      nodes:
-        - id: s1
-          value: "S1 (y=0)"
-          parent: null
-          state: active
-        - id: s2
-          value: "S2 (y=4)"
-          parent: s1
-          side: right
-          state: idle
-    - note: >-
-        El barrido avanza. En algún x intermedio (x=2) ambos segmentos
-        valen y=2: es el punto donde se cruzan — exactamente el tipo de
-        intersección que el caso simple excluye por regla (#29), porque no
-        es horizontal-vertical.
-      caption: "x=2: S1 y S2 se cruzan (y=2 ambos)"
-      nodes:
-        - id: s1
-          value: "S1 (y=2)"
-          parent: null
-          state: marked
-        - id: s2
-          value: "S2 (y=2)"
-          parent: s1
-          side: right
-          state: marked
-    - note: >-
-        Pasado el cruce, sus alturas se invirtieron: S2 ahora cruza más
-        abajo que S1. La BBST reordena la comparación (su comparador
-        depende de x, no es un valor fijo) y el nuevo orden queda [S2, S1].
-      caption: "x=4: orden [S2, S1]"
-      nodes:
-        - id: s2
-          value: "S2 (y=0)"
-          parent: null
-          state: active
-        - id: s1
-          value: "S1 (y=4)"
-          parent: s2
-          side: right
-          state: idle
+    - note: "Antes del cruce: de abajo arriba se encuentran S1 y luego S2. La clave de comparación es la
+        altura en la x actual."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 5
+          - 5
+        segments:
+          - id: S1
+            label: S1
+            from:
+              - 0
+              - 0
+            to:
+              - 4
+              - 4
+          - id: S2
+            label: S2
+            from:
+              - 0
+              - 4
+            to:
+              - 4
+              - 0
+        mode: sweep
+        sweepX: 1
+    - note: "En (2,2) se cruzan: ambas alturas coinciden. El empate es un evento; justo después hay que
+        actualizar el orden, no conservar un comparador con claves obsoletas."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 5
+          - 5
+        segments:
+          - id: S1
+            label: S1
+            from:
+              - 0
+              - 0
+            to:
+              - 4
+              - 4
+          - id: S2
+            label: S2
+            from:
+              - 0
+              - 4
+            to:
+              - 4
+              - 0
+        mode: sweep
+        sweepX: 2
+    - note: "Después del cruce: S2 queda debajo de S1. En un mapa planar las aristas no se cruzan en su
+        interior; este ejemplo pertenece al caso general de segmentos."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 5
+          - 5
+        segments:
+          - id: S1
+            label: S1
+            from:
+              - 0
+              - 0
+            to:
+              - 4
+              - 4
+          - id: S2
+            label: S2
+            from:
+              - 0
+              - 4
+            to:
+              - 4
+              - 0
+        mode: sweep
+        sweepX: 3
 ---
+
+import Visualization from "../../../../src/components/Visualization.astro";
+
 
 ## Qué hace
 
@@ -145,3 +182,10 @@ barrido avanza.
   en el material**: la BBST da el orden de cruces, pero de ahí a etiquetar
   la cara sobre la que cae un punto de consulta el deck no explica el
   vínculo — hueco declarado en `theory.md`.
+
+
+### El estado que mantiene el barrido
+
+El plano anterior explica por qué cambia el orden. Esta vista conserva el árbol que guarda ese orden.
+
+<Visualization viz={{"type":"tree","mode":"tree","steps":[{"note":"Caso \"Límite\" de examples.md: S1 va de (0,0) a (4,4) y S2 de (0,4) a (4,0). En x=0, S1 cruza más abajo (y=0) que S2 (y=4): ese orden es el que guarda la BBST de cruces.","caption":"x=0: orden [S1, S2]","nodes":[{"id":"s1","value":"S1 (y=0)","parent":null,"state":"active"},{"id":"s2","value":"S2 (y=4)","parent":"s1","side":"right","state":"idle"}]},{"note":"El barrido avanza. En algún x intermedio (x=2) ambos segmentos valen y=2: es el punto donde se cruzan — exactamente el tipo de intersección que el caso simple excluye por regla (#29), porque no es horizontal-vertical.","caption":"x=2: S1 y S2 se cruzan (y=2 ambos)","nodes":[{"id":"s1","value":"S1 (y=2)","parent":null,"state":"marked"},{"id":"s2","value":"S2 (y=2)","parent":"s1","side":"right","state":"marked"}]},{"note":"Pasado el cruce, sus alturas se invirtieron: S2 ahora cruza más abajo que S1. La BBST reordena la comparación (su comparador depende de x, no es un valor fijo) y el nuevo orden queda [S2, S1].","caption":"x=4: orden [S2, S1]","nodes":[{"id":"s2","value":"S2 (y=0)","parent":null,"state":"active"},{"id":"s1","value":"S1 (y=4)","parent":"s2","side":"right","state":"idle"}]}]}} />

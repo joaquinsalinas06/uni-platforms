@@ -4,6 +4,7 @@ title: "Localización de puntos en el plano"
 ---
 
 import Visualization from '../../../src/components/Visualization.astro';
+import { mapLesson, parityLesson } from '../../../src/visualizations/planar/examples';
 
 ## ¿Qué problema resuelve?
 
@@ -32,60 +33,21 @@ Antes de esa reducción, vale la pena ver el problema tal cual es: un mapa
 dibujado, un punto, y la pregunta de en qué cara cae — sin ningún truco
 todavía.
 
-<Visualization viz={{
-  type: "tree",
-  mode: "tree",
-  steps: [
-    {
-      note: "El mapa planar del profesor (#8-9) tiene 15 vértices y una frontera cerrada; el punto de consulta (8,4) (#9) es uno de los tres que usa el ejemplo del mazo (ver examples.md). Todavía no se sabe a qué cara pertenece — sólo está el mapa y el punto.",
-      caption: "paso 1 de 5: el mapa planar (#8-9) y el punto de consulta (8,4)",
-      nodes: [
-        { id: "mapa", value: "mapa planar: 15 vértices, una frontera (#8-9)", parent: null, state: "idle" },
-        { id: "q", value: "punto de consulta (8,4)", parent: "mapa", state: "active" },
-      ],
-    },
-    {
-      note: "Cualquier punto del plano cae en una de dos clases de cara: alguna de las caras acotadas que la frontera del mapa recorta, o la cara infinita — \"el complemento de todas las caras descritas\" (#64) — para lo que queda fuera del mapa. Ninguna de las dos está descartada todavía.",
-      caption: "paso 2 de 5: dos candidatas — la cara acotada y la cara infinita (#64)",
-      nodes: [
-        { id: "mapa", value: "mapa planar: 15 vértices, una frontera (#8-9)", parent: null, state: "idle" },
-        { id: "q", value: "punto de consulta (8,4)", parent: "mapa", state: "active" },
-        { id: "faceB", value: "cara acotada — su frontera pasa por (0,0)-(8,0)-(8,10)-(0,4)", parent: "mapa", state: "idle" },
-        { id: "faceInf", value: "cara infinita — complemento del mapa (#64)", parent: "mapa", state: "idle" },
-      ],
-    },
-    {
-      note: "La prueba (derivada; no aparece en las diapositivas — ver examples.md): se traza un rayo horizontal hacia la derecha desde el punto y se cuentan los cruces con la frontera de la cara acotada. Ese tramo de frontera queda marcado como el delimitador que se está probando en este paso; la cara infinita aún no se toca.",
-      caption: "paso 3 de 5: se traza el rayo y se cuentan los cruces contra la frontera de la cara acotada",
-      nodes: [
-        { id: "mapa", value: "mapa planar: 15 vértices, una frontera (#8-9)", parent: null, state: "muted" },
-        { id: "q", value: "punto de consulta (8,4)", parent: "mapa", state: "active" },
-        { id: "faceB", value: "frontera bajo prueba: (0,0)-(8,0)-(8,10)-(0,4)", parent: "mapa", state: "marked" },
-        { id: "faceInf", value: "cara infinita — complemento del mapa (#64)", parent: "mapa", state: "idle" },
-      ],
-    },
-    {
-      note: "\"La cara que contiene (0,0)-(8,0)-(8,10)-(0,4) da un cruce impar para (8,4): cae dentro de ella\" (derivado, ver examples.md). Cruce impar de este lado descarta, por definición, que el punto esté en la cara infinita — no hace falta probarla aparte.",
-      caption: "paso 4 de 5: cruce impar → el punto cae dentro de la cara acotada",
-      nodes: [
-        { id: "mapa", value: "mapa planar: 15 vértices, una frontera (#8-9)", parent: null, state: "muted" },
-        { id: "q", value: "punto de consulta (8,4)", parent: "mapa", state: "active" },
-        { id: "faceB", value: "cruce impar: cae dentro", parent: "mapa", state: "answer" },
-        { id: "faceInf", value: "descartada por el conteo", parent: "mapa", state: "muted" },
-      ],
-    },
-    {
-      note: "locate(8,4) = la cara acotada de (0,0)-(8,0)-(8,10)-(0,4). Esto es todo el problema: un mapa, un punto, una cara. Lo que sigue en el resto del tema no cambia esta pregunta — sólo busca una forma de contestarla sin probar cara por cara, mediante la cadena de reducciones de más abajo.",
-      caption: "paso 5 de 5: locate(8,4) resuelto — el problema, no todavía la reducción",
-      nodes: [
-        { id: "mapa", value: "mapa planar: 15 vértices, una frontera (#8-9)", parent: null, state: "idle" },
-        { id: "faceB", value: "cara acotada — contiene a (8,4)", parent: "mapa", state: "answer" },
-        { id: "faceInf", value: "cara infinita — no es esta consulta", parent: "mapa", state: "muted" },
-        { id: "q", value: "(8,4) localizado", parent: "faceB", state: "answer" },
-      ],
-    },
-  ],
-}} />
+<Visualization viz={mapLesson} />
+
+### Dentro, fuera y frontera
+
+El test de paridad prueba una cara a la vez. El siguiente polígono es un
+**ejemplo didáctico derivado**, distinto del mapa del profesor. Dibuja los
+cruces en vez de sustituirlos por una etiqueta de texto.
+
+<Visualization viz={parityLesson} />
+
+Se comprueba primero si Q está sobre una arista o vértice. En los demás
+casos, impar significa dentro y par fuera. Las aristas horizontales no
+aportan cruces; los roces en vértices no cambian la clasificación.
+
+
 
 ## Intuición
 
@@ -162,7 +124,7 @@ en adelante todo es abstracto, un problema reduciéndose a otro.
       nodes: [
         { id: "ppl", value: "PPL: locate(x,y)", parent: null, state: "muted" },
         { id: "vrs", value: "vertical ray shooting", parent: "ppl", state: "muted" },
-        { id: "sweep", value: "barrido de segmentos (sweep line)", parent: "vrs", state: "active" },
+        { id: "sweep", value: "barrido", parent: "vrs", state: "active" },
       ],
     },
     {
@@ -171,8 +133,8 @@ en adelante todo es abstracto, un problema reduciéndose a otro.
       nodes: [
         { id: "ppl", value: "PPL: locate(x,y)", parent: null, state: "muted" },
         { id: "vrs", value: "vertical ray shooting", parent: "ppl", state: "muted" },
-        { id: "sweep", value: "barrido de segmentos (sweep line)", parent: "vrs", state: "muted" },
-        { id: "ortho", value: "caso ortogonal → RSQ, O(n log n)", parent: "sweep", state: "answer" },
+        { id: "sweep", value: "barrido", parent: "vrs", state: "muted" },
+        { id: "ortho", value: "ortogonal: RSQ", parent: "sweep", state: "answer" },
       ],
     },
     {
@@ -181,9 +143,9 @@ en adelante todo es abstracto, un problema reduciéndose a otro.
       nodes: [
         { id: "ppl", value: "PPL: locate(x,y)", parent: null, state: "muted" },
         { id: "vrs", value: "vertical ray shooting", parent: "ppl", state: "muted" },
-        { id: "sweep", value: "barrido de segmentos (sweep line)", parent: "vrs", state: "muted" },
-        { id: "ortho", value: "caso ortogonal → RSQ, O(n log n)", parent: "sweep", state: "muted" },
-        { id: "bbst", value: "BBST del barrido (caso general)", parent: "sweep", state: "active" },
+        { id: "sweep", value: "barrido", parent: "vrs", state: "muted" },
+        { id: "ortho", value: "ortogonal: RSQ", parent: "sweep", state: "muted" },
+        { id: "bbst", value: "general: BBST", parent: "sweep", state: "active" },
       ],
     },
     {
@@ -192,10 +154,10 @@ en adelante todo es abstracto, un problema reduciéndose a otro.
       nodes: [
         { id: "ppl", value: "PPL: locate(x,y)", parent: null, state: "muted" },
         { id: "vrs", value: "vertical ray shooting", parent: "ppl", state: "muted" },
-        { id: "sweep", value: "barrido de segmentos (sweep line)", parent: "vrs", state: "muted" },
-        { id: "ortho", value: "caso ortogonal → RSQ, O(n log n)", parent: "sweep", state: "muted" },
-        { id: "bbst", value: "BBST del barrido (caso general)", parent: "sweep", state: "muted" },
-        { id: "persist", value: "Query(t_x, Successor(y)): O(log n)", parent: "bbst", state: "answer" },
+        { id: "sweep", value: "barrido", parent: "vrs", state: "muted" },
+        { id: "ortho", value: "ortogonal: RSQ", parent: "sweep", state: "muted" },
+        { id: "bbst", value: "general: BBST", parent: "sweep", state: "muted" },
+        { id: "persist", value: "consulta persistente", parent: "bbst", state: "answer" },
       ],
     },
     {
@@ -204,11 +166,11 @@ en adelante todo es abstracto, un problema reduciéndose a otro.
       nodes: [
         { id: "ppl", value: "PPL: locate(x,y)", parent: null, state: "muted" },
         { id: "vrs", value: "vertical ray shooting", parent: "ppl", state: "muted" },
-        { id: "sweep", value: "barrido de segmentos (sweep line)", parent: "vrs", state: "muted" },
-        { id: "ortho", value: "caso ortogonal → RSQ, O(n log n)", parent: "sweep", state: "muted" },
-        { id: "bbst", value: "BBST del barrido (caso general)", parent: "sweep", state: "muted" },
-        { id: "persist", value: "Query(t_x, Successor(y)): O(log n)", parent: "bbst", state: "muted" },
-        { id: "dynamic", value: "dinámico (ortogonal): retroactividad parcial, O(log n)", parent: "ppl", state: "answer" },
+        { id: "sweep", value: "barrido", parent: "vrs", state: "muted" },
+        { id: "ortho", value: "ortogonal: RSQ", parent: "sweep", state: "muted" },
+        { id: "bbst", value: "general: BBST", parent: "sweep", state: "muted" },
+        { id: "persist", value: "consulta persistente", parent: "bbst", state: "muted" },
+        { id: "dynamic", value: "retroactividad parcial", parent: "ppl", state: "answer" },
       ],
     },
   ],

@@ -16,6 +16,8 @@
 // solo la enuncia, sin algoritmo -- inventarlo violaria la fidelidad al
 // material (ver operations/edge-update.md).
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 #include <string>
 #include <vector>
 
@@ -33,7 +35,21 @@ struct Face {
 
 const string INFINITE_FACE = "region-infinita";
 
+bool onBoundary(const Point& p, const vector<Point>& polygon) {
+  for (size_t i = 0; i < polygon.size(); ++i) {
+    const Point& a = polygon[i];
+    const Point& b = polygon[(i + 1) % polygon.size()];
+    double cross = (b.x-a.x)*(p.y-a.y) - (b.y-a.y)*(p.x-a.x);
+    double eps = 1e-9;
+    if (abs(cross) <= eps * max(1.0, hypot(b.x-a.x, b.y-a.y)) &&
+        p.x >= min(a.x,b.x)-eps && p.x <= max(a.x,b.x)+eps &&
+        p.y >= min(a.y,b.y)-eps && p.y <= max(a.y,b.y)+eps) return true;
+  }
+  return false;
+}
+
 bool pointInPolygon(const Point& p, const vector<Point>& polygon) {
+  if (onBoundary(p, polygon)) return false; // interior estricto
   bool inside = false;
   int n = (int)(polygon.size());
   for (int i = 0, j = n - 1; i < n; j = i++) {
@@ -53,6 +69,9 @@ bool pointInPolygon(const Point& p, const vector<Point>& polygon) {
 // ponytail: O(F * V) -- linea base de fuerza bruta, no la cota reducida
 // O(log n) que da el profesor (#51) via persistencia sobre el BBST.
 string locateBruteForce(const Point& p, const vector<Face>& faces) {
+  for (const Face& face : faces) {
+    if (onBoundary(p, face.polygon)) return "frontera";
+  }
   for (const Face& face : faces) {
     if (pointInPolygon(p, face.polygon)) {
       return face.label;
@@ -97,34 +116,19 @@ int main() {
   cout << "verificado: con el mapa vacio, todo punto es la region "
        << "infinita" << endl;
 
-  // Ejemplo del profesor (#9): los tres puntos de consulta sobre el mapa
-  // grande del mazo, usando solo dos de sus caras acotadas -- el mazo no
-  // da las caras completas del mapa (solo los vertices del dibujo, sin
-  // decir que arista conecta con cual), asi que se aproximan con
-  // poligonos que SI dejan a cada punto estrictamente adentro, no sobre
-  // el borde -- estar exactamente sobre una arista es un caso limite
-  // aparte (ver operations/locate.md).
-  vector<Face> profesorMapa = {
-      {"cara-0-0", {{0, 0}, {10, 0}, {10, 10}, {0, 4}}},
-      {"cara-14-2", {{10, 0}, {30, 0}, {19, 20}}},
+  // Aristas transcritas del mapa de #9/#23; letras didacticas.
+  vector<Face> mapa = {
+    {"A", {{0,0},{0,4},{2,15},{10,15},{14,8},{8,10}}},
+    {"B", {{0,0},{8,10},{14,8},{16,13},{20,15},{14,2},{8,0}}},
+    {"C", {{10,15},{16,21},{23,15},{21,1},{14,2},{20,15},{16,13},{14,8}}},
+    {"D", {{23,15},{27,5},{21,1}}},
   };
-  if (!(locateBruteForce({8, 4}, profesorMapa) == "cara-0-0"))
-    cout << "Verificacion fallida en linea " << __LINE__ << endl;
-  cout << "verificado: (8,4) del ejemplo del profesor (#9) localiza "
-       << "en la cara aproximada alrededor de (0,0)-(0,4)" << endl;
-
-  if (!(locateBruteForce({19, 4}, profesorMapa) == "cara-14-2"))
-    cout << "Verificacion fallida en linea " << __LINE__ << endl;
-  cout << "verificado: (19,4) del ejemplo del profesor (#9) localiza "
-       << "en la cara aproximada alrededor de (14,2)-(19,4)" << endl;
-
-  if (!(locateBruteForce({4, 12}, profesorMapa) == INFINITE_FACE))
-    cout << "Verificacion fallida en linea " << __LINE__ << endl;
-  cout << "verificado: (4,12) del ejemplo del profesor (#9) cae "
-       << "fuera de las dos caras aproximadas -- region infinita "
-       << "en esta aproximacion" << endl;
-
-  cout << "todas las verificaciones de locate (fuerza bruta) "
-       << "pasaron" << endl;
+  if (locateBruteForce({8,4}, mapa) != "B" ||
+      locateBruteForce({4,12}, mapa) != "A" ||
+      locateBruteForce({19,4}, mapa) != "C" ||
+      locateBruteForce({28,18}, mapa) != INFINITE_FACE ||
+      locateBruteForce({8,10}, mapa) != "frontera" ||
+      locateBruteForce({8,4}, faces) != "frontera") return 1;
+  cout << "verificado: mapa original y frontera" << endl;
   return 0;
 }

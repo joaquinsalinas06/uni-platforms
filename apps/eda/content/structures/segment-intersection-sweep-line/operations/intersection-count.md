@@ -1,6 +1,6 @@
 ---
 kind: operation
-title: "Conteo de intersecciones aportadas por un segmento vertical"
+title: Conteo de intersecciones aportadas por un segmento vertical
 order: 2
 cppSteps:
   - step-1-events.cpp
@@ -8,42 +8,62 @@ cppSteps:
   - step-3-intersection-count.cpp
   - full-implementation.cpp
 visualization:
-  type: range-tree
-  mode: layers
+  type: planar
   steps:
-    - note: >-
-        En x=4 llega V1 [x=4, y=0..5]. La estructura de activos ya tiene a
-        H1 (y=3) y H2 (y=5) prendidos — el mismo estado que deja
-        segment-activation en ese instante.
-      caption: "V1 cubre y ∈ [0, 5]"
-      mode: layers
-      arrays:
-        - id: ypos
-          label: "activos"
-          row: 0
-          cells: [3, 5]
-          states: [active, active]
-    - note: >-
-        RSQ(0, 5) sobre la estructura de activos: ambas posiciones (3 y 5)
-        caen dentro del rango — cada una cuenta como una intersección.
-      caption: "RSQ(0, 5) → ambas caen dentro"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [answer, answer]
-    - note: >-
-        V1 aporta 2 intersecciones: cruza a H1 y a H2. El profesor atribuye
-        este costo al total O(n log n) del caso simple (#38), sin separar
-        activación de conteo.
-      caption: "V1 aporta 2 intersecciones"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [answer, answer]
+    - note: "x=1: se activa H1 antes de procesar consultas en su extremo izquierdo. El estado guarda su
+        altura y=3."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: &a1
+          - id: H1
+            label: H1
+            from:
+              - 1
+              - 3
+            to:
+              - 6
+              - 3
+          - id: H2
+            label: H2
+            from:
+              - 4
+              - 5
+            to:
+              - 7
+              - 5
+          - id: V1
+            label: V1
+            from:
+              - 4
+              - 0
+            to:
+              - 4
+              - 5
+        mode: sweep
+        sweepX: 1
+    - note: "x=4: primero se activa H2; luego V1 consulta el intervalo y∈[0,5]. Hay dos horizontales
+        activas dentro del intervalo: dos cruces."
+      planar:
+        bounds: &a2
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: *a1
+        mode: sweep
+        sweepX: 4
+        showHits: false
+    - note: "x=4: primero se activa H2; luego V1 consulta el intervalo y∈[0,5]. Hay dos horizontales
+        activas dentro del intervalo: dos cruces."
+      planar:
+        bounds: *a2
+        segments: *a1
+        mode: sweep
+        sweepX: 4
 ---
 
 ## Qué hace

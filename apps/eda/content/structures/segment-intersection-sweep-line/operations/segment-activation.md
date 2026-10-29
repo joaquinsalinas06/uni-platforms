@@ -1,94 +1,105 @@
 ---
 kind: operation
-title: "Activación / desactivación de segmentos horizontales"
+title: Activación / desactivación de segmentos horizontales
 order: 1
 cppSteps:
   - step-1-events.cpp
   - step-2-activation.cpp
   - full-implementation.cpp
 visualization:
-  type: range-tree
-  mode: layers
+  type: planar
   steps:
-    - note: >-
-        La recta de barrido arranca en x=0, antes de cualquier evento. H1
-        [x=1..6, y=3] y H2 [x=4..7, y=5] todavía no existen para el
-        barrido — ningún segmento horizontal está activo.
-      caption: "x=0: activos = {}"
-      mode: layers
-      arrays:
-        - id: ypos
-          label: "activos"
-          row: 0
-          cells: [3, 5]
-          states: [idle, idle]
-    - note: >-
-        El barrido llega a x=1: se activa H1 **antes** de procesar ese
-        punto (#34) — la regla de borde que hace que un segmento vertical
-        justo en x=1 sí cuente la intersección.
-      caption: "x=1: activa H1 (y=3)"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [active, idle]
-    - note: >-
-        El barrido llega a x=4: se activa H2 (y=5) antes de procesar el
-        punto — ahora ambos segmentos horizontales están activos, y es
-        justo la x en la que llega V1.
-      caption: "x=4: activa H2 (y=5)"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [active, active]
-    - note: >-
-        Con H1 y H2 activos, se procesa V1 [x=4, y=0..5]:
-        `RSQ(0, 5)` marca ambas posiciones — son exactamente los cruces
-        que aporta V1 en este instante (ver
-        [intersection-count](/structures/segment-intersection-sweep-line/operations/intersection-count)).
-      caption: "V1 consulta RSQ(0, 5) sobre los activos"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [marked, marked]
-    - note: >-
-        Las dos posiciones activas caen dentro de `[0, 5]`: V1 cruza a H1 y
-        a H2, dos intersecciones nuevas. El barrido sigue de largo — V1 no
-        se activa ni desactiva, sólo consulta.
-      caption: "intersecciones acumuladas: 2"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [answer, answer]
-    - note: >-
-        El barrido llega a x=6: se desactiva H1, **después** de procesar
-        ese punto (#34) — su rango [1,6] ya terminó y deja de aportar
-        cruces a cualquier vertical futuro.
-      caption: "x=6: desactiva H1"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [muted, active]
-    - note: >-
-        x=7: se desactiva H2. El barrido termina sin segmentos activos —
-        el total de intersecciones que aportó todo el recorrido fue 2,
-        todas atribuidas a V1 en x=4.
-      caption: "x=7: desactiva H2 — activos: {} — total: 2"
-      mode: layers
-      arrays:
-        - id: ypos
-          row: 0
-          cells: [3, 5]
-          states: [muted, muted]
+    - note: Ejemplo derivado de activación y consulta (#34–38). La vertical azul barre de izquierda a
+        derecha. H1 y H2 todavía no cruzan el barrido.
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: &a1
+          - id: H1
+            label: H1
+            from:
+              - 1
+              - 3
+            to:
+              - 6
+              - 3
+          - id: H2
+            label: H2
+            from:
+              - 4
+              - 5
+            to:
+              - 7
+              - 5
+          - id: V1
+            label: V1
+            from:
+              - 4
+              - 0
+            to:
+              - 4
+              - 5
+        mode: sweep
+        sweepX: 0
+    - note: "x=1: se activa H1 antes de procesar consultas en su extremo izquierdo. El estado guarda su
+        altura y=3."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: *a1
+        mode: sweep
+        sweepX: 1
+    - note: "x=4: primero se activa H2; luego V1 consulta el intervalo y∈[0,5]. Hay dos horizontales
+        activas dentro del intervalo: dos cruces."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: *a1
+        mode: sweep
+        sweepX: 4
+    - note: "x=6, durante las consultas: H1 aún cuenta en su extremo derecho. La regla es activar →
+        consultar → desactivar cuando los eventos comparten x."
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: *a1
+        mode: sweep
+        sweepX: 6
+    - note: Después de las consultas en x=6 se desactiva H1. Solo H2 queda en el estado del barrido.
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: *a1
+        mode: sweep
+        sweepX: 6
+        sweepAfter: true
+    - note: Después de x=7 también se retira H2. El estado queda vacío. Explorar mueve la vertical; los
+        cruces con V1 aparecen al coincidir con x=4.
+      planar:
+        bounds:
+          - -1
+          - -1
+          - 9
+          - 7
+        segments: *a1
+        mode: sweep
+        sweepX: 7
+        sweepAfter: true
 ---
 
 ## Qué hace

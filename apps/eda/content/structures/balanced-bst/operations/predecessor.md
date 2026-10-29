@@ -21,10 +21,10 @@ visualization:
       highlight: ["n20"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         En 30: 25 es menor, así que 30 NO puede ser el predecesor (sería
         mayor que 25) y no se actualiza el candidato; se sigue por el hijo
@@ -32,10 +32,10 @@ visualization:
       highlight: ["n30"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
     - note: >-
         En 27: 25 es menor, tampoco se actualiza el candidato (27 > 25); el
         hijo izquierdo de 27 es nulo, así que la búsqueda termina aquí. El
@@ -43,10 +43,10 @@ visualization:
       highlight: ["n27"]
       nodes:
         - { id: n20, value: 20, parent: null }
-        - { id: n10, value: 10, parent: n20 }
-        - { id: n30, value: 30, parent: n20 }
-        - { id: n27, value: 27, parent: n30 }
-        - { id: n40, value: 40, parent: n30 }
+        - { id: n10, value: 10, parent: n20, side: left }
+        - { id: n30, value: 30, parent: n20, side: right }
+        - { id: n27, value: 27, parent: n30, side: left }
+        - { id: n40, value: 40, parent: n30, side: right }
 ---
 
 <!-- Concepto de apoyo: no hay diapositiva que citar. Predecessor es la

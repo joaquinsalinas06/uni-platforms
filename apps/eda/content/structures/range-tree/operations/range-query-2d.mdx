@@ -160,6 +160,211 @@ import Visualization from '../../../../src/components/Visualization.astro';
 Responde una consulta de caja `[x1,x2] × [y1,y2]` sobre el range tree 2D de
 [build-2d](/structures/range-tree/operations/build-2d).
 
+Antes de seguir los árboles, mira la consulta en el plano. Estos son los mismos puntos que usa la construcción 2D: P7 y P9 pertenecen al subárbol canónico con raíz 7; P13 y P15, al de raíz 13. El filtro en y elimina P7.
+
+<Visualization viz={{
+  "type": "planar",
+  "steps": [
+    {
+      "note": "Ejemplo didáctico derivado, compartido con range tree 2D. Cada punto tiene dos coordenadas: P3=(3,10), P4=(4,7), P7=(7,11), P9=(9,6), P13=(13,0), P15=(15,-2), P18=(18,3), P27=(27,1). El eje horizontal es x; el vertical es y.",
+      "planar": {
+        "bounds": [
+          0,
+          -5,
+          30,
+          14
+        ],
+        "points": [
+          {
+            "id": "p3",
+            "x": 3,
+            "y": 10,
+            "label": "P3"
+          },
+          {
+            "id": "p4",
+            "x": 4,
+            "y": 7,
+            "label": "P4"
+          },
+          {
+            "id": "p7",
+            "x": 7,
+            "y": 11,
+            "label": "P7"
+          },
+          {
+            "id": "p9",
+            "x": 9,
+            "y": 6,
+            "label": "P9"
+          },
+          {
+            "id": "p13",
+            "x": 13,
+            "y": 0,
+            "label": "P13"
+          },
+          {
+            "id": "p15",
+            "x": 15,
+            "y": -2,
+            "label": "P15"
+          },
+          {
+            "id": "p18",
+            "x": 18,
+            "y": 3,
+            "label": "P18"
+          },
+          {
+            "id": "p27",
+            "x": 27,
+            "y": 1,
+            "label": "P27"
+          }
+        ]
+      }
+    },
+    {
+      "note": "Primero restringimos x a [5,16]. La franja incluye P7, P9, P13 y P15. Todavía no hemos aplicado el límite en y.",
+      "planar": {
+        "bounds": [
+          0,
+          -5,
+          30,
+          14
+        ],
+        "points": [
+          {
+            "id": "p3",
+            "x": 3,
+            "y": 10,
+            "label": "P3"
+          },
+          {
+            "id": "p4",
+            "x": 4,
+            "y": 7,
+            "label": "P4"
+          },
+          {
+            "id": "p7",
+            "x": 7,
+            "y": 11,
+            "label": "P7"
+          },
+          {
+            "id": "p9",
+            "x": 9,
+            "y": 6,
+            "label": "P9"
+          },
+          {
+            "id": "p13",
+            "x": 13,
+            "y": 0,
+            "label": "P13"
+          },
+          {
+            "id": "p15",
+            "x": 15,
+            "y": -2,
+            "label": "P15"
+          },
+          {
+            "id": "p18",
+            "x": 18,
+            "y": 3,
+            "label": "P18"
+          },
+          {
+            "id": "p27",
+            "x": 27,
+            "y": 1,
+            "label": "P27"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          5,
+          -5,
+          16,
+          14
+        ]
+      }
+    },
+    {
+      "note": "Ahora intersectamos con y∈[-3,8]. P7 cumple x pero queda por encima del rectángulo. La caja cerrada [5,16]×[-3,8] contiene P9=(9,6), P13=(13,0) y P15=(15,-2). Existencia: sí; conteo: 3; enumeración: esos tres puntos.",
+      "planar": {
+        "bounds": [
+          0,
+          -5,
+          30,
+          14
+        ],
+        "points": [
+          {
+            "id": "p3",
+            "x": 3,
+            "y": 10,
+            "label": "P3"
+          },
+          {
+            "id": "p4",
+            "x": 4,
+            "y": 7,
+            "label": "P4"
+          },
+          {
+            "id": "p7",
+            "x": 7,
+            "y": 11,
+            "label": "P7"
+          },
+          {
+            "id": "p9",
+            "x": 9,
+            "y": 6,
+            "label": "P9"
+          },
+          {
+            "id": "p13",
+            "x": 13,
+            "y": 0,
+            "label": "P13"
+          },
+          {
+            "id": "p15",
+            "x": 15,
+            "y": -2,
+            "label": "P15"
+          },
+          {
+            "id": "p18",
+            "x": 18,
+            "y": 3,
+            "label": "P18"
+          },
+          {
+            "id": "p27",
+            "x": 27,
+            "y": 1,
+            "label": "P27"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          5,
+          -3,
+          16,
+          8
+        ]
+      }
+    }
+  ]
+}} />
+
 ## Intuición
 
 Se resuelve como una consulta 1D en X que, en lugar de devolver
