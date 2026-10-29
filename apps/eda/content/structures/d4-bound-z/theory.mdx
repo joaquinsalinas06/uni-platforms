@@ -7,10 +7,10 @@ visualization:
     - note: >-
         El árbol de rango sobre z, en reposo — antes de buscar nada.
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
-        - { id: zc, value: "camino común", parent: rz }
-        - { id: za, value: "izquierda(zc)", parent: zc }
-        - { id: zb, value: "derecha(zc)", parent: zc }
+        - { id: rz, value: "raíz z", parent: null }
+        - { id: zc, value: "v_split", parent: rz }
+        - { id: za, value: "izq.", parent: zc }
+        - { id: zb, value: "der.", parent: zc }
     - note: >-
         Una consulta con caja $[a_3,b_3]$ en z busca $a_3$ y $b_3$ desde la
         raíz. Mientras el bit de z que decide el camino es el mismo para
@@ -18,10 +18,10 @@ visualization:
         común, sin separarse todavía.
       highlight: [rz, zc]
       nodes:
-        - { id: rz, value: "z_raíz", parent: null, state: active }
-        - { id: zc, value: "camino común", parent: rz, state: active }
-        - { id: za, value: "izquierda(zc)", parent: zc }
-        - { id: zb, value: "derecha(zc)", parent: zc }
+        - { id: rz, value: "raíz z", parent: null, state: active }
+        - { id: zc, value: "v_split", parent: rz, state: active }
+        - { id: za, value: "izq.", parent: zc }
+        - { id: zb, value: "der.", parent: zc }
       caption: "búsqueda de a3 y b3: todavía un solo camino"
     - note: >-
         En camino común los dos recorridos divergen: el de $a_3$ sigue por
@@ -31,10 +31,10 @@ visualization:
         en D3-separation-node; aquí sólo se ve dónde ocurre para z).
       highlight: [zc, za, zb]
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
-        - { id: zc, value: "camino común", parent: rz, state: marked }
-        - { id: za, value: "izquierda(zc)", parent: zc, state: active }
-        - { id: zb, value: "derecha(zc)", parent: zc, state: active }
+        - { id: rz, value: "raíz z", parent: null }
+        - { id: zc, value: "v_split", parent: rz, state: marked }
+        - { id: za, value: "izq.", parent: zc, state: active }
+        - { id: zb, value: "der.", parent: zc, state: active }
       caption: "camino común = nodo de separación: aquí divergen a3 y b3"
     - note: >-
         derecha(zc) sólo necesita la cota superior de z (b3) — nunca la
@@ -43,28 +43,28 @@ visualization:
         ($z \le b_3$).
       highlight: [zb]
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
-        - { id: zc, value: "camino común", parent: rz }
-        - { id: za, value: "izquierda(zc)", parent: zc }
-        - { id: zb, value: "derecha(zc)", parent: zc, state: active }
-        - { id: d3n, value: "D₃ normal (z ≤ b3)", parent: null, panel: sat }
+        - { id: rz, value: "raíz z", parent: null }
+        - { id: zc, value: "v_split", parent: rz }
+        - { id: za, value: "izq.", parent: zc }
+        - { id: zb, value: "der.", parent: zc, state: active }
+        - { id: d3n, value: "D₃: z≤b₃", parent: null, panel: sat }
       panels:
-        - { id: sat, label: "satélite de derecha(zc)", anchor: zb }
+        - { id: sat, label: "D₃ derecha", anchor: zb }
     - note: >-
         izquierda(zc) es la gemela simétrica: sólo necesita la cota inferior
         de z (a3). Por eso ahí cuelga la D₃′ invertida, acotada por abajo
         ($z \ge a_3$) — la mitad que D₃ sola no provee.
       highlight: [za]
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
-        - { id: zc, value: "camino común", parent: rz }
-        - { id: za, value: "izquierda(zc)", parent: zc, state: active }
-        - { id: zb, value: "derecha(zc)", parent: zc }
-        - { id: d3n, value: "D₃ normal (z ≤ b3)", parent: null, panel: sat }
-        - { id: d3i, value: "D₃′ invertida (z ≥ a3)", parent: null, panel: sat2 }
+        - { id: rz, value: "raíz z", parent: null }
+        - { id: zc, value: "v_split", parent: rz }
+        - { id: za, value: "izq.", parent: zc, state: active }
+        - { id: zb, value: "der.", parent: zc }
+        - { id: d3n, value: "D₃: z≤b₃", parent: null, panel: sat }
+        - { id: d3i, value: "D₃′: z≥a₃", parent: null, panel: sat2 }
       panels:
-        - { id: sat, label: "satélite de derecha(zc)", anchor: zb }
-        - { id: sat2, label: "satélite de izquierda(zc)", anchor: za }
+        - { id: sat, label: "D₃ derecha", anchor: zb }
+        - { id: sat2, label: "D₃′ izquierda", anchor: za }
     - note: >-
         Con las dos satélites disparadas — D₃ normal en derecha(zc) para
         $z \le b_3$ y D₃′ invertida en izquierda(zc) para $z \ge a_3$ — la caja
@@ -72,17 +72,20 @@ visualization:
         coordenadas: la respuesta se arma combinando el resultado de las dos,
         sin bajar a ningún otro nodo del árbol sobre z.
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
-        - { id: zc, value: "camino común", parent: rz }
-        - { id: za, value: "izquierda(zc)", parent: zc }
-        - { id: zb, value: "derecha(zc)", parent: zc }
-        - { id: d3n, value: "D₃ normal (z ≤ b3)", parent: null, panel: sat, state: answer }
-        - { id: d3i, value: "D₃′ invertida (z ≥ a3)", parent: null, panel: sat2, state: answer }
+        - { id: rz, value: "raíz z", parent: null }
+        - { id: zc, value: "v_split", parent: rz }
+        - { id: za, value: "izq.", parent: zc }
+        - { id: zb, value: "der.", parent: zc }
+        - { id: d3n, value: "D₃: z≤b₃", parent: null, panel: sat, state: answer }
+        - { id: d3i, value: "D₃′: z≥a₃", parent: null, panel: sat2, state: answer }
       panels:
-        - { id: sat, label: "satélite de derecha(zc)", anchor: zb }
-        - { id: sat2, label: "satélite de izquierda(zc)", anchor: za }
+        - { id: sat, label: "D₃ derecha", anchor: zb }
+        - { id: sat2, label: "D₃′ izquierda", anchor: za }
       caption: "caja cerrada en x, y y z — D₄ completo"
 ---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
 
 ## ¿Qué problema resuelve?
 
@@ -105,6 +108,145 @@ rango es sobre **z** y guarda $D_3$ normal a un lado y $D_3$ invertida al otro.
 > mismo que en $D_3$ — la misma estructura, pero acotando su dimensión libre por
 > abajo (≥) en vez de por arriba (≤), para el lado del árbol donde esa
 > dirección es la que falta por cerrar.
+
+**De una región abierta a una caja cerrada.** La figura usa un corte y×z
+con x ya restringida. No añade una cuarta dimensión: D₁–D₄ son nombres de
+estructuras sucesivas. D₄ completa las seis caras de una caja en tres
+dimensiones. Este ejemplo numérico es derivado.
+
+<Visualization viz={{
+  "type": "planar",
+  "steps": [
+    {
+      "note": "D₃ ya dejó y∈[4,8] y z≤5, dentro del intervalo x elegido. P3, P4 y P5 cumplen; falta imponer la cota inferior de z.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          12,
+          9
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "P1",
+            "x": 1,
+            "y": 1,
+            "label": "P1"
+          },
+          {
+            "id": "P2",
+            "x": 3,
+            "y": 7,
+            "label": "P2"
+          },
+          {
+            "id": "P3",
+            "x": 4,
+            "y": 2,
+            "label": "P3"
+          },
+          {
+            "id": "P4",
+            "x": 6,
+            "y": 3,
+            "label": "P4"
+          },
+          {
+            "id": "P5",
+            "x": 8,
+            "y": 4,
+            "label": "P5"
+          },
+          {
+            "id": "P6",
+            "x": 9,
+            "y": 6,
+            "label": "P6"
+          },
+          {
+            "id": "P7",
+            "x": 11,
+            "y": 1,
+            "label": "P7"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          4,
+          0,
+          8,
+          5
+        ]
+      }
+    },
+    {
+      "note": "D₄ añade z≥3. El corte de la caja 3D en el plano y×z es ahora un rectángulo [4,8]×[3,5]. Sobreviven P4=(6,3) y P5=(8,4); P3=(4,2) queda por debajo.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          12,
+          9
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "P1",
+            "x": 1,
+            "y": 1,
+            "label": "P1"
+          },
+          {
+            "id": "P2",
+            "x": 3,
+            "y": 7,
+            "label": "P2"
+          },
+          {
+            "id": "P3",
+            "x": 4,
+            "y": 2,
+            "label": "P3"
+          },
+          {
+            "id": "P4",
+            "x": 6,
+            "y": 3,
+            "label": "P4"
+          },
+          {
+            "id": "P5",
+            "x": 8,
+            "y": 4,
+            "label": "P5"
+          },
+          {
+            "id": "P6",
+            "x": 9,
+            "y": 6,
+            "label": "P6"
+          },
+          {
+            "id": "P7",
+            "x": 11,
+            "y": 1,
+            "label": "P7"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          4,
+          3,
+          8,
+          5
+        ]
+      }
+    }
+  ]
+}} />
 
 ## Estructura interna
 

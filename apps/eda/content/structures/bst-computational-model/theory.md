@@ -129,8 +129,7 @@ los prueba. Dos reglas, ambas de costo unitario:
 
 Sobre esas dos reglas se define el costo de Buscar(x): "Empezando desde el
 nodo raíz, se debe visitar el nodo con valor x." (#23) — es decir, el costo
-real de una búsqueda es el número de `pointer-move` que hacen falta para
-llegar de la raíz a x, que es exactamente la profundidad de x. El modelo
+de los descensos es el número de `pointer-move` que hacen falta para llegar de la raíz a x: exactamente la profundidad de x, con la raíz a profundidad 0. Al contar también las visitas y comparaciones, una búsqueda cuesta $O(h+1)$ para profundidad h; encontrar la raíz sigue requiriendo trabajo constante. El modelo
 **sólo** soporta Buscar (#22-23): no hay inserción ni eliminación, y el
 profesor restringe incluso las búsquedas a las que sí encuentran el valor:
 "Asumiremos solo búsquedas en las que x sí se encuentra en el árbol." (#24)
@@ -151,10 +150,7 @@ exactamente lo que instrumenta el C++ de este tema.
 
 ## Tabla de complejidad
 
-La tabla de `meta.yaml` ya cubre las tres cotas (`pointer-move` y `rotate` en
-$O(1)$, `search` en $O(\log n)$ en el peor caso). Lo que la tabla no puede decir:
-la cota de `search` es sobre **la forma del árbol en el peor caso**, no una
-propiedad de la secuencia — esa distinción es precisamente lo que
+La tabla de `meta.yaml` distingue las primitivas de costo $O(1)$ de una búsqueda a profundidad h, que cuesta $O(h+1)$. Con balance, h es $O(\log n)$; en una cadena puede ser $O(n)$. La observación del profesor de que $O(\log n)$ es el mejor peor caso alcanzable no garantiza balance en cualquier ejecución. La relación con la secuencia es precisamente lo que
 [`search-sequence-properties`](/structures/search-sequence-properties) viene
 a refinar.
 

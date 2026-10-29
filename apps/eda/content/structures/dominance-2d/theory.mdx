@@ -36,79 +36,288 @@ horizontal de la consulta — la pregunta de dominancia se volvió una pregunta
 de intersección de rayos, exactamente como PPL se volvió vertical ray
 shooting. Ver [ray-reformulation](/structures/dominance-2d/operations/ray-reformulation).
 
-```
-                z
-                |
-                |        ↑           ↑        ↑
-                |        |           |        |   (rayos verticales, uno
-                |        |           |        |    por cada punto (y_i,z_i))
-        b3 ─ ─ ─|┄┄┄┄┄┄┄┄●┄┄┄┄┄┄┄┄┄┄┄●┄┄┄┄┄┄┄┄┄┄┄┄┄●────  ← rayo de consulta
-                |        |           |        |     (b2,b3), va hacia
-                |        ●           |        |      la izquierda
-                |                    ●
-                |
-                +──────────────────────────────●──────── y
-                                              b2
-```
 
 Los puntos cuyo rayo vertical queda a la izquierda de $b_2$ **y** por debajo
 de la altura $b_3$ son exactamente los que el rayo horizontal atraviesa: los
 dominados.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
-  steps: [
+  "type": "planar",
+  "steps": [
     {
-      note: "Cuatro puntos ordenados por su coordenada y: (1,5), (2,1), (4,4), (5,2). La fila y guarda por qué coordenada se ordena cada columna; la fila z, su otra coordenada. Todavía son puntos sueltos, no rayos.",
-      caption: "puntos (y_i, z_i)",
-      arrays: [
-        { id: "y", label: "y", row: 0, cells: [1, 2, 4, 5] },
-        { id: "z", label: "z", row: 1, cells: [5, 1, 4, 2] },
-      ],
+      "note": "Ejemplo didáctico derivado: A=(1,5), B=(2,1), C=(4,4), D=(5,2). El eje horizontal es y y el vertical es z; las dos coordenadas se ven simultáneamente.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          7,
+          7
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "A",
+            "x": 1,
+            "y": 5,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 4,
+            "y": 4,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 5,
+            "y": 2,
+            "label": "D"
+          }
+        ]
+      }
     },
     {
-      note: "La consulta (b2, b3) = (4, 4) se agrega como una fila aparte, marcada: es el delimitador contra el que se compara cada punto, no un punto más del conjunto.",
-      caption: "consulta (b2, b3) = (4, 4)",
-      arrays: [
-        { id: "y", label: "y", row: 0, cells: [1, 2, 4, 5] },
-        { id: "z", label: "z", row: 1, cells: [5, 1, 4, 2] },
-        { id: "consulta", label: "consulta (b2,b3)", row: 2, cells: ["4,4"], states: ["marked"] },
-      ],
+      "note": "La consulta q=(4,4) domina los puntos a su izquierda y por debajo. Estar a la izquierda solamente no basta: A está demasiado alto.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          7,
+          7
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "A",
+            "x": 1,
+            "y": 5,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 4,
+            "y": 4,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 5,
+            "y": 2,
+            "label": "D"
+          }
+        ],
+        "query": {
+          "x": 4,
+          "y": 4
+        }
+      }
     },
     {
-      note: "Cada punto (y_i, z_i) se convierte en un rayo vertical que sale hacia z=+∞: la fila z ya no dice 'dónde está el punto', sino 'desde qué altura arranca su rayo'. Los cuatro se reformulan a la vez, por eso las cuatro columnas quedan activas juntas.",
-      caption: "puntos → rayos verticales hacia +∞",
-      arrays: [
-        { id: "y", label: "y", row: 0, cells: [1, 2, 4, 5], states: ["active", "active", "active", "active"] },
-        { id: "z", label: "z", row: 1, cells: [5, 1, 4, 2], states: ["active", "active", "active", "active"] },
-        { id: "consulta", label: "consulta (b2,b3)", row: 2, cells: ["4,4"], states: ["marked"] },
-      ],
+      "note": "Desde cada punto nace un rayo vertical hacia z positivo. La consulta se convierte en un rayo horizontal hacia y menor.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          7,
+          7
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "A",
+            "x": 1,
+            "y": 5,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 4,
+            "y": 4,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 5,
+            "y": 2,
+            "label": "D"
+          }
+        ],
+        "segments": [
+          {
+            "id": "rA",
+            "from": [
+              1,
+              5
+            ],
+            "to": [
+              1,
+              6.5
+            ],
+            "arrow": true
+          },
+          {
+            "id": "rB",
+            "from": [
+              2,
+              1
+            ],
+            "to": [
+              2,
+              6.5
+            ],
+            "arrow": true
+          },
+          {
+            "id": "rC",
+            "from": [
+              4,
+              4
+            ],
+            "to": [
+              4,
+              6.5
+            ],
+            "arrow": true
+          },
+          {
+            "id": "rD",
+            "from": [
+              5,
+              2
+            ],
+            "to": [
+              5,
+              6.5
+            ],
+            "arrow": true
+          }
+        ],
+        "query": {
+          "x": 4,
+          "y": 4
+        },
+        "showRay": false
+      }
     },
     {
-      note: "La consulta (4,4) se convierte, simétricamente, en un rayo horizontal que entra desde la derecha a la altura b3=4 y avanza hacia y menor — sigue marcada, ahora como rayo en vez de punto.",
-      caption: "consulta → rayo horizontal a la altura b3, hacia y menor",
-      arrays: [
-        { id: "y", label: "y", row: 0, cells: [1, 2, 4, 5] },
-        { id: "z", label: "z", row: 1, cells: [5, 1, 4, 2] },
-        { id: "consulta", label: "consulta (b2,b3)", row: 2, cells: ["4,4"], states: ["marked"] },
-      ],
+      "note": "El rayo de q cruza los rayos de B=(2,1) y C=(4,4): ambos cumplen y≤4 y z≤4. C cuenta incluso en el origen de la consulta, porque las desigualdades incluyen igualdad. A queda arriba y D a la derecha.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          7,
+          7
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "A",
+            "x": 1,
+            "y": 5,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 4,
+            "y": 4,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 5,
+            "y": 2,
+            "label": "D"
+          }
+        ],
+        "mode": "dominance",
+        "query": {
+          "x": 4,
+          "y": 4
+        },
+        "showRay": true,
+        "showHits": true
+      }
     },
     {
-      note: "El rayo horizontal de la consulta atraviesa el rayo vertical de un punto exactamente cuando y_i ≤ b2 ∧ z_i ≤ b3: y=2 (z=1≤4) y y=4 (z=4≤4, empate incluido por la convención ≤) quedan dominados; y=1 (z=5>4) y y=5 (y=5>4) no.",
-      caption: "dominados: y=2, y=4 — no dominados: y=1, y=5",
-      arrays: [
-        { id: "y", label: "y", row: 0, cells: [1, 2, 4, 5], states: ["muted", "answer", "answer", "muted"] },
-        { id: "z", label: "z", row: 1, cells: [5, 1, 4, 2], states: ["muted", "answer", "answer", "muted"] },
-        { id: "consulta", label: "consulta (b2,b3)", row: 2, cells: ["4,4"], states: ["marked"] },
-      ],
-    },
-  ],
+      "note": "Al mover q a (3,2), sólo B queda dominado. Usa Explorar para mover la consulta y comprobar cómo cambian las dos condiciones a la vez.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          7,
+          7
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "A",
+            "x": 1,
+            "y": 5,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 4,
+            "y": 4,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 5,
+            "y": 2,
+            "label": "D"
+          }
+        ],
+        "mode": "dominance",
+        "query": {
+          "x": 3,
+          "y": 2
+        },
+        "showRay": true,
+        "showHits": true
+      }
+    }
+  ]
 }} />
 
 ## Estructura interna
 
-Los $n$ rayos verticales dividen el plano en una **subdivisión planar de
+Sobre los $n$ rayos se construye una **subdivisión planar auxiliar de
 caras de grado acotado** (un número constante de vecinos por cara) — un
 resultado geométrico de **Chazelle (1986)** que garantiza que esta
 subdivisión existe con $O(n)$ caras en total, aun cuando cada rayo podría en
@@ -123,63 +332,13 @@ Cada cara de la subdivisión tiene, como borde, o bien un tramo de un rayo
 (un punto real) o bien un borde "vacío" que solo existe para mantener el
 grado acotado de sus vecinas.
 
-<Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
-  steps: [
-    {
-      note: "Con un solo rayo (el de y=1, z=5) hay una sola cara: su propio borde real. Nada que acotar todavía.",
-      caption: "col y=1: un rayo, una cara real",
-      arrays: [
-        { id: "col1", label: "col y=1", row: 0, cells: ["z=5"] },
-      ],
-    },
-    {
-      note: "En cuanto hay más rayos alrededor, esta cara necesita un vecino fijo de más para no crecer sin límite: se agrega un borde 'vacío' (muted) que no representa ningún punto — sólo completa el grado acotado de la cara real.",
-      caption: "col y=1: cara real (z=5) + cara vacía",
-      arrays: [
-        { id: "col1", label: "col y=1", row: 0, cells: ["z=5", "vacía"], states: ["idle", "muted"] },
-      ],
-    },
-    {
-      note: "La columna y=2 repite el patrón — propio rayo real (z=1) + su cara vacía — y además promueve (marcado) una fracción de lo que ya vio y=1: la celda promovida guarda un puente activo hacia su posición real en col y=1, la misma idea de 'promover la mitad' de fractional cascading.",
-      caption: "col y=2: propio + vacía + promovido de y=1",
-      arrays: [
-        { id: "col1", label: "col y=1", row: 0, cells: ["z=5", "vacía"], states: ["idle", "muted"] },
-        { id: "col2", label: "col y=2", row: 1, cells: ["z=1", "vacía", "z=5"], states: ["idle", "muted", "marked"] },
-      ],
-      bridges: [
-        { from: "col2", fromIndex: 2, to: "col1", toIndex: 0, active: true },
-      ],
-    },
-    {
-      note: "Col y=4 repite exactamente el mismo patrón acotado — propio (z=4), vacía, promovido de y=2 (marcado) — con su propio puente activo. El puente de y=2 hacia y=1 sigue existiendo, sólo ya no es el que está en foco este paso.",
-      caption: "col y=4: mismo patrón acotado, un nivel más allá",
-      arrays: [
-        { id: "col1", label: "col y=1", row: 0, cells: ["z=5", "vacía"], states: ["idle", "muted"] },
-        { id: "col2", label: "col y=2", row: 1, cells: ["z=1", "vacía", "z=5"], states: ["idle", "muted", "marked"] },
-        { id: "col4", label: "col y=4", row: 2, cells: ["z=4", "vacía", "z=1"], states: ["idle", "muted", "marked"] },
-      ],
-      bridges: [
-        { from: "col2", fromIndex: 2, to: "col1", toIndex: 0, active: false },
-        { from: "col4", fromIndex: 2, to: "col2", toIndex: 0, active: true },
-      ],
-    },
-    {
-      note: "Cada columna, sin importar cuántas haya, tiene el mismo número acotado de caras: una real, una vacía y (salvo la primera) una promovida. Por eso el total de caras de las n columnas sigue siendo O(n), aunque cada rayo real 'viaje' promovido de columna en columna.",
-      caption: "grado acotado por columna → O(n) caras en total (Chazelle, 1986)",
-      arrays: [
-        { id: "col1", label: "col y=1", row: 0, cells: ["z=5", "vacía"], states: ["idle", "muted"] },
-        { id: "col2", label: "col y=2", row: 1, cells: ["z=1", "vacía", "z=5"], states: ["idle", "muted", "shared"] },
-        { id: "col4", label: "col y=4", row: 2, cells: ["z=4", "vacía", "z=1"], states: ["idle", "muted", "shared"] },
-      ],
-      bridges: [
-        { from: "col2", fromIndex: 2, to: "col1", toIndex: 0, active: false },
-        { from: "col4", fromIndex: 2, to: "col2", toIndex: 0, active: false },
-      ],
-    },
-  ],
-}} />
+La figura anterior muestra la **reformulación geométrica**, no una construcción
+completa de la subdivisión de Chazelle. Una lista por columna con celdas
+«real / vacía / promovida» no determina caras geométricas ni demuestra grado
+acotado. Para la consulta eficiente hace falta la subdivisión auxiliar que
+cita el material; sus detalles de construcción no aparecen en estas diapositivas.
+
+
 
 ## Operaciones
 

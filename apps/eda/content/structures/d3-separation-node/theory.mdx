@@ -5,15 +5,15 @@ visualization:
   type: tree
   steps:
     - note: >-
-        Árbol de rango sobre y = {1,3,4,6,8,9,11} — el mismo de
+        Árbol de rango con datos en las hojas y={1,4,8,11}; 6, 3 y 9 son separadores — el mismo de
         [locate-separation-node](/structures/d3-separation-node/operations/locate-separation-node).
         Cada nodo interno (aquí, los tres marcados como internos: 6, 3 y 9)
         va a guardar dos estructuras satélite sobre los puntos de sus dos
         hijos. Todavía sin ninguna satélite colgada.
       nodes:
-        - { id: r6, value: 6, parent: null }
-        - { id: n3, value: 3, parent: r6 }
-        - { id: n9, value: 9, parent: r6 }
+        - { id: r6, value: 6, parent: null, tag: corte }
+        - { id: n3, value: 3, parent: r6, tag: corte }
+        - { id: n9, value: 9, parent: r6, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3 }
         - { id: n8, value: 8, parent: n9 }
@@ -23,9 +23,9 @@ visualization:
         él. Tiene dos hijos: derecha(v)=4 e izquierda(v)=1.
       highlight: [n3]
       nodes:
-        - { id: r6, value: 6, parent: null }
-        - { id: n3, value: 3, parent: r6, state: active }
-        - { id: n9, value: 9, parent: r6 }
+        - { id: r6, value: 6, parent: null, tag: corte }
+        - { id: n3, value: 3, parent: r6, state: active, tag: corte }
+        - { id: n9, value: 9, parent: r6, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3 }
         - { id: n8, value: 8, parent: n9 }
@@ -37,12 +37,12 @@ visualization:
         completa sobre ese subárbol, no un valor suelto.
       highlight: [n4]
       nodes:
-        - { id: r6, value: 6, parent: null }
-        - { id: n3, value: 3, parent: r6 }
-        - { id: n9, value: 9, parent: r6 }
+        - { id: r6, value: 6, parent: null, tag: corte }
+        - { id: n3, value: 3, parent: r6, tag: corte }
+        - { id: n9, value: 9, parent: r6, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3, state: active }
-        - { id: sat-r, value: "D₂ normal (y≤b₂)", parent: n4, collapsed: true }
+        - { id: sat-r, value: "D₂: y≤b₂", parent: n4, collapsed: true }
         - { id: n8, value: 8, parent: n9 }
         - { id: n11, value: 11, parent: n9 }
       links:
@@ -53,11 +53,11 @@ visualization:
         la misma D₂, pero comparando en el sentido contrario.
       highlight: [n1]
       nodes:
-        - { id: r6, value: 6, parent: null }
-        - { id: n3, value: 3, parent: r6 }
-        - { id: n9, value: 9, parent: r6 }
+        - { id: r6, value: 6, parent: null, tag: corte }
+        - { id: n3, value: 3, parent: r6, tag: corte }
+        - { id: n9, value: 9, parent: r6, tag: corte }
         - { id: n1, value: 1, parent: n3, state: active }
-        - { id: sat-l, value: "D₂' invertida (y≥a₂)", parent: n1, collapsed: true }
+        - { id: sat-l, value: "D₂′: y≥a₂", parent: n1, collapsed: true }
         - { id: n4, value: 4, parent: n3 }
         - { id: n8, value: 8, parent: n9 }
         - { id: n11, value: 11, parent: n9 }
@@ -71,14 +71,17 @@ visualization:
         izquierda.
       caption: "cada nodo interno paga dos D₂: una normal, una invertida — ningún nodo se queda sin las suyas"
       nodes:
-        - { id: r6, value: 6, parent: null, state: active }
-        - { id: n3, value: 3, parent: r6, state: active }
-        - { id: n9, value: 9, parent: r6, state: active }
+        - { id: r6, value: 6, parent: null, state: active, tag: corte }
+        - { id: n3, value: 3, parent: r6, state: active, tag: corte }
+        - { id: n9, value: 9, parent: r6, state: active, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3 }
         - { id: n8, value: 8, parent: n9 }
         - { id: n11, value: 11, parent: n9 }
 ---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
 
 ## ¿Qué problema resuelve?
 
@@ -89,7 +92,7 @@ lados**, $[a_2,b_2]$, sin repetir el mismo truco: si se acotara y con otra
 descomposición canónica anidada dentro de cada nodo canónico de x, el costo
 sería "$O(\lg n)$ nodos canónicos en x, cada uno con $O(\lg n)$ nodos canónicos en
 y: $O(\lg^2 n)$ consultas. Perdimos el $O(\lg n)$ que queríamos." (Sem5_Fractional_Cascading_II.pdf#36).
-$D_3$ resuelve exactamente esto: acotar $[x_1,x_2] \times [a_2,b_2] \times (-\infty,b_3)$ sin pagar
+$D_3$ resuelve exactamente esto: acotar $[x_1,x_2] \times [a_2,b_2] \times (-\infty,b_3]$ sin pagar
 ese factor extra.
 
 ## Intuición
@@ -102,6 +105,145 @@ juntos, y se **separan en un único nodo** — "exactamente como en un árbol de
 rangos 1D clásico" (#40). Ese nodo, el nodo de separación ($v_{\text{split}}$), es
 donde toda la información que hace falta ya está disponible de un solo golpe:
 de ahí en adelante ya no hace falta seguir bajando (#45).
+
+**La región que se consulta.** En este corte todos los puntos cumplen ya
+el rango de x. El plano y×z permite ver la diferencia entre «por debajo de
+b₃» y «además, entre a₂ y b₂». El árbol de separación explica cómo responder;
+la región explica qué debe devolver. Los puntos son un ejemplo derivado.
+
+<Visualization viz={{
+  "type": "planar",
+  "steps": [
+    {
+      "note": "Corte didáctico: todos estos puntos ya cumplen el intervalo x. Con z≤5, sobreviven P1, P3, P4, P5 y P7; aún no se ha cerrado y por ambos lados.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          12,
+          9
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "P1",
+            "x": 1,
+            "y": 1,
+            "label": "P1"
+          },
+          {
+            "id": "P2",
+            "x": 3,
+            "y": 7,
+            "label": "P2"
+          },
+          {
+            "id": "P3",
+            "x": 4,
+            "y": 2,
+            "label": "P3"
+          },
+          {
+            "id": "P4",
+            "x": 6,
+            "y": 3,
+            "label": "P4"
+          },
+          {
+            "id": "P5",
+            "x": 8,
+            "y": 4,
+            "label": "P5"
+          },
+          {
+            "id": "P6",
+            "x": 9,
+            "y": 6,
+            "label": "P6"
+          },
+          {
+            "id": "P7",
+            "x": 11,
+            "y": 1,
+            "label": "P7"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          0,
+          0,
+          12,
+          5
+        ]
+      }
+    },
+    {
+      "note": "D₃ agrega 4≤y≤8. La región resultante es una franja vertical cerrada por arriba en z=5. Quedan P3=(4,2), P4=(6,3) y P5=(8,4), con coordenadas (y,z).",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          12,
+          9
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "P1",
+            "x": 1,
+            "y": 1,
+            "label": "P1"
+          },
+          {
+            "id": "P2",
+            "x": 3,
+            "y": 7,
+            "label": "P2"
+          },
+          {
+            "id": "P3",
+            "x": 4,
+            "y": 2,
+            "label": "P3"
+          },
+          {
+            "id": "P4",
+            "x": 6,
+            "y": 3,
+            "label": "P4"
+          },
+          {
+            "id": "P5",
+            "x": 8,
+            "y": 4,
+            "label": "P5"
+          },
+          {
+            "id": "P6",
+            "x": 9,
+            "y": 6,
+            "label": "P6"
+          },
+          {
+            "id": "P7",
+            "x": 11,
+            "y": 1,
+            "label": "P7"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          4,
+          0,
+          8,
+          5
+        ]
+      }
+    }
+  ]
+}} />
 
 ## Estructura interna
 

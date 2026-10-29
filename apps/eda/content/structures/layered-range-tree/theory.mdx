@@ -111,6 +111,60 @@ equivalente en cada hijo. Bajar por el árbol durante una consulta deja de
 ser "buscar de nuevo en cada nivel" y pasa a ser "saltar por el puntero ya
 calculado".
 
+Antes de seguir índices y puentes, comprueba el resultado en el plano.
+El árbol descompone el rango horizontal; los arreglos y sus puentes filtran
+el rango vertical. Se trata de los mismos cuatro puntos en ambas vistas.
+
+<Visualization viz={{
+  "type": "planar",
+  "steps": [
+    {
+      "note": "Ejemplo derivado: A=(1,4), B=(2,9), C=(3,1), D=(4,7). La consulta [2,4]×[3,8] contiene sólo D. B cumple x pero está por encima; C cumple x pero está por debajo. El árbol y los puentes deben devolver este mismo resultado.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          6,
+          11
+        ],
+        "points": [
+          {
+            "id": "A",
+            "x": 1,
+            "y": 4,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 9,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 3,
+            "y": 1,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 4,
+            "y": 7,
+            "label": "D"
+          }
+        ],
+        "mode": "range",
+        "range": [
+          2,
+          3,
+          4,
+          8
+        ]
+      }
+    }
+  ]
+}} />
+
 ## Estructura interna
 
 Cada nodo del árbol primario (el mismo árbol primario de

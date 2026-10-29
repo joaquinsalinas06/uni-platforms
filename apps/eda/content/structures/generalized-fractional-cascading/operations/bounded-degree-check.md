@@ -6,100 +6,144 @@ cppSteps:
   - step-2-bounded-degree-check.cpp
   - full-implementation.cpp
 visualization:
-  type: persistent
-  mode: fat-node
+  type: range-tree
   steps:
-    - note: >-
-        Un vértice v cualquiera del árbol D₄/D₃, con sus 5 vecinos posibles
-        enumerados como registro: padre, hijo izquierdo, hijo derecho, y dos
-        enlaces auxiliares hacia la estructura invertida gemela del mismo
-        nodo. Ninguno se ha contado todavía.
+    - note: "Vecindad de un vértice v: p es el padre, i y d los hijos, g₁ y g₂ los enlaces
+        auxiliares hacia la estructura gemela. Las cinco conexiones se dibujan completas.
+        Es un esquema de adyacencia, no cinco registros independientes."
       nodes:
-        - id: padre
-          value: padre
         - id: v
           value: v
-          fields:
-            - { name: "vecino 1", value: "padre" }
-            - { name: "vecino 2", value: "hijo izq." }
-            - { name: "vecino 3", value: "hijo der." }
-            - { name: "vecino 4", value: "gemela A" }
-            - { name: "vecino 5", value: "gemela B" }
+          parent: null
+          tag: d≤5
+        - id: padre
+          value: p
+          parent: v
+          edge: false
         - id: hijoIzq
-          value: "hijo izq."
+          value: i
+          parent: v
+          edge: false
         - id: hijoDer
-          value: "hijo der."
+          value: d
+          parent: v
+          edge: false
         - id: gemelaA
-          value: "gemela A"
+          value: g₁
+          parent: v
+          edge: false
         - id: gemelaB
-          value: "gemela B"
+          value: g₂
+          parent: v
+          edge: false
       links:
-        - { from: v, to: padre, kind: pointer, label: padre }
-        - { from: v, to: hijoIzq, kind: pointer, label: hijo }
-        - { from: v, to: hijoDer, kind: pointer, label: hijo }
-        - { from: v, to: gemelaA, kind: pointer, label: gemela }
-        - { from: v, to: gemelaB, kind: pointer, label: gemela }
-    - note: >-
-        Se cuentan los vecinos uno por uno — no se recorre el resto del
-        grafo, sólo esta lista fija de a lo más 5 candidatos por vértice.
-      highlight: [v]
+        - from: v
+          to: padre
+          kind: pointer
+        - from: v
+          to: hijoIzq
+          kind: pointer
+        - from: v
+          to: hijoDer
+          kind: pointer
+        - from: v
+          to: gemelaA
+          kind: pointer
+        - from: v
+          to: gemelaB
+          kind: pointer
+    - note: Se cuentan los vecinos uno por uno — no se recorre el resto del grafo, sólo esta
+        lista fija de a lo más 5 candidatos por vértice.
+      highlight:
+        - v
       nodes:
-        - id: padre
-          value: padre
         - id: v
           value: v
+          parent: null
           state: active
-          fields:
-            - { name: "vecino 1", value: "padre" }
-            - { name: "vecino 2", value: "hijo izq." }
-            - { name: "vecino 3", value: "hijo der." }
-            - { name: "vecino 4", value: "gemela A" }
-            - { name: "vecino 5", value: "gemela B" }
-        - id: hijoIzq
-          value: "hijo izq."
-        - id: hijoDer
-          value: "hijo der."
-        - id: gemelaA
-          value: "gemela A"
-        - id: gemelaB
-          value: "gemela B"
-      links:
-        - { from: v, to: padre, kind: pointer, label: padre }
-        - { from: v, to: hijoIzq, kind: pointer, label: hijo }
-        - { from: v, to: hijoDer, kind: pointer, label: hijo }
-        - { from: v, to: gemelaA, kind: pointer, label: gemela }
-        - { from: v, to: gemelaB, kind: pointer, label: gemela }
-    - note: >-
-        |vecinos(v)| = 5 ≤ 5: la condición de grado acotado se cumple para
-        este vértice — y, por construcción, para cualquier otro vértice de
-        D₄/D₃, porque ningún nodo tiene más de estos 5 tipos de vecino.
-      caption: "grado(v) = 5 ≤ d — condición de Applicability cumplida"
-      nodes:
+          tag: d≤5
         - id: padre
-          value: padre
+          value: p
+          parent: v
+          edge: false
+        - id: hijoIzq
+          value: i
+          parent: v
+          edge: false
+        - id: hijoDer
+          value: d
+          parent: v
+          edge: false
+        - id: gemelaA
+          value: g₁
+          parent: v
+          edge: false
+        - id: gemelaB
+          value: g₂
+          parent: v
+          edge: false
+      links:
+        - from: v
+          to: padre
+          kind: pointer
+        - from: v
+          to: hijoIzq
+          kind: pointer
+        - from: v
+          to: hijoDer
+          kind: pointer
+        - from: v
+          to: gemelaA
+          kind: pointer
+        - from: v
+          to: gemelaB
+          kind: pointer
+    - note: "|vecinos(v)| = 5 ≤ 5: la condición de grado acotado se cumple para este vértice —
+        y, por construcción, para cualquier otro vértice de D₄/D₃, porque ningún nodo
+        tiene más de estos 5 tipos de vecino."
+      caption: grado(v) = 5 ≤ d — condición de Applicability cumplida
+      nodes:
         - id: v
           value: v
+          parent: null
           state: answer
-          fields:
-            - { name: "vecino 1", value: "padre" }
-            - { name: "vecino 2", value: "hijo izq." }
-            - { name: "vecino 3", value: "hijo der." }
-            - { name: "vecino 4", value: "gemela A" }
-            - { name: "vecino 5", value: "gemela B" }
+          tag: d≤5
+        - id: padre
+          value: p
+          parent: v
+          edge: false
         - id: hijoIzq
-          value: "hijo izq."
+          value: i
+          parent: v
+          edge: false
         - id: hijoDer
-          value: "hijo der."
+          value: d
+          parent: v
+          edge: false
         - id: gemelaA
-          value: "gemela A"
+          value: g₁
+          parent: v
+          edge: false
         - id: gemelaB
-          value: "gemela B"
+          value: g₂
+          parent: v
+          edge: false
       links:
-        - { from: v, to: padre, kind: pointer, label: padre }
-        - { from: v, to: hijoIzq, kind: pointer, label: hijo }
-        - { from: v, to: hijoDer, kind: pointer, label: hijo }
-        - { from: v, to: gemelaA, kind: pointer, label: gemela }
-        - { from: v, to: gemelaB, kind: pointer, label: gemela }
+        - from: v
+          to: padre
+          kind: pointer
+        - from: v
+          to: hijoIzq
+          kind: pointer
+        - from: v
+          to: hijoDer
+          kind: pointer
+        - from: v
+          to: gemelaA
+          kind: pointer
+        - from: v
+          to: gemelaB
+          kind: pointer
 ---
 
 ## Qué hace
@@ -174,8 +218,7 @@ propio en este fragmento) y cada uno de los otros 4 vértices tiene grado 1
   número de vecinos proporcional a $n$ (por ejemplo, un nodo conectado a
   todos los demás), el chequeo fallaría — y con él, la premisa completa de
   [Applicability](/structures/generalized-fractional-cascading/operations/applicability).
-  `full-implementation.cpp` construye este caso con números concretos: con
-  grado acotado $d = 5$ un vértice necesita del orden de $d \cdot n/2$ puentes;
-  con grado no acotado $d = 400$ (sobre las mismas listas de tamaño $n$),
-  ese mismo vértice concentra 80 veces más puentes — el tamaño de la
-  estructura en ese único vértice deja de ser constante frente a $n$.
+  La comparación finita d=5 frente a d=400 del código sólo ilustra una
+  diferencia de volumen de puentes. Para demostrar grado no acotado hace
+  falta una familia de grafos: por ejemplo, un hub con d=m−1 vecinos cuando
+  el número de vértices m crece. Una constante grande sigue siendo constante.

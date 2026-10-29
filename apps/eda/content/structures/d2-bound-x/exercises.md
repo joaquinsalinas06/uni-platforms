@@ -5,7 +5,7 @@ items:
   - level: 1
     statement: >-
       D₂ (la estructura de esta página) recibe una consulta [x1, x2] × (−∞,
-      b2] × (−∞, b3). ¿Cuáles de las tres restricciones acota D₂ con un
+      b2] × (−∞, b3]. ¿Cuáles de las tres restricciones acota D₂ con un
       intervalo cerrado, cuáles con dominancia, y qué estructura resuelve
       cada parte?
     hints:
@@ -14,7 +14,7 @@ items:
     solution: >-
       D₂ acota sólo x con un intervalo cerrado [x1, x2], usando el BST sobre
       x. Las otras dos, y y z, siguen acotadas por dominancia (−∞, b2] y
-      (−∞, b3), resueltas por la D₁ satélite de cada nodo canónico.
+      (−∞, b3], resueltas por la D₁ satélite de cada nodo canónico.
   - level: 2
     statement: >-
       Con el BST de build.md (raíz x=4, hijo izquierdo x=3 con hijo
@@ -44,7 +44,7 @@ items:
       (la D1 satélite simplificada).
   - level: 4
     statement: >-
-      Adapta tu D₂ para responder [x1, x2] × (−∞, b2] × (−∞, b3): recorre
+      Adapta tu D₂ para responder [x1, x2] × (−∞, b2] × (−∞, b3]: recorre
       los nodos canónicos de [x1, x2] y dispara la consulta de dominancia
       en cada uno.
     hints:

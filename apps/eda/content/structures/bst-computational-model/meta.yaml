@@ -24,10 +24,10 @@ complexity:
       que ese mecanismo cuesta O(1) sea cual sea el tamaño de los subárboles
       que mueve.
   search:
-    worst: O(log n)
+    worst: O(h + 1), con h = profundidad de x
     reasoning: >-
       Buscar(x) es una secuencia de pointer-move desde la raíz hasta x, así
-      que su costo real es la profundidad de x en el árbol vigente. El
+      que el número de descensos es la profundidad h de x y el trabajo de búsqueda es O(h+1), incluyendo examinar la raíz. El
       profesor señala que, en el peor caso y sobre todas las formas
       posibles de BST, O(log n) es el mejor tiempo posible (#26) — pero
       remarca de inmediato que "el trabajo de las búsquedas depende de la

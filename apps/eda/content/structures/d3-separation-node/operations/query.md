@@ -20,9 +20,9 @@ visualization:
         derecha(3)=4 e izquierda(3)=1.
       highlight: [n3]
       nodes:
-        - { id: r6, value: 6, parent: null }
+        - { id: r6, value: 6, parent: null, tag: corte }
         - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
-        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n9, value: 9, parent: r6, state: muted, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3 }
         - { id: n8, value: 8, parent: n9, state: muted }
@@ -36,9 +36,9 @@ visualization:
         reimplementa aquí.
       highlight: [n4]
       nodes:
-        - { id: r6, value: 6, parent: null }
+        - { id: r6, value: 6, parent: null, tag: corte }
         - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
-        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n9, value: 9, parent: r6, state: muted, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3, state: active }
         - { id: n8, value: 8, parent: n9, state: muted }
@@ -52,9 +52,9 @@ visualization:
         la respuesta canónica de esta consulta.
       highlight: [n4]
       nodes:
-        - { id: r6, value: 6, parent: null }
+        - { id: r6, value: 6, parent: null, tag: corte }
         - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
-        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n9, value: 9, parent: r6, state: muted, tag: corte }
         - { id: n1, value: 1, parent: n3 }
         - { id: n4, value: 4, parent: n3, state: answer }
         - { id: n8, value: 8, parent: n9, state: muted }
@@ -69,9 +69,9 @@ visualization:
         normal pero comparando al revés.
       highlight: [n1]
       nodes:
-        - { id: r6, value: 6, parent: null }
+        - { id: r6, value: 6, parent: null, tag: corte }
         - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
-        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n9, value: 9, parent: r6, state: muted, tag: corte }
         - { id: n1, value: 1, parent: n3, state: active }
         - { id: n4, value: 4, parent: n3, state: answer }
         - { id: n8, value: 8, parent: n9, state: muted }
@@ -85,9 +85,9 @@ visualization:
         respuesta canónica.
       highlight: [n1]
       nodes:
-        - { id: r6, value: 6, parent: null }
+        - { id: r6, value: 6, parent: null, tag: corte }
         - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
-        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n9, value: 9, parent: r6, state: muted, tag: corte }
         - { id: n1, value: 1, parent: n3, state: answer }
         - { id: n4, value: 4, parent: n3, state: answer }
         - { id: n8, value: 8, parent: n9, state: muted }
@@ -102,9 +102,9 @@ visualization:
         como en la descomposición canónica en y que este diseño evita (#36).
       caption: "respuesta = {(2,4), (2,1)} — 2 disparos totales"
       nodes:
-        - { id: r6, value: 6, parent: null }
+        - { id: r6, value: 6, parent: null, tag: corte }
         - { id: n3, value: 3, parent: r6, state: marked, tag: v_split }
-        - { id: n9, value: 9, parent: r6, state: muted }
+        - { id: n9, value: 9, parent: r6, state: muted, tag: corte }
         - { id: n1, value: 1, parent: n3, state: answer }
         - { id: n4, value: 4, parent: n3, state: answer }
         - { id: n8, value: 8, parent: n9, state: muted }
@@ -113,7 +113,7 @@ visualization:
 
 ## Qué hace
 
-Resuelve $[x_1,x_2] \times [a_2,b_2] \times (-\infty,b_3)$ disparando exactamente **dos**
+Resuelve $[x_1,x_2] \times [a_2,b_2] \times (-\infty,b_3]$ disparando exactamente **dos**
 consultas satélite desde el
 [nodo de separación](/structures/d3-separation-node/operations/locate-separation-node),
 en vez de recorrer $O(\lg n)$ nodos canónicos de una descomposición en y.
@@ -162,7 +162,7 @@ función consultarD3(raiz, x1, x2, a2, b2):
 Ver `step-4-query.cpp` en el editor de arriba. Las satélites $D_2$ / $D_2'$ se
 implementan aquí como estructuras funcionalmente correctas y verificadas
 contra fuerza bruta (no como una reimplementación completa de
-[D₂](/structures/d2-bound-x), que es alcance de otro agente): filtran por
+[D₂](/structures/d2-bound-x)): filtran por
 `x` y por el lado de `y` que todavía falta, exactamente como describe la
 intuición de esta operación.
 
@@ -189,5 +189,5 @@ Ver [Ejemplos](/structures/d3-separation-node/examples).
   $O(\lg^2 n)$ en vez de las 2 consultas de aquí (#36).
 - Si $v_{\text{split}}$ es una hoja (ver
   [Casos límite de localización](/structures/d3-separation-node/operations/locate-separation-node)),
-  no hay `derecha(v_split)` ni `izquierda(v_split)` con puntos: la consulta
-  devuelve vacío. No discutido por el profesor.
+  no hay satélites que consultar: se comprueba el punto de esa hoja
+  contra todas las cotas y se reporta si las cumple. No discutido por el profesor.

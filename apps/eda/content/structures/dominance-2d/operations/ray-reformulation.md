@@ -6,54 +6,233 @@ cppSteps:
   - step-1-ray-reformulation.cpp
   - full-implementation.cpp
 visualization:
-  type: range-tree
-  mode: layers
-  steps:
-    - note: >-
-        Cuatro puntos ordenados por su coordenada y: (1,5), (2,1), (4,4),
-        (5,2). Cada celda es un punto — su etiqueta es sólo su y; la z de
-        cada uno se explica aquí, no en la celda: y=1→z=5, y=2→z=1, y=4→z=4,
-        y=5→z=2. Todavía se piensan como puntos sueltos, no como rayos.
-      caption: "puntos (y_i, z_i), antes de la reformulación"
-      arrays:
-        - id: puntos
-          label: "puntos por y"
-          row: 0
-          cells: [1, 2, 4, 5]
-    - note: >-
-        Cada punto se convierte en un rayo vertical que sale de (y_i, z_i)
-        hacia z=+∞: la celda ya no es "dónde está el punto", sino "desde
-        dónde arranca su rayo hacia arriba". La consulta (b2,b3)=(4,4) se
-        convierte, simétricamente, en un rayo horizontal que entra desde la
-        derecha a la altura z=4 y avanza hacia y menor.
-      caption: "cada celda es ahora un rayo vertical hacia +∞"
-      arrays:
-        - id: puntos
-          label: "rayos verticales (y)"
-          row: 0
-          cells: [1, 2, 4, 5]
-        - id: consulta
-          label: "consulta"
-          row: 1
-          cells: ["(4,4)"]
-          states: [marked]
-    - note: >-
-        El rayo horizontal de la consulta atraviesa el rayo vertical de un
-        punto exactamente cuando ese punto cumple y_i ≤ b2 ∧ z_i ≤ b3: y=2
-        (z=1≤4) y y=4 (z=4≤4, empate incluido por la convención ≤) quedan
-        dominados; y=1 (z=5>4) y y=5 (y>4) no.
-      caption: "dominados: y=2, y=4 — no dominados: y=1, y=5"
-      arrays:
-        - id: puntos
-          label: "rayos verticales (y)"
-          row: 0
-          cells: [1, 2, 4, 5]
-          states: [muted, answer, answer, muted]
-        - id: consulta
-          label: "consulta"
-          row: 1
-          cells: ["(4,4)"]
-          states: [marked]
+  {
+    "type": "planar",
+    "steps": [
+      {
+        "note": "Ejemplo didáctico derivado: A=(1,5), B=(2,1), C=(4,4), D=(5,2). El eje horizontal es y y el vertical es z; las dos coordenadas se ven simultáneamente.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ]
+        }
+      },
+      {
+        "note": "La consulta q=(4,4) domina los puntos a su izquierda y por debajo. Estar a la izquierda solamente no basta: A está demasiado alto.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "query": {
+            "x": 4,
+            "y": 4
+          }
+        }
+      },
+      {
+        "note": "Desde cada punto nace un rayo vertical hacia z positivo. La consulta se convierte en un rayo horizontal hacia y menor.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "segments": [
+            {
+              "id": "rA",
+              "from": [
+                1,
+                5
+              ],
+              "to": [
+                1,
+                6.5
+              ],
+              "arrow": true
+            },
+            {
+              "id": "rB",
+              "from": [
+                2,
+                1
+              ],
+              "to": [
+                2,
+                6.5
+              ],
+              "arrow": true
+            },
+            {
+              "id": "rC",
+              "from": [
+                4,
+                4
+              ],
+              "to": [
+                4,
+                6.5
+              ],
+              "arrow": true
+            },
+            {
+              "id": "rD",
+              "from": [
+                5,
+                2
+              ],
+              "to": [
+                5,
+                6.5
+              ],
+              "arrow": true
+            }
+          ],
+          "query": {
+            "x": 4,
+            "y": 4
+          },
+          "showRay": false
+        }
+      },
+      {
+        "note": "El rayo de q cruza los rayos de B=(2,1) y C=(4,4): ambos cumplen y≤4 y z≤4. C cuenta incluso en el origen de la consulta, porque las desigualdades incluyen igualdad. A queda arriba y D a la derecha.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "mode": "dominance",
+          "query": {
+            "x": 4,
+            "y": 4
+          },
+          "showRay": true,
+          "showHits": true
+        }
+      }
+    ]
+  }
 ---
 
 ## Qué hace

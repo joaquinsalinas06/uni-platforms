@@ -6,70 +6,161 @@ cppSteps:
   - step-1-graph-vertex.cpp
   - full-implementation.cpp
 visualization:
-  type: persistent
-  mode: fat-node
+  type: range-tree
   steps:
-    - note: >-
-        Caso acotado (D₄/D₃, referencia): un vértice v con grado fijo d=5 —
-        sus 5 puentes entrantes, dibujados como puertos. El tamaño que v
-        aporta a la estructura es una constante, la misma para cualquier n.
+    - note: "Grado acotado: cada vértice tiene a lo más cinco vecinos, independientemente del
+        tamaño n del grafo. La cantidad de conexiones locales por vértice es constante."
       nodes:
         - id: v
           value: v
+          parent: null
+          tag: d≤5
           state: answer
-          fields:
-            - { name: grado, value: 5 }
-            - { name: "puentes ≈ d·n/2, con d=5", value: "O(1) por vértice" }
-      ports:
-        - { id: p1, to: v }
-        - { id: p2, to: v }
-        - { id: p3, to: v }
-        - { id: p4, to: v }
-        - { id: p5, to: v }
-    - note: >-
-        Contraejemplo — grado NO acotado: un vértice u (un "hub") conectado a
-        una fracción de los n vértices restantes en vez de a una constante.
-        Aquí se dibujan sólo 6 de esos puentes para caber en el diagrama; en
-        la construcción real son del orden de d=400 sobre las mismas listas
-        de tamaño n.
-      highlight: [u]
+        - id: n0
+          value: "1"
+          parent: v
+          edge: false
+        - id: n1
+          value: "2"
+          parent: v
+          edge: false
+        - id: n2
+          value: "3"
+          parent: v
+          edge: false
+        - id: n3
+          value: "4"
+          parent: v
+          edge: false
+        - id: n4
+          value: "5"
+          parent: v
+          edge: false
+      links:
+        - from: v
+          to: n0
+          kind: pointer
+        - from: v
+          to: n1
+          kind: pointer
+        - from: v
+          to: n2
+          kind: pointer
+        - from: v
+          to: n3
+          kind: pointer
+        - from: v
+          to: n4
+          kind: pointer
+    - note: "Grado no acotado: un hub u se conecta con los otros n−1 vértices. Sólo se muestran
+        cinco vecinos y puntos suspensivos. Al crecer n también crece d: ésa es la
+        diferencia, no elegir una constante grande como 400."
+      highlight:
+        - u
       nodes:
         - id: u
           value: u
+          parent: null
+          tag: d=n−1
           state: marked
-          fields:
-            - { name: grado, value: "d=400 (no constante)" }
-            - { name: "puentes ≈ d·n/2, con d=400", value: "80× más que con d=5" }
-      ports:
-        - { id: q1, label: "…", to: u }
-        - { id: q2, label: "…", to: u }
-        - { id: q3, label: "…", to: u }
-        - { id: q4, label: "…", to: u }
-        - { id: q5, label: "…", to: u }
-        - { id: q6, label: "…", to: u }
-    - note: >-
-        El tamaño que u concentra ya no es O(1): crece en proporción a su
-        grado, que a su vez podría crecer con n. Mantener un puente por cada
-        vecino deja de ser un costo constante por vértice — se rompe
-        exactamente la condición 3 de Applicability, y con ella la premisa
-        que permite el paso O(1) por vértice de fractional cascading
-        generalizado.
-      caption: "grado no acotado ⇒ la técnica no aplica sobre este vértice tal cual"
-      highlight: [u]
+        - id: n0
+          value: "1"
+          parent: u
+          edge: false
+        - id: n1
+          value: "2"
+          parent: u
+          edge: false
+        - id: n2
+          value: "3"
+          parent: u
+          edge: false
+        - id: n3
+          value: "4"
+          parent: u
+          edge: false
+        - id: n4
+          value: "5"
+          parent: u
+          edge: false
+        - id: n5
+          value: …
+          parent: u
+          edge: false
+      links:
+        - from: u
+          to: n0
+          kind: pointer
+        - from: u
+          to: n1
+          kind: pointer
+        - from: u
+          to: n2
+          kind: pointer
+        - from: u
+          to: n3
+          kind: pointer
+        - from: u
+          to: n4
+          kind: pointer
+        - from: u
+          to: n5
+          kind: pointer
+    - note: Si d crece con n, mantener o combinar la información de todos los vecinos deja de
+        costar O(1) por vértice. El teorema usado en esta sección requiere un límite
+        constante sobre d.
+      caption: grado no acotado ⇒ la técnica no aplica sobre este vértice tal cual
+      highlight:
+        - u
       nodes:
         - id: u
           value: u
-          state: muted
-          fields:
-            - { name: grado, value: "d=400 (no constante)" }
-            - { name: "puentes ≈ d·n/2, con d=400", value: "80× más que con d=5" }
-      ports:
-        - { id: q1, label: "…", to: u }
-        - { id: q2, label: "…", to: u }
-        - { id: q3, label: "…", to: u }
-        - { id: q4, label: "…", to: u }
-        - { id: q5, label: "…", to: u }
-        - { id: q6, label: "…", to: u }
+          parent: null
+          tag: d=n−1
+          state: marked
+        - id: n0
+          value: "1"
+          parent: u
+          edge: false
+        - id: n1
+          value: "2"
+          parent: u
+          edge: false
+        - id: n2
+          value: "3"
+          parent: u
+          edge: false
+        - id: n3
+          value: "4"
+          parent: u
+          edge: false
+        - id: n4
+          value: "5"
+          parent: u
+          edge: false
+        - id: n5
+          value: …
+          parent: u
+          edge: false
+      links:
+        - from: u
+          to: n0
+          kind: pointer
+        - from: u
+          to: n1
+          kind: pointer
+        - from: u
+          to: n2
+          kind: pointer
+        - from: u
+          to: n3
+          kind: pointer
+        - from: u
+          to: n4
+          kind: pointer
+        - from: u
+          to: n5
+          kind: pointer
 ---
 
 <!-- Es una CONDICIÓN, no un algoritmo -- igual que

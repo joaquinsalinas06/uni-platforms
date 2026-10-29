@@ -8,101 +8,192 @@ cppSteps:
   - step-3-dominance-query.cpp
   - full-implementation.cpp
 visualization:
-  type: range-tree
-  mode: layers
-  steps:
-    - note: >-
-        ConsultaDominancia(S, b2=4, b3=4) sobre la subdivisión de
-        subdivision-build: cuatro columnas, una por punto, ordenadas por y.
-        Ninguna se ha visitado todavía.
-      caption: "ConsultaDominancia(S, 4, 4) — estado inicial"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-    - note: >-
-        Primer paso del pseudocódigo: "cara ← búsqueda binaria de b3 en la
-        columna izquierda de S". Se ubica, en O(lg n), en qué cara de la
-        columna y=1 cae la altura b3=4 — sin recorrer nada más todavía.
-      caption: "búsqueda binaria de b3=4 en la columna izquierda — O(lg n)"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [active, idle, idle, idle]
-    - note: >-
-        "mientras la posición horizontal de cara es < b2": la posición de
-        y=1 (1) es menor que b2=4, así que la caminata continúa. "si el
-        borde de cara es un rayo de un punto": el rayo de y=1 tiene z=5, por
-        encima de b3=4 — no se cumple z_i ≤ b3, así que este punto NO se
-        agrega a resultado.
-      caption: "y=1: z=5 > 4 → no se reporta"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [muted, idle, idle, idle]
-    - note: >-
-        "cara ← cara vecina hacia la derecha" — O(1), por el grado acotado de
-        la subdivisión. Se avanza a la columna y=2 sin volver a buscar desde
-        cero.
-      caption: "avanzar a la cara vecina — O(1)"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [muted, active, idle, idle]
-    - note: >-
-        En y=2, la posición (2) sigue siendo < b2=4: se repite la
-        comprobación. El rayo de y=2 tiene z=1 ≤ b3=4: sí se cumple la
-        condición, así que este punto se agrega a resultado.
-      caption: "y=2: z=1 ≤ 4 → se reporta (2,1)"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [muted, answer, idle, idle]
-    - note: >-
-        Se avanza otra vez a la cara vecina, ahora hacia y=4. La posición (4)
-        todavía no es estrictamente menor que b2=4 en el sentido de "ya
-        pasado" — el material usa ≤ en ambas coordenadas, así que el punto
-        exactamente sobre el borde (y_i=b2) cuenta como dominado: se
-        comprueba su cara igual que las anteriores.
-      caption: "avanzar a y=4 — borde y_i=b2 incluido por la convención ≤"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [muted, answer, active, idle]
-    - note: >-
-        El rayo de y=4 tiene z=4 ≤ b3=4 (empate incluido por la misma
-        convención ≤): se agrega a resultado. La siguiente columna (y=5) ya
-        no cumple "posición < b2=4" — el bucle `mientras` termina ahí.
-      caption: "y=4: z=4 ≤ 4 → se reporta (4,4); y=5 queda fuera del rango"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [muted, answer, answer, muted]
-    - note: >-
-        "devolver resultado": la caminata visitó 3 caras reales (una por
-        cada punto entre y=1 y y=4) y se detuvo antes de y=5 — el costo total
-        fue O(lg n) de la búsqueda inicial más O(1) por cada una de las
-        k=2 caras reportadas, consistente con O(lg n + k).
-      caption: "resultado: {(2,1), (4,4)}, k=2"
-      arrays:
-        - id: cols
-          label: "columnas por y"
-          row: 0
-          cells: ["z=5", "z=1", "z=4", "z=2"]
-          states: [muted, answer, answer, muted]
+  {
+    "type": "planar",
+    "steps": [
+      {
+        "note": "Consulta q=(4,4) sobre el ejemplo de rayos. Se busca reportar puntos, no contar todo lo que esté a la izquierda.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "query": {
+            "x": 4,
+            "y": 4
+          }
+        }
+      },
+      {
+        "note": "A=(1,5) no se reporta: su rayo empieza por encima de la altura de q. D=(5,2) tampoco: queda a la derecha del origen de la consulta.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "mode": "dominance",
+          "query": {
+            "x": 4,
+            "y": 4
+          },
+          "showRay": true,
+          "showHits": true
+        }
+      },
+      {
+        "note": "Respuesta geométrica: B=(2,1) y C=(4,4), k=2. La representación permite comprobar el resultado; el pseudocódigo de abajo usa una subdivisión auxiliar para encontrarlo sin examinar todos los puntos.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "mode": "dominance",
+          "query": {
+            "x": 4,
+            "y": 4
+          },
+          "showRay": true,
+          "showHits": true
+        }
+      },
+      {
+        "note": "Consulta q=(0,0): no cruza ningún rayo y k=0. Explorar permite buscar también el caso en que todos queden dominados.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "mode": "dominance",
+          "query": {
+            "x": 0,
+            "y": 0
+          },
+          "showRay": true,
+          "showHits": true
+        }
+      }
+    ]
+  }
 ---
 
 ## Qué hace
@@ -174,14 +265,12 @@ y la lista de resultado, de tamaño `k`.
 
 ## Ejemplo
 
-*(derivado del pseudocódigo; no aparece en las diapositivas — no hay un
-solo valor concreto en las 76 páginas del deck)*: con
-`(1,5), (2,1), (4,4), (5,2)` y consulta $(b_2,b_3) = (4,4)$, la búsqueda
-binaria ubica `b3=4` en la columna izquierda; la caminata avanza por las
-columnas `y=1` (rayo en `z=5`, por encima de `4`, no se reporta), `y=2`
-(rayo en `z=1 ≤ 4`, se reporta), `y=4` (rayo en `z=4 ≤ 4`, se reporta), y se
-detiene ahí porque la siguiente columna (`y=5`) ya no es `< b2=4`.
-Resultado: $\{(2,1), (4,4)\}$, $k=2$.
+*(Ejemplo geométrico derivado; estos valores no aparecen en las diapositivas.)*
+Con A=(1,5), B=(2,1), C=(4,4), D=(5,2) y q=(4,4), la prueba de
+las dos desigualdades devuelve B y C. La figura muestra esa equivalencia.
+No dibuja las caras auxiliares de la estructura eficiente ni identifica cada
+punto descartado con una cara visitada: hacerlo convertiría el ejemplo en un
+barrido lineal y no justificaría el costo sensible al tamaño de la respuesta.
 
 ## Casos límite
 

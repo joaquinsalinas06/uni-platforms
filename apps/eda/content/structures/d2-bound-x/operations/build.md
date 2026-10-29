@@ -29,7 +29,7 @@ visualization:
         - { id: n3, value: 3, parent: r4 }
         - { id: n6, value: 6, parent: r4 }
         - { id: n1, value: 1, parent: n3 }
-        - { id: d1-root, value: "D₁({1,3,4,6})", parent: null, panel: sat }
+        - { id: d1-root, value: "D₁ raíz", parent: null, panel: sat }
       panels:
         - { id: sat, label: "D₁ satélite de x=4", anchor: r4 }
     - note: >-
@@ -45,7 +45,7 @@ visualization:
         - { id: n1, value: 1, parent: n3 }
         - { id: d1-n3, value: "D₁({1,3})", parent: null, panel: sat }
       panels:
-        - { id: sat, label: "D₁ satélite de x=3", anchor: n3 }
+        - { id: sat, label: "D₁ de x=3", anchor: n3 }
     - note: >-
         Y en el nodo hoja x=6, la D₁ satélite sólo tiene el punto {6}: el
         patrón es el mismo en toda la altura del árbol, hoja incluida. Al

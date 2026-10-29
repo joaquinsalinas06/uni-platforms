@@ -15,8 +15,8 @@ items:
     solution: >-
       (b) es correcta: v_split es el nodo más profundo compartido por
       ambos caminos, definido por dónde se bifurcan (#40, #45). (a) es
-      falsa en general: el ejemplo normal de examples.md muestra un caso
-      donde la separación ocurre más abajo. (c) es falsa: v_split
+      falsa en general: la operación de localización muestra un caso
+      donde la consulta [1,4] se separa más abajo (ver la operación de localización). (c) es falsa: v_split
       depende de AMBOS caminos, no de uno solo.
   - level: 2
     statement: >-
@@ -29,8 +29,8 @@ items:
       - "Si van al mismo lado en la raíz, sigue bajando juntos por ese lado antes de mirar el siguiente nodo."
     solution: >-
       En la raíz (6): a2=2 ≤ 6 → izquierda; b2=9 > 6 → derecha. Ya se
-      separan en la raíz: v_split = 6. derecha(v_split) = {8,9,11},
-      izquierda(v_split) = {1,3,4}.
+      separan en la raíz: v_split = 6. derecha(v_split) = {8,11},
+      izquierda(v_split) = {1,4}.
   - level: 3
     statement: >-
       Implementa localizarNodoDeSeparacion(raiz, a2, b2) en C++ siguiendo

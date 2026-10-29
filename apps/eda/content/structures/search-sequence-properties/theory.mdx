@@ -1,82 +1,118 @@
 ---
 kind: theory
-title: "Propiedades de análisis de secuencias de búsqueda"
+title: Propiedades de análisis de secuencias de búsqueda
 visualization:
-  type: tree
+  type: planar
   steps:
-    - note: >-
-        Secuencia fácil (acceso secuencial): x1=1. Primera búsqueda, sin
-        patrón previo que aprovechar todavía.
-      highlight: ["k1"]
-      nodes:
-        - { id: k4, value: 4 }
-        - { id: k2, value: 2, parent: k4, side: left }
-        - { id: k6, value: 6, parent: k4, side: right }
-        - { id: k1, value: 1, parent: k2, side: left, state: active }
-        - { id: k3, value: 3, parent: k2, side: right }
-        - { id: k5, value: 5, parent: k6, side: left }
-        - { id: k7, value: 7, parent: k6, side: right }
-    - note: >-
-        x2=2, a un paso de x1 (k_2=1): el puntero dinámico ya está cerca de
-        la búsqueda anterior. O(1) amortizado.
-      highlight: ["k2"]
-      nodes:
-        - { id: k4, value: 4 }
-        - { id: k2, value: 2, parent: k4, side: left, state: active }
-        - { id: k6, value: 6, parent: k4, side: right }
-        - { id: k1, value: 1, parent: k2, side: left }
-        - { id: k3, value: 3, parent: k2, side: right }
-        - { id: k5, value: 5, parent: k6, side: left }
-        - { id: k7, value: 7, parent: k6, side: right }
-    - note: >-
-        x3=3, otra vez k_3=1: la diagonal de acceso secuencial se sostiene.
-        Toda la secuencia {1,2,3,...} cuesta O(1) por búsqueda, amortizado.
-      highlight: ["k3"]
-      nodes:
-        - { id: k4, value: 4 }
-        - { id: k2, value: 2, parent: k4, side: left }
-        - { id: k6, value: 6, parent: k4, side: right }
-        - { id: k1, value: 1, parent: k2, side: left }
-        - { id: k3, value: 3, parent: k2, side: right, state: active }
-        - { id: k5, value: 5, parent: k6, side: left }
-        - { id: k7, value: 7, parent: k6, side: right }
-    - note: >-
-        Mismo árbol, secuencia cara: x4=7 tras x3=3 (k_4=4, salto grande).
-        Ninguna de las cinco propiedades da una cota barata todavía.
-      highlight: ["k7"]
-      nodes:
-        - { id: k4, value: 4 }
-        - { id: k2, value: 2, parent: k4, side: left }
-        - { id: k6, value: 6, parent: k4, side: right }
-        - { id: k1, value: 1, parent: k2, side: left }
-        - { id: k3, value: 3, parent: k2, side: right }
-        - { id: k5, value: 5, parent: k6, side: left }
-        - { id: k7, value: 7, parent: k6, side: right, state: active }
-    - note: >-
-        x5=2: otro salto grande (k_5=5) y sin repetición reciente que ayude
-        al conjunto de trabajo. Sigue sin haber propiedad barata que aplique.
-      highlight: ["k2"]
-      nodes:
-        - { id: k4, value: 4 }
-        - { id: k2, value: 2, parent: k4, side: left, state: active }
-        - { id: k6, value: 6, parent: k4, side: right }
-        - { id: k1, value: 1, parent: k2, side: left }
-        - { id: k3, value: 3, parent: k2, side: right }
-        - { id: k5, value: 5, parent: k6, side: left }
-        - { id: k7, value: 7, parent: k6, side: right }
-    - note: >-
-        x6=6: cada búsqueda de esta secuencia cuesta el peor caso O(log n)
-        del modelo BST, contra el O(1) amortizado de la secuencia de arriba
-        sobre el mismo árbol — la diferencia es la secuencia, no la estructura.
-      highlight: ["k6"]
-      nodes:
-        - { id: k4, value: 4 }
-        - { id: k2, value: 2, parent: k4, side: left }
-        - { id: k6, value: 6, parent: k4, side: right, state: active }
-        - { id: k1, value: 1, parent: k2, side: left }
-        - { id: k3, value: 3, parent: k2, side: right }
-        - { id: k5, value: 5, parent: k6, side: left }
-        - { id: k7, value: 7, parent: k6, side: right }
+    - note: "Acceso secuencial del mazo (#35): 1,2,3,4,5,6. Eje horizontal: posición i
+        de la búsqueda; eje vertical: llave x_i. La diagonal muestra el orden de
+        acceso, no un recorrido por aristas de un árbol. Un algoritmo con la
+        propiedad secuencial aprovecha este patrón en O(1) amortizado por
+        búsqueda."
+      planar:
+        bounds:
+          - 0
+          - 0
+          - 7
+          - 8
+        points:
+          - id: p0
+            x: 1
+            y: 1
+            label: "1"
+          - id: p1
+            x: 2
+            y: 2
+            label: "2"
+          - id: p2
+            x: 3
+            y: 3
+            label: "3"
+          - id: p3
+            x: 4
+            y: 4
+            label: "4"
+          - id: p4
+            x: 5
+            y: 5
+            label: "5"
+          - id: p5
+            x: 6
+            y: 6
+            label: "6"
+    - note: "Puntero dinámico del mazo (#36): 1,3,2,5,4,6. La distancia entre llaves
+        consecutivas es 2,1,3,1,2. Los accesos no son crecientes, pero cada
+        salto es pequeño. La propiedad describe una garantía que debe satisfacer
+        el algoritmo; el dibujo no afirma que un BST fijo se adapte."
+      planar:
+        bounds:
+          - 0
+          - 0
+          - 7
+          - 8
+        points:
+          - id: p0
+            x: 1
+            y: 1
+            label: "1"
+          - id: p1
+            x: 2
+            y: 3
+            label: "3"
+          - id: p2
+            x: 3
+            y: 2
+            label: "2"
+          - id: p3
+            x: 4
+            y: 5
+            label: "5"
+          - id: p4
+            x: 5
+            y: 4
+            label: "4"
+          - id: p5
+            x: 6
+            y: 6
+            label: "6"
+    - note: "Conjunto de trabajo del mazo (#43): 1,3,7,3,2,3. La llave 3 vuelve en las
+        posiciones 2,4,6. Entre dos apariciones consecutivas sólo hay una llave
+        distinta: primero 7, después 2. Los tres puntos en la fila y=3 hacen
+        visible esa repetición temporal."
+      planar:
+        bounds:
+          - 0
+          - 0
+          - 7
+          - 8
+        points:
+          - id: p0
+            x: 1
+            y: 1
+            label: "1"
+          - id: p1
+            x: 2
+            y: 3
+            label: "3"
+            state: marked
+          - id: p2
+            x: 3
+            y: 7
+            label: "7"
+          - id: p3
+            x: 4
+            y: 3
+            label: "3"
+            state: marked
+          - id: p4
+            x: 5
+            y: 2
+            label: "2"
+          - id: p5
+            x: 6
+            y: 3
+            label: "3"
+            state: marked
 ---
 
 import Visualization from '../../../src/components/Visualization.astro';
@@ -84,8 +120,7 @@ import Visualization from '../../../src/components/Visualization.astro';
 ## ¿Qué problema resuelve?
 
 El [modelo computacional BST](/structures/bst-computational-model) establece
-que, en el peor caso, `Buscar(x)` cuesta $O(\log n)$ y que ese $O(\log n)$ "es
-el mejor tiempo posible" — pero enseguida observa que "el trabajo de las
+que un árbol balanceado permite `Buscar(x)` en $O(\log n)$ y que ése es el mejor orden de peor caso alcanzable por una forma fija de BST — pero enseguida observa que "el trabajo de las
 búsquedas depende de la secuencia de elementos que se buscan." Ese es
 exactamente el problema que abren estas propiedades: el peor caso no es la
 métrica interesante, porque trata todas las secuencias como si fueran
@@ -98,8 +133,7 @@ posibles.
 
 Cada una de las cinco propiedades es una forma distinta de decir lo mismo:
 "esta secuencia tiene un patrón que un BST que se adapta puede aprovechar,
-así que sale barata en promedio (amortizado), aunque el peor caso siga
-siendo $O(\log n)$." No son cinco ideas independientes — son cinco maneras de
+así que un algoritmo que cumpla la propiedad puede resolverla con poco costo amortizado." No son cinco ideas independientes — son cinco maneras de
 capturar "facilidad" en una secuencia:
 
 - **Acceso secuencial**: la secuencia entera es fácil porque siempre avanza
@@ -109,7 +143,9 @@ capturar "facilidad" en una secuencia:
 
 *(Ejemplo derivado, no en el mazo — mismo árbol de 5 claves \{1,2,4,8,9\} usado
 abajo en conjunto de trabajo, para poder contrastar las dos propiedades sobre
-el mismo BST fijo.)*
+el mismo conjunto de llaves.)*
+
+Los árboles siguientes ubican las llaves y resaltan el acceso actual. Su forma permanece fija: no representan la ejecución de un algoritmo autoajustable ni demuestran las cotas amortizadas. Con raíz a profundidad 0, visitar una llave a profundidad d cuesta d movimientos y un trabajo de búsqueda de orden d+1. Para medir cercanía se usan los rangos de las llaves ordenadas: 1,2,4,8,9 tienen rangos 1,2,3,4,5.
 
 <Visualization viz={{
   type: 'tree',
@@ -126,7 +162,7 @@ el mismo BST fijo.)*
       ],
     },
     {
-      note: "x2=9: k_2=|9-8|=1, el puntero dinámico queda a un paso de la búsqueda anterior — la propiedad promete O(log k_2)=O(log 1)=O(1) amortizado para ESTA búsqueda, sin importar que 9 esté a otra profundidad que 8.",
+      note: "x2=9: la distancia de rangos entre 8 y 9 es 1. El término de puntero dinámico es constante, usando log(2+k_i). El árbol fijo mostrado sólo señala el acceso: en él aún se visita el camino 4→9.",
       highlight: ["k9"],
       nodes: [
         { id: "k4", value: 4 },
@@ -137,7 +173,7 @@ el mismo BST fijo.)*
       ],
     },
     {
-      note: "x3=1: k_3=|1-9|=8, un salto grande respecto de la búsqueda anterior — la cota sube a O(log 8), la más cara de esta secuencia. La propiedad no promete que TODA la secuencia sea barata, sólo acota cada búsqueda según su propio k_i.",
+      note: "x3=1: la distancia de rangos entre 9 y 1 es 4. Es el salto más grande de esta secuencia, así que su término log(2+k_i) es mayor. No se mide la diferencia numérica 8 cuando el conjunto de llaves tiene huecos.",
       highlight: ["k1"],
       nodes: [
         { id: "k4", value: 4 },
@@ -148,7 +184,7 @@ el mismo BST fijo.)*
       ],
     },
     {
-      note: "x4=2: k_4=|2-1|=1, otra vez pegado a la búsqueda anterior — vuelve a ser barata (O(log 1)=O(1)), aunque 2 y 1 no sean consecutivos en la secuencia global {8,9,1,2} como exigiría la propiedad de acceso secuencial.",
+      note: "x4=2: las llaves 1 y 2 son vecinas por rango, k_4=1. Vuelve a aparecer un término constante de puntero dinámico aunque la secuencia 8,9,1,2 no sea un recorrido creciente completo.",
       highlight: ["k2"],
       nodes: [
         { id: "k4", value: 4 },
@@ -159,7 +195,7 @@ el mismo BST fijo.)*
       ],
     },
     {
-      note: "Contraste con acceso secuencial (diagrama de arriba de esta página): esa propiedad exige que TODA la secuencia sea {1,...,n} en orden. Puntero dinámico es más débil pero más general — sólo pide que CADA búsqueda esté cerca de la anterior (k_i chico), sin importar el orden global ni la profundidad real de las claves en el árbol.",
+      note: "La propiedad secuencial garantiza poco costo para el recorrido ordenado completo. Puntero dinámico da una garantía más general, expresada en función de la distancia de rangos entre accesos consecutivos. Un algoritmo puede aprovechar saltos pequeños sin que toda la secuencia sea creciente.",
       highlight: [],
       nodes: [
         { id: "k4", value: 4 },
@@ -219,7 +255,7 @@ numérica.)*
       ],
     },
     {
-      note: "x4=9 otra vez: t_4 cuenta los valores DISTINTOS buscados entre la última ocurrencia de 9 (posición 1) y ésta — son {1,8}, t_4=2. La propiedad promete O(log t_4)=O(log 2) para esta búsqueda, sin importar que 9 esté a profundidad 1 y sea numéricamente lejos de 1: lo que cuenta es cuántos valores DISTINTOS se interpusieron, no la distancia ni la profundidad.",
+      note: "x4=9 otra vez: t_4 cuenta los valores DISTINTOS buscados entre la última ocurrencia de 9 (posición 1) y ésta — son {1,8}, t_4=2. El término de conjunto de trabajo es pequeño: log(2+t_4). Esto describe la garantía amortizada del algoritmo, no el costo del árbol fijo mostrado: lo que cuenta es cuántos valores distintos se interpusieron.",
       highlight: ["k9"],
       nodes: [
         { id: "k4", value: 4 },
@@ -241,7 +277,7 @@ numérica.)*
       ],
     },
     {
-      note: "x6=9 una vez más: t_6 cuenta los distintos desde la posición 4 — sólo {2}, t_6=1. Cada vez que 9 se repite pronto, el conjunto de trabajo intermedio es chico y la búsqueda vuelve a salir barata (O(log 1)), sin que importe la distancia numérica |9-2|=7 que sí penalizaría al puntero dinámico del diagrama anterior — la orthogonalidad que menciona el texto.",
+      note: "x6=9 una vez más: t_6 cuenta los distintos desde la posición 4 — sólo {2}, t_6=1. El término log(2+t_6) es constante. La distancia de rangos entre 2 y 9 es 3: conjunto de trabajo y puntero dinámico miden aspectos distintos del patrón. El dibujo sólo localiza el acceso, no modifica el árbol.",
       highlight: ["k9"],
       nodes: [
         { id: "k4", value: 4 },
@@ -254,7 +290,7 @@ numérica.)*
   ],
 }} />
 
-Ninguna de las cuatro dice cómo lograr esa cota — eso es trabajo de una
+Ninguna de estas propiedades dice cómo lograr esa cota — eso es trabajo de una
 estructura concreta que se adapte a la secuencia (el
 [Splay Tree](/structures/splay-tree) es la que el profesor trae después). Lo
 que este tema define es **qué significa que una secuencia sea fácil**, no
@@ -296,7 +332,7 @@ Los dos lemas que relacionan las propiedades entre sí:
 
 - **Lema 1**: "La propiedad del puntero dinámico implica la propiedad de
   acceso secuencial." (Directo: si toda la secuencia es $\{1,\dots,n\}$, entonces
-  $k_i = 1$ para todo i, y $O(\log 1) = O(1)$.)
+  $k_i = 1$ para todo i y la cota, interpretada con su término constante, da $O(1)$ amortizado por acceso.)
 - **Lema 2**: "La propiedad del conjunto de trabajo implica la propiedad de
   cota de entropía."
 
@@ -310,22 +346,11 @@ abierta que retoma [dynamic-optimality](/structures/dynamic-optimality).
 
 ### Visualizaciones del patrón de la secuencia
 
-El diagrama en la parte superior de esta página contrasta las dos familias
-de patrón sobre el **mismo BST fijo** (claves 1-7): los primeros tres pasos
-recorren una secuencia fácil (acceso secuencial, \{1,2,3\}, O(1) amortizado
-por búsqueda), y los últimos tres una secuencia sin patrón aprovechable
-(saltos grandes sin repetición, O(log n) por búsqueda) — mismo árbol, mismo
-peor caso posible, costo real muy distinto según la secuencia. Los dos
-diagramas intercalados en "Intuición" (derivados, no en el mazo) aíslan cada
-una de las otras dos propiedades sobre un segundo árbol fijo de 5 claves: uno
-muestra puntero dinámico (el costo sigue a $k_i=|x_i-x_{i-1}|$, no a la
-posición en el árbol) y el otro conjunto de trabajo (el costo sigue a $t_i$,
-cuántos valores distintos se buscaron desde la última ocurrencia — no a la
-distancia numérica que sí penaliza al puntero dinámico). El material trae
-tres gráficos de dispersión adicionales (eje horizontal $i$ = posición, eje
-vertical $x_i$ = valor buscado) para acceso secuencial, puntero dinámico y
-conjunto de trabajo — ver los puntos exactos en
-[examples.md](/structures/search-sequence-properties#ejemplos).
+El primer gráfico representa directamente los tres patrones del mazo como puntos (posición de búsqueda, llave). No es todavía la vista geométrica de una ejecución de BST de [semana 6](/structures/geometric-view): aquí sólo aparece el acceso solicitado, sin los demás nodos que visite el algoritmo.
+
+Los dos árboles intercalados localizan las llaves de los ejemplos de puntero dinámico y conjunto de trabajo. Sus formas fijas no producen por sí mismas las mejoras amortizadas: permiten separar la identidad de la llave, su profundidad y la métrica de localidad que se está estudiando.
+
+Las fórmulas abreviadas del mazo usan $\log k_i$ o $\log t_i$. Al interpretarlas se añade un costo constante, por ejemplo escribiendo $\log(2+k_i)$ y $\log(2+t_i)$: repetir inmediatamente una llave o acceder a una vecina no tiene costo cero.
 
 ## Operaciones
 
@@ -361,10 +386,7 @@ observaciones del propio material que no caben en la tabla:
 La tabla se genera desde `meta.yaml`, indexada por el nombre de cada
 propiedad (no hay una única "operación" que costar). Nota de lectura: las
 cinco filas son cotas **amortizadas** — el peor caso de una búsqueda
-individual, sin promediar, sigue siendo $O(\log n)$ según el
-[modelo computacional BST](/structures/bst-computational-model); estas
-propiedades acotan el promedio sobre la secuencia completa, no el costo de
-una búsqueda aislada.
+individual puede llegar a $O(n)$ en un BST sin balancear. Un árbol balanceado garantiza $O(\log n)$, mientras que estas propiedades describen garantías amortizadas en función de la secuencia. No son límites automáticos para cualquier árbol fijo.
 
 ## Ejemplos
 

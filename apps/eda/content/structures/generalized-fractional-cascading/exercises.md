@@ -97,7 +97,7 @@ items:
       ignora.
     hints:
       - "k es el número de pasos de UNA consulta (el tamaño del camino recorrido); el grado es una propiedad de CADA vértice del grafo completo, independiente de qué consulta se haga."
-      - "En el contraejemplo, el grado del vértice hub crece con n (el tamaño de las listas / el número total de vecinos posibles), no con k."
+      - "En el contraejemplo, el grado del vértice hub crece con n (el número de vértices del grafo), no con k."
     solution: >-
       k mide cuántos pasos recorre una consulta particular (el largo del
       camino), y SIEMPRE aparece como término aditivo O(k) en el costo

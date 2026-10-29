@@ -7,62 +7,146 @@ cppSteps:
   - step-2-subdivision-build.cpp
   - full-implementation.cpp
 visualization:
-  type: range-tree
-  mode: layers
-  steps:
-    - note: >-
-        La columna más a la izquierda (y=1, rayo con z=5) queda tal cual:
-        sólo su propio rayo, sin nada promovido todavía. Es la base sobre la
-        que se apoyan las columnas siguientes.
-      caption: "columna y=1: base, sin promociones"
-      arrays:
-        - id: col1
-          label: "col y=1"
-          row: 0
-          cells: ["z=5"]
-    - note: >-
-        La columna y=2 (rayo propio z=1) no sólo guarda su propio rayo:
-        promueve (virtualmente) una fracción de lo que ya vio la columna y=1,
-        para que la caminata de ConsultaDominancia nunca tenga que volver
-        atrás. La celda promovida (marcada) guarda un puente hacia su
-        posición real en la columna y=1.
-      caption: "col y=2: propio + promovido de y=1 (misma idea de fractional cascading)"
-      arrays:
-        - id: col1
-          label: "col y=1"
-          row: 0
-          cells: ["z=5"]
-        - id: col2
-          label: "col y=2"
-          row: 1
-          cells: ["z=1", "z=5"]
-          states: [idle, marked]
-      bridges:
-        - { from: col2, fromIndex: 1, to: col1, toIndex: 0, active: true }
-    - note: >-
-        Lo mismo se repite entrando a la columna y=4 (rayo propio z=4): más
-        lo promovido desde y=2 (marcado, con puente hacia su posición real en
-        y=2). El puente de y=2 hacia y=1 sigue ahí — no se vuelve a explicar
-        en cada nivel, sólo baja un paso a la vez.
-      caption: "col y=4: propio + promovido de y=2 — grado acotado, O(n) espacio total"
-      arrays:
-        - id: col1
-          label: "col y=1"
-          row: 0
-          cells: ["z=5"]
-        - id: col2
-          label: "col y=2"
-          row: 1
-          cells: ["z=1", "z=5"]
-          states: [idle, marked]
-        - id: col4
-          label: "col y=4"
-          row: 2
-          cells: ["z=4", "z=1"]
-          states: [idle, marked]
-      bridges:
-        - { from: col2, fromIndex: 1, to: col1, toIndex: 0, active: false }
-        - { from: col4, fromIndex: 1, to: col2, toIndex: 0, active: true }
+  {
+    "type": "planar",
+    "steps": [
+      {
+        "note": "Entrada geométrica: cada punto inicia un rayo vertical. Ésta es la entrada de la construcción, no una lista de caras ni una reconstrucción del resultado de Chazelle.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "segments": [
+            {
+              "id": "rA",
+              "from": [
+                1,
+                5
+              ],
+              "to": [
+                1,
+                6.5
+              ],
+              "arrow": true
+            },
+            {
+              "id": "rB",
+              "from": [
+                2,
+                1
+              ],
+              "to": [
+                2,
+                6.5
+              ],
+              "arrow": true
+            },
+            {
+              "id": "rC",
+              "from": [
+                4,
+                4
+              ],
+              "to": [
+                4,
+                6.5
+              ],
+              "arrow": true
+            },
+            {
+              "id": "rD",
+              "from": [
+                5,
+                2
+              ],
+              "to": [
+                5,
+                6.5
+              ],
+              "arrow": true
+            }
+          ]
+        }
+      },
+      {
+        "note": "La consulta q=(4,4) permite comprobar qué rayos debe encontrar la futura subdivisión: B y C. El material garantiza una estructura auxiliar con grado acotado y espacio lineal; no proporciona aquí su algoritmo de construcción.",
+        "planar": {
+          "bounds": [
+            0,
+            0,
+            7,
+            7
+          ],
+          "xLabel": "y",
+          "yLabel": "z",
+          "points": [
+            {
+              "id": "A",
+              "x": 1,
+              "y": 5,
+              "label": "A"
+            },
+            {
+              "id": "B",
+              "x": 2,
+              "y": 1,
+              "label": "B"
+            },
+            {
+              "id": "C",
+              "x": 4,
+              "y": 4,
+              "label": "C"
+            },
+            {
+              "id": "D",
+              "x": 5,
+              "y": 2,
+              "label": "D"
+            }
+          ],
+          "mode": "dominance",
+          "query": {
+            "x": 4,
+            "y": 4
+          },
+          "showRay": true,
+          "showHits": true
+        }
+      }
+    ]
+  }
 ---
 
 ## Qué hace
@@ -118,8 +202,8 @@ Ver `step-2-subdivision-build.cpp` y `full-implementation.cpp` en el editor
 de arriba. La construcción ahí es una realización didáctica simple y
 correcta (columnas acumulativas ordenadas por `y`, cada una con sus rayos
 activos ordenados por `z`) — no reproduce la subdivisión de grado acotado de
-Chazelle, que el profesor cita pero no construye en el curso. Ver el
-reporte final del agente para el detalle exacto de la simplificación.
+Chazelle, que el profesor cita pero no construye en el curso. Esa representación acumulativa puede ocupar espacio cuadrático y no hereda
+la garantía lineal de la subdivisión citada.
 
 ## Complejidad temporal
 
@@ -133,12 +217,10 @@ que el total, sumado sobre las `n` columnas, siga siendo lineal.
 
 ## Ejemplo
 
-*(derivado del pseudocódigo; no aparece en las diapositivas — no hay
-diagrama de la subdivisión, sólo del resultado de los rayos, #22-23)*: con
-los puntos `(1,5), (2,1), (4,4), (5,2)` ordenados por `y`, la subdivisión
-tiene columnas en `y=1,2,4,5`; la columna en `y=2` ya contiene, además de su
-propio rayo, la información necesaria (promovida) para no tener que volver a
-mirar la columna `y=1` al caminar hacia la derecha.
+La figura usa cuatro puntos derivados para mostrar la entrada y el resultado
+que deberá producir una consulta. El mazo no incluye el trazado de las caras
+auxiliares: no se asigna una cara por punto o por columna, porque esa regla
+no es la construcción que garantiza el resultado citado.
 
 ## Casos límite
 

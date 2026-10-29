@@ -1,63 +1,161 @@
 ---
 kind: theory
-title: "Optimalidad dinámica"
+title: Optimalidad dinámica
 visualization:
   type: tree
   steps:
-    - note: >-
-        Árbol estático de partida sobre las llaves {1,2,3,4}, fijo antes de
-        ver la secuencia S = (1,1,1,1,4,4,4,4) *(derivado; ver
-        examples.md)*. Un algoritmo que no se reestructura paga esta forma
-        para toda la secuencia.
+    - note: "Ejemplo didáctico: secuencia S=(1,1,1,1,4,4,4,4), con el mismo árbol
+        inicial para todas las estrategias. El dibujo compara mantenerlo fijo
+        con reestructurarlo; no calcula OPT(S)."
       nodes:
-        - { id: n2, value: 2 }
-        - { id: n1, value: 1, parent: n2, side: left }
-        - { id: n3, value: 3, parent: n2, side: right }
-        - { id: n4, value: 4, parent: n3, side: right }
-    - note: >-
-        Bloque de accesos a 1: con este árbol fijo, cada acceso baja
-        raíz→1, profundidad 2. Costo real por acceso — el que paga
-        cualquier estrategia que no anticipe el bloque.
-      highlight: ["n1"]
+        - id: n1
+          value: 1
+          parent: n2
+          side: left
+        - id: n2
+          value: 2
+          parent: null
+        - id: n3
+          value: 3
+          parent: n2
+          side: right
+        - id: n4
+          value: 4
+          parent: n3
+          side: right
+    - note: "En el árbol fijo, buscar 1 visita 2→1: dos nodos y un movimiento por
+        arista. Buscar 4 visita 2→3→4: tres nodos y dos movimientos. Repetir una
+        llave no abarata ese recorrido si la forma permanece fija."
+      highlight:
+        - n2
+        - n1
       nodes:
-        - { id: n2, value: 2, state: idle }
-        - { id: n1, value: 1, parent: n2, side: left, state: active }
-        - { id: n3, value: 3, parent: n2, side: right }
-        - { id: n4, value: 4, parent: n3, side: right }
-    - note: >-
-        OPT(S) ve la secuencia completa de antemano y ya eligió 1 como raíz
-        desde el inicio: profundidad 1 en todo el primer bloque. Marcado
-        `answer` porque es la respuesta canónica del óptimo offline, no algo
-        que un algoritmo online pueda saber sin ver el futuro.
-      highlight: ["n1"]
+        - id: n1
+          value: 1
+          parent: n2
+          side: left
+        - id: n2
+          value: 2
+          parent: null
+        - id: n3
+          value: 3
+          parent: n2
+          side: right
+        - id: n4
+          value: 4
+          parent: n3
+          side: right
+    - note: "Una estrategia adaptativa puede subir 1 al acceder a él: una rotación
+        derecha con 2 lo deja como raíz. Las siguientes consultas a 1 ya no
+        descienden por aristas. Esa rotación también se cobra; no es trabajo
+        gratis."
+      highlight:
+        - n1
+        - n2
       nodes:
-        - { id: n1, value: 1, state: answer }
-        - { id: n2, value: 2, parent: n1, side: right }
-        - { id: n3, value: 3, parent: n2, side: right }
-        - { id: n4, value: 4, parent: n3, side: right }
-    - note: >-
-        En la frontera entre bloques, OPT rota una vez para subir 4 —
-        anticipando el segundo bloque. Un algoritmo online real sólo podría
-        notar el cambio de patrón *después* de verlo, no en la frontera
-        exacta: esa es la brecha que "O(1)-competitivo" preguntaría si se
-        puede cerrar.
-      highlight: ["n4"]
+        - id: n1
+          value: 1
+          parent: null
+        - id: n2
+          value: 2
+          parent: n1
+          side: right
+        - id: n3
+          value: 3
+          parent: n2
+          side: right
+        - id: n4
+          value: 4
+          parent: n3
+          side: right
+    - note: "Al acceder a 4, el camino actual es 1→2→3→4. Para exhibir el costo de la
+        reestructuración lo subimos un nivel por giro. Primera rotación
+        izquierda: 4 intercambia su posición con 3. Faltan dos niveles."
+      highlight:
+        - n4
+        - n3
       nodes:
-        - { id: n4, value: 4, state: answer }
-        - { id: n1, value: 1, parent: n4, side: left }
-        - { id: n2, value: 2, parent: n1, side: right }
-        - { id: n3, value: 3, parent: n2, side: right }
-    - note: >-
-        Bloque de accesos a 4: profundidad 1 por acceso, igual de barato que
-        el primer bloque. El costo total de OPT sobre S queda muy por debajo
-        del estático — la pregunta abierta es si algún algoritmo *online*
-        logra acercarse a este total sin ver S por adelantado.
-      highlight: ["n4"]
+        - id: n1
+          value: 1
+          parent: null
+        - id: n2
+          value: 2
+          parent: n1
+          side: right
+        - id: n3
+          value: 3
+          parent: n4
+          side: left
+        - id: n4
+          value: 4
+          parent: n2
+          side: right
+    - note: "Segunda rotación izquierda: 4 sube sobre 2. El nodo 3 queda como hijo
+        derecho de 2. Se conserva el orden 1<2<3<4; aún falta subir sobre 1."
+      highlight:
+        - n4
+        - n2
       nodes:
-        - { id: n4, value: 4, state: active }
-        - { id: n1, value: 1, parent: n4, side: left }
-        - { id: n2, value: 2, parent: n1, side: right }
-        - { id: n3, value: 3, parent: n2, side: right }
+        - id: n1
+          value: 1
+          parent: null
+        - id: n2
+          value: 2
+          parent: n4
+          side: left
+        - id: n3
+          value: 3
+          parent: n2
+          side: right
+        - id: n4
+          value: 4
+          parent: n1
+          side: right
+    - note: "Tercera rotación izquierda: 4 sube sobre 1 y queda como raíz. Han sido
+        tres rotaciones para recorrer tres niveles, no una. Los siguientes
+        accesos a 4 ya encuentran la llave en la raíz."
+      highlight:
+        - n4
+        - n1
+      nodes:
+        - id: n1
+          value: 1
+          parent: n4
+          side: left
+        - id: n2
+          value: 2
+          parent: n1
+          side: right
+        - id: n3
+          value: 3
+          parent: n2
+          side: right
+        - id: n4
+          value: 4
+          parent: null
+    - note: El balance final debe incluir búsquedas, movimientos y todas las
+        rotaciones. Esta estrategia sólo ilustra cómo adaptar la forma al
+        patrón; no prueba que sea óptima ni competitiva. OPT(S) es el mínimo
+        entre todas las estrategias permitidas que parten del mismo estado y
+        conocen S.
+      highlight:
+        - n4
+      nodes:
+        - id: n1
+          value: 1
+          parent: n4
+          side: left
+        - id: n2
+          value: 2
+          parent: n1
+          side: right
+        - id: n3
+          value: 3
+          parent: n2
+          side: right
+        - id: n4
+          value: 4
+          parent: null
 ---
 
 ## ¿Qué problema resuelve?

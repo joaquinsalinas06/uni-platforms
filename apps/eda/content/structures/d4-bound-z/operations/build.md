@@ -15,7 +15,7 @@ visualization:
         raíz y sus dos hijos. Todavía sin ninguna D₃ colgada — es la misma
         forma que D₃ tenía sobre y, una dimensión más arriba.
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
+        - { id: rz, value: "raíz z", parent: null }
         - { id: zl, value: "izquierda(raíz)", parent: rz }
         - { id: zr, value: "derecha(raíz)", parent: rz }
     - note: >-
@@ -24,10 +24,10 @@ visualization:
         superior, nunca la inferior, así que le alcanza con D₃ normal.
       highlight: [zr]
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
+        - { id: rz, value: "raíz z", parent: null }
         - { id: zl, value: "izquierda(raíz)", parent: rz }
         - { id: zr, value: "derecha(raíz)", parent: rz, state: active }
-        - { id: d3-normal, value: "D₃ normal (z ≤ b3)", parent: null, panel: sat }
+        - { id: d3-normal, value: "D₃: z≤b₃", parent: null, panel: sat }
       panels:
         - { id: sat, label: "satélite de derecha(raíz)", anchor: zr }
     - note: >-
@@ -37,10 +37,10 @@ visualization:
         y a z y la estructura satélite cambió de D₂/D₂′ a D₃/D₃′.
       highlight: [zl]
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
+        - { id: rz, value: "raíz z", parent: null }
         - { id: zl, value: "izquierda(raíz)", parent: rz, state: active }
         - { id: zr, value: "derecha(raíz)", parent: rz }
-        - { id: d3-inv, value: "D₃′ invertida (z ≥ a3)", parent: null, panel: sat }
+        - { id: d3-inv, value: "D₃′: z≥a₃", parent: null, panel: sat }
       panels:
         - { id: sat, label: "satélite de izquierda(raíz)", anchor: zl }
     - note: >-
@@ -50,7 +50,7 @@ visualization:
         de su árbol sobre y.
       caption: "D₄ = árbol de rango sobre z + (D₃ normal, D₃′ invertida) por nodo"
       nodes:
-        - { id: rz, value: "z_raíz", parent: null }
+        - { id: rz, value: "raíz z", parent: null }
         - { id: zl, value: "izquierda(raíz)", parent: rz }
         - { id: zr, value: "derecha(raíz)", parent: rz }
 ---

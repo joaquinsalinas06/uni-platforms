@@ -47,9 +47,8 @@ secuencia: el mejor posible sobre las 14 formas de BST con 4 llaves cuesta
 los dos bloques paga profundidad alta).
 
 $OPT(S)$ sí puede reestructurar entre búsquedas: sube `1` cerca de la raíz
-para el primer bloque, rota una vez en la frontera entre bloques, y sube `4`
-para el segundo. El cálculo exhaustivo (todos los árboles, todas las
-distancias de rotación entre ellos) da **$OPT(S) = 9$** — estrictamente
+para el primer bloque y puede dejar `4` como su hijo derecho, con `2` y `3` en el subárbol izquierdo de `4`. Desde **esa** forma, una rotación izquierda de la raíz sube `4` para el segundo bloque. Una cadena `1→2→3→4`, en cambio, necesitaría tres rotaciones para subir `4`, como muestra la teoría. El cálculo exhaustivo (todos los árboles, todas las
+distancias de rotación entre ellos) da **$OPT(S) = 9$** con elección gratuita de la forma inicial en ese programa — estrictamente
 mejor que el estático, y también mejor que una heurística simple como
 move-to-root (que da 14 aquí, porque reacomoda después de cada acceso en
 vez de anticipar el cambio de bloque).

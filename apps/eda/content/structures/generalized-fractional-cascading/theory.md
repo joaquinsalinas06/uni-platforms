@@ -2,124 +2,229 @@
 kind: theory
 title: Fractional cascading generalizado
 visualization:
-  type: persistent
-  mode: fat-node
+  type: tree
   steps:
-    - note: >-
-        El grafo de cascading generalizado para la consulta 3D: D4 sobre D3
-        sobre D2 sobre D1, encadenados por aristas de descenso, más el
-        enlace de D4 hacia su propia estructura invertida gemela (el quinto
-        vecino que da grado acotado — ver Bounded-degree-check). Nada se ha
-        recorrido todavía.
+    - note: Esquema de composición D₄ → D₃ → D₂ → D₁ y su variante invertida D₄′. Las flechas
+        indican delegación entre estructuras; no son una enumeración de los vecinos de un
+        vértice del grafo de listas. El grado acotado se comprueba por separado en la
+        operación correspondiente.
       nodes:
         - id: D4
           value: D4
+          parent: null
+          edge: false
         - id: D4inv
-          value: "D4 (gemela invertida)"
+          value: D₄′
+          parent: D4
+          edge: false
         - id: D3
           value: D3
+          parent: D4
+          edge: false
         - id: D2
           value: D2
+          parent: D3
+          edge: false
         - id: D1
           value: D1
+          parent: D2
+          edge: false
       links:
-        - { from: D4, to: D3, kind: tree, label: baja }
-        - { from: D3, to: D2, kind: tree, label: baja }
-        - { from: D2, to: D1, kind: tree, label: baja }
-        - { from: D4, to: D4inv, kind: pointer, label: gemela }
-    - note: >-
-        Se entra por D4 con la única búsqueda binaria real de toda la
-        consulta: O(lg n). El resto del grafo, incluida la gemela
-        invertida, todavía no se toca.
-      highlight: [D4]
+        - from: D4
+          to: D3
+          kind: tree
+          label: baja
+        - from: D3
+          to: D2
+          kind: tree
+          label: baja
+        - from: D2
+          to: D1
+          kind: tree
+          label: baja
+        - from: D4
+          to: D4inv
+          kind: pointer
+          label: gemela
+    - note: "Se entra por D4 con la única búsqueda binaria real de toda la consulta: O(lg n). El
+        resto del grafo, incluida la gemela invertida, todavía no se toca."
+      highlight:
+        - D4
       nodes:
         - id: D4
           value: D4
           state: active
+          parent: null
+          edge: false
         - id: D4inv
-          value: "D4 (gemela invertida)"
+          value: D₄′
+          parent: D4
+          edge: false
         - id: D3
           value: D3
+          parent: D4
+          edge: false
         - id: D2
           value: D2
+          parent: D3
+          edge: false
         - id: D1
           value: D1
+          parent: D2
+          edge: false
       links:
-        - { from: D4, to: D3, kind: tree, label: baja }
-        - { from: D3, to: D2, kind: tree, label: baja }
-        - { from: D2, to: D1, kind: tree, label: baja }
-        - { from: D4, to: D4inv, kind: pointer, label: gemela }
-      caption: "búsqueda real en D4 — O(lg n)"
-    - note: >-
-        Primer paso de descenso, D4 → D3: se baja el puente que la búsqueda
-        en D4 ya dejó apuntando, en vez de volver a buscar — O(1), el mismo
-        mecanismo de fractional cascading sobre esta arista concreta.
-      highlight: [D3]
+        - from: D4
+          to: D3
+          kind: tree
+          label: baja
+        - from: D3
+          to: D2
+          kind: tree
+          label: baja
+        - from: D2
+          to: D1
+          kind: tree
+          label: baja
+        - from: D4
+          to: D4inv
+          kind: pointer
+          label: gemela
+      caption: búsqueda real en D4 — O(lg n)
+    - note: "Primer paso de descenso, D4 → D3: se baja el puente que la búsqueda en D4 ya dejó
+        apuntando, en vez de volver a buscar — O(1), el mismo mecanismo de fractional
+        cascading sobre esta arista concreta."
+      highlight:
+        - D3
       nodes:
         - id: D4
           value: D4
+          parent: null
+          edge: false
         - id: D4inv
-          value: "D4 (gemela invertida)"
+          value: D₄′
+          parent: D4
+          edge: false
         - id: D3
           value: D3
           state: active
+          parent: D4
+          edge: false
         - id: D2
           value: D2
+          parent: D3
+          edge: false
         - id: D1
           value: D1
+          parent: D2
+          edge: false
       links:
-        - { from: D4, to: D3, kind: tree, label: baja }
-        - { from: D3, to: D2, kind: tree, label: baja }
-        - { from: D2, to: D1, kind: tree, label: baja }
-        - { from: D4, to: D4inv, kind: pointer, label: gemela }
-      caption: "D4 → D3 — O(1)"
-    - note: >-
-        Segundo paso, D3 → D2: otra vez O(1) por el mismo mecanismo — el
-        grado acotado de cada vértice es lo que garantiza que este paso
-        cueste lo mismo sin importar cuántos niveles lleve la cadena.
-      highlight: [D2]
+        - from: D4
+          to: D3
+          kind: tree
+          label: baja
+        - from: D3
+          to: D2
+          kind: tree
+          label: baja
+        - from: D2
+          to: D1
+          kind: tree
+          label: baja
+        - from: D4
+          to: D4inv
+          kind: pointer
+          label: gemela
+      caption: D4 → D3 — O(1)
+    - note: "Segundo paso, D3 → D2: otra vez O(1) por el mismo mecanismo — el grado acotado de
+        cada vértice es lo que garantiza que este paso cueste lo mismo sin importar
+        cuántos niveles lleve la cadena."
+      highlight:
+        - D2
       nodes:
         - id: D4
           value: D4
+          parent: null
+          edge: false
         - id: D4inv
-          value: "D4 (gemela invertida)"
+          value: D₄′
+          parent: D4
+          edge: false
         - id: D3
           value: D3
+          parent: D4
+          edge: false
         - id: D2
           value: D2
           state: active
+          parent: D3
+          edge: false
         - id: D1
           value: D1
+          parent: D2
+          edge: false
       links:
-        - { from: D4, to: D3, kind: tree, label: baja }
-        - { from: D3, to: D2, kind: tree, label: baja }
-        - { from: D2, to: D1, kind: tree, label: baja }
-        - { from: D4, to: D4inv, kind: pointer, label: gemela }
-      caption: "D3 → D2 — O(1)"
-    - note: >-
-        Último paso, D2 → D1: se llega al nivel base con un tercer O(1). En
-        total, una búsqueda real más tres pasos de descenso: O(lg n) +
-        O(1)·O(lg n) + O(k) = O(lg n + k) — el resultado completo de
-        Composition.
-      highlight: [D1]
+        - from: D4
+          to: D3
+          kind: tree
+          label: baja
+        - from: D3
+          to: D2
+          kind: tree
+          label: baja
+        - from: D2
+          to: D1
+          kind: tree
+          label: baja
+        - from: D4
+          to: D4inv
+          kind: pointer
+          label: gemela
+      caption: D3 → D2 — O(1)
+    - note: "Último paso, D2 → D1: se llega al nivel base con un tercer O(1). En total, una
+        búsqueda real más tres pasos de descenso: O(lg n) + O(1)·O(lg n) + O(k) = O(lg n +
+        k) — el resultado completo de Composition."
+      highlight:
+        - D1
       nodes:
         - id: D4
           value: D4
+          parent: null
+          edge: false
         - id: D4inv
-          value: "D4 (gemela invertida)"
+          value: D₄′
+          parent: D4
+          edge: false
         - id: D3
           value: D3
+          parent: D4
+          edge: false
         - id: D2
           value: D2
+          parent: D3
+          edge: false
         - id: D1
           value: D1
           state: answer
+          parent: D2
+          edge: false
       links:
-        - { from: D4, to: D3, kind: tree, label: baja }
-        - { from: D3, to: D2, kind: tree, label: baja }
-        - { from: D2, to: D1, kind: tree, label: baja }
-        - { from: D4, to: D4inv, kind: pointer, label: gemela }
-      caption: "O(lg n) + O(1)·O(lg n) + O(k) = O(lg n + k)"
+        - from: D4
+          to: D3
+          kind: tree
+          label: baja
+        - from: D3
+          to: D2
+          kind: tree
+          label: baja
+        - from: D2
+          to: D1
+          kind: tree
+          label: baja
+        - from: D4
+          to: D4inv
+          kind: pointer
+          label: gemela
+      caption: O(lg n) + O(1)·O(lg n) + O(k) = O(lg n + k)
 ---
 
 ## ¿Qué problema resuelve?

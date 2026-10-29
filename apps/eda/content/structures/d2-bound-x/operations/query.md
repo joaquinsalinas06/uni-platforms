@@ -96,7 +96,7 @@ visualization:
 
 ## Qué hace
 
-Responde consultas $[x_1, x_2] \times (-\infty, b_2] \times (-\infty, b_3)$: rango cerrado en x,
+Responde consultas $[x_1, x_2] \times (-\infty, b_2] \times (-\infty, b_3]$: rango cerrado en x,
 dominancia en (y, z).
 
 ## Intuición

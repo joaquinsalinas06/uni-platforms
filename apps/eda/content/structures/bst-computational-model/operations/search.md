@@ -12,7 +12,7 @@ visualization:
   steps:
     - note: >-
         Mismos 7 valores {1..7}, dos formas posibles. Árbol balanceado:
-        Buscar(1) baja raíz→4→2→1, tres pointer-moves — la profundidad de
+        Buscar(1) recorre 4→2→1: tres nodos visitados y dos pointer-moves — la profundidad de
         cualquier nodo aquí es $O(\log n)$.
       highlight: ["b1"]
       nodes:
@@ -50,8 +50,7 @@ operación de consulta que el modelo soporta.
 Es una secuencia de [`pointer-move`](/structures/bst-computational-model/operations/pointer-move):
 en cada nodo se compara `x` contra el valor del nodo actual y se decide bajar
 a la izquierda, bajar a la derecha, o detenerse porque ya se llegó. El costo
-real es exactamente cuántos de esos movimientos hicieron falta, es decir, la
-profundidad de `x` en el árbol vigente.
+de los descensos es exactamente cuántas aristas se recorren: la profundidad de `x`, con la raíz a profundidad 0. Si se cuentan también las visitas o comparaciones, se suma el trabajo constante de examinar cada nodo; una búsqueda en la raíz sigue costando $O(1)$.
 
 ## Algoritmo
 
@@ -82,8 +81,7 @@ la profundidad de `x`.
 
 ## Complejidad temporal
 
-$O(\log n)$ en el peor caso — pero esa cota es sobre **la forma del árbol**, no
-una propiedad fija de `n`. El profesor lo dice en dos pasos: "En el peor
+$O(h+1)$ para profundidad h. Con balance, $h=O(\log n)$; sin balance puede ser $h=O(n)$. La cota logarítmica depende de **la forma del árbol**, no sólo de `n`. El profesor lo dice en dos pasos: "En el peor
 caso, ciertamente $O(\log n)$ es el mejor tiempo posible" (#26), pero de
 inmediato aclara que "el trabajo de las búsquedas depende de la secuencia de
 elementos que se buscan" (#27). Es decir: existe un BST con n nodos donde

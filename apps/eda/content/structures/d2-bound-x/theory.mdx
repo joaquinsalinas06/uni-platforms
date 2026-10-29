@@ -25,9 +25,9 @@ visualization:
         - { id: n3, value: 3, parent: r4 }
         - { id: n6, value: 6, parent: r4 }
         - { id: n1, value: 1, parent: n3 }
-        - { id: d1-r4, value: "D₁({1,3,4,6})", parent: null, panel: sat }
+        - { id: d1-r4, value: "D₁ raíz", parent: null, panel: sat }
       panels:
-        - { id: sat, label: "D₁ satélite de la raíz", anchor: r4 }
+        - { id: sat, label: "D₁ de la raíz", anchor: r4 }
     - note: >-
         Acotar x se resuelve exactamente como en el range tree: descomposición
         canónica sobre el BST. Aquí x=3 es un nodo canónico de un rango que
@@ -39,9 +39,9 @@ visualization:
         - { id: n3, value: 3, parent: r4, state: marked }
         - { id: n6, value: 6, parent: r4 }
         - { id: n1, value: 1, parent: n3 }
-        - { id: d1-r4, value: "D₁({1,3,4,6})", parent: null, panel: sat }
+        - { id: d1-r4, value: "D₁ raíz", parent: null, panel: sat }
       panels:
-        - { id: sat, label: "D₁ satélite de la raíz", anchor: r4 }
+        - { id: sat, label: "D₁ de la raíz", anchor: r4 }
     - note: >-
         Acotar (y, z) se resuelve delegando en $D_1$, que ya sabe hacerlo:
         sobre ese nodo canónico se dispara **una** consulta de dominancia
@@ -53,9 +53,9 @@ visualization:
         - { id: n3, value: 3, parent: r4, state: marked }
         - { id: n6, value: 6, parent: r4 }
         - { id: n1, value: 1, parent: n3 }
-        - { id: d1-n3, value: "D₁({1,3}) ⊳ dominance-query", parent: null, panel: sat2, state: active }
+        - { id: d1-n3, value: "D₁ {1,3}", parent: null, panel: sat2, state: active }
       panels:
-        - { id: sat2, label: "D₁ satélite de x=3", anchor: n3 }
+        - { id: sat2, label: "D₁ de x=3", anchor: n3 }
     - note: >-
         Composición final: descomposición canónica en x (delimitador ámbar)
         × delegación en $D_1$ (consulta activa) = $D_2$. Ningún dato se
@@ -67,20 +67,23 @@ visualization:
         - { id: n3, value: 3, parent: r4, state: marked }
         - { id: n6, value: 6, parent: r4 }
         - { id: n1, value: 1, parent: n3 }
-        - { id: d1-n3, value: "D₁({1,3}) ⊳ dominance-query", parent: null, panel: sat2, state: answer }
+        - { id: d1-n3, value: "D₁ {1,3}", parent: null, panel: sat2, state: answer }
       panels:
-        - { id: sat2, label: "D₁ satélite de x=3", anchor: n3 }
+        - { id: sat2, label: "D₁ de x=3", anchor: n3 }
 ---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
 
 ## ¿Qué problema resuelve?
 
 [/structures/dominance-2d](/structures/dominance-2d) ($D_1$) responde consultas de
-dominancia: $(-\infty, b_2] \times (-\infty, b_3)$. $D_2$ añade la primera acotación real de la
+dominancia: $(-\infty, b_2] \times (-\infty, b_3]$. $D_2$ añade la primera acotación real de la
 cadena que este curso construye hacia el rango 3D completo — un intervalo
 cerrado en x — para responder consultas de la forma:
 
 ```
-[x1, x2] × (−∞, b2] × (−∞, b3)
+[x1, x2] × (−∞, b2] × (−∞, b3]
 ```
 
 rango cerrado en x, dominancia en (y, z).
@@ -98,6 +101,117 @@ BST. Acotar (y, z) se resuelve delegando en $D_1$, que ya sabe hacerlo.
 > composición "árbol de rangos con estructura satélite por nodo" que ya
 > aparece en range tree 2D — aquí la estructura satélite no es otro BST, es
 > $D_1$.
+
+**Cómo leer las tres dimensiones.** El árbol anterior organiza **x**. En
+cada subárbol seleccionado, la figura siguiente dibuja las otras dos
+coordenadas, **y horizontal y z vertical**. Son dos vistas complementarias;
+una proyección y×z por sí sola no muestra si un punto cumple el intervalo x.
+
+<Visualization viz={{
+  "type": "planar",
+  "steps": [
+    {
+      "note": "Ejemplo derivado con puntos 3D: A=(1,5,5), B=(3,2,1), C=(4,8,4), D=(6,1,2). Este dibujo es la proyección y×z: x no es un eje de esta figura.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          10,
+          8
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "A",
+            "x": 5,
+            "y": 5,
+            "label": "A"
+          },
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 8,
+            "y": 4,
+            "label": "C"
+          },
+          {
+            "id": "D",
+            "x": 1,
+            "y": 2,
+            "label": "D"
+          }
+        ]
+      }
+    },
+    {
+      "note": "Primero se filtra x∈[2,5] mediante el árbol: sólo quedan B y C. La proyección muestra la entrada que reciben las consultas D₁ de los subárboles canónicos.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          10,
+          8
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 8,
+            "y": 4,
+            "label": "C"
+          }
+        ]
+      }
+    },
+    {
+      "note": "Ahora D₁ impone y≤6 y z≤6. B=(3,2,1) cumple las tres restricciones; C queda fuera por y=8. El rayo se dibuja sobre la proyección, no sobre el eje x del árbol.",
+      "planar": {
+        "bounds": [
+          0,
+          0,
+          10,
+          8
+        ],
+        "xLabel": "y",
+        "yLabel": "z",
+        "points": [
+          {
+            "id": "B",
+            "x": 2,
+            "y": 1,
+            "label": "B"
+          },
+          {
+            "id": "C",
+            "x": 8,
+            "y": 4,
+            "label": "C"
+          }
+        ],
+        "mode": "dominance",
+        "query": {
+          "x": 6,
+          "y": 6
+        },
+        "showRay": true,
+        "showHits": true
+      }
+    }
+  ]
+}} />
 
 ## Estructura interna
 
