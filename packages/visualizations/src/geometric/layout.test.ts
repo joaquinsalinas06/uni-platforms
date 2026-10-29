@@ -89,3 +89,20 @@ test('entradas: los puntos crecen escalonados y los rectángulos se trazan', () 
   assert.equal(path(f, 'r')!.enter, 'draw');
   assert.ok((path(f, 'r-fill')!.delay ?? 0) > (path(f, 'r')!.delay ?? 0));
 });
+
+
+test('el contador diferencia entrada y añadidos sin contar dos veces la misma coordenada', () => {
+  const f = geometricLayout({ points: [
+    { id: 'a', x: 1, t: 1 }, { id: 'dup', x: 1, t: 1, kind: 'added' },
+    { id: 'e', x: 2, t: 1, kind: 'added' },
+  ] });
+  assert.equal(ann(f, 'point-count')!.text, 'Entrada: 1 · Extra: 1 · Total: 2');
+  assert.ok(ann(f, 'point-count')!.y < f.height);
+});
+
+test('las etiquetas del extremo derecho se colocan hacia dentro del plano', () => {
+  const f = geometricLayout({ points: [{ id: 'p', x: 4, t: 1, label: 'consulta p' }], xMax: 4 }, { width: 300 });
+  const label = ann(f, 'p-lbl')!;
+  assert.equal(label.anchor, 'end');
+  assert.ok(label.x < geometry({ xMax: 4 }, 300).px(4));
+});

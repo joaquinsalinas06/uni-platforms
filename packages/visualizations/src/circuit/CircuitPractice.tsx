@@ -5,6 +5,7 @@
 import { useMemo, useRef, useState } from 'react';
 import VisualizationCanvas from '../VisualizationCanvas';
 import { circuitSteps, type CircuitSpec } from './layout.ts';
+import { renderRich } from '../rich-text.ts';
 import {
   carriesNoCurrent, classifyPair, deltaToWye, formatSI, mergePair, practiceStatus, reqBetween, removePart, resolveMergedValues,
   type PairVerdict,
@@ -156,7 +157,7 @@ export default function CircuitPractice({ steps, practice, title }: { steps: Ste
         {hist.length > 1 && (
           <ol className="mt-3 list-decimal space-y-0.5 pl-5 text-[var(--muted)]">
             {hist.slice(1).map((e, i) => (
-              <li key={i}>{e.note}</li>
+              <li key={i} dangerouslySetInnerHTML={{ __html: renderRich(e.note) }} />
             ))}
           </ol>
         )}

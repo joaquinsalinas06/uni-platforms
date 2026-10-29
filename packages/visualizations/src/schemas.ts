@@ -18,6 +18,7 @@ export const ALL_VISUALIZATION_TYPES = [
   'timeline',
   'memory-layout',
   'geometric',
+  'planar',
 ] as const;
 
 export const VISUALIZATION_TYPES = ALL_VISUALIZATION_TYPES;

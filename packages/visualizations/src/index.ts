@@ -27,3 +27,5 @@ export { default as CircuitPractice } from './circuit/CircuitPractice';
 export * from './circuit/solve';
 export * from './circuit/kvl';
 export * from './circuit/symbols';
+
+export { default as PlanarVisualization } from './planar/PlanarVisualization';

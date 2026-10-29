@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import katex from 'katex';
+import { renderRich } from './rich-text.ts';
 import { SceneLayer, EquationPanel } from './CanvasScene.tsx';
 import { StepControls } from './StepControls.tsx';
 import {
@@ -32,18 +32,10 @@ import {
 // TreeVisualization.tsx — tenga que cambiar.
 export type { CanvasNode, CanvasEdge, CanvasGroup, CanvasText, CanvasStep };
 
-/** Renderiza fragmentos `$...$` de un texto plano como KaTeX real. El resto
- * del sitio usa remark-math/rehype-katex, pero `step.note` no pasa por el
- * pipeline de markdown, así que hay que invocar KaTeX a mano acá. */
-
-function renderInlineMath(text: string): string {
-  return text.replace(/\$([^$]+)\$/g, (_, formula) => {
-    try {
-      return katex.renderToString(formula, { throwOnError: false, displayMode: false });
-    } catch {
-      return `$${formula}$`;
-    }
-  });
+/** `step.note` no pasa por el pipeline de markdown: usa el mismo mini-renderizador
+ * que enunciados y pistas (KaTeX, `código`, **negrita**, listas, párrafos). */
+function renderNote(text: string): string {
+  return renderRich(text);
 }
 
 /** Una nota de una cláusula y una de tres oraciones no merecen el mismo
@@ -68,6 +60,7 @@ type Props = {
   /** Capa SVG propia de la familia (iconos, animaciones): se dibuja encima
    * de todo, dentro del viewBox, con el índice del paso actual. */
   render?: (index: number) => ReactNode;
+  onStepChange?: (index: number) => void;
 };
 
 /** Extremo de una arista recortado contra el borde de la caja destino, para
@@ -201,7 +194,7 @@ const SIDE = [
   { row: '@min-[59rem]:flex', main: '@min-[59rem]:flex-1', aside: '@min-[59rem]:w-[19rem] @min-[59rem]:shrink-0 @min-[59rem]:border-t-0 @min-[59rem]:border-l' },
 ];
 
-export default function VisualizationCanvas({ steps, width = 640, height = 260, title, static: isStatic = false, minScale, render }: Props) {
+export default function VisualizationCanvas({ steps, width = 640, height = 260, title, static: isStatic = false, minScale, render, onStepChange }: Props) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -252,6 +245,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
 
   const last = steps.length - 1;
   const step = steps[Math.min(i, last)];
+  useEffect(() => { onStepChange?.(Math.min(i, last)); }, [i, last, onStepChange]);
 
   const go = useCallback(
     (n: number) => setI((prev) => Math.max(0, Math.min(last, prev + n))),
@@ -274,6 +268,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
   }, [playing, i, last, step.note]);
 
   const onKey = (e: React.KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement) return;
     if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
     if (e.key === 'Home') { e.preventDefault(); setPlaying(false); setI(0); }
@@ -802,7 +797,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
               key={idx}
               className="px-5 py-3.5 text-[0.9375rem] leading-relaxed"
               dangerouslySetInnerHTML={{
-                __html: renderInlineMath(s.note ?? ''),
+                __html: renderNote(s.note ?? ''),
               }}
             />
           ))}
@@ -818,7 +813,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
           aria-live="polite"
         >
           {/* Remontada por paso: entra con un fundido corto (ver StepControls). */}
-          <div key={i} className={isStatic ? undefined : 'vc-note-in'} dangerouslySetInnerHTML={{ __html: renderInlineMath(step.note ?? '') }} />
+          <div key={i} className={isStatic ? undefined : 'vc-note-in'} dangerouslySetInnerHTML={{ __html: renderNote(step.note ?? '') }} />
         </div>
 
         {!isStatic && (

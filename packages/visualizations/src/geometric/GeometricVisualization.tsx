@@ -46,7 +46,18 @@ export default function GeometricVisualization({ steps, title, static: isStatic 
 
   return (
     <div ref={box}>
-      <VisualizationCanvas steps={canvasSteps} width={width} height={height} title={title} static={isStatic} />
+      <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm" aria-label="Leyenda del plano llave y tiempo">
+        <span className="inline-flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="4" fill="var(--ink)" /></svg>
+          Punto de entrada
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><circle cx="7" cy="7" r="4" fill="none" stroke="var(--ink)" strokeWidth="2" /></svg>
+          Toque añadido
+        </span>
+        <span className="text-[var(--muted)]">Horizontal: llave · Vertical: tiempo</span>
+      </div>
+      <VisualizationCanvas steps={canvasSteps} width={width} height={height} title={title} static={isStatic ?? steps.length === 1} />
     </div>
   );
 }

@@ -41,7 +41,7 @@ export type GeometricInput = {
 const PAD_L = 44;
 const PAD_R = 18;
 const PAD_T = 22;
-const PAD_B = 34;
+const PAD_B = 64;
 const DOT_R = 5.5;
 const HALO_R = 12;
 /** Escalonado de la entrada de puntos (ms entre uno y el siguiente) y su tope. */
@@ -206,8 +206,18 @@ export function geometricLayout(input: GeometricInput, opts: { width?: number; h
       paths.push({ id: p.id, d: dot(cx, cy, DOT_R), fill: true, opacity: 1, state, enter: 'grow', delay });
     }
     if (p.label) {
-      annotations.push({ id: `${p.id}-lbl`, text: p.label, x: r1(cx + DOT_R + 5), y: r1(cy - DOT_R - 3), anchor: 'start', size: 11, weight: 600, bg: 'var(--paper)' });
+      const labelWidth = p.label.length * charW(11);
+      const left = cx + DOT_R + 5 + labelWidth > W - PAD_R;
+      annotations.push({ id: `${p.id}-lbl`, text: p.label, x: r1(cx + (left ? -DOT_R - 5 : DOT_R + 5)), y: r1(cy - DOT_R - 3), anchor: left ? 'end' : 'start', size: 11, weight: 600, bg: 'var(--paper)' });
     }
+  });
+
+  const total = pointCount(input);
+  const requested = new Set(points.filter((p) => p.kind !== 'added').map((p) => `${p.x},${p.t}`)).size;
+  annotations.push({
+    id: 'point-count', text: `Entrada: ${requested} · Extra: ${total - requested} · Total: ${total}`,
+    x: PAD_L, y: plotB + 54, anchor: 'start', size: 11,
+    color: 'var(--ink)',
   });
 
   const height = opts.height ?? plotB + PAD_B;

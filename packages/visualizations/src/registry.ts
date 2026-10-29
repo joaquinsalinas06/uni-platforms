@@ -12,6 +12,7 @@ import NetworkTopologyVisualization from './network-topology/NetworkTopologyVisu
 import SequenceVisualization from './sequence/SequenceVisualization';
 import TimelineVisualization from './timeline/TimelineVisualization';
 import XyChartVisualization from './xy-chart/XyChartVisualization';
+import PlanarVisualization from './planar/PlanarVisualization';
 import GeometricVisualization from './geometric/GeometricVisualization';
 
 import { ALL_VISUALIZATION_TYPES, type VisualizationType } from './schemas';
@@ -31,4 +32,5 @@ export const VISUALIZATIONS: Record<VisualizationFamily, ComponentType<any>> = {
   timeline: TimelineVisualization,
   'xy-chart': XyChartVisualization,
   geometric: GeometricVisualization,
+  planar: PlanarVisualization,
 };
