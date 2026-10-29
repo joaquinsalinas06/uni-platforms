@@ -142,6 +142,15 @@ items:
     href: "/structures/arborally-satisfied-set"
     statement: >-
       (P10) Considera $P = \{(1,1), (4,2)\}$ (dos accesos: a la clave 1 en el tiempo 1 y a la clave 4 en el tiempo 2). ¿Es $P$ arboralmente satisfecho? Si no lo es, da dos puntos distintos que, agregados individualmente, lo vuelvan satisfecho y explica qué región del plano los contiene. Toma el punto $(2,2)$ como ejemplo (el BST también tocó la clave 2 en el tiempo 2): explica por qué eso es consistente con que un BST real, buscando la clave 4 desde la raíz, pase por el nodo 2: ¿en qué posición relativa respecto del nodo 4 estaría el nodo 2 en el árbol vigente en el tiempo 2?
+    visualization:
+      type: geometric
+      steps:
+        - note: "Datos de P10: dos puntos de entrada, (1,1) y (4,2). La figura muestra únicamente los accesos pedidos. Tú debes decidir qué pares revisar y qué puntos añadir."
+          xMax: 4
+          tMax: 2
+          points:
+            - { id: p1, x: 1, t: 1, label: "(1,1)" }
+            - { id: p2, x: 4, t: 2, label: "(4,2)" }
     hints:
       - "Los dos puntos no comparten fila ni columna: definen un rectángulo. ¿Tiene un tercer punto?"
       - "Un punto nuevo también forma pares con los dos puntos originales. ¿Cuándo esos pares no exigen nada?"
@@ -226,6 +235,16 @@ items:
     href: "/structures/greedy-algorithm"
     statement: >-
       (P15) Considera los accesos $2, 1, 3$ sobre las claves $\{1,2,3\}$. Simula Greedy fila por fila (una por tiempo) para construir un conjunto arboralmente satisfecho: en cada fila agrega el punto del acceso y determina, con la definición, si hacen falta puntos adicionales en esa misma fila (no se puede modificar ninguna fila ya procesada). Muestra qué pares revisas, cuáles violan, qué punto agregas y por qué. ¿Cuántos puntos usa Greedy y cuántos son extra?
+    visualization:
+      type: geometric
+      steps:
+        - note: "Datos de P15: accesos 2,1,3, con un punto por tiempo. Procesa las filas de abajo hacia arriba. Los toques extra se deben deducir; no están dibujados."
+          xMax: 3
+          tMax: 3
+          points:
+            - { id: p1, x: 2, t: 1, label: "(2,1)" }
+            - { id: p2, x: 1, t: 2, label: "(1,2)" }
+            - { id: p3, x: 3, t: 3, label: "(3,3)" }
     hints:
       - "Fila 1 tiene un solo punto, $(2,1)$: no hay pares todavía."
       - "En la fila 2 el par $(2,1)$–$(1,2)$ define un rectángulo vacío. ¿Qué punto de la fila 2 puedes agregar?"
@@ -241,3 +260,6 @@ items:
 ---
 
 Quince preguntas de práctica, tres por nivel y una por tema en cada nivel. **Las soluciones son resolución propia**: el PDF del profesor no las incluye. Las que son numéricas se verificaron con código; dos enunciados (P10 y P12) tienen una precisión que merece comentario, y está en la solución.
+
+
+Para dibujar antes de responder: en P10 usa una columna por llave y una fila por tiempo, como en [vista geométrica](/structures/geometric-view#intuición). En P15 conserva las filas anteriores al procesar cada acceso; la convención de puntos rellenos y anillos está en [Greedy](/structures/greedy-algorithm#intuición). Estas referencias explican la notación; las pistas y soluciones de cada pregunta siguen ocultas hasta que las abras.

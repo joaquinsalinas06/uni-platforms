@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
 import ExerciseBlock from '../components/ExerciseBlock';
+import Visualization from '../components/Visualization.astro';
 
 const [doc] = await getCollection('repaso');
 const { Content } = await render(doc);
@@ -42,6 +43,11 @@ const niveles = [
                     <p class="tag mb-2">
                       tema relacionado · <a href={item.href}>{item.etiqueta.split(' · ')[1]}</a>
                     </p>
+                  )}
+                  {item.visualization && (
+                    <div class="mb-5" aria-label="Datos gráficos del enunciado">
+                      <Visualization viz={item.visualization} />
+                    </div>
                   )}
                   <ExerciseBlock client:visible exercise={item} label={item.etiqueta} />
                 </div>
