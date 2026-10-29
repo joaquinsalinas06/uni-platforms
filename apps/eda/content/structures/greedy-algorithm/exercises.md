@@ -26,10 +26,10 @@ items:
       a (2,2) y (2,3) dentro. En total 5 puntos, de los cuales 3 son accesos pedidos y 2 son extra: (2,2) y (2,3).
   - level: 3
     statement: >-
-      Implementa `greedy(n, acc)` en C++ que devuelva los puntos del conjunto. Pruébala con $3, 1, 4, 2$ (debe dar 8 puntos) y con $1, 2, 3, 4$ (debe dar 7).
+      Implementa `greedy(n, acc)` en C++ que devuelva los puntos del conjunto. Pruébala con $3, 1, 4, 2$ (debe dar 8 puntos) y con $1, 2, 3, 4$ (debe dar 7) y con $2,1,1$ (debe dar 4, no 5).
     hints:
       - "Mantén un arreglo ultimo[y] con la última fila en que se tocó cada llave (0 = nunca)."
-      - "Para cada fila, recorre desde x hacia cada lado llevando el mayor ultimo visto; una llave entra si su ultimo lo supera."
+      - "Para cada fila, inicia el mayor ultimo visto en ultimo[x] y recorre desde x hacia cada lado; una llave entra si su ultimo lo supera."
       - "Actualiza ultimo[] sólo después de leer ambas escaleras."
     solution: |-
       ```cpp
@@ -40,7 +40,7 @@ items:
           int x = acc[t - 1];
           vector<int> fila = {x};
           for (int paso : {+1, -1}) {
-            int mejor = 0;
+            int mejor = ultimo[x];
             for (int y = x + paso; y >= 1 && y <= n; y += paso)
               if (ultimo[y] > mejor) { fila.push_back(y); mejor = ultimo[y]; }
           }

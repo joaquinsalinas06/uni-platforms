@@ -1,5 +1,6 @@
 // Greedy sobre una secuencia de accesos, fila por fila, más un comprobador de satisfacción arboral.
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 #include <vector>
 using namespace std;
@@ -11,7 +12,7 @@ struct Punto {
 
 vector<int> escalera(const vector<int>& ultimo, int n, int x, int paso) {
   vector<int> vistas;
-  int mejor = 0;
+  int mejor = ultimo[x];
   for (int y = x + paso; y >= 1 && y <= n; y += paso)
     if (ultimo[y] > mejor) { vistas.push_back(y); mejor = ultimo[y]; }
   return vistas;
@@ -44,6 +45,10 @@ bool arboralmente_satisfecho(const vector<Punto>& P) {
 }
 
 int main() {
+  // Un acceso repetido no vuelve a tocar una llave cuyo rectángulo ya estaba bloqueado.
+  const vector<Punto> repetidos = {{2, 1}, {1, 2}, {2, 2}, {1, 3}};
+  assert(greedy(2, {2, 1, 1}) == repetidos);
+  assert(arboralmente_satisfecho(repetidos));
   struct Caso { int n; vector<int> acc; };
   vector<Caso> casos = {{4, {3, 1, 4, 2}}, {3, {2, 1, 3}}, {4, {1, 2, 3, 4}}, {8, {1, 5, 3, 7, 2, 6, 4, 8}}};
   for (auto& c : casos) {
@@ -53,4 +58,5 @@ int main() {
     cout << "  ->  |P| = " << P.size() << " (" << P.size() - c.acc.size() << " extra), satisfecho: "
          << (arboralmente_satisfecho(P) ? "sí" : "NO") << "\n";
   }
+  return 0;
 }

@@ -58,13 +58,13 @@ que el conjunto acumulado siga siendo arboralmente satisfecho. No modifica ningu
 ## Intuición
 
 Mira desde $x_t$ hacia la derecha y hacia la izquierda. Cada llave $y$ guarda *cuándo fue la última vez que se tocó*. La llave $y$ tiene que entrar a la fila si, entre ella y $x_t$,
-nadie fue tocado más recientemente que ella: si no entrara, el rectángulo entre $(x_t, t)$ y $(y, \mathrm{ult}(y))$ quedaría **vacío** y la condición arboral se rompería.
+ninguna llave entre ambas, incluyendo el extremo $x_t$, fue tocada en ese tiempo o después: si no entrara, el rectángulo entre $(x_t, t)$ y $(y, \mathrm{ult}(y))$ quedaría **vacío** y la condición arboral se rompería.
 Lo que entra es una **escalera**: llaves cuyos últimos toques son cada vez más recientes a medida que te acercas a $x_t$.
 
 ## Algoritmo
 
 1. Poner $(x_t, t)$ en la fila.
-2. **Hacia la derecha**: recorrer $y = x_t + 1, x_t + 2, \dots$ llevando el último toque más reciente visto, $m$. Si $\mathrm{ult}(y) > m$, agregar $(y, t)$ y hacer $m \leftarrow \mathrm{ult}(y)$.
+2. **Hacia la derecha**: recorrer $y = x_t + 1, x_t + 2, \dots$ llevando el último toque más reciente visto, $m$, inicialmente $\mathrm{ult}(x_t)$. El toque anterior de la propia llave también puede bloquear el rectángulo. Si $\mathrm{ult}(y) > m$, agregar $(y, t)$ y hacer $m \leftarrow \mathrm{ult}(y)$.
 3. **Hacia la izquierda**: igual con $y = x_t - 1, x_t - 2, \dots$
 4. Para cada llave de la fila, $\mathrm{ult}(y) \leftarrow t$ (**después** de leer ambas escaleras, para que una escalera no vea los toques de la propia fila).
 
@@ -78,7 +78,7 @@ Las llaves nunca tocadas tienen $\mathrm{ult} = 0$ y nunca entran.
 GREEDY-FILA(x, t):
   fila ← {x}
   para paso en {+1, −1}:
-    mejor ← 0
+    mejor ← ult[x]
     para y desde x + paso mientras 1 ≤ y ≤ n, de paso en paso:
       si ult[y] > mejor:
         fila ← fila ∪ {y}
@@ -110,5 +110,5 @@ a la izquierda, $y = 1$ entra ($2 > 0$). La fila queda $\{1, 2, 3\}$.
 ## Casos límite
 
 - **Primera fila**: nada fue tocado antes; la fila es sólo $\{x_1\}$.
-- **Mismo acceso repetido**: si $x_t = x_{t-1}$ y es la única tocada en la fila anterior, la escalera no ve a nadie más reciente: la fila es sólo $\{x_t\}$ (costo mínimo, 1 punto).
+- **Mismo acceso repetido**: si $x_t = x_{t-1}$, se inicia la escalera en $\mathrm{ult}(x_t)=t-1$. Ninguna otra llave tiene un toque más reciente: la nueva fila es sólo $\{x_t\}$, aunque el acceso anterior haya tocado varias llaves.
 - **Acceso secuencial** $1, 2, \dots, n$: cada fila agrega sólo la llave anterior (la fila $t$ es $\{t-1, t\}$): $2n - 1$ puntos en total.

@@ -8,7 +8,7 @@ using namespace std;
 
 vector<int> escalera(const vector<int>& ultimo, int n, int x, int paso) {
   vector<int> vistas;
-  int mejor = 0;                                       // último toque más reciente visto hasta ahora
+  int mejor = ultimo[x];                                       // el último toque de x también bloquea rectángulos
   for (int y = x + paso; y >= 1 && y <= n; y += paso)
     if (ultimo[y] > mejor) {                           // más reciente que todo lo que está entre x e y
       vistas.push_back(y);

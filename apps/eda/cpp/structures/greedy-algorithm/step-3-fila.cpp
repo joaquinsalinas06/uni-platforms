@@ -7,7 +7,7 @@ struct Punto { int x, t; };
 
 vector<int> escalera(const vector<int>& ultimo, int n, int x, int paso) {
   vector<int> vistas;
-  int mejor = 0;
+  int mejor = ultimo[x];
   for (int y = x + paso; y >= 1 && y <= n; y += paso)
     if (ultimo[y] > mejor) { vistas.push_back(y); mejor = ultimo[y]; }
   return vistas;

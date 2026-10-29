@@ -28,7 +28,7 @@ Iacono, Kane & Pătrașcu, 2009) y es ésta:
 
 > **Nota de apoyo** (no está en las diapositivas): para el acceso $x$ en el tiempo $t$, se toca la llave $y$ si el rectángulo entre $(x, t)$ y $(y, \mathrm{ult}(y))$
 > —donde $\mathrm{ult}(y)$ es la última fila en que $y$ fue tocada— **no contiene ningún otro punto**. Mirando desde $x$ hacia cada lado, eso significa que $y$ entra si
-> su último toque es *más reciente* que el de todas las llaves ya vistas entre $x$ e $y$: una *escalera* de toques cada vez más recientes.
+> su último toque es *más reciente* que el de todas las llaves ya vistas entre $x$ e $y$, incluido el toque anterior de $x$: una *escalera* de toques cada vez más recientes.
 
 Se ve mejor con la secuencia $2, 1, 3$ sobre las llaves $\{1, 2, 3\}$:
 
@@ -88,6 +88,28 @@ Se ve mejor con la secuencia $2, 1, 3$ sobre las llaves $\{1, 2, 3\}$:
 }} />
 
 *(Ejemplo derivado ejecutando la regla anterior; es la pregunta 15 del repaso. No aparece en las diapositivas.)*
+
+
+### Si se repite el acceso
+
+Después de los accesos $2,1$, la fila 2 contiene $(1,2)$ y el toque añadido $(2,2)$. Si el siguiente acceso vuelve a ser $1$, **no** se agrega otro toque de la llave 2: el punto $(1,2)$ ya está en el borde del rectángulo entre $(1,3)$ y $(2,2)$. Por eso la escalera empieza con $\mathrm{ult}(1)=2$, no con cero.
+
+<Visualization viz={{
+  type: 'geometric',
+  steps: [{
+    note: "Secuencia 2,1,1. La fila 3 sólo añade el acceso pedido (1,3). El rectángulo hasta (2,2) ya contiene (1,2) en su borde: volver a añadir (2,3) sería innecesario. Resultado: 4 puntos, uno extra.",
+    points: [
+      { id: 'p1', x: 2, t: 1 },
+      { id: 'p2', x: 1, t: 2, label: 'bloquea' },
+      { id: 'e2', x: 2, t: 2, kind: 'added' },
+      { id: 'p3', x: 1, t: 3, state: 'active' },
+    ],
+    rects: [{ id: 'satisfecho', a: 'p3', b: 'e2', state: 'answer', fill: true }],
+    xMax: 3,
+    tMax: 3,
+    row: 3,
+  }],
+}} />
 
 ## Operaciones
 
