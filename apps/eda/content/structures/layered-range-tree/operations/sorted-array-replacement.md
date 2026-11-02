@@ -10,33 +10,65 @@ visualization:
   mode: layers
   steps:
     - note: >-
-        Postorden, de abajo hacia arriba: cada hoja del árbol primario en X
-        (A,B,C,D, con Y = 4,9,1,7) guarda un arreglo de un solo elemento —
-        su propia Y. Nada que mezclar todavía.
+        Paso 1 (Hojas base en X, con su coordenada Y): Tenemos 4 puntos en el plano 2D:
+        A=(1,4), B=(2,9), C=(3,1) y D=(4,7). El árbol primario divide el eje X
+        (hojas ordenadas por X: 1, 2, 3, 4). Cada hoja guarda un arreglo de tamaño 1
+        con la coordenada Y de su punto: A guarda Y=[4], B guarda Y=[9], C guarda Y=[1],
+        D guarda Y=[7].
       mode: layers
+      caption: "Hojas en X: A=(1,4) [Y=4] | B=(2,9) [Y=9] | C=(3,1) [Y=1] | D=(4,7) [Y=7]"
+      bridges: []
       arrays:
-        - { id: A, label: "A [4]", row: 2, cells: [4] }
-        - { id: B, label: "B [9]", row: 2, cells: [9] }
-        - { id: C, label: "C [1]", row: 2, cells: [1] }
-        - { id: D, label: "D [7]", row: 2, cells: [7] }
+        - { id: A, label: "A(1,4) [Y=4]", row: 2, slot: left, cells: [4], states: [idle] }
+        - { id: B, label: "B(2,9) [Y=9]", row: 2, slot: left, cells: [9], states: [idle] }
+        - { id: C, label: "C(3,1) [Y=1]", row: 2, slot: right, cells: [1], states: [idle] }
+        - { id: D, label: "D(4,7) [Y=7]", row: 2, slot: right, cells: [7], states: [idle] }
     - note: >-
-        Cada nodo interno mezcla los arreglos ya listos de sus dos hijos,
-        como el merge de Merge Sort: (A,B) = merge([4],[9]) = [4,9];
-        (C,D) = merge([1],[7]) = [1,7]. Ningún BST secundario de por
-        medio, sólo un arreglo ordenado por nodo.
+        Paso 2 (Nivel intermedio: mezcla de coordenadas Y): Cada nodo interno en X
+        cubre un subrango horizontal y junta las Y de sus puntos mezclando los arreglos
+        de sus hijos: (A,B) para X∈[1,2] mezcla [4] y [9] para formar [4,9]; (C,D) para
+        X∈[3,4] mezcla [1] y [7] para formar [1,7]. Las hojas permanecen visibles en la base.
       mode: layers
+      caption: "Nivel 1: (A,B) X∈[1,2] -> Y=[4,9]  |  (C,D) X∈[3,4] -> Y=[1,7]"
+      bridges: []
       arrays:
-        - { id: nAB, label: "(A,B) [4,9]", row: 1, slot: left, cells: [4, 9] }
-        - { id: nCD, label: "(C,D) [1,7]", row: 1, slot: right, cells: [1, 7] }
+        - { id: nAB, label: "(A,B) X∈[1,2] [Y: 4,9]", row: 1, slot: left, cells: [4, 9], states: [active, active] }
+        - { id: nCD, label: "(C,D) X∈[3,4] [Y: 1,7]", row: 1, slot: right, cells: [1, 7], states: [active, active] }
+        - { id: A, label: "A(1,4) [Y=4]", row: 2, slot: left, cells: [4], states: [muted] }
+        - { id: B, label: "B(2,9) [Y=9]", row: 2, slot: left, cells: [9], states: [muted] }
+        - { id: C, label: "C(3,1) [Y=1]", row: 2, slot: right, cells: [1], states: [muted] }
+        - { id: D, label: "D(4,7) [Y=7]", row: 2, slot: right, cells: [7], states: [muted] }
     - note: >-
-        En la raíz se mezclan (A,B) y (C,D) una última vez:
-        merge([4,9],[1,7]) = [1,4,7,9]. Este arreglo final es el que
-        bridge-build usa para tender los puentes hacia cada hijo.
+        Paso 3 (Raíz: todas las coordenadas Y mezcladas): En la raíz, que cubre todo el
+        eje horizontal X∈[1,4], se mezclan los arreglos de sus dos hijos: merge([4,9], [1,7]) =
+        [1,4,7,9]. Este arreglo contiene las Y de TODOS los puntos ordenadas ascendentemente.
       mode: layers
+      caption: "Nivel 0 (raíz): X∈[1,4] -> Y=[1,4,7,9] (unión ordenada de todas las Y)"
+      bridges: []
       arrays:
-        - { id: nAB, label: "(A,B) [4,9]", row: 1, slot: left, cells: [4, 9] }
-        - { id: nCD, label: "(C,D) [1,7]", row: 1, slot: right, cells: [1, 7] }
-        - { id: root, label: "raíz [1,4,7,9]", row: 0, cells: [1, 4, 7, 9] }
+        - { id: root, label: "raíz X∈[1,4] [Y: 1,4,7,9]", row: 0, cells: [1, 4, 7, 9], states: [active, active, active, active] }
+        - { id: nAB, label: "(A,B) X∈[1,2] [Y: 4,9]", row: 1, slot: left, cells: [4, 9], states: [idle, idle] }
+        - { id: nCD, label: "(C,D) X∈[3,4] [Y: 1,7]", row: 1, slot: right, cells: [1, 7], states: [idle, idle] }
+        - { id: A, label: "A(1,4) [Y=4]", row: 2, slot: left, cells: [4], states: [muted] }
+        - { id: B, label: "B(2,9) [Y=9]", row: 2, slot: left, cells: [9], states: [muted] }
+        - { id: C, label: "C(3,1) [Y=1]", row: 2, slot: right, cells: [1], states: [muted] }
+        - { id: D, label: "D(4,7) [Y=7]", row: 2, slot: right, cells: [7], states: [muted] }
+    - note: >-
+        Paso 4 (Estructura 2D completa con arreglos): El árbol primario en X ya tiene en
+        cada nodo su arreglo ordenado de coordenadas Y. Hemos sustituido los costosos BSTs
+        secundarios por arreglos contiguos. En la siguiente operación (bridge-build), tenderemos
+        los puentes hacia hijo izquierdo y derecho para permitir búsquedas en Y en O(1).
+      mode: layers
+      caption: "Árbol 2D listo: primario divide en X, cada nodo almacena sus coordenadas Y ordenadas"
+      bridges: []
+      arrays:
+        - { id: root, label: "raíz X∈[1,4] [Y: 1,4,7,9]", row: 0, cells: [1, 4, 7, 9], states: [answer, answer, answer, answer] }
+        - { id: nAB, label: "(A,B) X∈[1,2] [Y: 4,9]", row: 1, slot: left, cells: [4, 9], states: [idle, idle] }
+        - { id: nCD, label: "(C,D) X∈[3,4] [Y: 1,7]", row: 1, slot: right, cells: [1, 7], states: [idle, idle] }
+        - { id: A, label: "A(1,4) [Y=4]", row: 2, slot: left, cells: [4], states: [idle] }
+        - { id: B, label: "B(2,9) [Y=9]", row: 2, slot: left, cells: [9], states: [idle] }
+        - { id: C, label: "C(3,1) [Y=1]", row: 2, slot: right, cells: [1], states: [idle] }
+        - { id: D, label: "D(4,7) [Y=7]", row: 2, slot: right, cells: [7], states: [idle] }
 ---
 
 ## Qué hace

@@ -11,83 +11,107 @@ visualization:
   mode: layers
   steps:
     - note: >-
-        Antes de mezclar: el arreglo del hijo izquierdo [3, 8] y el del
-        hijo derecho [5, 9], ya construidos (postorden). Todavía no existe
-        el arreglo del padre ni ningún puente.
+        Punto de partida: los arreglos de los dos hijos ya están listos (postorden):
+        L = [3, 8] en el carril izquierdo y R = [5, 9] en el carril derecho.
+        Iniciamos el merge con dos punteros: pL = 0 (apunta a 3) y pR = 0 (apunta a 5).
+        ¿Por qué puentes hacia 2 lados? Porque durante una consulta 2D, si el
+        recorrido en X baja a L usará puenteIzq; si baja a R usará puenteDer.
+        Ambos se calculan durante el mismo merge.
       mode: layers
+      caption: "Inicio: pL = 0 (valor 3) | pR = 0 (valor 5) — P vacío"
+      bridges: []
       arrays:
-        - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
-        - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
+        - { id: L, label: "L [3, 8]", row: 1, slot: left, cells: [3, 8], states: [active, idle] }
+        - { id: R, label: "R [5, 9]", row: 1, slot: right, cells: [5, 9], states: [active, idle] }
     - note: >-
-        Merge: el frente izquierdo (3) es menor que el derecho (5), así que
-        3 entra en la posición 0 del padre. Ese elemento vino de L0 — su
-        puente hacia el hijo izquierdo es "gratis": es la misma posición
-        que el propio merge acaba de leer.
+        Paso 1 del merge: L[0]=3 < R[0]=5. El menor es 3, que entra en P[0].
+        Sus DOS puentes se anotan de inmediato: (1) puenteIzq[0] = pL (0) hacia L[0]=3
+        (de donde vino); (2) puenteDer[0] = pR (0) hacia R[0]=5 (el primer elemento
+        >= 3 en R). Avanza pL a 1.
       mode: layers
+      caption: "P[0]=3 -> puenteIzq[0]=0 (L[0]=3), puenteDer[0]=0 (R[0]=5) | pL avanza a 1"
       arrays:
-        - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
-        - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
-        - { id: P, label: P, row: 0, cells: [3] }
+        - { id: P, label: "P", row: 0, cells: [3], states: [active] }
+        - { id: L, label: "L [3, 8]", row: 1, slot: left, cells: [3, 8], states: [answer, idle] }
+        - { id: R, label: "R [5, 9]", row: 1, slot: right, cells: [5, 9], states: [answer, idle] }
       bridges:
-        - { from: P, fromIndex: 0, to: L, toIndex: 0, active: true }
+        - { from: P, fromIndex: 0, to: L, toIndex: 0, active: true, label: "izq" }
+        - { from: P, fromIndex: 0, to: R, toIndex: 0, active: true, label: "der" }
     - note: >-
-        Ahora el frente izquierdo es 8 y el derecho 5: 5 es menor y entra
-        en la posición 1 del padre, con puente hacia R0.
+        Paso 2 del merge: ahora el frente es L[1]=8 y R[0]=5. El menor es 5, que entra
+        en P[1]. Sus DOS puentes: (1) puenteDer[1] = pR (0) hacia R[0]=5 (de donde vino);
+        (2) puenteIzq[1] = pL (1) hacia L[1]=8 (el primer elemento >= 5 en L).
+        Avanza pR a 1.
       mode: layers
+      caption: "P[1]=5 -> puenteIzq[1]=1 (L[1]=8), puenteDer[1]=0 (R[0]=5) | pR avanza a 1"
       arrays:
-        - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
-        - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
-        - { id: P, label: P, row: 0, cells: [3, 5] }
+        - { id: P, label: "P", row: 0, cells: [3, 5], states: [idle, active] }
+        - { id: L, label: "L [3, 8]", row: 1, slot: left, cells: [3, 8], states: [idle, answer] }
+        - { id: R, label: "R [5, 9]", row: 1, slot: right, cells: [5, 9], states: [answer, idle] }
       bridges:
         - { from: P, fromIndex: 0, to: L, toIndex: 0, active: false }
-        - { from: P, fromIndex: 1, to: R, toIndex: 0, active: true }
+        - { from: P, fromIndex: 0, to: R, toIndex: 0, active: false }
+        - { from: P, fromIndex: 1, to: L, toIndex: 1, active: true, label: "izq" }
+        - { from: P, fromIndex: 1, to: R, toIndex: 0, active: true, label: "der" }
     - note: >-
-        Frente izquierdo 8, derecho 9: 8 entra en la posición 2 del padre,
-        con puente hacia L1.
+        Paso 3 del merge: comparamos L[1]=8 y R[1]=9. El menor es 8, que entra en P[2].
+        Sus DOS puentes: (1) puenteIzq[2] = pL (1) hacia L[1]=8 (de donde vino);
+        (2) puenteDer[2] = pR (1) hacia R[1]=9 (primer elemento >= 8 en R).
+        L queda completamente agotado (pL avanza a 2).
       mode: layers
+      caption: "P[2]=8 -> puenteIzq[2]=1 (L[1]=8), puenteDer[2]=1 (R[1]=9) | L agotado"
       arrays:
-        - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
-        - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
-        - { id: P, label: P, row: 0, cells: [3, 5, 8] }
+        - { id: P, label: "P", row: 0, cells: [3, 5, 8], states: [idle, idle, active] }
+        - { id: L, label: "L [3, 8]", row: 1, slot: left, cells: [3, 8], states: [idle, answer] }
+        - { id: R, label: "R [5, 9]", row: 1, slot: right, cells: [5, 9], states: [idle, answer] }
       bridges:
         - { from: P, fromIndex: 0, to: L, toIndex: 0, active: false }
+        - { from: P, fromIndex: 0, to: R, toIndex: 0, active: false }
+        - { from: P, fromIndex: 1, to: L, toIndex: 1, active: false }
         - { from: P, fromIndex: 1, to: R, toIndex: 0, active: false }
-        - { from: P, fromIndex: 2, to: L, toIndex: 1, active: true }
+        - { from: P, fromIndex: 2, to: L, toIndex: 1, active: true, label: "izq" }
+        - { from: P, fromIndex: 2, to: R, toIndex: 1, active: true, label: "der" }
     - note: >-
-        El hijo izquierdo se agotó: el único elemento que queda, 9, entra
-        en la posición 3 del padre, con puente hacia R1. El arreglo
-        mezclado del padre queda [3, 5, 8, 9].
+        Paso 4 del merge: L está agotado; sólo queda 9 en R[1], que entra en P[3].
+        Sus DOS puentes: (1) puenteDer[3] = pR (1) hacia R[1]=9; (2) en L ya no quedan
+        elementos >= 9, así que puenteIzq[3] = 2 apunta al centinela 'fin' de L.
+        R queda agotado (pR avanza a 2).
       mode: layers
+      caption: "P[3]=9 -> puenteIzq[3]=2 (fin en L), puenteDer[3]=1 (R[1]=9) | R agotado"
       arrays:
-        - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
-        - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
-        - { id: P, label: P, row: 0, cells: [3, 5, 8, 9] }
+        - { id: P, label: "P [3, 5, 8, 9]", row: 0, cells: [3, 5, 8, 9], states: [idle, idle, idle, active] }
+        - { id: L, label: "L [3, 8]", row: 1, slot: left, cells: [3, 8], states: [idle, idle] }
+        - { id: R, label: "R [5, 9]", row: 1, slot: right, cells: [5, 9], states: [idle, answer] }
       bridges:
         - { from: P, fromIndex: 0, to: L, toIndex: 0, active: false }
+        - { from: P, fromIndex: 0, to: R, toIndex: 0, active: false }
+        - { from: P, fromIndex: 1, to: L, toIndex: 1, active: false }
         - { from: P, fromIndex: 1, to: R, toIndex: 0, active: false }
         - { from: P, fromIndex: 2, to: L, toIndex: 1, active: false }
-        - { from: P, fromIndex: 3, to: R, toIndex: 1, active: true }
+        - { from: P, fromIndex: 2, to: R, toIndex: 1, active: false }
+        - { from: P, fromIndex: 3, to: L, toIndex: 2, active: true, label: "izq" }
+        - { from: P, fromIndex: 3, to: R, toIndex: 1, active: true, label: "der" }
     - note: >-
-        Los dos detalles que casi siempre se rompen en la implementación:
-        (1) pIzq y pDer sólo avanzan, nunca retroceden — es la misma
-        invariante que hace a Merge Sort O(n) y no O(n lg n); calcular cada
-        puente con una búsqueda binaria independiente sería correcto pero
-        más lento, no lo que el merge ya regala gratis; (2) al terminar se
-        guarda un centinela — puenteIzq[4] = 2 y puenteDer[4] = 2, una
-        posición extra que apunta al final de cada hijo — para que
-        preguntar por una posición del padre que cae después del último
-        elemento nunca lea fuera de rango.
+        Centinelas y resultado final: Al final de P se añade una posición centinela
+        (índice 4 = fin) con puenteIzq[4] = 2 y puenteDer[4] = 2, para que cualquier
+        búsqueda que caiga después del último elemento tenga a dónde apuntar sin leer
+        fuera de rango. Los punteros pL y pR sólo avanzaron hacia adelante: los puentes
+        a ambos hijos se construyeron en O(|L| + |R|), exactamente el mismo costo del merge.
       mode: layers
+      caption: "puenteIzq = [0,1,1,2,2]  |  puenteDer = [0,0,1,1,2]  (índice 4 = centinela fin)"
       arrays:
-        - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
-        - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
-        - { id: P, label: P, row: 0, cells: [3, 5, 8, 9] }
+        - { id: P, label: "P [3, 5, 8, 9]", row: 0, cells: [3, 5, 8, 9] }
+        - { id: L, label: "L [3, 8]", row: 1, slot: left, cells: [3, 8] }
+        - { id: R, label: "R [5, 9]", row: 1, slot: right, cells: [5, 9] }
       bridges:
         - { from: P, fromIndex: 0, to: L, toIndex: 0, active: false }
+        - { from: P, fromIndex: 0, to: R, toIndex: 0, active: false }
+        - { from: P, fromIndex: 1, to: L, toIndex: 1, active: false }
         - { from: P, fromIndex: 1, to: R, toIndex: 0, active: false }
         - { from: P, fromIndex: 2, to: L, toIndex: 1, active: false }
+        - { from: P, fromIndex: 2, to: R, toIndex: 1, active: false }
+        - { from: P, fromIndex: 3, to: L, toIndex: 2, active: false }
         - { from: P, fromIndex: 3, to: R, toIndex: 1, active: false }
-      caption: "puenteIzq = [0,1,1,2,2]  puenteDer = [0,0,1,1,2]  (última posición = centinela)"
 ---
 
 ## Qué hace
@@ -109,6 +133,15 @@ avanzan hacia adelante. Anotar, en cada posición del padre, el valor que
 esos dos punteros tenían **en ese instante** es el puente completo: no hace
 falta buscarlo después con una búsqueda binaria, ya se sabía durante la
 construcción.
+
+### ¿Por qué puentes hacia DOS lados (izq y der)?
+
+En una consulta 2D $[x_1, x_2] \times [y_1, y_2]$, el árbol primario en $X$ descompone el rango horizontal. Cuando la consulta llega a cualquier nodo padre $P$, el camino de búsqueda puede requerir descender hacia su **hijo izquierdo** (subárbol con $X$ menores), hacia su **hijo derecho** (subárbol con $X$ mayores), o hacia **ambos** (si el rango $[x_1, x_2]$ se bifurca):
+
+- Si la consulta desciende al **hijo izquierdo**: salta por `puenteIzq[i]` en $O(1)$ directo a la posición donde empieza el rango vertical en $L$.
+- Si la consulta desciende al **hijo derecho**: salta por `puenteDer[i]` en $O(1)$ directo a la posición donde empieza el rango vertical en $R$.
+
+Como el nodo $P$ no puede predecir hacia qué lado irá cada consulta que el usuario haga en el futuro, **cada posición de $P$ necesita vías rápidas hacia ambos lados**. Sin puentes hacia ambos lados, descender a un hijo exigiría repetir una búsqueda binaria completa en $O(\lg n)$. Con puentes a ambos lados, **todo descenso toma $O(1)$**.
 
 A diferencia del caso general de fractional cascading — donde sólo se
 promueve la mitad de cada lista para no disparar el tamaño —, aquí "cada

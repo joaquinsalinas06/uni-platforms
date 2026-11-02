@@ -12,6 +12,7 @@ visualization:
         un hijo derecho R=[5,9] ya lo tienen construido; su padre P=[3,5,8,9]
         también, pero todavía sin ningún puente.
       mode: layers
+      bridges: []
       arrays:
         - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
         - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
@@ -23,6 +24,7 @@ visualization:
         hay que elegir qué mitad de qué lista promover, porque toda la
         lista del padre ya viene de los hijos.
       mode: layers
+      bridges: []
       arrays:
         - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
         - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
@@ -30,17 +32,17 @@ visualization:
     - note: >-
         puenteIzq[i] guarda, para cada posición i del padre, la posición
         equivalente en el arreglo del hijo izquierdo. P[0]=3 vino de L[0]=3,
-        así que puenteIzq[0]=0 — el puente activo, en azul.
+        así que puenteIzq[0]=0 — el puente activo hacia la izquierda, en azul.
       mode: layers
       arrays:
         - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
         - { id: R, label: R, row: 1, slot: right, cells: [5, 9] }
         - { id: P, label: P, row: 0, cells: [3, 5, 8, 9] }
       bridges:
-        - { from: P, fromIndex: 0, to: L, toIndex: 0, active: true }
+        - { from: P, fromIndex: 0, to: L, toIndex: 0, active: true, label: "izq" }
     - note: >-
         puenteDer[i] hace lo mismo hacia el hijo derecho. P[1]=5 vino de
-        R[0]=5, así que puenteDer[1]=0.
+        R[0]=5, así que puenteDer[1]=0 — el puente activo hacia la derecha, en azul.
       mode: layers
       arrays:
         - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
@@ -48,13 +50,12 @@ visualization:
         - { id: P, label: P, row: 0, cells: [3, 5, 8, 9] }
       bridges:
         - { from: P, fromIndex: 0, to: L, toIndex: 0, active: false }
-        - { from: P, fromIndex: 1, to: R, toIndex: 0, active: true }
+        - { from: P, fromIndex: 1, to: R, toIndex: 0, active: true, label: "der" }
     - note: >-
-        El invariante no se detiene ahí: las posiciones 0, 1 y 2 de P llevan
-        puente hacia AMBOS hijos, no sólo hacia el que aportó el valor — a
-        diferencia del caso general de fractional cascading, donde sólo se
-        promueve la mitad de cada lista, aquí no hay nada que decidir
-        promover, porque todo elemento del padre viene de alguno de los dos.
+        ¿Por qué puentes hacia AMBOS hijos? Durante una consulta 2D en X el
+        camino puede ramificarse o bajar hacia la izquierda o hacia la derecha.
+        Para poder bajar a cualquiera de los dos lados en O(1), cada celda de P
+        guarda puenteIzq y puenteDer.
       mode: layers
       arrays:
         - { id: L, label: L, row: 1, slot: left, cells: [3, 8] }
@@ -102,7 +103,7 @@ padre-hijos): O(lg n) por consulta 2D, el mismo espacio de antes."
 En el range tree 2D, la lista de Y de un nodo padre **no es independiente**
 de las de sus hijos: es exactamente la unión de ambas. Eso es la
 precondición que fractional cascading necesita para funcionar sin ningún
-trabajo adicional — no hace falta escoger qué la mitad de qué lista
+trabajo adicional — no hace falta escoger qué mitad de qué lista
 promover, porque **toda** la lista del padre ya viene de los hijos. Basta
 entonces con reemplazar cada árbol secundario por un arreglo ordenado y, al
 construir el arreglo del padre mezclando los de sus dos hijos (igual que en
@@ -110,6 +111,34 @@ Merge Sort), anotar en cada posición del padre un puntero a su posición
 equivalente en cada hijo. Bajar por el árbol durante una consulta deja de
 ser "buscar de nuevo en cada nivel" y pasa a ser "saltar por el puntero ya
 calculado".
+
+### ¿Cómo se distribuyen las coordenadas X e Y en el árbol?
+
+Un error muy común al estudiar esta estructura es confundir qué dimensión va en el árbol y cuál en los arreglos:
+
+1. **Los Puntos en el Plano 2D**: Cada punto tiene dos coordenadas $(x, y)$. En el ejemplo del curso tenemos cuatro puntos:
+   - $A = (1, 4)$
+   - $B = (2, 9)$
+   - $C = (3, 1)$
+   - $D = (4, 7)$
+
+2. **El Árbol Primario (Eje X)**: Divide el espacio **horizontal**. Sus hojas son los puntos ordenados de izquierda a derecha por su coordenada $X$:
+   - Hoja $A$ ($x = 1$)
+   - Hoja $B$ ($x = 2$)
+   - Hoja $C$ ($x = 3$)
+   - Hoja $D$ ($x = 4$)
+   Los nodos internos cubren rangos de $X$: $(A,B)$ cubre $X \in [1,2]$, $(C,D)$ cubre $X \in [3,4]$, y la raíz cubre $X \in [1,4]$.
+
+3. **Los Arreglos Secundarios en cada Nodo (Eje Y)**: Para filtrar la dimensión **vertical**, cada nodo almacena un arreglo ordenado con las coordenadas $Y$ de los puntos de su subárbol:
+   - En la hoja $A(1,4)$: arreglo $Y = [4]$
+   - En la hoja $B(2,9)$: arreglo $Y = [9]$
+   - En el nodo $(A,B)$: mezcla las $Y$ de sus dos hijos $\to Y = [4, 9]$
+   - En la hoja $C(3,1)$: arreglo $Y = [1]$
+   - En la hoja $D(4,7)$: arreglo $Y = [7]$
+   - En el nodo $(C,D)$: mezcla las $Y$ de sus dos hijos $\to Y = [1, 7]$
+   - En la raíz: mezcla las $Y$ de todo el árbol $\to Y = [1, 4, 7, 9]$
+
+4. **Los Puentes (Fractional Cascading)**: Cada posición de un arreglo tiene dos punteros: `puenteIzq` (hacia el hijo izquierdo) y `puenteDer` (hacia el hijo derecho). En una consulta rectangular $[x_1, x_2] \times [y_1, y_2]$, hacemos **una única búsqueda binaria en la raíz** para el rango vertical $[y_1, y_2]$ y luego **descendemos en $O(1)$** por los puentes hacia los nodos canónicos en $X$, logrando $O(\lg n)$ tiempo total en vez de $O(\lg^2 n)$.
 
 Antes de seguir índices y puentes, comprueba el resultado en el plano.
 El árbol descompone el rango horizontal; los arreglos y sus puentes filtran
@@ -176,6 +205,14 @@ Cada nodo del árbol primario (el mismo árbol primario de
   derecho: `puenteIzq[i]` y `puenteDer[i]` son la posición, en el arreglo del
   hijo correspondiente, donde caería el mismo valor que está en la posición
   `i` del arreglo del padre.
+
+### ¿Por qué puentes hacia DOS lados (izq y der)?
+
+En una consulta 2D $[x_1, x_2] \times [y_1, y_2]$, el árbol primario en $X$ descompone el rango horizontal. Al llegar a un nodo $P$, la consulta puede necesitar descender a su hijo izquierdo, a su hijo derecho o a ambos:
+- Si baja al **hijo izquierdo**: salta por `puenteIzq[i]` en $O(1)$ directo a la posición donde empieza el rango en $L$.
+- Si baja al **hijo derecho**: salta por `puenteDer[i]` en $O(1)$ directo a la posición donde empieza el rango en $R$.
+
+Tener puentes hacia ambos lados es la clave que permite que todo descenso en el árbol cueste $O(1)$ sin repetir búsquedas binarias.
 
 > **Nota de apoyo** (no está en las diapositivas): el material no dice qué
 > hacer cuando $i$ cae después del último elemento de un hijo. La

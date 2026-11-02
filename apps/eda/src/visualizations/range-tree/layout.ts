@@ -36,7 +36,7 @@ export type RangeArray = {
   states?: RangeState[];
 };
 
-export type RangeBridge = { from: string; fromIndex: number; to: string; toIndex: number; active?: boolean };
+export type RangeBridge = { from: string; fromIndex: number; to: string; toIndex: number; active?: boolean; label?: string; curve?: number };
 
 export type RangeStep = {
   note: string;
@@ -283,7 +283,8 @@ export function layoutLayers(step: RangeStep, canvasWidth = layersWidth(step)): 
         id: `${fromId}->${toId}`,
         kind: 'pointer' as const,
         arrow: true,
-        curve: 14 * dir,
+        label: b.label,
+        curve: b.curve !== undefined ? b.curve : 14 * dir,
         state: b.active ? ('active' as const) : undefined,
       };
     })

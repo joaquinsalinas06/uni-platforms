@@ -11,93 +11,92 @@ visualization:
   type: range-tree
   steps:
     - note: >-
-        Mismo ejemplo de "Normal" en Ejemplos: cuatro puntos A(1,4) B(2,9)
-        C(3,1) D(4,7), árbol primario en X con hojas A,B,C,D. Consulta
-        [x1,x2]×[y1,y2] = [2,4]×[3,8]: primero se descompone [2,4] en X,
-        exactamente como en range-query-1d de range-tree.
+        Puntos en 2D: A(1,4), B(2,9), C(3,1), D(4,7). El árbol primario organiza
+        los puntos por su coordenada horizontal X (hojas A, B, C, D con X = 1, 2, 3, 4).
+        Consulta rectangular: [x1,x2] × [y1,y2] = [2,4] × [3,8]. Primero filtramos
+        en X para identificar los subárboles que cubren el rango horizontal [2,4].
       mode: tree
       nodes:
-        - { id: root, value: "[1,4]", parent: null }
-        - { id: nAB, value: "[1,2]", parent: root }
-        - { id: nCD, value: "[3,4]", parent: root }
-        - { id: A, value: 1, parent: nAB }
-        - { id: B, value: 2, parent: nAB }
-        - { id: C, value: 3, parent: nCD }
-        - { id: D, value: 4, parent: nCD }
+        - { id: root, value: "X:[1,4]", parent: null }
+        - { id: nAB, value: "X:[1,2]", parent: root }
+        - { id: nCD, value: "X:[3,4]", parent: root }
+        - { id: A, value: "A(1,4)", parent: nAB }
+        - { id: B, value: "B(2,9)", parent: nAB }
+        - { id: C, value: "C(3,1)", parent: nCD }
+        - { id: D, value: "D(4,7)", parent: nCD }
     - note: >-
-        Los nodos canónicos de [2,4] son la hoja B y el nodo (C,D) completo
-        (marcado colapsado: se trata como una sola unidad, no se vuelve a
-        entrar en C y D por separado). La raíz y (A,B) sólo se visitan de
-        paso, no son canónicos.
+        Descomposición canónica en X: El rango [2,4] se cubre con exactamente
+        dos nodos canónicos: la hoja B(2,9) [cubre X=2] y el nodo interno (C,D)
+        completo [cubre X∈[3,4]]. El nodo A(1,4) queda fuera (X=1 < 2). La raíz y (A,B)
+        solo se visitan de paso.
       mode: tree
       nodes:
-        - { id: root, value: "[1,4]", parent: null, state: active }
-        - { id: nAB, value: "[1,2]", parent: root, state: active }
-        - { id: nCD, value: "[3,4]", parent: root, state: answer, collapsed: true }
-        - { id: A, value: 1, parent: nAB, state: muted }
-        - { id: B, value: 2, parent: nAB, state: answer }
+        - { id: root, value: "X:[1,4]", parent: null, state: active }
+        - { id: nAB, value: "X:[1,2]", parent: root, state: active }
+        - { id: nCD, value: "X:[3,4]", parent: root, state: answer, collapsed: true }
+        - { id: A, value: "A(1,4)", parent: nAB, state: muted }
+        - { id: B, value: "B(2,9)", parent: nAB, state: answer }
     - note: >-
-        En la raíz, y sólo en la raíz, se hace la única búsqueda binaria
-        real: sobre su arreglo de Y ya mezclado [1,4,7,9], localizar
-        pa = primer elemento ≥ y1=3 (posición 1, valor 4) y
-        pb = primer elemento > y2=8 (posición 3, valor 9). Cuesta O(lg n)
-        y no se repite en ningún nodo canónico.
+        Única búsqueda binaria en Y (en la raíz): Ahora filtramos el eje vertical
+        Y ∈ [3,8]. En la raíz, sobre su arreglo de Y=[1,4,7,9], localizamos:
+        pa = primer elemento ≥ y1=3 (índice 1, valor 4) y pb = primer elemento > y2=8
+        (índice 3, valor 9). Esta búsqueda cuesta O(lg n) y NUNCA se repite al bajar.
       mode: layers
       arrays:
         - id: root
-          label: "raíz [1,4]"
+          label: "raíz X∈[1,4] — arreglo de Y"
           row: 0
           cells: [1, 4, 7, 9]
           states: [idle, answer, idle, answer]
-      caption: "pa = 1, pb = 3"
+      caption: "Búsqueda binaria en Y: pa = 1 (valor 4), pb = 3 (valor 9) para Y∈[3,8]"
     - note: >-
-        Para llegar al nodo canónico (C,D), se baja por puenteDer de la
-        raíz (el mismo que construyó bridge-build): pa=1 y pb=3 se
-        traducen en O(1) a pa'=1 y pb'=2 sobre el arreglo de (C,D)=[1,7].
-        pb'-pa' = 1 punto: D=(4,7), porque 7 ∈ [3,8].
+        Bajando al nodo canónico (C,D) en O(1): Para filtrar Y en (C,D) no hacemos
+        búsqueda binaria; saltamos por puenteDer de la raíz. pa=1 y pb=3 se traducen en
+        O(1) a pa'=1 y pb'=2 sobre el arreglo (C,D) de Y=[1,7]. pb' − pa' = 2 − 1 = 1 punto:
+        es exactamente D=(4,7), porque su Y=7 ∈ [3,8]. ¡Primer punto reportado!
       mode: layers
       arrays:
-        - { id: root, label: "raíz [1,4]", row: 0, cells: [1, 4, 7, 9] }
+        - { id: root, label: "raíz X∈[1,4] [Y: 1,4,7,9]", row: 0, cells: [1, 4, 7, 9] }
         - id: nCD
-          label: "(C,D) [1,7]"
+          label: "(C,D) X∈[3,4] [Y: 1,7]"
           row: 1
           slot: right
           cells: [1, 7]
-          states: [answer, answer]
+          states: [idle, answer]
       bridges:
-        - { from: root, fromIndex: 1, to: nCD, toIndex: 1, active: true }
-        - { from: root, fromIndex: 3, to: nCD, toIndex: 2, active: true }
-      caption: "aporta pb' − pa' = 1 punto"
+        - { from: root, fromIndex: 1, to: nCD, toIndex: 1, active: true, label: "der" }
+        - { from: root, fromIndex: 3, to: nCD, toIndex: 2, active: true, label: "der" }
+      caption: "Salto O(1) hacia (C,D): pa'=1, pb'=2 -> 1 punto reportado: D(4,7)"
     - note: >-
-        Hacia (A,B), el mismo puente de la raíz (puenteIzq) traduce
-        pa=1, pb=3 a pa''=0, pb''=1 sobre (A,B)=[4,9] en O(1). Pero (A,B)
-        no es un nodo canónico completo — sólo la hoja B lo es — así que
-        hace falta un segundo descenso.
+        Bajando hacia la rama izquierda (A,B) en O(1): Usamos puenteIzq de la raíz para
+        trasladar pa=1, pb=3 a pa''=0, pb''=1 sobre el arreglo de Y de (A,B)=[4,9]. Como
+        (A,B) no es nodo canónico completo (solo su hoja B lo es), debemos hacer un
+        último salto hacia B.
       mode: layers
       arrays:
-        - { id: root, label: "raíz [1,4]", row: 0, cells: [1, 4, 7, 9] }
+        - { id: root, label: "raíz X∈[1,4] [Y: 1,4,7,9]", row: 0, cells: [1, 4, 7, 9] }
         - id: nAB
-          label: "(A,B) [4,9]"
+          label: "(A,B) X∈[1,2] [Y: 4,9]"
           row: 1
           slot: left
           cells: [4, 9]
       bridges:
-        - { from: root, fromIndex: 1, to: nAB, toIndex: 0, active: true }
-        - { from: root, fromIndex: 3, to: nAB, toIndex: 1, active: true }
+        - { from: root, fromIndex: 1, to: nAB, toIndex: 0, active: true, label: "izq" }
+        - { from: root, fromIndex: 3, to: nAB, toIndex: 1, active: true, label: "izq" }
+      caption: "Salto O(1) hacia (A,B): pa''=0, pb''=1"
     - note: >-
-        Segundo salto de puente, ahora el propio de (A,B) hacia su hijo
-        derecho B: pa''=0, pb''=1 se traducen a pa'''=0, pb'''=0 sobre
-        B=[9]. pb'''-pa'''=0: B=(2,9) no aporta, porque 9 ∉ [3,8]. Sigue
-        siendo O(1) — el descenso completo en Y nunca volvió a buscar
-        binario.
+        Salto final a la hoja B(2,9) en O(1): Usamos el puente derecho de (A,B) hacia su
+        hoja B. pa''=0, pb''=1 se traducen a pa'''=0, pb'''=0 sobre B=[9]. pb''' − pa''' = 0:
+        el punto B=(2,9) queda excluido porque su Y=9 no está en [3,8]. Total de la consulta:
+        exactamente 1 punto — D(4,7). Todo el descenso en Y costó O(1) por nodo.
       mode: layers
       arrays:
-        - { id: nAB, label: "(A,B) [4,9]", row: 0, cells: [4, 9] }
-        - { id: B, label: "B [9]", row: 1, slot: right, cells: [9], states: [muted] }
+        - { id: nAB, label: "(A,B) X∈[1,2] [Y: 4,9]", row: 0, cells: [4, 9] }
+        - { id: B, label: "hoja B(2,9) [Y=9]", row: 1, slot: right, cells: [9], states: [muted] }
       bridges:
-        - { from: nAB, fromIndex: 0, to: B, toIndex: 0, active: true }
-        - { from: nAB, fromIndex: 1, to: B, toIndex: 0, active: true }
-      caption: "1 (de D) + 0 (de B) = 1 punto en total, con una sola búsqueda binaria"
+        - { from: nAB, fromIndex: 0, to: B, toIndex: 0, active: true, label: "der" }
+        - { from: nAB, fromIndex: 1, to: B, toIndex: 0, active: true, label: "der" }
+      caption: "Resultado: 1 (de D) + 0 (de B) = 1 punto reportado: D(4,7) en O(lg n) total"
 ---
 
 ## Qué hace

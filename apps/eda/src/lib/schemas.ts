@@ -166,6 +166,8 @@ export const visualizationSchema = z.object({
               to: z.string(),
               toIndex: z.number().int().min(0),
               active: z.boolean().default(false),
+              label: z.string().optional(),
+              curve: z.number().optional(),
             }),
           )
           .optional(),
