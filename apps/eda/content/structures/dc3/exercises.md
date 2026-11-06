@@ -3,42 +3,52 @@ kind: exercises
 title: Preguntas de examen
 items:
 - level: 1
-  statement: ¿Qué residuos entran en la muestra?
+  statement: >-
+    ¿Qué clases de posiciones forman la muestra C que se ordena recursivamente en DC3?
   hints:
-  - Divide la posición entre tres y mira el resto.
-  solution: Los residuos 1 y 2.
+  - Divide cada posición entre tres y mira el resto.
+  solution: >-
+    Las posiciones con residuo 1 y 2, es decir $C = B_1 \cup B_2$, unos $2n/3$ elementos.
   label: reconocer
 - level: 2
-  statement: Para comparar un sufijo 0 con uno 2, ¿cuántas letras debes retirar antes de mirar rangos
-    si hay empate?
+  statement: >-
+    En mississippi, ¿qué tripletas de la muestra repiten nombre?
   hints:
-  - Suma el mismo desplazamiento a ambos residuos.
-  solution: 'Dos: llegan a residuos 2 y 1, ambos de la muestra.'
+  - Mira los comienzos 1 y 4, y también 2 y 5.
+  solution: >-
+    iss (posiciones 1 y 4) y ssi (posiciones 2 y 5).
   label: trazar
 - level: 3
-  statement: ¿Qué ternas repiten nombre en la muestra de mississippi?
+  statement: >-
+    Para comparar un sufijo de residuo 0 con uno de residuo 1 en la mezcla, ¿cuántas letras bastan antes de consultar rangos?
   hints:
-  - Mira los comienzos 1 y 4, y 2 y 5.
-  solution: iss y ssi, respectivamente.
-  label: resolver
+  - Quita una letra al de residuo 0 y mira en qué residuo cae.
+  solution: >-
+    Una. La cola cae en residuo 1 y su rango existe en la muestra, junto con el de la otra cola en residuo 2.
+  label: comparar
 - level: 4
-  statement: Al comparar residuos 0 y 1, ¿cuántas letras puedes quitar antes de consultar rangos?
+  statement: >-
+    Para comparar un sufijo de residuo 0 con uno de residuo 2, ¿cuántas letras hacen falta?
   hints:
-  - Suma uno a ambos residuos.
-  solution: Una. Las colas caen en residuos 1 y 2.
+  - Suma el mismo desplazamiento a ambos residuos.
+  solution: >-
+    Dos. Quitando dos letras, la cola de residuo 0 cae en residuo 2 y la otra en residuo 1, ambos en la muestra.
   label: comparar
 - level: 5
-  statement: ¿Qué costo tiene la mezcla una vez que hay rangos de muestra?
+  statement: >-
+    ¿Por qué el orden de los sufijos de residuo 0 se obtiene con un radix de dos claves y no con tripletas?
   hints:
-  - Cada comparación emite una cabeza.
-  solution: O(n). Cada comparación usa hasta dos caracteres y rangos de las colas y se hace a lo sumo
-    una por sufijo emitido.
+  - Piensa qué rangos ya se conocen cuando ordenas B0.
+  solution: >-
+    Cuando se ordena B0, los rangos de la muestra ya están calculados. El par (S[i], rnk[i+1]) basta, y no hace falta volver a leer tripletas.
   label: justificar
 - level: 6
-  statement: ¿Por qué reducir el problema a dos tercios da tiempo lineal?
+  statement: >-
+    ¿Por qué reducir el problema a dos tercios da tiempo lineal?
   hints:
-  - Escribe el costo total de los niveles.
-  solution: Cada nivel cuesta lineal en su tamaño y los tamaños decrecen geométricamente.
+  - Escribe el costo total de los niveles como una suma.
+  solution: >-
+    Cada nivel cuesta $O(n)$ en su tamaño, y los tamaños decrecen geométricamente. La suma $n + 2n/3 + 4n/9 + \cdots$ es como mucho $3n$.
   label: demostrar
 ---
 

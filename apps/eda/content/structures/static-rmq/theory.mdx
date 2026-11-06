@@ -5,160 +5,417 @@ title: "RMQ estático y sparse table"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Queremos devolver el índice de un mínimo en un intervalo de un arreglo fijo. Un escaneo repite comparaciones en cada consulta. Tabular todos los intervalos consume espacio cuadrático.
+Tenemos un arreglo fijo $A[0..n-1]$ y muchas consultas $\mathrm{RMQ}(i,j)$: devolver el **índice** del mínimo de $A[i..j]$. Sin preprocesar, cada consulta recorre $j-i+1$ valores. Con $n = 10^6$ y $10^6$ consultas son del orden de $10^{12}$ operaciones.
 
-## Intuición
+Un segment tree responde en $O(\lg n)$ por consulta, pero el arreglo nunca cambia y el segment tree paga por actualizaciones que nunca usamos. La meta de esta sesión es casi $n$ de preprocesamiento y $O(1)$ por consulta, sin que el costo dependa de $j-i$.
 
-Precalcula el mínimo de cada ventana de longitud potencia de dos. Cubre la consulta con dos ventanas de la mayor potencia que quepa. Se permite solapamiento porque repetir un candidato no cambia el mínimo.
+## Intuición dibujada
 
-## Estructura interna
-
-$M[k,i]$ guarda el índice del mínimo de $[i,i+2^k-1]$. Para empates usa el índice menor. Una ventana de nivel $k$ se compone de dos medias ventanas del nivel anterior.
-
-### El preprocesamiento es un intercambio de trabajo
-
-Sin preparar nada, un intervalo de longitud $L$ exige examinar sus $L$ valores. Si preparas todos los intervalos, cada consulta sólo lee una entrada, pero ya existen $n(n+1)/2$ pares de extremos. La sparse table se ubica entre esos extremos: prepara ventanas de ciertas longitudes y aprende a combinar dos de ellas para las consultas restantes.
-
-Para construir la fila de longitud cuatro no se vuelve a recorrer cada grupo de cuatro valores. La fila de longitud dos ya resuelve las mitades consecutivas. Cada ventana de cuatro compara los valores de los dos índices previamente guardados. El mismo principio sirve para cualquier potencia. Si en la tabla aparecen 5 y 7 como candidatos, compara $A[5]$ con $A[7]$. Elegir el menor de los índices sin mirar sus valores devolvería una respuesta incorrecta.
-
-### La cobertura necesita una propiedad del mínimo
-
-Una consulta de seis valores se cubre con dos ventanas de cuatro que se tocan en dos posiciones. Cualquier mínimo de la consulta aparece en al menos una de las ventanas. Si aparece en ambas, repetirlo no altera el resultado. Para una suma, esas dos posiciones cambiarían el total si se agregan dos veces. En el examen conviene separar la prueba geométrica de cobertura de la propiedad algebraica que permite usarla.
-
-## Operaciones
-
-Para $[l,r]$, calcula $k=\lfloor\lg(r-l+1)\rfloor$. Lee $M[k,l]$ y $M[k,r-2^k+1]$. Compara sus valores y devuelve el índice ganador. Para ventanas que caen dentro del mismo bloque, una descomposición por bloques requiere una estrategia local adicional.
-
-### Construir ventanas y resolver RMQ(1,6)
+La idea es precalcular el mínimo sólo de ventanas cuya longitud es una potencia de dos. Una consulta cualquiera se cubre con dos de esas ventanas, aunque se solapen. El primer diagrama muestra qué ventanas entran en la tabla; el segundo, cómo una ventana de longitud 4 se apoya en otras dos de longitud 2.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Arreglo de clase. Los índices empiezan en cero.",
-      arrays: [
-        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "A", "row": 1, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "El arreglo de clase, con índices desde cero. Sin preprocesar, un intervalo arbitrario obliga a mirar cada una de sus celdas.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
       ],
-      bridges: [],
+      caption: "n = 8. Una consulta [1,6] recorrería seis celdas.",
     },
     {
-      note: "Longitud 1. El mínimo de una celda es su propio índice.",
-      arrays: [
-        {"id": "row-0", "label": "M[0]", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "La tabla guarda sólo ventanas de longitud 1, 2, 4 y 8, es decir, potencias de dos. La ventana [1,4] tiene longitud 4 = 2 elevado a 2; la ventana [4,7] también; la de longitud 2 es [0,1]. Ninguna otra longitud se precalcula.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Para M[1,2], compara A[2]=8 y A[3]=1. Gana el índice 3.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "active", "answer", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "M[1]", "row": 1, "cells": ["1", "1", "3", "3", "5", "5", "7"], "states": ["idle", "idle", "answer", "idle", "idle", "idle", "idle"]},
+      spans: [
+        { id: "v2", row: "A", from: 0, to: 1, label: "longitud 2", state: "marked" },
+        { id: "v4a", row: "A", from: 1, to: 4, label: "longitud 4", state: "active" },
+        { id: "v4b", row: "A", from: 4, to: 7, label: "longitud 4", state: "marked" },
       ],
-      bridges: [],
-    },
-    {
-      note: "Para M[2,4], compara los mínimos de [4,5] y [6,7]. Gana A[7]=2.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "idle", "idle", "idle", "active", "idle", "answer"]},
-        {"id": "row-1", "label": "M[2]", "row": 1, "cells": ["3", "3", "3", "3", "7"], "states": ["idle", "idle", "idle", "idle", "answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "La consulta [1,6] tiene longitud 6. Usa ventanas de longitud 4.",
-      arrays: [
-        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "marked", "marked", "marked", "marked", "marked", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Primera ventana: [1,4]. El mínimo está en 3.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "active", "active", "answer", "active", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Segunda ventana: [3,6]. Su mínimo también está en 3.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "idle", "answer", "active", "active", "active", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El solapamiento incluye el mínimo dos veces. La respuesta sigue siendo el índice 3.",
-      arrays: [
-        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["índice:3", "valor:1"], "states": ["answer", "answer"]},
-      ],
-      bridges: [],
+      caption: "Ventanas de longitud potencia de dos. Se pueden solapar: la tabla no necesita las demás.",
     },
   ],
 }} />
 
-### Cruzar un límite de bloque
+## Definición y notación
 
-*(Traza derivada de la explicación de clase.)*
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | número de posiciones del arreglo | la tabla tiene $n$ inicios por nivel |
+| $k$ | nivel: la ventana mide $2^k$ | hay $\lfloor \lg n\rfloor + 1$ niveles |
+| $M[k][i]$ | índice del mínimo de la ventana $[i,\, i+2^k-1]$ | sólo existe si $i + 2^k - 1 \le n-1$ |
+| $\lfloor \lg L \rfloor$ | mayor $k$ con $2^k \le L$ | crece muy despacio: $\lg 6 \to 2$, $\lg 8 \to 3$ |
+
+Sólo guardamos $M[k][i]$ cuando la ventana cabe dentro del arreglo. Por eso el nivel $k$ tiene $n - 2^k + 1$ entradas, no $n$. Para $n = 8$: nivel 0 con 8 entradas, nivel 1 con 7, nivel 2 con 5, nivel 3 con 1.
+
+Una convención fija todo el tema: `M` guarda **índices**, no valores. Para comparar dos candidatos $a$ y $b$ se miran $A[a]$ y $A[b]$, y ante empate gana el índice menor.
+
+## Construcción
+
+Una ventana de longitud $2^k$ se parte en dos mitades de longitud $2^{k-1}$, que ya están en el nivel anterior:
+
+$$M[0][i] = i, \qquad M[k][i] = \text{mejor}\big(M[k-1][i],\; M[k-1][i+2^{k-1}]\big)$$
+
+El mínimo de la ventana grande es el mejor de los dos mínimos de sus mitades. La tabla para $A = [5,3,8,1,9,4,7,2]$ tiene estas celdas, en orden de nivel:
+
+| Celda | Mitades (índices) | Comparación de valores | Resultado |
+| --- | --- | --- | --- |
+| $M[0][i]$, $i=0..7$ | ventana de un elemento | ninguna | $i$ |
+| $M[1][0]$ | $0, 1$ | $A[0]=5$ contra $A[1]=3$ | $1$ |
+| $M[1][1]$ | $1, 2$ | $A[1]=3$ contra $A[2]=8$ | $1$ |
+| $M[1][2]$ | $2, 3$ | $A[2]=8$ contra $A[3]=1$ | $3$ |
+| $M[1][3]$ | $3, 4$ | $A[3]=1$ contra $A[4]=9$ | $3$ |
+| $M[1][4]$ | $4, 5$ | $A[4]=9$ contra $A[5]=4$ | $5$ |
+| $M[1][5]$ | $5, 6$ | $A[5]=4$ contra $A[6]=7$ | $5$ |
+| $M[1][6]$ | $6, 7$ | $A[6]=7$ contra $A[7]=2$ | $7$ |
+| $M[2][0]$ | $M[1][0]$, $M[1][2]$ | $A[1]=3$ contra $A[3]=1$ | $3$ |
+| $M[2][1]$ | $M[1][1]$, $M[1][3]$ | $A[1]=3$ contra $A[3]=1$ | $3$ |
+| $M[2][2]$ | $M[1][2]$, $M[1][4]$ | $A[3]=1$ contra $A[5]=4$ | $3$ |
+| $M[2][3]$ | $M[1][3]$, $M[1][5]$ | $A[3]=1$ contra $A[5]=4$ | $3$ |
+| $M[2][4]$ | $M[1][4]$, $M[1][6]$ | $A[5]=4$ contra $A[7]=2$ | $7$ |
+| $M[3][0]$ | $M[2][0]$, $M[2][4]$ | $A[3]=1$ contra $A[7]=2$ | $3$ |
+
+Observa el detalle que más confunde: en la celda $M[2][4]$ se compara $A[5]=4$ con $A[7]=2$. Se escribe $7$, el índice, no $2$. Si guardáramos el valor, no sabríamos dónde está el mínimo.
+
+El dibujo siguiente muestra el orden de llenado. Las filas son niveles $k$; las columnas, inicios $i$. Cada nivel se calcula a partir del anterior.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Con bloques de dos, consulta [1,6]. Los extremos no alinean con el bloque.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "marked", "idle", "idle", "idle", "idle", "marked", "idle"]},
+      note: "Estado inicial. Sólo existe A. Las tablas de cada nivel aún no tienen valores: cada celda es un hueco por llenar. El nivel 1 tiene 7 entradas, el 2 tiene 5 y el 3 tiene 1 porque la ventana debe caber.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"},{value:"·",tag:"5"},{value:"·",tag:"6"},{value:"·",tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"},{value:"·",tag:"5"},{value:"·",tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
       ],
-      bridges: [],
+      caption: "Cuatro niveles: k = 0, 1, 2, 3 porque lg 8 = 3.",
     },
     {
-      note: "Toma el sufijo izquierdo, los bloques interiores completos y el prefijo derecho.",
-      arrays: [
-        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["3", "1", "4", "7"], "states": ["active", "active", "active", "active"]},
+      note: "Nivel 0: una ventana de longitud 1 es su propia posición, así que M[0][i] = i. No hay comparaciones: la fila es la identidad sobre los índices.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0",state:"copied"},{value:1,tag:"1",state:"copied"},{value:2,tag:"2",state:"copied"},{value:3,tag:"3",state:"copied"},{value:4,tag:"4",state:"copied"},{value:5,tag:"5",state:"copied"},{value:6,tag:"6",state:"copied"},{value:7,tag:"7",state:"copied"}] },
+        { id: "M1", label: "M[1]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"},{value:"·",tag:"5"},{value:"·",tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
       ],
-      bridges: [],
+      caption: "Nivel 0 completo: ocho entradas, ninguna comparación.",
     },
     {
-      note: "El mínimo global es 1. Una consulta dentro de un único bloque necesita una consulta local.",
-      arrays: [
-        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["3", "1", "4", "7"], "states": ["idle", "answer", "idle", "idle"]},
+      note: "Nivel 1, celda i=2: la ventana [2,3] se parte en [2] y [3]. Se compara A[2]=8 con A[3]=1, gana 3 y ese índice se escribe en M[1][2].",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2",state:"active"},{value:1,tag:"3",state:"answer"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:3,tag:"2",state:"answer"},{value:"·",tag:"3"},{value:"·",tag:"4"},{value:"·",tag:"5"},{value:"·",tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
       ],
-      bridges: [],
+      spans: [ { id: "w23", row: "A", from: 2, to: 3, label: "[2,3]", state: "marked" } ],
+      caption: "M[1][2] = 3: la celda de la ventana [2,3] guarda el índice ganador.",
+    },
+    {
+      note: "Nivel 1 completo. Cada celda se calcula igual: compara los valores de dos índices del nivel 0 y guarda el ganador. Por ejemplo M[1][4] compara A[4]=9 con A[5]=4 y gana 5.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0",state:"copied"},{value:1,tag:"1",state:"copied"},{value:3,tag:"2",state:"copied"},{value:3,tag:"3",state:"copied"},{value:5,tag:"4",state:"copied"},{value:5,tag:"5",state:"copied"},{value:7,tag:"6",state:"copied"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
+      ],
+      caption: "Nivel 1: siete entradas, cada una con una comparación.",
+    },
+    {
+      note: "Nivel 2, celda i=4: la ventana [4,7] se parte en [4,5] y [6,7]. Sus mínimos guardados son M[1][4]=5 y M[1][6]=7. Se compara A[5]=4 con A[7]=2: gana 7, y se escribe 7.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5",state:"marked"},{value:7,tag:"6"},{value:2,tag:"7",state:"answer"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4",state:"marked"},{value:5,tag:"5"},{value:7,tag:"6",state:"marked"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:7,tag:"4",state:"answer"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
+      ],
+      spans: [
+        { id: "h1", row: "A", from: 4, to: 5, label: "M[1][4]", state: "marked" },
+        { id: "h2", row: "A", from: 6, to: 7, label: "M[1][6]", state: "marked" },
+      ],
+      caption: "M[2][4] = 7. Los candidatos son los índices 5 y 7; se decide por A[5]=4 contra A[7]=2.",
+    },
+    {
+      note: "Nivel 2 completo: cinco entradas. Dos entradas consecutivas comparten una mitad: M[2][0] y M[2][2] usan M[1][2], y así sucesivamente. Esa repetición no es un error: la tabla reutiliza lo ya calculado.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0",state:"copied"},{value:3,tag:"1",state:"copied"},{value:3,tag:"2",state:"copied"},{value:3,tag:"3",state:"copied"},{value:7,tag:"4",state:"copied"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
+      ],
+      caption: "Nivel 2 completo: cinco entradas.",
+    },
+    {
+      note: "Nivel 3, única celda: la ventana [0,7] se parte en [0,3] y [4,7], con mínimos guardados M[2][0]=3 y M[2][4]=7. Se compara A[3]=1 con A[7]=2 y gana 3.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3",state:"answer"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0",state:"marked"},{value:3,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:7,tag:"4",state:"marked"}] },
+        { id: "M3", label: "M[3]", cells: [{value:3,tag:"0",state:"copied"}] },
+      ],
+      spans: [
+        { id: "m0", row: "A", from: 0, to: 3, label: "M[2][0]", state: "marked" },
+        { id: "m4", row: "A", from: 4, to: 7, label: "M[2][4]", state: "marked" },
+      ],
+      caption: "Tabla completa: M[3][0] = 3. Trece entradas en total para n = 8.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Operaciones: consulta en $O(1)$
 
-Una celda de la tabla representa un intervalo completo. Su índice ganador sirve como representante porque ningún elemento de esa mitad puede vencerlo bajo el mismo desempate. En la consulta, coloca las dos ventanas a partir de sus extremos y comprueba la cobertura antes de mirar los valores. Así se ve por qué la tabla no necesita guardar una entrada para todas las longitudes.
+Para $\mathrm{RMQ}(i,j)$ con $L = j - i + 1$:
 
-## Análisis de complejidad
+1. Calcula $k = \lfloor \lg L \rfloor$. Eso es el nivel cuya ventana cabe dentro del intervalo y es la más grande posible.
+2. Lee $a = M[k][i]$: la ventana que empieza en $i$.
+3. Lee $b = M[k][j - 2^k + 1]$: la ventana que termina en $j$.
+4. Devuelve el mejor entre $a$ y $b$, comparando $A[a]$ con $A[b]$.
 
-Hay $O(n\lg n)$ ventanas válidas y cada una combina dos índices en constante. La consulta usa dos lecturas y una comparación, con el logaritmo entero disponible en constante. La cobertura funciona porque $2^k\le r-l+1<2^{k+1}$. El solapamiento puede duplicar elementos. Eso es inocuo para mínimo y altera una suma.
+El paso 1 cumple $2^k \le L < 2^{k+1}$. Así, la primera ventana cubre desde $i$ y la segunda termina en $j$. Las dos caben en $[i,j]$ porque ambas tienen longitud $2^k \le L$. Como $2^{k+1} > L$, no hace falta un nivel más grande: ya con dos ventanas de tamaño $2^k$ se cubren $L$ posiciones, a costa de solaparse en $2\cdot 2^k - L$ posiciones.
 
-### Cómo justificar la cota en el examen
+Con $\mathrm{RMQ}(1,6)$ sobre el arreglo de clase: $L = 6$, $k = 2$, $2^k = 4$. Las dos ventanas son $M[2][1]$ (cubre $[1,4]$) y $M[2][3]$ (cubre $[3,6]$). Se solapan en $[3,4]$.
 
-Cuenta filas y costo por celda. Hay $lfloorlg n
-floor+1$ longitudes y a lo sumo $n$ comienzos por longitud. Una vez construida la fila anterior, cada celda hace una comparación. Para la consulta se leen dos entradas de una misma fila. El paso constante depende de obtener $lfloorlg L
-floor$ en tiempo constante, por ejemplo con una tabla de logaritmos enteros.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Consulta [1,6] sobre A. Su longitud es 6, así que la pregunta es qué nivel usar. Las posiciones 1 a 6 están marcadas; la 0 y la 7 quedan fuera.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1",state:"marked"},{value:8,tag:"2",state:"marked"},{value:1,tag:"3",state:"marked"},{value:9,tag:"4",state:"marked"},{value:4,tag:"5",state:"marked"},{value:7,tag:"6",state:"marked"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:7,tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:3,tag:"0"}] },
+      ],
+      spans: [ { id: "q", row: "A", from: 1, to: 6, label: "consulta [1,6], L = 6", state: "marked" } ],
+      caption: "k = floor(lg 6) = 2. La ventana máxima de nivel 2 mide 4.",
+    },
+    {
+      note: "Dos ventanas de longitud 4 que se tocan: M[2][1] cubre [1,4] y M[2][3] cubre [3,6]. El índice 3 sirve de puente. Las dos juntas cubren las seis posiciones.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1",state:"marked"},{value:3,tag:"2"},{value:3,tag:"3",state:"marked"},{value:7,tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:3,tag:"0"}] },
+      ],
+      spans: [
+        { id: "a", row: "A", from: 1, to: 4, label: "M[2][1]", state: "marked" },
+        { id: "b", row: "A", from: 3, to: 6, label: "M[2][3]", state: "marked" },
+      ],
+      caption: "Las dos ventanas: a = M[2][1] y b = M[2][3]. La segunda empieza en j - 2^k + 1 = 3.",
+    },
+    {
+      note: "Se leen las dos celdas de la fila 2. Ambas guardan el índice 3, así que la comparación de valores no cambia nada: A[3] contra A[3]. El resultado es 3.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3",state:"answer"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1",state:"answer"},{value:3,tag:"2"},{value:3,tag:"3",state:"answer"},{value:7,tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:3,tag:"0"}] },
+      ],
+      caption: "RMQ(1,6) = 3. Dos lecturas de tabla y una comparación.",
+    },
+    {
+      note: "Caso con candidatos distintos: RMQ(5,7) usa k = 1 con las ventanas M[1][5] y M[1][6]. Gana 7 porque A[7]=2 es menor que A[5]=4. Las ventanas no tienen por qué dar el mismo índice.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5",state:"marked"},{value:7,tag:"6",state:"marked"},{value:2,tag:"7",state:"answer"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4",state:"marked"},{value:5,tag:"5",state:"marked"},{value:7,tag:"6",state:"answer"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:7,tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:3,tag:"0"}] },
+      ],
+      spans: [
+        { id: "c1", row: "A", from: 5, to: 6, label: "M[1][5]", state: "marked" },
+        { id: "c2", row: "A", from: 6, to: 7, label: "M[1][6]", state: "marked" },
+      ],
+      caption: "RMQ(5,7) = 7: la comparación es A[5]=4 contra A[7]=2.",
+    },
+  ],
+}} />
 
-## Tabla de complejidad
+### Por qué el solapamiento no estorba
 
-La tabla superior usa las unidades de costo de la explicación.
+La posición 3 y la posición 4 pertenecen a las dos ventanas. Eso es correcto para el mínimo, porque repetir un candidato no cambia el resultado: el mínimo de $\{x, x\}$ es $x$. La operación que cumple esta propiedad se llama **idempotente**. Para una suma no sirve: contar dos veces las posiciones 3 y 4 cambia el total. Si la pregunta fuera la suma, habría que partir sin solapar, y la técnica de la tabla dejaría de ser $O(1)$.
 
-## Ejemplos
+## De dónde sale la cota
 
-[Casos resueltos](/structures/static-rmq/examples) y [preguntas con pistas](/structures/static-rmq/exercises).
+**Preprocesamiento.** La tabla tiene una fila por nivel. Los niveles van de $k = 0$ a $k = \lfloor \lg n\rfloor$, así que hay $\lfloor \lg n\rfloor + 1$ filas. Cada fila tiene como máximo $n$ entradas, y cada entrada se calcula en $O(1)$ con una comparación. El costo total es
 
-## Comparación con estructuras relacionadas
+$$\underbrace{(\lfloor \lg n\rfloor + 1)}_{\text{filas}} \cdot \underbrace{n}_{\text{entradas por fila}} \cdot \underbrace{O(1)}_{\text{una comparación}} = O(n \lg n).$$
 
-Un segment tree permite actualizaciones y consulta en $O(\lg n)$. La sparse table paga preprocesamiento sobre un arreglo fijo para contestar en constante.
+El dibujo recorre las filas en orden y cuenta sus entradas. Para $n = 8$ se obtienen $8 + 7 + 5 + 1 = 21$ entradas, dentro de las $4 \cdot 8 = 32$ de la cota.
 
-## Prueba de dominio
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Fila 0: n = 8 entradas. Cada entrada es un índice y no hay comparaciones, así que cuesta O(1) por celda.",
+      rows: [
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0",state:"copied"},{value:1,tag:"1",state:"copied"},{value:2,tag:"2",state:"copied"},{value:3,tag:"3",state:"copied"},{value:4,tag:"4",state:"copied"},{value:5,tag:"5",state:"copied"},{value:6,tag:"6",state:"copied"},{value:7,tag:"7",state:"copied"}] },
+        { id: "M1", label: "M[1]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"},{value:"·",tag:"5"},{value:"·",tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
+      ],
+      caption: "Entradas acumuladas: 8.",
+    },
+    {
+      note: "Fila 1: n - 2 + 1 = 7 entradas. Cada una compara dos índices de la fila anterior: una comparación por celda, O(1).",
+      rows: [
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0",state:"copied"},{value:1,tag:"1",state:"copied"},{value:3,tag:"2",state:"copied"},{value:3,tag:"3",state:"copied"},{value:5,tag:"4",state:"copied"},{value:5,tag:"5",state:"copied"},{value:7,tag:"6",state:"copied"}] },
+        { id: "M2", label: "M[2]", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"},{value:"·",tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
+      ],
+      caption: "Entradas acumuladas: 8 + 7 = 15.",
+    },
+    {
+      note: "Fila 2: n - 4 + 1 = 5 entradas. El número de entradas baja porque las ventanas de longitud 4 tienen menos inicios posibles.",
+      rows: [
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0",state:"copied"},{value:3,tag:"1",state:"copied"},{value:3,tag:"2",state:"copied"},{value:3,tag:"3",state:"copied"},{value:7,tag:"4",state:"copied"}] },
+        { id: "M3", label: "M[3]", cells: [{value:"·",tag:"0"}] },
+      ],
+      caption: "Entradas acumuladas: 8 + 7 + 5 = 20.",
+    },
+    {
+      note: "Fila 3: n - 8 + 1 = 1 entrada. Con n = 8 la única ventana de longitud 8 es el arreglo entero. Total: 21 entradas, cada una O(1).",
+      rows: [
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"}] },
+        { id: "M1", label: "M[1]", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:7,tag:"4"}] },
+        { id: "M3", label: "M[3]", cells: [{value:3,tag:"0",state:"copied"}] },
+      ],
+      caption: "Entradas acumuladas: 8 + 7 + 5 + 1 = 21 de 4 * 8 = 32 posibles.",
+    },
+  ],
+}} />
 
-[Lista de comprobación](/structures/static-rmq/mastery-check).
+**Consulta.** Calcular $\lfloor \lg L\rfloor$ es $O(1)$: se precalcula una tabla de $n$ valores o se usa la instrucción de contar ceros iniciales. Después vienen dos lecturas de tabla y una comparación. Son tres operaciones de tiempo constante, sin importar $j - i$.
 
-*Fuente de clase: Sem12_Static_Trees.pdf · pp. 8-17.*
+**Memoria.** Hay $n$ inicios por nivel y $\lfloor\lg n\rfloor + 1$ niveles: $O(n\lg n)$ celdas. Esa es la cota de espacio de la sparse table sola, y la motivación para reducirla con bloques.
+
+## Bloques: bajar la memoria a $O(n)$
+
+Partimos el arreglo en bloques de tamaño $b$. Hay $n/b$ bloques. Guardamos el mínimo de cada bloque y construimos una sparse table sobre esos $n/b$ valores. La memoria de esa tabla es
+
+$$O\!\left(\frac{n}{b}\lg\frac{n}{b}\right).$$
+
+Si elegimos $b = \lg n$, la expresión queda $\frac{n}{\lg n}\cdot\lg n = n$. Es decir, $O(n)$. El precio es que las consultas que empiezan y terminan en bloques distintos necesitan tres zonas:
+
+1. **Sufijo** del bloque de $i$: desde $i$ hasta el final de su bloque.
+2. **Bloques completos** entre los dos: una sparse table sobre los mínimos de bloque, en $O(1)$.
+3. **Prefijo** del bloque de $j$: desde el inicio de su bloque hasta $j$.
+
+Los sufijos y los prefijos se precalculan para cada posición: el mínimo desde su posición hasta el final del bloque, y el mínimo desde el inicio del bloque hasta su posición. Son $O(n)$ de memoria y $O(1)$ por consulta.
+
+Para el dibujo usamos $b = 3$ sobre 12 valores, el mismo ejemplo de la clase. Hay cuatro bloques con mínimos $3, 1, 2, 0$. La fila $T_1$ es la sparse table de nivel 1 sobre esos mínimos: guarda el bloque ganador de cada par de bloques consecutivos.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Doce valores en cuatro bloques de tamaño 3. La fila B guarda el mínimo de cada bloque; la fila Suf guarda, para cada posición, el índice del mínimo desde esa posición hasta el final de su bloque; la fila Pre, desde el inicio del bloque hasta esa posición.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"},{value:6,tag:"8"},{value:0,tag:"9"},{value:9,tag:"10"},{value:3,tag:"11"}] },
+        { id: "Suf", label: "Suf", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"},{value:7,tag:"7"},{value:8,tag:"8"},{value:9,tag:"9"},{value:11,tag:"10"},{value:11,tag:"11"}] },
+        { id: "Pre", label: "Pre", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:3,tag:"3"},{value:3,tag:"4"},{value:3,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"},{value:7,tag:"8"},{value:9,tag:"9"},{value:9,tag:"10"},{value:9,tag:"11"}] },
+        { id: "B", label: "B", cells: [{value:3,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:0,tag:"3"}] },
+        { id: "T1", label: "T1", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"}] },
+      ],
+      spans: [
+        { id: "b0", row: "A", from: 0, to: 2, label: "bloque 0" },
+        { id: "b1", row: "A", from: 3, to: 5, label: "bloque 1" },
+        { id: "b2", row: "A", from: 6, to: 8, label: "bloque 2" },
+        { id: "b3", row: "A", from: 9, to: 11, label: "bloque 3" },
+      ],
+      caption: "Fila B: mínimos de bloque 3, 1, 2, 0. Las filas Suf y Pre guardan índices.",
+    },
+    {
+      note: "Consulta RMQ(2,10): i = 2 está en el bloque 0 y j = 10 en el bloque 3. Ninguna zona sirve sola, así que se combinan tres candidatos.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2",state:"marked"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"},{value:6,tag:"8"},{value:0,tag:"9"},{value:9,tag:"10",state:"marked"},{value:3,tag:"11"}] },
+        { id: "Suf", label: "Suf", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"},{value:7,tag:"7"},{value:8,tag:"8"},{value:9,tag:"9"},{value:11,tag:"10"},{value:11,tag:"11"}] },
+        { id: "Pre", label: "Pre", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:3,tag:"3"},{value:3,tag:"4"},{value:3,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"},{value:7,tag:"8"},{value:9,tag:"9"},{value:9,tag:"10"},{value:9,tag:"11"}] },
+        { id: "B", label: "B", cells: [{value:3,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:0,tag:"3"}] },
+        { id: "T1", label: "T1", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"}] },
+      ],
+      caption: "Entrada: i = 2 (bloque 0) y j = 10 (bloque 3).",
+    },
+    {
+      note: "Zona 1, sufijo del bloque de i: Suf[2] es el índice 2 porque el bloque 0 desde la posición 2 sólo contiene el 8. El candidato es 8.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2",state:"answer"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"},{value:6,tag:"8"},{value:0,tag:"9"},{value:9,tag:"10"},{value:3,tag:"11"}] },
+        { id: "Suf", label: "Suf", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2",state:"answer"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"},{value:7,tag:"7"},{value:8,tag:"8"},{value:9,tag:"9"},{value:11,tag:"10"},{value:11,tag:"11"}] },
+        { id: "Pre", label: "Pre", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:3,tag:"3"},{value:3,tag:"4"},{value:3,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"},{value:7,tag:"8"},{value:9,tag:"9"},{value:9,tag:"10"},{value:9,tag:"11"}] },
+        { id: "B", label: "B", cells: [{value:3,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:0,tag:"3"}] },
+        { id: "T1", label: "T1", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"}] },
+      ],
+      spans: [ { id: "suf", row: "A", from: 2, to: 2, label: "sufijo", state: "answer" } ],
+      caption: "Candidato de la zona 1: índice 2, valor 8.",
+    },
+    {
+      note: "Zona 2, bloques completos 1 y 2: son dos bloques, así que la longitud en bloques es 2 y el nivel de T1 es 1. T1[1] guarda el bloque ganador, el bloque 1, cuyo mínimo es 1 en el índice 3.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3",state:"answer"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"},{value:6,tag:"8"},{value:0,tag:"9"},{value:9,tag:"10"},{value:3,tag:"11"}] },
+        { id: "Suf", label: "Suf", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"},{value:7,tag:"7"},{value:8,tag:"8"},{value:9,tag:"9"},{value:11,tag:"10"},{value:11,tag:"11"}] },
+        { id: "Pre", label: "Pre", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:3,tag:"3"},{value:3,tag:"4"},{value:3,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"},{value:7,tag:"8"},{value:9,tag:"9"},{value:9,tag:"10"},{value:9,tag:"11"}] },
+        { id: "B", label: "B", cells: [{value:3,tag:"0"},{value:1,tag:"1",state:"marked"},{value:2,tag:"2",state:"marked"},{value:0,tag:"3"}] },
+        { id: "T1", label: "T1", cells: [{value:1,tag:"0"},{value:1,tag:"1",state:"answer"},{value:3,tag:"2"}] },
+      ],
+      spans: [ { id: "mid", row: "A", from: 3, to: 8, label: "bloques 1 y 2", state: "marked" } ],
+      caption: "Candidato de la zona 2: bloque 1, valor 1 en el índice 3.",
+    },
+    {
+      note: "Zona 3, prefijo del bloque de j: Pre[10] es el índice 9, porque en el bloque 3 hasta la posición 10 el mínimo es el 0 de la posición 9.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"},{value:6,tag:"8"},{value:0,tag:"9",state:"answer"},{value:9,tag:"10"},{value:3,tag:"11"}] },
+        { id: "Suf", label: "Suf", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"},{value:7,tag:"7"},{value:8,tag:"8"},{value:9,tag:"9"},{value:11,tag:"10"},{value:11,tag:"11"}] },
+        { id: "Pre", label: "Pre", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:3,tag:"3"},{value:3,tag:"4"},{value:3,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"},{value:7,tag:"8"},{value:9,tag:"9",state:"answer"},{value:9,tag:"10",state:"answer"},{value:9,tag:"11"}] },
+        { id: "B", label: "B", cells: [{value:3,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:0,tag:"3"}] },
+        { id: "T1", label: "T1", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"}] },
+      ],
+      spans: [ { id: "pre", row: "A", from: 9, to: 10, label: "prefijo del bloque 3", state: "marked" } ],
+      caption: "Candidato de la zona 3: índice 9, valor 0.",
+    },
+    {
+      note: "Se combinan los tres candidatos por valor: 8 de la zona 1, 1 de la zona 2 y 0 de la zona 3. Gana el 0, así que RMQ(2,10) = 9. Basta un mínimo de tres números.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2",state:"marked"},{value:1,tag:"3",state:"marked"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"},{value:6,tag:"8"},{value:0,tag:"9",state:"answer"},{value:9,tag:"10"},{value:3,tag:"11"}] },
+        { id: "Suf", label: "Suf", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"},{value:5,tag:"5"},{value:7,tag:"6"},{value:7,tag:"7"},{value:8,tag:"8"},{value:9,tag:"9"},{value:11,tag:"10"},{value:11,tag:"11"}] },
+        { id: "Pre", label: "Pre", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:3,tag:"3"},{value:3,tag:"4"},{value:3,tag:"5"},{value:6,tag:"6"},{value:7,tag:"7"},{value:7,tag:"8"},{value:9,tag:"9",state:"answer"},{value:9,tag:"10"},{value:9,tag:"11"}] },
+        { id: "B", label: "B", cells: [{value:3,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:0,tag:"3"}] },
+        { id: "T1", label: "T1", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:3,tag:"2"}] },
+      ],
+      caption: "RMQ(2,10) = 9. Tres zonas, tres candidatos, una comparación de valores.",
+    },
+  ],
+}} />
+
+**Lo que queda abierto.** Si $i$ y $j$ caen en el mismo bloque, ninguna de las tres zonas aplica: ambos están dentro de un bloque de tamaño $b = \lg n$. Recorrer el bloque cuesta $O(\lg n)$; una sparse table por bloque cuesta $O(n\lg\lg n)$; una tabla completa por bloque cuesta $O(n\lg n)$. Esa parte se resuelve más adelante, después de estudiar LCA: la herramienta es un árbol.
+
+## Errores típicos y casos límite
+
+- **Sumar en lugar de elegir.** La cobertura solapada sirve para mínimo, no para suma. Mostrar que una posición se cuenta dos veces es la prueba.
+- **Guardar valores en lugar de índices.** La celda $M[2][4]$ debe guardar $7$, no $2$. Sin el índice no se recupera la posición del mínimo.
+- **Empates.** Con $A = [5,3,8,1,9,1,7,2]$ hay dos unos, en los índices 3 y 5. Gana el índice menor. La regla debe usarse al construir la tabla y al consultar, o las dos mitades podrían discrepar.
+- **Consulta de longitud 1.** Con $i = j$, $L = 1$, $k = 0$ y las dos lecturas son la misma celda $M[0][i] = i$. No hay caso especial, pero el error típico es calcular $r - l$ en lugar de $r - l + 1$.
+- **Índice de la segunda ventana.** Es $j - 2^k + 1$, no $j - 2^k$. Con $j = 6$ y $k = 2$ es el índice 3.
+
+## Conexión
+
+- Herramienta de comparación: el segment tree de `/structures/segment-tree` responde en $O(\lg n)$ y admite actualizaciones. Aquí pagamos menos por consulta porque el arreglo no cambia.
+- Lo que sigue: `/structures/cartesian-tree` reduce RMQ a un árbol, y `/structures/lca-euler-tour` reduce LCA a RMQ. Esta sesión deja la cota de las consultas; las siguientes pasan la misma pregunta a un árbol.

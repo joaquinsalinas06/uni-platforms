@@ -3,7 +3,7 @@ title: Modelo de memoria externa
 type: concept
 week: week-10
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites: []
 complexity:
   Escaneo:

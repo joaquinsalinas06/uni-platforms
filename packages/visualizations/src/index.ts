@@ -29,3 +29,4 @@ export * from './circuit/kvl';
 export * from './circuit/symbols';
 
 export { default as PlanarVisualization } from './planar/PlanarVisualization';
+export { default as ArrayVisualization } from './array/ArrayVisualization';

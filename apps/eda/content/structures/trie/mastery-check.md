@@ -2,9 +2,11 @@
 kind: mastery
 title: Prueba de dominio
 canExplain:
-- ¿Cuántos nodos nuevos aparecen al insertar hers después de he?
-- ¿Por qué la búsqueda depende de la longitud de la consulta?
+- Por qué insertar y buscar cuestan O(|S|) sin depender del número de cadenas
+- Por qué una marca terminal distingue una palabra de un prefijo que sólo existe como camino
+- Cuántos nodos nuevos crea insertar hers después de he y por qué
 canDo:
-- ¿Puede ser terminal un nodo interno?
-- ¿Cuántos nodos nuevos aparecen al insertar hers después de he?
+- Dibujar el trie de {he, she, his, hers} palabra por palabra, marcando los nodos terminales
+- Decir en qué letra falla la búsqueda de hera y por qué
+- Relacionar la cota de espacio O(sum |S_i|) con los prefijos compartidos
 ---

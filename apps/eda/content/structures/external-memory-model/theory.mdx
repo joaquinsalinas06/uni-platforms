@@ -5,147 +5,537 @@ title: "Modelo de memoria externa"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Un acceso a disco mueve un bloque entero. Contar comparaciones puede ocultar la diferencia entre recorrer datos contiguos y saltar entre bloques.
+Un programa que cuenta comparaciones dice que buscar en un arreglo de $N=10^9$ enteros cuesta unos 30 pasos. Si el arreglo vive en disco, ese número no dice nada sobre el tiempo real, porque el costo dominante es otro: cada lectura trae un **bloque** entero, no un entero suelto.
 
-Un algoritmo puede hacer el mismo trabajo de CPU que otro y tardar más porque sus datos llegan en un orden distinto. Por ejemplo, una matriz almacenada fila por fila guarda las celdas de una fila juntas. Recorrerla por filas suele aprovechar las celdas que llegaron con cada carga. Saltar de fila en fila para leer una columna puede pedir un bloque distinto en cada visita. Qué pasa cuando vuelves a una fila depende de si su bloque todavía cabe en la memoria rápida.
+Con bloques de $B=10^3$ enteros, recorrer el arreglo completo cuesta $10^9/10^3=10^6$ lecturas. Buscar con búsqueda binaria cuesta unas 20 lecturas, porque las primeras consultas caen en bloques distintos y las últimas caen en el mismo bloque ya cargado. Dos algoritmos con la misma cantidad de comparaciones pueden diferir en miles de lecturas. Un modelo que sólo cuenta comparaciones no puede distinguirlos.
 
-El modelo aísla esa diferencia. En un ejercicio puedes tener que dar dos respuestas para el mismo algoritmo, una para comparaciones y otra para E/S. Las cotas tienen sentido sólo después de decir qué estás contando y dónde están los datos al comenzar.
+## Intuición dibujada
 
-## Intuición
+Piensa en la RAM como una mesa pequeña y en el disco como un archivador. Sólo puedes llevar a la mesa **páginas enteras** del archivador, y cada traslado es caro. Una vez sobre la mesa, mirar cualquier registro de esa página es gratis.
 
-Imagina que cada lectura trae una bandeja de $B$ registros a RAM. Cualquier registro de la bandeja ya cargada se consulta sin otra transferencia.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El disco guarda ocho registros en dos bloques de cuatro. La RAM está vacía: todavía no se ha hecho ninguna transferencia.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+        ]},
+        { id: "ram", label: "RAM", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+      ],
+      caption: "Transferencias: 0.",
+    },
+    {
+      note: "Pedir el registro 0 obliga a traer el bloque 0 completo. Ese traslado cuesta una transferencia, y los registros 1, 2 y 3 llegan con él.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0", state: "active" }, { value: 1, tag: "1", state: "active" }, { value: 2, tag: "2", state: "active" }, { value: 3, tag: "3", state: "active" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 0, state: "active" }, { value: 1, state: "active" }, { value: 2, state: "active" }, { value: 3, state: "active" },
+        ]},
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+      ],
+      caption: "Transferencias: 1.",
+    },
+    {
+      note: "Pedir el registro 5 está fuera de la mesa. Se descarta el bloque 0 para hacer espacio y se trae el bloque 1. Esa es la segunda transferencia.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0", state: "muted" }, { value: 1, tag: "1", state: "muted" }, { value: 2, tag: "2", state: "muted" }, { value: 3, tag: "3", state: "muted" },
+          { value: 4, tag: "4", state: "active" }, { value: 5, tag: "5", state: "active" }, { value: 6, tag: "6", state: "active" }, { value: 7, tag: "7", state: "active" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 4, state: "active" }, { value: 5, state: "active" }, { value: 6, state: "active" }, { value: 7, state: "active" },
+        ]},
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "muted" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+      ],
+      caption: "Transferencias: 2.",
+    },
+  ],
+}} />
 
-## Estructura interna
+## Definición y notación
 
-$N$ es el número de registros, $B$ los registros por bloque y $M$ los registros que caben en RAM. La métrica es el número de transferencias entre RAM y almacenamiento externo. La última bandeja también cuenta si queda incompleta.
+El modelo de Aggarwal y Vitter (modelo de transferencias de bloque) mide sólo el número de transferencias entre RAM y almacenamiento externo. Las operaciones dentro de RAM son gratis, aunque se declaren.
 
-### Qué describe cada parámetro
-
-| Símbolo | Qué mide | Qué cambia si aumenta |
+| Símbolo | Qué mide | Qué pasa si crece |
 | --- | --- | --- |
-| $N$ | Registros que componen la entrada | Crece el volumen a leer o escribir |
+| $N$ | Registros de la entrada | Crece el volumen a leer o escribir |
 | $B$ | Registros por bloque | Cada transferencia trae más registros juntos |
-| $M$ | Registros que caben simultáneamente en memoria rápida | Se pueden mantener más bloques o más corridas abiertas |
+| $M$ | Registros que caben en RAM | Se pueden mantener más bloques abiertos a la vez |
 
-Si $M=12$ y $B=4$, hay tres ranuras de bloque. Una puede servir para salida y quedarían dos para entradas. Esta restricción es la que reaparece en [mezcla externa](/structures/external-merge-sort). La posición de un registro dentro del archivo determina a qué bloque pertenece. Cargar un bloque reemplaza otro cuando todas las ranuras están ocupadas. Una visita posterior sólo evita una lectura si el bloque sobrevivió a ese reemplazo.
+Con $M$ y $B$ se cuentan las **ranuras**: $M/B$ bloques pueden estar en RAM a la vez. Si $M=12$ y $B=4$, hay tres ranuras. Cuando todas están ocupadas, cargar un bloque nuevo expulsa uno viejo. Una visita posterior sólo se ahorra una transferencia si su bloque sobrevivió a esa expulsión.
 
-**Qué cuenta como escritura.** Un algoritmo que lee para sumar puede devolver un acumulador sin escribir todo el archivo. Si copia cada registro a otro archivo, además debe vaciar los bloques de salida. Al contar una pasada, aclara si se está leyendo, escribiendo o haciendo las dos cosas. Un búfer parcial al final también puede requerir una escritura.
+**Qué cuenta como escritura.** Un algoritmo que sólo suma un archivo puede guardar el acumulador en RAM y no escribir nada. Uno que copia el archivo debe vaciar cada bloque de salida, y el último bloque, aunque esté incompleto, también cuenta como una escritura. Declara siempre si la cota cuenta lecturas, escrituras o ambas.
 
-## Operaciones
+## Operaciones paso a paso
 
-En un escaneo, consume el bloque actual antes de leer el siguiente. En una búsqueda binaria, cada comparación reduce el intervalo, pero el siguiente pivote puede estar lejos del bloque actual.
+Un ejemplo corrido sirve para todas las operaciones de esta página: **un archivo de $N=10$ registros con $B=4$**, con los bloques 0 (posiciones 0 a 3), 1 (posiciones 4 a 7) y 2 (posiciones 8 y 9). El bloque 2 queda incompleto.
 
-### Diez registros, cuatro por bloque
+### Escanear: leer todo, en orden
 
-*(Traza derivada de la explicación de clase.)*
+Un escaneo recorre los registros de izquierda a derecha. Cada decisión es la misma: ¿el registro que necesito ya está en la mesa? Si no, traigo su bloque.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Transferencia 1. Se cargan cuatro registros juntos.",
-      arrays: [
-        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["active", "active", "active", "active", "marked", "marked", "marked", "marked", "idle", "idle"]},
-        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["active", "active", "active", "active"]},
+      note: "Punto de partida. Los diez registros están en tres bloques. Ninguno está en RAM, así que el primer acceso obligará a una transferencia.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" },
+        ]},
+        { id: "ram", label: "RAM", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
       ],
-      bridges: [],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 9, label: "bloque 2" },
+      ],
+      caption: "Transferencias: 0. Registros examinados: 0.",
     },
     {
-      note: "Recorrer los cuatro registros no añade lecturas.",
-      arrays: [
-        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "idle", "active"]},
+      note: "Decisión: el registro 0 no está en RAM. Se trae el bloque 0 completo. Ahora los registros 0 a 3 se pueden examinar sin más lecturas.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0", state: "active" }, { value: 1, tag: "1", state: "active" }, { value: 2, tag: "2", state: "active" }, { value: 3, tag: "3", state: "active" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 0, state: "active" }, { value: 1, state: "active" }, { value: 2, state: "active" }, { value: 3, state: "active" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 9, label: "bloque 2" },
+      ],
+      caption: "Transferencias: 1. Registros examinados: 1.",
     },
     {
-      note: "Transferencia 2. Carga el siguiente bloque contiguo.",
-      arrays: [
-        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["idle", "idle", "idle", "idle", "active", "active", "active", "active", "idle", "idle"]},
-        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["4", "5", "6", "7"], "states": ["active", "active", "active", "active"]},
+      note: "Decisión: los registros 1, 2 y 3 ya están en RAM. Examinarlos no cuesta nada. Los registros ya vistos pasan a muted sólo para marcar que el escaneo los dejó atrás.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0", state: "muted" }, { value: 1, tag: "1", state: "muted" }, { value: 2, tag: "2", state: "muted" }, { value: 3, tag: "3", state: "active" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 0, state: "muted" }, { value: 1, state: "muted" }, { value: 2, state: "muted" }, { value: 3, state: "active" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 9, label: "bloque 2" },
+      ],
+      caption: "Transferencias: 1. Registros examinados: 4.",
     },
     {
-      note: "Transferencia 3. Los dos últimos registros todavía ocupan una lectura.",
-      arrays: [
-        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "active", "active"]},
-        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["8", "9"], "states": ["active", "active"]},
+      note: "Decisión: el registro 4 cae en el bloque 1. Como el bloque 0 debe salir para hacer espacio, esta es la segunda transferencia. El cambio de bloque ocurre exactamente al pasar la frontera.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4", state: "active" }, { value: 5, tag: "5", state: "active" }, { value: 6, tag: "6", state: "active" }, { value: 7, tag: "7", state: "active" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 4, state: "active" }, { value: 5, state: "active" }, { value: 6, state: "active" }, { value: 7, state: "active" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "muted" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 9, label: "bloque 2" },
+      ],
+      caption: "Transferencias: 2. Registros examinados: 8.",
     },
     {
-      note: "Balance final. Diez visitas a registros y tres transferencias.",
-      arrays: [
-        {"id": "row-0", "label": "Bloques transferidos", "row": 0, "cells": ["1", "2", "3"], "states": ["answer", "answer", "answer"]},
+      note: "Decisión: el registro 8 pertenece al bloque 2, que tiene sólo dos registros. La lectura cuesta lo mismo que un bloque lleno. Esa es la razón del techo en la cota.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8", state: "active" }, { value: 9, tag: "9", state: "active" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 8, state: "active" }, { value: 9, state: "active" }, { value: "·" }, { value: "·" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "muted" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "muted" },
+        { id: "b2", row: "disco", from: 8, to: 9, label: "bloque 2", state: "active" },
+      ],
+      caption: "Transferencias: 3. Registros examinados: 10.",
+    },
+    {
+      note: "Balance final. Los diez registros se examinaron con tres transferencias. Cada bloque se trajo una sola vez y no se volvió a necesitar.",
+      rows: [
+        { id: "resumen", label: "Bloques transferidos", cells: [{ value: "1" }, { value: "2" }, { value: "3" }] },
+      ],
+      spans: [],
+      caption: "Resultado: ceil(10/4) = 3 transferencias.",
     },
   ],
 }} />
 
-### Cuatro separadores, cinco destinos
+**Pasos del escaneo.** (1) Mira el registro actual. (2) Si su bloque está en RAM, examínalo y avanza. (3) Si no, carga su bloque; si la ranura está ocupada, expulsa el bloque anterior. (4) Repite hasta el último registro. El punto clave es que el algoritmo **termina de usar un bloque antes de pedir el siguiente**. Nunca vuelve atrás.
 
-*(Traza derivada de la explicación de clase.)*
+### De dónde sale $\lceil N/B\rceil$
+
+El término del escaneo tiene un origen geométrico. Se corta el archivo en tramos de $B$ posiciones consecutivas; cada tramo cuesta una transferencia.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Las llaves de un bloque separan cinco intervalos.",
-      arrays: [
-        {"id": "row-0", "label": "Separadores", "row": 0, "cells": ["10", "20", "30", "40"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Intervalos", "row": 1, "cells": ["<10", "10–20", "20–30", "30–40", ">40"], "states": ["idle", "idle", "idle", "idle", "idle"]},
+      note: "Los diez registros forman una sola fila. Nada en la fila indica todavía cuántas transferencias costará recorrerla.",
+      rows: [
+        { id: "reg", label: "Registros", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" }, { value: 4, tag: "4" },
+          { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" }, { value: 8, tag: "8" }, { value: 9, tag: "9" },
+        ]},
       ],
-      bridges: [],
+      caption: "N = 10 registros.",
     },
     {
-      note: "Para q=27 sólo interesa el tercer intervalo.",
-      arrays: [
-        {"id": "row-0", "label": "Separadores", "row": 0, "cells": ["10", "20", "30", "40"], "states": ["idle", "active", "active", "idle"]},
-        {"id": "row-1", "label": "Intervalos", "row": 1, "cells": ["<10", "10–20", "20–30", "30–40", ">40"], "states": ["idle", "idle", "answer", "idle", "idle"]},
+      note: "Se corta la fila en grupos de B = 4 posiciones consecutivas. Cada grupo corresponde a un bloque físico, y cada bloque se lee una vez.",
+      rows: [
+        { id: "reg", label: "Registros", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" }, { value: 4, tag: "4" },
+          { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" }, { value: 8, tag: "8" }, { value: 9, tag: "9" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "g0", row: "reg", from: 0, to: 3, label: "4 registros" },
+        { id: "g1", row: "reg", from: 4, to: 7, label: "4 registros" },
+        { id: "g2", row: "reg", from: 8, to: 9, label: "2 de 4" },
+      ],
+      caption: "Tres grupos: dos llenos y uno parcial.",
+    },
+    {
+      note: "El grupo parcial también es un bloque físico. Leerlo cuesta una transferencia completa, porque la lectura no puede traer medio bloque. Por eso el número de transferencias es el techo y no el cociente.",
+      rows: [
+        { id: "reg", label: "Registros", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" }, { value: 4, tag: "4" },
+          { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" }, { value: 8, tag: "8", state: "marked" }, { value: 9, tag: "9", state: "marked" },
+        ]},
+      ],
+      spans: [
+        { id: "g0", row: "reg", from: 0, to: 3, label: "4 registros" },
+        { id: "g1", row: "reg", from: 4, to: 7, label: "4 registros" },
+        { id: "g2", row: "reg", from: 8, to: 9, label: "2 de 4", state: "marked" },
+      ],
+      caption: "10/4 = 2,5 no es un número de transferencias. ceil(10/4) = 3.",
     },
   ],
 }} />
+
+La cota del escaneo es $\Theta\left(\left\lceil \frac{N}{B}\right\rceil\right)$. El término constante del techo desaparece en la notación asintótica, pero el caso $N<B$ sigue pagando **al menos una** transferencia.
+
+### Mezclar corridas: tres escaneos a la vez
+
+Mezclar dos corridas ordenadas $A$ y $C$ en una salida $S$ usa **tres escaneos simultáneos**: uno sobre $A$, uno sobre $C$ y uno sobre $S$. Cada uno necesita sólo un bloque en RAM. Con $M\ge 3B$ hay espacio para los tres. El algoritmo siempre escoge la menor cabeza entre $A$ y $C$, la escribe en $S$ y avanza en esa corrida.
+
+Ejemplo: $B=3$, $A=(1,4,6)$ y $C=(2,3,7)$. Cada corrida cabe en un bloque. La salida tiene 6 registros, o sea dos bloques.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cada corrida cabe en un bloque de tres. Cargar A y C cuesta dos lecturas. La salida empieza vacía.",
+      rows: [
+        { id: "A", label: "Corrida A", cells: [{ value: 1, tag: "A0" }, { value: 4, tag: "A1" }, { value: 6, tag: "A2" }] },
+        { id: "C", label: "Corrida C", cells: [{ value: 2, tag: "C0" }, { value: 3, tag: "C1" }, { value: 7, tag: "C2" }] },
+        { id: "S", label: "Salida", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Lecturas: 2. Escrituras: 0.",
+    },
+    {
+      note: "Comparar las cabezas 1 y 2. Gana el 1, que pasa a la salida. A0 es la cabeza de A, y ya no hace falta mirarla otra vez.",
+      rows: [
+        { id: "A", label: "Corrida A", cells: [{ value: 1, tag: "A0", state: "muted" }, { value: 4, tag: "A1", state: "active" }, { value: 6, tag: "A2" }] },
+        { id: "C", label: "Corrida C", cells: [{ value: 2, tag: "C0", state: "marked" }, { value: 3, tag: "C1" }, { value: 7, tag: "C2" }] },
+        { id: "S", label: "Salida", cells: [{ value: 1, state: "answer" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Salida: 1. Lecturas: 2.",
+    },
+    {
+      note: "Ahora la cabeza de C es la menor. Sale el 2. Esta comparación no añade lecturas porque C0 ya estaba en RAM.",
+      rows: [
+        { id: "A", label: "Corrida A", cells: [{ value: 1, tag: "A0", state: "muted" }, { value: 4, tag: "A1", state: "marked" }, { value: 6, tag: "A2" }] },
+        { id: "C", label: "Corrida C", cells: [{ value: 2, tag: "C0", state: "muted" }, { value: 3, tag: "C1", state: "active" }, { value: 7, tag: "C2" }] },
+        { id: "S", label: "Salida", cells: [{ value: 1 }, { value: 2, state: "answer" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Salida: 1, 2. Lecturas: 2.",
+    },
+    {
+      note: "Sale el 3, de C. Después la cabeza de A (el 4) queda como la menor y se procesa a continuación.",
+      rows: [
+        { id: "A", label: "Corrida A", cells: [{ value: 1, tag: "A0", state: "muted" }, { value: 4, tag: "A1", state: "active" }, { value: 6, tag: "A2" }] },
+        { id: "C", label: "Corrida C", cells: [{ value: 2, tag: "C0", state: "muted" }, { value: 3, tag: "C1", state: "muted" }, { value: 7, tag: "C2", state: "marked" }] },
+        { id: "S", label: "Salida", cells: [{ value: 1 }, { value: 2 }, { value: 3, state: "answer" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Salida: 1, 2, 3. Lecturas: 2.",
+    },
+    {
+      note: "Sale el 4 de A y luego el 6. Son consecutivos en A, así que la corrida A no necesita otra lectura: su único bloque ya está en RAM.",
+      rows: [
+        { id: "A", label: "Corrida A", cells: [{ value: 1, tag: "A0", state: "muted" }, { value: 4, tag: "A1", state: "muted" }, { value: 6, tag: "A2", state: "active" }] },
+        { id: "C", label: "Corrida C", cells: [{ value: 2, tag: "C0", state: "muted" }, { value: 3, tag: "C1", state: "muted" }, { value: 7, tag: "C2", state: "marked" }] },
+        { id: "S", label: "Salida", cells: [{ value: 1 }, { value: 2 }, { value: 3 }, { value: 4, state: "answer" }, { value: 6, state: "answer" }, { value: "·" }] },
+      ],
+      caption: "Salida: 1, 2, 3, 4, 6. Lecturas: 2. Escrituras: 1 bloque lleno.",
+    },
+    {
+      note: "El último registro, el 7, sale de C. Ahora la salida tiene dos bloques de tres. El segundo se escribe completo al terminar, así que cuenta como escritura.",
+      rows: [
+        { id: "A", label: "Corrida A", cells: [{ value: 1, tag: "A0", state: "muted" }, { value: 4, tag: "A1", state: "muted" }, { value: 6, tag: "A2", state: "muted" }] },
+        { id: "C", label: "Corrida C", cells: [{ value: 2, tag: "C0", state: "muted" }, { value: 3, tag: "C1", state: "muted" }, { value: 7, tag: "C2", state: "active" }] },
+        { id: "S", label: "Salida", cells: [{ value: 1 }, { value: 2 }, { value: 3 }, { value: 4 }, { value: 6 }, { value: 7, state: "answer" }] },
+      ],
+      spans: [
+        { id: "s0", row: "S", from: 0, to: 2, label: "bloque de salida 0" },
+        { id: "s1", row: "S", from: 3, to: 5, label: "bloque de salida 1" },
+      ],
+      caption: "Lecturas: 2. Escrituras: 2. Total 4 = 2 · ceil(6/3).",
+    },
+  ],
+}} />
+
+Con $k$ corridas de entrada, el mismo esquema mantiene $k+1$ escaneos activos. Un escaneo por bloque cuesta una lectura por bloque, así que la mezcla sigue costando un solo escaneo mientras $k+1\le M/B$. Cuando hay más corridas que ranuras, hay que dividir la mezcla en varias pasadas, y ese costo aparece en la página de [ordenamiento externo](/structures/external-merge-sort).
+
+### Saltar: búsqueda binaria sobre un arreglo grande
+
+Una búsqueda binaria hace $\lg N$ comparaciones en el modelo RAM. En el modelo de transferencias, cada comparación puede caer en un bloque distinto. El ejemplo tiene $N=16$ y $B=4$. Se busca $q=12$, con cuatro bloques de cuatro: el bloque 0 va de la posición 0 a la 3, el 1 de la 4 a la 7, el 2 de la 8 a la 11 y el 3 de la 12 a la 15.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El intervalo inicial es el arreglo completo [0, 15]. Los extremos están marcados: allí se guarda la frontera de la búsqueda.",
+      rows: [
+        { id: "arr", label: "Arreglo", cells: [
+          { value: 0, tag: "0", state: "marked" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+          { value: 12, tag: "12" }, { value: 13, tag: "13" }, { value: 14, tag: "14" }, { value: 15, tag: "15", state: "marked" },
+        ]},
+      ],
+      spans: [
+        { id: "b0", row: "arr", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "arr", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "arr", from: 8, to: 11, label: "bloque 2" },
+        { id: "b3", row: "arr", from: 12, to: 15, label: "bloque 3" },
+      ],
+      caption: "Intervalo [0, 15]. Transferencias: 0. Comparaciones: 0.",
+    },
+    {
+      note: "Primer pivote: el medio, 7. Está en el bloque 1, que no está en RAM. Cargarlo cuesta la primera transferencia. Comparar 12 con 7 es posible una vez cargado.",
+      rows: [
+        { id: "arr", label: "Arreglo", cells: [
+          { value: 0, tag: "0", state: "marked" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7", state: "active" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+          { value: 12, tag: "12" }, { value: 13, tag: "13" }, { value: 14, tag: "14" }, { value: 15, tag: "15", state: "marked" },
+        ]},
+      ],
+      spans: [
+        { id: "b0", row: "arr", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "arr", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "arr", from: 8, to: 11, label: "bloque 2" },
+        { id: "b3", row: "arr", from: 12, to: 15, label: "bloque 3" },
+      ],
+      caption: "Transferencias: 1. Comparaciones: 1.",
+    },
+    {
+      note: "12 es mayor que 7, así que la mitad izquierda sale del intervalo. Se descarta, pero su bloque queda en RAM hasta que otro lo expulse. El nuevo pivote, 11, está en el bloque 2: otra transferencia.",
+      rows: [
+        { id: "arr", label: "Arreglo", cells: [
+          { value: 0, tag: "0", state: "muted" }, { value: 1, tag: "1", state: "muted" }, { value: 2, tag: "2", state: "muted" }, { value: 3, tag: "3", state: "muted" },
+          { value: 4, tag: "4", state: "muted" }, { value: 5, tag: "5", state: "muted" }, { value: 6, tag: "6", state: "muted" }, { value: 7, tag: "7", state: "muted" },
+          { value: 8, tag: "8", state: "marked" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11", state: "active" },
+          { value: 12, tag: "12" }, { value: 13, tag: "13" }, { value: 14, tag: "14" }, { value: 15, tag: "15", state: "marked" },
+        ]},
+      ],
+      spans: [
+        { id: "b0", row: "arr", from: 0, to: 3, label: "bloque 0", state: "muted" },
+        { id: "b1", row: "arr", from: 4, to: 7, label: "bloque 1", state: "muted" },
+        { id: "b2", row: "arr", from: 8, to: 11, label: "bloque 2", state: "active" },
+        { id: "b3", row: "arr", from: 12, to: 15, label: "bloque 3" },
+      ],
+      caption: "Transferencias: 2. Comparaciones: 2.",
+    },
+    {
+      note: "12 es mayor que 11: queda sólo [12, 15]. Ese intervalo es exactamente el bloque 3. El pivote 13 obliga a traerlo, y es la tercera transferencia. A partir de aquí el intervalo cabe en un bloque.",
+      rows: [
+        { id: "arr", label: "Arreglo", cells: [
+          { value: 0, tag: "0", state: "muted" }, { value: 1, tag: "1", state: "muted" }, { value: 2, tag: "2", state: "muted" }, { value: 3, tag: "3", state: "muted" },
+          { value: 4, tag: "4", state: "muted" }, { value: 5, tag: "5", state: "muted" }, { value: 6, tag: "6", state: "muted" }, { value: 7, tag: "7", state: "muted" },
+          { value: 8, tag: "8", state: "muted" }, { value: 9, tag: "9", state: "muted" }, { value: 10, tag: "10", state: "muted" }, { value: 11, tag: "11", state: "muted" },
+          { value: 12, tag: "12", state: "marked" }, { value: 13, tag: "13", state: "active" }, { value: 14, tag: "14" }, { value: 15, tag: "15", state: "marked" },
+        ]},
+      ],
+      spans: [
+        { id: "b0", row: "arr", from: 0, to: 3, label: "bloque 0", state: "muted" },
+        { id: "b1", row: "arr", from: 4, to: 7, label: "bloque 1", state: "muted" },
+        { id: "b2", row: "arr", from: 8, to: 11, label: "bloque 2", state: "muted" },
+        { id: "b3", row: "arr", from: 12, to: 15, label: "bloque 3", state: "active" },
+      ],
+      caption: "Transferencias: 3. Comparaciones: 3.",
+    },
+    {
+      note: "12 es menor que 13: queda [12, 12]. El registro 12 está en el bloque 3, que sigue en RAM desde el paso anterior. Esta comparación no cuesta nada.",
+      rows: [
+        { id: "arr", label: "Arreglo", cells: [
+          { value: 0, tag: "0", state: "muted" }, { value: 1, tag: "1", state: "muted" }, { value: 2, tag: "2", state: "muted" }, { value: 3, tag: "3", state: "muted" },
+          { value: 4, tag: "4", state: "muted" }, { value: 5, tag: "5", state: "muted" }, { value: 6, tag: "6", state: "muted" }, { value: 7, tag: "7", state: "muted" },
+          { value: 8, tag: "8", state: "muted" }, { value: 9, tag: "9", state: "muted" }, { value: 10, tag: "10", state: "muted" }, { value: 11, tag: "11", state: "muted" },
+          { value: 12, tag: "12", state: "active" }, { value: 13, tag: "13", state: "muted" }, { value: 14, tag: "14", state: "muted" }, { value: 15, tag: "15", state: "muted" },
+        ]},
+      ],
+      spans: [
+        { id: "b3", row: "arr", from: 12, to: 15, label: "bloque 3, en RAM", state: "active" },
+      ],
+      caption: "Transferencias: 3. Comparaciones: 4.",
+    },
+    {
+      note: "El intervalo es [12, 12] y el valor buscado está allí. La búsqueda termina con 4 comparaciones y 3 transferencias.",
+      rows: [
+        { id: "arr", label: "Arreglo", cells: [
+          { value: 12, tag: "12", state: "answer" },
+        ]},
+      ],
+      caption: "Resultado: 3 transferencias, aunque la búsqueda hizo 4 comparaciones.",
+    },
+  ],
+}} />
+
+**Pasos de la búsqueda.** (1) Toma el medio del intervalo. (2) Si su bloque no está en RAM, cárgalo y cuenta una transferencia. (3) Compara y descarta la mitad que no contiene la respuesta. (4) Repite. Cuando el intervalo cabe en un bloque cargado, las comparaciones siguientes son gratis.
+
+### De dónde sale $\Theta(\lg(N/B))$
+
+Cada transferencia en las primeras reducciones trae $B$ registros, pero sólo se usa uno de ellos para decidir. Tras $t$ mitades el intervalo mide $N/2^t$. Cuando $N/2^t$ llega a $B$, el intervalo cabe en un bloque. Esto ocurre en $t=\lg(N/B)$ reducciones.
+
+En el ejemplo, $\lg(16/4)=2$: el intervalo pasa de 16 a 8, de 8 a 4, y el cuarto paso ya tiene tamaño $B$. El tercer pivote, 13, es la transferencia que carga el bloque final. Por eso el costo real es $\lg(N/B)$ más una constante pequeña. Con $N=10^9$ y $B=10^3$, esto da unas 20 transferencias, mientras que las comparaciones son unas 30.
+
+La búsqueda binaria se queda corta porque cada pivote elige la mitad sin mirar el bloque. Las dos primeras transferencias sólo aportan un registro útil cada una.
 
 ## Análisis de complejidad
 
-Un escaneo alineado necesita $\lceil N/B\rceil$ transferencias. Una búsqueda binaria sobre un arreglo grande puede gastar una lectura por reducción hasta que queden $O(B)$ registros, de modo que cuesta $O(1+\lg(N/B))$ E/S. En el modelo de comparaciones, un bloque con $B$ llaves distingue hasta $B+1$ intervalos de ausencia. Un árbol de decisiones de $t$ lecturas distingue a lo sumo $(B+1)^t$ intervalos y necesita cubrir $N+1$. De ahí sale $\Omega(\log_{B+1}(N+1))$ para búsqueda por comparaciones.
+Un escaneo cuesta $\Theta(\lceil N/B\rceil)$ transferencias.
 
-### De una traza a una cota de escaneo
+La búsqueda binaria cuesta $\Theta(\lg(N/B))$ transferencias, como se vio arriba. Es una cota superior para ese algoritmo, no para todo algoritmo.
 
-Particiona los índices del archivo en grupos de $B$. Cada grupo debe leerse al menos una vez si cualquier registro puede cambiar la respuesta. El recorrido secuencial alcanza esa cota porque termina el bloque antes de abandonarlo. Es un argumento en dos direcciones: la necesidad de inspeccionar todos los datos da la cota inferior y la traza concreta da el algoritmo que la alcanza.
+**Cota inferior.** Para ubicar un elemento entre $N$ ordenados hay $N+1$ respuestas posibles: los huecos de inserción. Un bloque de $B$ llaves divide el orden en $B+1$ zonas, y una transferencia distingue como mucho esas $B+1$ zonas. Si $t$ transferencias deben cubrir $N+1$ respuestas:
 
-### Por qué una búsqueda binaria puede desaprovechar el bloque
+$$
+(B+1)^t \ge N+1 \quad\Longrightarrow\quad t \ge \log_{B+1}(N+1)
+$$
 
-Al principio, los pivotes de la búsqueda binaria se separan por distancias grandes. Aunque una lectura traiga $B$ llaves, el algoritmo elige su próxima mitad según el pivote y puede saltar fuera del bloque. Tras $t$ reducciones queda un intervalo de tamaño aproximado $N/2^t$. Igualarlo a $B$ da $tapproxlg(N/B)$. A partir de ahí la región cabe en uno o dos bloques contiguos, según alineación. Las comparaciones restantes ocurren dentro de lo cargado. El término constante es importante cuando todo el arreglo ya tiene tamaño de un bloque o menos.
+Así sale $\Omega\left(\log_{B+1} N\right)$ para buscar en el modelo de comparaciones. Con $N=10^9$ y $B=10^3$ esto da unas 3 transferencias, contra las 20 de la búsqueda binaria.
 
-### Por qué el profesor cambia de base para la cota inferior
+### De dónde sale el factor $B+1$
 
-La cota anterior describe lo que hace **una búsqueda binaria**. La cota inferior pregunta qué podría lograr cualquier método de comparaciones bajo el modelo. Si una lectura muestra hasta $B$ separadores, hay hasta $B+1$ decisiones para una consulta ausente. Para distinguir todos los puntos de inserción hacen falta al menos $N+1$ hojas. Escribe $(B+1)^tge N+1$ y despeja $t$. El [B-tree](/structures/b-tree) organiza justamente los separadores que permiten tomar una decisión de muchas ramas por bloque.
+Dibuja $B$ llaves ordenadas y los huecos entre ellas. Cuatro llaves crean cinco zonas: antes de la primera, entre cada par y después de la última. Una consulta ausente cae en exactamente una zona, así que una transferencia puede decidir entre $B+1$ opciones.
 
-## Tabla de complejidad
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Diez llaves ordenadas dejan once huecos de inserción. Cada hueco es una respuesta posible para una consulta ausente.",
+      rows: [
+        { id: "llaves", label: "Llaves", cells: [
+          { value: 1, tag: "0" }, { value: 2, tag: "1" }, { value: 3, tag: "2" }, { value: 4, tag: "3" }, { value: 5, tag: "4" },
+          { value: 6, tag: "5" }, { value: 7, tag: "6" }, { value: 8, tag: "7" }, { value: 9, tag: "8" }, { value: 10, tag: "9" },
+        ]},
+        { id: "huecos", label: "Huecos", cells: [
+          { value: "·", tag: "0" }, { value: "·", tag: "1" }, { value: "·", tag: "2" }, { value: "·", tag: "3" }, { value: "·", tag: "4" },
+          { value: "·", tag: "5" }, { value: "·", tag: "6" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" },
+        ]},
+      ],
+      caption: "N = 10 llaves, N+1 = 11 huecos.",
+    },
+    {
+      note: "Un bloque de B = 4 llaves marca cuatro de ellas como separadores. Cada separador parte la fila de huecos y crea una zona nueva.",
+      rows: [
+        { id: "llaves", label: "Llaves", cells: [
+          { value: 1, tag: "0" }, { value: 2, tag: "1" }, { value: 3, tag: "2", state: "marked" }, { value: 4, tag: "3" }, { value: 5, tag: "4" },
+          { value: 6, tag: "5", state: "marked" }, { value: 7, tag: "6" }, { value: 8, tag: "7", state: "marked" }, { value: 9, tag: "8" }, { value: 10, tag: "9", state: "marked" },
+        ]},
+        { id: "huecos", label: "Huecos", cells: [
+          { value: "·", tag: "0" }, { value: "·", tag: "1" }, { value: "·", tag: "2" }, { value: "·", tag: "3" }, { value: "·", tag: "4" },
+          { value: "·", tag: "5" }, { value: "·", tag: "6" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" },
+        ]},
+      ],
+      spans: [
+        { id: "zA", row: "huecos", from: 0, to: 2, label: "zona A" },
+        { id: "zB", row: "huecos", from: 3, to: 5, label: "zona B" },
+        { id: "zC", row: "huecos", from: 6, to: 7, label: "zona C" },
+        { id: "zD", row: "huecos", from: 8, to: 9, label: "zona D" },
+        { id: "zE", row: "huecos", from: 10, to: 10, label: "zona E" },
+      ],
+      caption: "Cuatro separadores producen B+1 = 5 zonas.",
+    },
+    {
+      note: "La consulta 7 cae entre los separadores 6 y 8, así que su respuesta está en la zona C. Una sola transferencia decidió entre cinco zonas posibles, no entre dos como en la búsqueda binaria.",
+      rows: [
+        { id: "llaves", label: "Llaves", cells: [
+          { value: 1, tag: "0" }, { value: 2, tag: "1" }, { value: 3, tag: "2", state: "marked" }, { value: 4, tag: "3" }, { value: 5, tag: "4" },
+          { value: 6, tag: "5", state: "marked" }, { value: 7, tag: "6", state: "active" }, { value: 8, tag: "7", state: "marked" }, { value: 9, tag: "8" }, { value: 10, tag: "9", state: "marked" },
+        ]},
+        { id: "huecos", label: "Huecos", cells: [
+          { value: "·", tag: "0", state: "muted" }, { value: "·", tag: "1", state: "muted" }, { value: "·", tag: "2", state: "muted" }, { value: "·", tag: "3", state: "muted" }, { value: "·", tag: "4", state: "muted" },
+          { value: "·", tag: "5", state: "muted" }, { value: "·", tag: "6", state: "answer" }, { value: "·", tag: "7", state: "answer" }, { value: "·", tag: "8", state: "muted" }, { value: "·", tag: "9", state: "muted" }, { value: "·", tag: "10", state: "muted" },
+        ]},
+      ],
+      spans: [
+        { id: "zA", row: "huecos", from: 0, to: 2, label: "zona A", state: "muted" },
+        { id: "zB", row: "huecos", from: 3, to: 5, label: "zona B", state: "muted" },
+        { id: "zC", row: "huecos", from: 6, to: 7, label: "zona C", state: "answer" },
+        { id: "zD", row: "huecos", from: 8, to: 9, label: "zona D", state: "muted" },
+        { id: "zE", row: "huecos", from: 10, to: 10, label: "zona E", state: "muted" },
+      ],
+      caption: "Respuesta: zona C. Con t transferencias quedan como mucho (B+1)^t zonas.",
+    },
+  ],
+}} />
 
-La tabla superior usa las unidades de costo de la explicación.
+Dos niveles con cinco zonas cada uno distinguen como mucho $5^2=25$ respuestas. Para $N=100$ hacen falta 101, así que dos niveles no bastan y tres sí. Por eso el factor es $B+1$, no $B$ ni $2$.
 
-## Ejemplos
+La cota inferior describe **cualquier** método de comparaciones, no sólo la búsqueda binaria. El [B-tree](/structures/b-tree) alcanza justamente esa cota: cada bloque contiene separadores que dividen el intervalo en muchas ramas.
 
-[Casos resueltos](/structures/external-memory-model/examples) y [preguntas con pistas](/structures/external-memory-model/exercises).
+## Errores típicos y casos límite
 
-## Comparación con estructuras relacionadas
+- **Contar sólo comparaciones.** Dos algoritmos con $\lg N$ comparaciones pueden costar $\lg N$ y $\lg(N/B)$ transferencias. Siempre declara la unidad.
+- **Olvidar el bloque incompleto.** Si $N$ no es múltiplo de $B$, el último bloque cuesta una transferencia completa. La cota exacta usa techo, no división.
+- **Creer que una consulta corta es barata.** La cantidad de registros no determina las transferencias. Lo que decide es cuántos bloques diferentes toca la consulta. Un intervalo de longitud 6 toca dos bloques si está alineado con $B=4$, y tres si no.
+- **Ignorar la expulsión.** Revisitar un bloque sólo es gratis si sobrevivió en RAM. Con una ranura, cada cambio de bloque expulsa el anterior.
+- **Caso $N<B$.** El arreglo cabe en un bloque, pero la primera lectura todavía cuesta una transferencia.
+- **Mezcla con $M<3B$.** Sin espacio para tres bloques simultáneos, la mezcla ya no es un escaneo.
 
-La permutación también ilustra por qué se debe declarar el modelo. El mazo compara mover registros uno por uno con ordenarlos por su posición de destino. En el modelo de registros indivisibles, la cota de permutación toma el mínimo entre $N$ y el costo de ordenar externamente.
+## Conexión
 
-Una búsqueda binaria usa dos ramas por comparación. El B-tree convierte un bloque entero en un nodo de muchas ramas.
-
-## Prueba de dominio
-
-[Lista de comprobación](/structures/external-memory-model/mastery-check).
+Lo que sigue usa este modelo para cada estructura. Los [árboles B](/structures/b-tree) convierten el bloque en un nodo de muchas ramas, y el [ordenamiento externo](/structures/external-merge-sort) reutiliza la mezcla de corridas vista aquí. La [lista de comprobación](/structures/external-memory-model/mastery-check) y los [casos resueltos](/structures/external-memory-model/examples) practican estas cuentas.
 
 *Fuente de clase: Sem10_Memory_Hierarchy_I.pdf · pp. 28-42.*

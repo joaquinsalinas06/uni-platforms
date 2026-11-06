@@ -5,90 +5,84 @@ title: Casos resueltos
 
 import Visualization from "../../../src/components/Visualization.astro";
 
+Los tres casos usan el arreglo de 16 celdas con trozos de 4 y altura $h = 2$ de la teoría. Umbrales: raíz $[1/2,\ 3/4]$, nivel medio $[3/8,\ 7/8]$, hojas $[1/4,\ 1]$.
 
-La traza de 25, 26 y 27 toma el ejemplo de densidad de clase. El caso de crecimiento se deriva del mismo criterio.
+## Mínimo · la inserción que no sube
 
-## Insertar 25 · la primera mitad basta
-En el estado inicial de clase, el primer trozo tiene cuatro llaves en cuatro celdas. Insertar 25 entre 20 y 30 produciría cinco llaves en ese trozo. El cociente 5/4 supera 1. No se puede reparar moviendo llaves dentro de esas mismas cuatro posiciones.
-
-Al examinar la mitad izquierda, la nueva ocupación es 6/8. El umbral de ese nivel es 7/8, así que alcanza con redistribuir esa mitad. Los dos trozos de la región recuperan holgura. La mitad derecha conserva su contenido y sus posiciones.
-
-## Insertar 26 y 27 · ahora se llega a la raíz
-El 26 entra en un hueco recuperado y deja el trozo lleno. Con el 27, la hoja vuelve a quedar en 5/4, pero esta vez la mitad estaría en 8/8. Como 8/8 supera 7/8, subir un nivel es obligatorio. La raíz quedaría en 12/16, exactamente 3/4. La desigualdad permite el empate y se redistribuye todo el arreglo.
+Estado: `10 20 30 40 | 50 · · · | 60 · 70 · | 80 · 90 ·`. Insertar 55 entre 50 y 60 cae en el trozo 2, que tiene 1 llave de 4 celdas. Tras insertarla el trozo queda en 2/4, dentro de la banda de hoja. No hay ancestro que revisar: el costo es sólo reescribir el trozo, $\Theta(\lg N)$ celdas.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Tras la primera reparación, la mitad izquierda recupera huecos.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Mitad izquierda", "cells": ["10", "20", "25", "·", "30", "40", "50", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Mitad derecha", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Antes: el trozo 2 (celdas 4–7) tiene una sola llave, 50. La llave 55 debe quedar entre 50 y 60, así que cae en este trozo.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 30}, {value: 40}, {value: 50, state: "active"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [ { id: "t2", row: "arch", from: 4, to: 7, label: "trozo 2: 1/4" } ],
+      caption: "Densidad del trozo: 1/4, igual al umbral inferior de hoja. Insertar sube a 2/4.",
     },
     {
-      note: "26 consume el hueco del primer trozo. La mitad izquierda alcanza 7/8.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Mitad izquierda", "cells": ["10", "20", "25", "26", "30", "40", "50", "·"], "states": ["idle", "idle", "idle", "active", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Mitad derecha", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Después: 55 se escribe en el primer hueco del trozo y se reescribe el trozo entero. 2/4 está dentro de la banda [1/4, 1], así que la operación termina aquí.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 30}, {value: 40}, {value: 50}, {value: 55, state: "active"}, {value: "·"}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Agregar 27 deja ocho llaves en la mitad. Su límite era siete. Examina la raíz.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Mitad candidata", "cells": ["10", "20", "25", "26", "27", "30", "40", "50"], "states": ["idle", "idle", "idle", "idle", "active", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Ocupación", "cells": ["8/8", "límite:7/8"], "states": ["marked", "marked"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Con capacidad 16, la raíz admite las doce llaves. El reparto deja un hueco por trozo.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Mitad izquierda", "cells": ["10", "20", "25", "·", "26", "27", "30", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "answer", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Mitad derecha", "cells": ["40", "50", "60", "·", "70", "80", "90", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
+      spans: [ { id: "t2", row: "arch", from: 4, to: 7, label: "trozo 2: 2/4 ≤ 1" } ],
+      caption: "Costo: una reescritura de 4 celdas, $O(1+\\lg N/B)$. Ningún ancestro se toca.",
     },
   ],
 }} />
 
-Repartir 12 llaves entre cuatro trozos deja tres en cada uno. Conserva el orden global y vuelve a aparecer un hueco por trozo.
+## Normal · eliminación en cascada
 
-## La raíz tampoco admite otra llave
-Si la prueba de una actualización llega a la raíz y la ocupación sería 13/16, ninguna permutación de esas 13 llaves entre las mismas 16 celdas reduce la densidad. Hace falta cambiar la capacidad. Distingue esta decisión de redistribuir: en la redistribución cambias posiciones con la misma capacidad; en el redimensionamiento cambias el denominador de la densidad.
+Partimos del estado final de la teoría, con 12 llaves: `10 20 25 · | 26 27 30 · | 40 50 60 · | 70 80 90 ·`. Borramos 26, 27, 30 y luego 25. Cada borrado revisa la banda inferior de su trozo; si no cumple, sube.
 
-## Borrar puede producir el problema opuesto
+1. Borrar 26, 27 y 30: el trozo 2 queda vacío, 0/4 < 1/4. Sube a la mitad izquierda: 3/8 = 3/8. El umbral inferior admite el empate, así que no se reparte.
+2. Borrar 25: el trozo 1 queda con 2/4, dentro de la banda. La mitad izquierda queda en 2/8 = 1/4 < 3/8. Sube a la raíz.
+3. La raíz tiene 8 llaves en 16 celdas: 8/16 = 1/2 = umbral inferior. El empate se admite, y se reparten las 8 llaves con 2 por trozo.
 
-Supón un PMA de 16 celdas con cuatro trozos de cuatro. Si un trozo queda vacío,
-examina la mitad que lo contiene. Con altura dos, la densidad inferior de la
-hoja es 1/4 y la de la mitad es 3/8. Si el trozo hermano conserva tres llaves,
-la mitad tiene tres llaves sobre ocho celdas y cumple exactamente su umbral.
-Puedes distribuirlas como una en un trozo y dos en el otro. Ambos recuperan
-la densidad mínima y la otra mitad conserva sus posiciones.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado inicial: 12 llaves en 16 celdas. Vamos a borrar 26, 27 y 30, que están en el trozo 2 (celdas 4–7).",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 25}, {value: "·"}, {value: 26, state: "active"}, {value: 27, state: "active"}, {value: 30, state: "active"}, {value: "·"}, {value: 40}, {value: 50}, {value: 60}, {value: "·"}, {value: 70}, {value: 80}, {value: 90}, {value: "·"}] },
+      ],
+      spans: [ { id: "t2", row: "arch", from: 4, to: 7, label: "trozo 2: 3/4" } ],
+      caption: "Borrar deja el trozo en 0/4, por debajo de la banda de hoja, que llega hasta 1/4.",
+    },
+    {
+      note: "Tras borrar las tres llaves, el trozo 2 está vacío. Como 0/4 < 1/4, se sube. La mitad izquierda tiene 3 llaves en 8 celdas: 3/8, que es igual a su umbral inferior. El empate se admite; no se reparte nada.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 25}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: 40}, {value: 50}, {value: 60}, {value: "·"}, {value: 70}, {value: 80}, {value: 90}, {value: "·"}] },
+      ],
+      spans: [ { id: "m0", row: "arch", from: 0, to: 7, label: "mitad izq.: 3/8 = 3/8" } ],
+      caption: "Empate en el umbral inferior del nivel medio: se admite y el borrado termina.",
+    },
+    {
+      note: "Se borra 25. El trozo 1 queda con 2/4, dentro de su banda. Pero la mitad izquierda queda en 2/8 = 1/4, menor que 3/8. Se sube a la raíz.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: 40}, {value: 50}, {value: 60}, {value: "·"}, {value: 70}, {value: 80}, {value: 90}, {value: "·"}] },
+      ],
+      spans: [ { id: "m0", row: "arch", from: 0, to: 7, label: "2/8 < 3/8" }, { id: "rt", row: "arch", from: 0, to: 15, label: "raíz: 8/16 = 1/2" } ],
+      caption: "La raíz tiene 8 llaves en 16 celdas: 1/2, exactamente su umbral inferior. Se admite.",
+    },
+    {
+      note: "La raíz reparte sus 8 llaves de forma pareja: dos por trozo. Cada trozo queda en 2/4 = 1/2, dentro de la banda de hoja, con holgura para nuevas inserciones.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10, state: "active"}, {value: 20, state: "active"}, {value: "·"}, {value: "·"}, {value: 40, state: "active"}, {value: 50, state: "active"}, {value: "·"}, {value: "·"}, {value: 60, state: "active"}, {value: 70, state: "active"}, {value: "·"}, {value: "·"}, {value: 80, state: "active"}, {value: 90, state: "active"}, {value: "·"}, {value: "·"}] },
+      ],
+      spans: [ { id: "rt", row: "arch", from: 0, to: 15, label: "raíz repartida" } ],
+      caption: "Costo del borrado final: un reparto de 16 celdas, $O(1+16/B)$ transferencias.",
+    },
+  ],
+}} />
 
-Si el hermano sólo tuviera dos llaves, la mitad quedaría en 2/8 y tampoco
-sería admisible. En ese caso hay que examinar la raíz. Este es el mismo
-procedimiento de subir por intervalos, con la desigualdad invertida.
-Al insertar preocupa que falten huecos. Al borrar preocupa que sobren
-tantos que un escaneo lea bloques con demasiado pocos registros.
+## Límite · empates y la banda de amortiguación
 
-## Seguir todos los umbrales de la secuencia 25, 26, 27
+El caso límite es el empate exacto. Los dos umbrales de la raíz son $1/2$ y $3/4$, así que 12 llaves ($= 3/4$) y 8 llaves ($= 1/2$) se admiten. Eso es intencional: si el umbral fuera estricto, una inserción justo en el borde forzaría un reparto del arreglo entero, y el siguiente borrado lo forzaría otra vez.
 
-Caso de clase. Capacidad 16, trozos de cuatro, dos mitades de ocho. La ocupación superior permitida es 4, 7 y 12 llaves en cada escala respectiva.
+La banda entre $3/4$ y $1/2$ es lo que da holgura a las dos operaciones. Un arreglo con 10 llaves en 16 celdas no se reparte ni al insertar ni al borrar.
 
-1. Ubica 25 entre 20 y 30, dentro del primer trozo. Ya había cuatro llaves allí.
-2. Incluye la llave nueva al calcular la densidad. Cinco sobre cuatro supera el umbral uno.
-3. Sube a la mitad izquierda. Hay seis llaves contando 25, por debajo de siete.
-4. Redistribuye las seis en el mismo orden. Quedan tres llaves en cada trozo y vuelve un hueco a cada uno.
-5. Ubica 26 detrás de 25, todavía en el primer trozo.
-6. Comprueba 4/4. La igualdad se permite, así que la inserción usa el hueco y no requiere redistribuir la mitad.
-7. Ubica 27 entre 26 y 30. El trozo vuelve a exceder su capacidad.
-8. Calcula la ocupación de la mitad: ocho llaves en ocho celdas. Aunque caben físicamente, su umbral es siete.
-9. Examina la raíz. Hay doce llaves contando 27 y eso iguala el límite.
-10. Reescribe la región de 16 celdas en orden global, con tres llaves por trozo.
-11. Comprueba que el movimiento dejó un hueco por trozo. La siguiente inserción no tiene por qué repetir el mismo costo.
-
-**Comprobación.** La última inserción es cara. Los umbrales explican cuándo se ejecuta y el margen recuperado explica por qué no se ejecuta siempre.
+> **Nota de apoyo** (no está en las diapositivas): la lectura "el empate se admite" sigue la desigualdad de las láminas, que usa $\le$ para ambos extremos de la banda. No hay un caso de la clase que lo confirme explícitamente.

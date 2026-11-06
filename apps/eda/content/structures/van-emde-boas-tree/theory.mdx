@@ -5,23 +5,63 @@ title: "Árbol van Emde Boas"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Las consultas de vecino sobre enteros pueden aprovechar que la palabra tiene una cantidad fija de bits.
+Sobre enteros de $w$ bits, el universo tiene $u = 2^w$ valores. Un BST da sucesor en $O(\lg n)$, y en el peor caso $n$ puede ser casi $u$. Con $w = 32$ eso son hasta $\lg n \approx 32$ comparaciones, aunque el conjunto tenga diez elementos y el dominio $u \approx 4\cdot 10^9$. La pregunta de la clase es si podemos cobrar $O(\lg w)$ en lugar de $O(\lg n)$, sin depender del tamaño del conjunto.
 
-## Intuición
+## Intuición dibujada
 
-Usa los bits altos como dirección de clúster y los bajos como llave local. Un resumen representa los clústeres ocupados. Mínimo y máximo permiten decidir si queda algún candidato en el clúster actual.
+Imagina el universo como una tira de celdas numeradas de $0$ a $u-1$. Partes la tira en bloques contiguos de tamaño $\sqrt{u}$. Cada bloque es un **clúster**. Si un clúster tiene algún elemento, un **resumen** marca su índice. Con el índice del clúster y el sufijo dentro del clúster se recompone la llave original.
 
-## Estructura interna
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Universo u=16 con S = 2, 3, 4, 5, 7, 14, 15. Las celdas guardan la llave si pertenece a S; · significa que no hay nada. Esta fila es sólo lectura: la estructura no guarda así los datos.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+      ],
+      spans: [
+        { id: "c0", row: "u", from: 0, to: 3, label: "cluster 0" },
+        { id: "c1", row: "u", from: 4, to: 7, label: "cluster 1" },
+        { id: "c2", row: "u", from: 8, to: 11, label: "cluster 2" },
+        { id: "c3", row: "u", from: 12, to: 15, label: "cluster 3" },
+      ],
+      caption: "Cuatro clústeres de tamaño 4 (√16).",
+    },
+    {
+      note: "Ahora se ve la estructura real. El mínimo 2 no aparece en ningún clúster: vive sólo en V.min. Cada clúster guarda sus llaves con sufijo local, y el resumen marca los clústeres ocupados.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c0", label: "Cluster 0", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"}] },
+      ],
+      caption: "Cluster 2 está vacío, así que su índice 2 falta en el resumen. El 14 es ⟨3,2⟩ y el 15 es ⟨3,3⟩.",
+    },
+  ],
+}} />
 
-En un universo de 16 usamos cuatro clústeres de tamaño cuatro. Una llave se recompone como $4\cdot high+low$. El mínimo del nodo se guarda fuera de los clústeres. El resumen contiene un índice si y sólo si su clúster está ocupado.
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $u$ | tamaño del universo, $u = 2^w$ | el número de bits $w = \lg u$ crece linealmente en su logaritmo |
+| $w$ | bits por llave, $w = \lg u$ | la altura de la recursión es $\lg w$ |
+| $\sqrt{u}$ | tamaño de cada clúster y del resumen | se divide $w$ entre dos en cada nivel |
+| $V.\min$, $V.\max$ | menor y mayor elemento de $V$, guardados fuera de los clústeres | dan una respuesta en $O(1)$ cuando el consulta cae fuera del rango |
+| $V.\text{cluster}[c]$ | subestructura vEB de tamaño $\sqrt{u}$ para el grupo $c$ | sólo existen clústeres no vacíos en la versión compacta |
+| $V.\text{summary}$ | vEB de tamaño $\sqrt{u}$ con los índices $c$ de los clústeres ocupados | su tamaño es el de un clúster, no el de $u$ |
+
+Una llave $x$ se descompone en su prefijo $c = \lfloor x/\sqrt{u} \rfloor$ (el clúster) y su sufijo $i = x \bmod \sqrt{u}$ (la posición dentro del clúster). Escribimos $x = \langle c, i\rangle$, de modo que $x = c\cdot\sqrt{u} + i$. Con $u = 16$, $\sqrt{u} = 4$, y $7 = \langle 1, 3\rangle$ porque $1\cdot 4 + 3 = 7$.
 
 ### Leer una llave desde tres perspectivas
 
-En el estado de clase, 7 pertenece al universo global, aparece bajo el clúster 1 y allí se representa por el sufijo 3. El resumen guarda 1, que identifica un clúster, y no guarda 7. Esta diferencia es la que permite consultar el resumen como una estructura más pequeña. Si el resumen devuelve 3, ese 3 es un prefijo, no una respuesta global. Todavía se necesita un sufijo local para recomponer la llave.
+En el estado de clase, $7$ pertenece al universo global, aparece bajo el clúster 1 y allí se representa por el sufijo 3. El resumen guarda 1, que identifica un clúster, y no guarda 7. Esta diferencia es la que permite consultar el resumen como una estructura más pequeña. Si el resumen devuelve 3, ese 3 es un prefijo, no una respuesta global: todavía hace falta un sufijo local para recomponer la llave.
 
-El campo mínimo desempeña un papel especial. El 2 global se guarda directamente, fuera de los clústeres. Si consultas por un valor menor que 2, el sucesor puede obtenerse del campo sin descender. Si borras 2, tienes que encontrar quién asciende. El primer clúster ocupado tiene el menor prefijo disponible. Su mínimo local da la menor llave restante dentro de ese prefijo.
+El mínimo tiene un papel especial. El 2 global se guarda directamente en $V.\min$, fuera de los clústeres. Si consultas por un valor menor que 2, el sucesor sale del campo sin descender. Si borras 2, asciende el menor elemento restante, y para encontrarlo hay que mirar el primer clúster ocupado.
 
 ### Tres cambios de ocupación que no deben confundirse
 
@@ -31,145 +71,419 @@ El campo mínimo desempeña un papel especial. El 2 global se guarda directament
 | Aparece la primera llave de un clúster | Se añade su índice al resumen |
 | Se elimina la última llave de un clúster | Se elimina su índice del resumen |
 
-El primer caso puede desencadenar recursión dentro del clúster. Los dos últimos pueden desencadenarla en el resumen. La distinción permite defender la recurrencia con una sola llamada no trivial.
+El primer caso puede desencadenar recursión dentro del clúster. Los dos últimos pueden desencadenar recursión en el resumen. Esta distinción sostiene la cota de la sección de complejidad.
 
-## Operaciones
+## Operaciones paso a paso
 
-Para sucesor, si el clúster actual tiene un máximo mayor que el sufijo, recurre dentro de él. Si no, pregunta al resumen por el siguiente clúster y toma su mínimo. Para predecesor invierte el sentido y considera el mínimo global cuando el resumen no devuelve un grupo anterior. Al insertar el primer elemento de un clúster, fija su mínimo y máximo en tiempo constante y actualiza el resumen. Al borrar el mínimo global, asciende el menor elemento que sigue dentro de un clúster.
+Todas usan el mismo estado de clase, $u = 16$ y $S = \{2,3,4,5,7,14,15\}$, con resumen $\{0,1,3\}$. En las figuras, la fila $S$ es sólo lectura del conjunto; las operaciones sólo tocan las filas de clúster y de resumen.
 
-### Clúster local o salto por el resumen
+### Sucesor: una sola llamada
+
+El primer intento recorre dos ramas: busca dentro del clúster y, si no hay, consulta el resumen. Eso da $T(u) = 2T(\sqrt{u}) + O(1)$, que es $O(\lg u)$, es decir, no mejora mirar los bits uno por uno. La versión de clase evita la segunda rama guardando el **máximo de cada clúster**.
+
+1. Calcula $x = \langle c, i\rangle$.
+2. Si $x < V.\min$, devuelve $V.\min$. Si $x \ge V.\max$ o no hay máximo, devuelve nulo. Ambas comparaciones son $O(1)$.
+3. Mira $V.\text{cluster}[c].\max$. Si existe y $i$ es menor que ese máximo, el sucesor está dentro del clúster: recurre sólo ahí y recompone $\langle c, \cdot\rangle$.
+4. En otro caso, recurre sobre el resumen para hallar el siguiente clúster ocupado $c'$ y devuelve $\langle c', V.\text{cluster}[c'].\min\rangle$. El mínimo se lee en $O(1)$.
+
+Así, en cada llamada se recorre **una** de las dos ramas. El caso base es $u = 2$: ya sabemos que $V.\min \le x < V.\max$, luego el sucesor es $V.\max$.
+
+#### Sucesor(5)
+
+Empezamos en $x = 5 = \langle 1,1\rangle$. La figura sigue el mismo estado de clase; el último paso reconstruye la llave.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Estado de clase. El mínimo global 2 está fuera de los clústeres.",
-      arrays: [
-        {"id": "row-0", "label": "Extremos", "row": 0, "cells": ["min:2", "max:15"], "states": ["marked", "marked"]},
-        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["0", "1", "3"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-2", "label": "Clústeres con sufijos", "row": 2, "cells": ["0:{3}", "1:{0,1,3}", "2:∅", "3:{2,3}"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Estado de clase. Consulta Sucesor(5): aún no sabemos si la respuesta cae en su propio clúster o en otro.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1" },
+      ],
+      caption: "Entrada: x = 5 = ⟨1,1⟩.",
     },
     {
-      note: "Sucesor de 5. high=1 y low=1.",
-      arrays: [
-        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["1", "1"], "states": ["active", "active"]},
-        {"id": "row-1", "label": "Clúster 1", "row": 1, "cells": ["0", "1", "3"], "states": ["idle", "marked", "idle"]},
+      note: "5 es mayor o igual que min 2 y menor que max 15. No hay atajo por los extremos, así que hay que buscar. El sufijo i = 1 identifica la posición dentro del clúster 1.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5,state:"active"},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1", state: "marked" },
+      ],
+      caption: "Prefijo c = 1, sufijo i = 1.",
     },
     {
-      note: "El máximo local 3 supera a 1. Se puede resolver dentro del mismo grupo.",
-      arrays: [
-        {"id": "row-0", "label": "Clúster 1", "row": 0, "cells": ["0", "1", "3"], "states": ["idle", "marked", "answer"]},
+      note: "Decisión: V.cluster[1].max es 3 y 1 es menor que 3. El sucesor está dentro del clúster 1. Basta una sola llamada; el resumen no se consulta.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5,state:"active"},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"muted"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"active"},{value:"·",tag:"2"},{value:3,tag:"3",state:"marked"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1", state: "marked" },
+      ],
+      caption: "max del clúster 1 = 3 > 1: recursión sólo en el clúster 1.",
     },
     {
-      note: "Reconstruye 4·1+3=7.",
-      arrays: [
-        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["7"], "states": ["answer"]},
+      note: "Dentro del clúster 1, el sucesor de 1 es 3. Ese 3 es el sufijo local, no la respuesta global. Como el mínimo local 0 vive en el campo min de ese clúster, el subresultado sale directo del máximo.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5,state:"active"},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"marked"},{value:"·",tag:"2"},{value:3,tag:"3",state:"answer"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1", state: "marked" },
+      ],
+      caption: "Sucesor local de 1 = 3.",
     },
     {
-      note: "Sucesor de 9. high=2 y low=1. El clúster 2 está vacío.",
-      arrays: [
-        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["2", "1"], "states": ["active", "active"]},
-        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "marked", "idle"]},
+      note: "Reconstruye la llave global: prefijo 1 por 4 más sufijo 3, es decir, 4·1+3 = 7. El sucesor de 5 es 7.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7,state:"answer"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "El resumen da el clúster 3. Toma su mínimo local, 2.",
-      arrays: [
-        {"id": "row-0", "label": "Resumen", "row": 0, "cells": ["0", "1", "3"], "states": ["idle", "idle", "answer"]},
-        {"id": "row-1", "label": "Clúster 3", "row": 1, "cells": ["2", "3"], "states": ["answer", "idle"]},
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1", state: "marked" },
       ],
-      bridges: [],
-    },
-    {
-      note: "Reconstruye 4·3+2=14.",
-      arrays: [
-        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["14"], "states": ["answer"]},
-      ],
-      bridges: [],
+      caption: "Resultado: 4·1+3 = 7.",
     },
   ],
 }} />
 
-### Insertar en un grupo vacío y borrar el mínimo global
+#### Sucesor(9)
+
+Ahora $9 = \langle 2,1\rangle$ cae en el clúster 2, que está vacío. Sin máximo que comparar, la rama de clúster no existe.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Parte del estado de clase. 9 pertenece al grupo 2.",
-      arrays: [
-        {"id": "row-0", "label": "Resumen", "row": 0, "cells": ["0", "1", "3"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Grupo 2", "row": 1, "cells": ["·"], "states": ["idle"]},
+      note: "Estado de clase. El clúster 2 aparece vacío y el 9 pertenece al grupo 2 por su prefijo.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k2", row: "u", from: 8, to: 11, label: "cluster 2" },
+      ],
+      caption: "Entrada: x = 9 = ⟨2,1⟩.",
     },
     {
-      note: "Inicializa el grupo 2 con sufijo 1. Agrega 2 al resumen.",
-      arrays: [
-        {"id": "row-0", "label": "Resumen", "row": 0, "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "answer", "idle"]},
-        {"id": "row-1", "label": "Grupo 2", "row": 1, "cells": ["1"], "states": ["answer"]},
+      note: "9 pertenece al clúster 2, pero ese clúster está vacío. Sin máximo local no hay candidato dentro del grupo, así que no recurre dentro de él.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9,state:"active"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2",state:"marked"},{value:3,tag:"3"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k2", row: "u", from: 8, to: 11, label: "cluster 2", state: "marked" },
+      ],
+      caption: "Clúster 2 vacío: no hay máximo contra el que comparar.",
     },
     {
-      note: "Para borrar el mínimo 2, localiza el primer grupo ocupado, 0.",
-      arrays: [
-        {"id": "row-0", "label": "Mínimo", "row": 0, "cells": ["2"], "states": ["active"]},
-        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["answer", "idle", "idle", "idle"]},
-        {"id": "row-2", "label": "Grupo 0", "row": 2, "cells": ["3"], "states": ["idle"]},
+      note: "Recurre sobre el resumen para hallar el siguiente clúster ocupado tras c = 2. En el resumen, el sucesor de 2 es 3.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9,state:"active"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2",state:"active"},{value:3,tag:"3",state:"answer"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k2", row: "u", from: 8, to: 11, label: "cluster 2" },
+      ],
+      caption: "Sucesor de c = 2 en el resumen: c′ = 3.",
     },
     {
-      note: "El 3 asciende a mínimo global y desaparece como entrada del clúster 0.",
-      arrays: [
-        {"id": "row-0", "label": "Mínimo", "row": 0, "cells": ["3"], "states": ["answer"]},
-        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["1", "2", "3"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-2", "label": "Grupo 0", "row": 2, "cells": ["·"], "states": ["idle"]},
+      note: "Del clúster 3 sólo se lee su mínimo local, 2, en tiempo constante. No hay una segunda búsqueda recursiva.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9,state:"active"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3",state:"answer"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2",state:"answer"},{value:3,tag:"3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "k3", row: "u", from: 12, to: 15, label: "cluster 3", state: "marked" },
+      ],
+      caption: "Mínimo de cluster 3 = 2.",
+    },
+    {
+      note: "Reconstruye 4·3+2 = 14. El sucesor de 9 es 14, que está en el grupo siguiente.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14,state:"answer"},{value:15}] },
+      ],
+      spans: [
+        { id: "k3", row: "u", from: 12, to: 15, label: "cluster 3", state: "marked" },
+      ],
+      caption: "Resultado: 4·3+2 = 14.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+### Predecesor
 
-La rama del sucesor se decide comparando el sufijo consultado con el máximo local. Si hay candidato dentro del grupo, el orden por prefijo garantiza que cualquier clúster posterior tendría una llave mayor. Si no hay candidato local, el primer grupo ocupado posterior es suficiente. Dentro de ese grupo basta leer su mínimo guardado. Este último paso explica por qué consultar el resumen no exige otra búsqueda recursiva en el clúster encontrado.
+Es simétrico. Se devuelve $V.\max$ si $x > V.\max$ y nulo si $x \le V.\min$. Si $i$ es mayor que el mínimo del clúster, el predecesor está dentro: se recurre allí. Si no, se busca el clúster ocupado anterior $c'$ en el resumen y se toma su máximo. Hay un caso propio: si $c'$ no existe, el mínimo global ($V.\min$) es la respuesta, porque el mínimo no vive en ningún clúster. Por ejemplo, Predecesor(3) da 2: el clúster 0 tiene mínimo 3 y $3 > 3$ es falso; el resumen no tiene clúster anterior a 0; la respuesta es $V.\min = 2$.
 
-## Análisis de complejidad
+### Insertar: el clúster vacío sólo cuesta una llamada
 
-La división reduce aproximadamente a la mitad la longitud $w$ de la palabra. En sucesor se recurre dentro de un clúster **o** al resumen. En inserción, sólo hay recursión en el resumen si el clúster estaba vacío, caso en que inicializarlo es constante. En eliminación, el resumen cambia si desaparece el último elemento de un clúster, caso en que vaciarlo es constante. Por tanto $T(w)\le T(\lceil w/2\rceil)+O(1)=O(\lg w)=O(\lg\lg u)$. La representación densa reserva espacio en función del universo. La versión compacta de Enteros II guarda sólo clústeres ocupados en un diccionario. Cada llave puede dejar información en $O(\lg w)$ escalas, de donde sale la cota de espacio $O(n\lg w)$ para esa versión. Si se usa hashing, el costo de consultar el diccionario es esperado.
+Insertar $x = \langle c, i\rangle$ mete $i$ en el clúster $c$ y, si el clúster estaba vacío, también $c$ en el resumen. Hay dos llamadas posibles, pero una es trivial: insertar en una estructura vacía sólo asigna min y max.
 
-### Cómo justificar la cota en el examen
+1. Si la estructura está vacía, fija $\min = \max = x$ y termina.
+2. Si $x$ ya es $\min$ o $\max$, termina sin cambios.
+3. Si $x < V.\min$, intercambia $x$ con $V.\min$. El mínimo anterior es el que se inserta ahora; así el primer elemento de cada clúster siempre es su min.
+4. Si el clúster $c$ está vacío, inserta $c$ en el resumen (recursión costosa) y fija $\min = \max = i$ en $O(1)$. Si no, inserta $i$ en el clúster (recursión costosa). Sólo una de las dos es costosa.
+5. Si $x > V.\max$, actualiza $V.\max = x$.
 
-Escribe la recurrencia en bits, $T(w)le T(lceil w/2
-ceil)+O(1)$. En una actualización pueden cambiar tanto el resumen como un clúster, así que debes explicar por qué eso no duplica el término recursivo. Cuando aparece un clúster, era vacío y se inicializa con extremos iguales. Cuando desaparece, tenía un único elemento. En esos casos la modificación local es constante y sólo el resumen puede requerir recursión no trivial.
+#### Insertar 9
 
-## Tabla de complejidad
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado de clase. 9 = ⟨2,1⟩ es mayor que min 2, así que no hay intercambio con el mínimo.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+      ],
+      caption: "Entrada: insertar 9 = ⟨2,1⟩.",
+    },
+    {
+      note: "El clúster 2 está vacío. Su min y max son nulos, así que hay que registrar c = 2 en el resumen. Aquí sí hay recursión costosa.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9,state:"active"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2",state:"active"},{value:3,tag:"3"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+      ],
+      spans: [
+        { id: "k2", row: "u", from: 8, to: 11, label: "cluster 2", state: "marked" },
+      ],
+      caption: "Insertar(resumen, 2): única llamada costosa.",
+    },
+    {
+      note: "El resumen pasa a {0,1,2,3}. Ahora fija min = max = 1 en el clúster 2. Eso es O(1) porque el clúster estaba vacío, así que no hay recursión.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9,state:"active"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2",state:"answer"},{value:3,tag:"3"}] },
+        { id: "c2", label: "Cluster 2", cells: [{value:"·",tag:"0"},{value:1,tag:"1",state:"answer"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+      ],
+      spans: [
+        { id: "k2", row: "u", from: 8, to: 11, label: "cluster 2", state: "marked" },
+      ],
+      caption: "min = max = 1 en el clúster 2.",
+    },
+    {
+      note: "9 ≤ max 15: el máximo global no cambia. La inserción terminó con una sola llamada costosa.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:9,state:"answer"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+      ],
+      caption: "Resultado: el conjunto incluye 9.",
+    },
+  ],
+}} />
 
-La tabla superior usa las unidades de costo de la explicación.
+### Eliminar: el mínimo sube desde un clúster
 
-## Ejemplos
+Si borras el mínimo global, el nuevo mínimo es el mínimo del primer clúster no vacío. Ese mínimo vive en un clúster, así que hay que sacarlo de allí. Si el clúster queda vacío, se elimina su índice del resumen; la eliminación local era de un solo elemento y costó $O(1)$. Después se recalcula el máximo si hace falta.
 
-[Casos resueltos](/structures/van-emde-boas-tree/examples) y [preguntas con pistas](/structures/van-emde-boas-tree/exercises).
+#### Eliminar 2 (el mínimo)
 
-## Comparación con estructuras relacionadas
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado de clase. El mínimo 2 vive sólo en Extremos. El primer clúster ocupado es el 0, por el resumen {0,1,3}.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c0", label: "Cluster 0", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+      ],
+      caption: "Entrada: eliminar 2.",
+    },
+    {
+      note: "c = min del resumen = 0. El nuevo mínimo global es ⟨0, V.cluster[0].min⟩. El min del clúster 0 es 3, así que el nuevo mínimo es 3.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0",state:"active"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c0", label: "Cluster 0", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3",state:"marked"}] },
+      ],
+      caption: "Primer clúster ocupado: 0; su mínimo es 3.",
+    },
+    {
+      note: "El 3 sube a V.min y sale de su clúster para no repetirse. El clúster tenía un solo elemento, así que vaciarlo es O(1).",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 3"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0",state:"active"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c0", label: "Cluster 0", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3",state:"muted"}] },
+      ],
+      caption: "El 3 ya está en min; el clúster 0 quedó vacío.",
+    },
+    {
+      note: "El clúster 0 está vacío, así que Eliminar(resumen, 0) quita su índice. El resumen pasa de {0,1,3} a {1,3}. Como 3 ≠ max 15, el máximo no cambia.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 3"},{value:"max 15"}] },
+        { id: "s", label: "Resumen", cells: [{value:"·",tag:"0",state:"muted"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c0", label: "Cluster 0", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:"·",tag:"2"},{value:"·",tag:"3"}] },
+      ],
+      caption: "Resumen final {1,3}; conjunto {3,4,5,7,14,15}.",
+    },
+  ],
+}} />
 
-Un BST divide el conjunto según llaves presentes. vEB divide el universo y utiliza resumen y extremos para evitar dos llamadas recursivas no triviales.
+## De dónde sale la cota
 
-## Prueba de dominio
+Cada operación hace trabajo $O(1)$ en el nivel actual y como mucho **una** llamada no trivial, y esa llamada opera sobre un subproblema de tamaño $\sqrt{u}$:
 
-[Lista de comprobación](/structures/van-emde-boas-tree/mastery-check).
+- Sucesor y predecesor: recurren en el clúster o en el resumen, nunca en ambos.
+- Insertar: si el clúster estaba vacío, su inicialización es constante y sólo queda la recursión en el resumen; si no, sólo recurre en el clúster.
+- Eliminar: si el clúster queda vacío, su eliminación fue constante y sólo queda la recursión en el resumen.
 
-*Fuente de clase: Sem11_Integers_I.pdf · pp. 27-60.*
+Con esto la recurrencia es
+
+$$T(u) \le T(\sqrt{u}) + O(1).$$
+
+Mirémosla nivel por nivel, usando $w = \lg u$ bits:
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nivel 0: universo u=16, que son w=4 bits. Se hace O(1) trabajo y se pasa a un subproblema.",
+      rows: [
+        { id: "u", label: "u", cells: [{value:16,tag:"0",state:"active"},{value:4,tag:"1"},{value:2,tag:"2"}] },
+        { id: "w", label: "bits w", cells: [{value:4,tag:"0",state:"active"},{value:2,tag:"1"},{value:1,tag:"2"}] },
+      ],
+      caption: "w se reduce a la mitad en cada nivel.",
+    },
+    {
+      note: "Nivel 1: u=4, es decir, w=2 bits. Otra llamada con O(1) trabajo. El tamaño del problema sigue siendo la raíz del anterior.",
+      rows: [
+        { id: "u", label: "u", cells: [{value:16,tag:"0"},{value:4,tag:"1",state:"active"},{value:2,tag:"2"}] },
+        { id: "w", label: "bits w", cells: [{value:4,tag:"0"},{value:2,tag:"1",state:"active"},{value:1,tag:"2"}] },
+      ],
+      caption: "w pasa de 4 a 2.",
+    },
+    {
+      note: "Nivel 2: u=2, w=1 bit. Es el caso base: min y max deciden sin más recursión.",
+      rows: [
+        { id: "u", label: "u", cells: [{value:16,tag:"0"},{value:4,tag:"1"},{value:2,tag:"2",state:"active"}] },
+        { id: "w", label: "bits w", cells: [{value:4,tag:"0"},{value:2,tag:"1"},{value:1,tag:"2",state:"active"}] },
+      ],
+      caption: "Caso base: u = 2.",
+    },
+    {
+      note: "Hay lg w + 1 niveles, y como w = lg u, la altura es O(lg lg u). Cada nivel cuesta O(1), así que el total es O(lg w) = O(lg lg u).",
+      rows: [
+        { id: "u", label: "u", cells: [{value:16,tag:"0",state:"answer"},{value:4,tag:"1",state:"answer"},{value:2,tag:"2",state:"answer"}] },
+        { id: "w", label: "bits w", cells: [{value:4,tag:"0",state:"answer"},{value:2,tag:"1",state:"answer"},{value:1,tag:"2",state:"answer"}] },
+      ],
+      caption: "Total: O(lg w) = O(lg lg u).",
+    },
+  ],
+}} />
+
+Para un universo de $2^{32}$ valores, $\lg u = 32$: la recursión tiene del orden de cinco niveles de división (32, 16, 8, 4, 2, 1 bits). Eso es mucho menos que $\lg n$ cuando $n$ es grande.
+
+## Por qué sólo se recorre una rama
+
+La figura del sucesor ya mostró la decisión: en cada nivel se compara el sufijo con el máximo del clúster. Si hay candidato, la respuesta está dentro de ese clúster, y los clústeres posteriores tendrían llaves mayores, así que el resumen no hace falta. Si no hay candidato, el primer clúster ocupado posterior es suficiente, y su mínimo se lee en $O(1)$. Una segunda búsqueda sobre el clúster encontrado no existe.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Vista recursiva del universo u=16. Cada nivel parte u en √u: cuatro clústeres de u=4 y un resumen de u=4. Los clústeres son subárboles, no claves sueltas.",
+      nodes: [
+        { id: "r", value: "u=16", parent: null },
+        { id: "sA", value: "resumen u=4", parent: "r", collapsed: true },
+        { id: "c0", value: "clúster 0 u=4", parent: "r", collapsed: true },
+        { id: "c1", value: "clúster 1 u=4", parent: "r", collapsed: true },
+        { id: "c2", value: "clúster 2 u=4", parent: "r", collapsed: true },
+        { id: "c3", value: "clúster 3 u=4", parent: "r", collapsed: true },
+        { id: "c1s", value: "resumen u=2", parent: "c1" },
+        { id: "c1a", value: "sub 0 u=2", parent: "c1" },
+        { id: "c1b", value: "sub 1 u=2", parent: "c1" },
+      ],
+      highlight: [],
+      caption: "Raíz: el universo completo.",
+    },
+    {
+      note: "Sucesor(5) empieza en la raíz con x=5=⟨1,1⟩. El clúster 1 tiene máximo 3 > 1, así que la rama activa es la del clúster.",
+      nodes: [
+        { id: "r", value: "u=16", parent: null, state: "active" },
+        { id: "sA", value: "resumen u=4", parent: "r", collapsed: true, state: "muted" },
+        { id: "c0", value: "clúster 0 u=4", parent: "r", collapsed: true },
+        { id: "c1", value: "clúster 1 u=4", parent: "r", collapsed: true, state: "active" },
+        { id: "c2", value: "clúster 2 u=4", parent: "r", collapsed: true },
+        { id: "c3", value: "clúster 3 u=4", parent: "r", collapsed: true },
+        { id: "c1s", value: "resumen u=2", parent: "c1" },
+        { id: "c1a", value: "sub 0 u=2", parent: "c1" },
+        { id: "c1b", value: "sub 1 u=2", parent: "c1" },
+      ],
+      highlight: ["r", "c1"],
+      caption: "Rama del clúster 1. El resumen (atenuado) no se visita.",
+    },
+    {
+      note: "Dentro del clúster 1, el sufijo 1 y el sub 0 tiene máximo 1, así que ese sub no tiene candidato. Se consulta el resumen de u=2, y el sub 1 nunca se visita.",
+      nodes: [
+        { id: "r", value: "u=16", parent: null, state: "shared" },
+        { id: "sA", value: "resumen u=4", parent: "r", collapsed: true, state: "muted" },
+        { id: "c0", value: "clúster 0 u=4", parent: "r", collapsed: true, state: "muted" },
+        { id: "c1", value: "clúster 1 u=4", parent: "r", collapsed: true, state: "active" },
+        { id: "c2", value: "clúster 2 u=4", parent: "r", collapsed: true, state: "muted" },
+        { id: "c3", value: "clúster 3 u=4", parent: "r", collapsed: true, state: "muted" },
+        { id: "c1s", value: "resumen u=2", parent: "c1", state: "answer" },
+        { id: "c1a", value: "sub 0 u=2", parent: "c1", state: "marked" },
+        { id: "c1b", value: "sub 1 u=2", parent: "c1", state: "muted" },
+      ],
+      highlight: ["c1", "c1s"],
+      caption: "Dentro del clúster: sub 0 descartado, resumen consultado, sub 1 no visitado.",
+    },
+  ],
+}} />
+
+## Complejidad
+
+| Operación | Costo | Nota |
+| --- | --- | --- |
+| Sucesor, predecesor | $O(\lg\lg u)$ | una sola rama no trivial por nivel |
+| Insertar, eliminar | $O(\lg\lg u)$ | clúster vacío o singleton cuesta $O(1)$ |
+| Espacio, versión densa | $\Theta(u)$ | reserva todos los clústeres aunque estén vacíos |
+| Espacio, versión compacta | $O(n\lg\lg u)$ | sólo clústeres ocupados en un diccionario hash |
+
+En la versión densa, la recurrencia del espacio es $S(u) = (\sqrt{u}+1)\,S(\sqrt{u}) + O(1)$, con solución $S(u) = \Theta(u)$. Con $w = 32$ eso significa unos $4\cdot 10^9$ celdas aunque el conjunto tenga diez elementos, y con $w = 64$ ni siquiera cabe en memoria.
+
+### Ahorrar espacio: tabla hash en lugar de arreglo de clústeres
+
+Para no reservar clústeres vacíos, $V.\text{cluster}[c]$ pasa a ser una entrada de una tabla hash que sólo existe cuando el clúster no está vacío. Con hashing perfecto dinámico, buscar y crear una entrada cuestan $O(1)$ esperado. El espacio se mide en registros: cada inserción deja $O(1)$ registros por nivel de recursión y hay $\lg w$ niveles, así que el total es $O(n\lg w)$. Con $w = 32$ y 1024 llaves, la medida en clase fue de 3,3 a 3,9 registros por llave.
+
+Otra forma de verlo es el árbol binario perfecto de altura $w$ sobre los $u$ bits: cada nodo vale el OR de sus hijos. Buscar el último 1 en el camino de $x$ es una búsqueda binaria de $O(\lg w)$ sobre la profundidad, pero actualizar cuesta $O(w)$ y el espacio sigue siendo $\Theta(u)$. Por eso la versión con tabla hash es la que cabe en memoria.
+
+## Errores típicos y casos límite
+
+- **Universo vacío**: si $V.\min$ es nulo, sucesor y predecesor devuelven nulo sin mirar los clústeres.
+- **Un solo elemento**: $\min = \max$. Insertar otro cambia sólo uno de los extremos; eliminar el único deja la estructura vacía.
+- **Duplicados**: un $x$ igual a $\min$ o $\max$ no cambia nada al insertar.
+- **Mínimo fuera de los clústeres**: al eliminar, no se busca $V.\min$ dentro de un clúster: se promueve el mínimo del primer clúster ocupado, y ese valor sale de allí.
+- **Predecesor sin grupo anterior**: devuelve $V.\min$, porque el mínimo no está en ningún clúster.
+
+## Conexión
+
+Prerrequisito: [Predecesor y sucesor sobre enteros](/structures/integer-predecessor). El BST ordenado de otras semanas sirve de contraste: divide el conjunto según las llaves presentes, mientras vEB divide el universo. Para ver sus casos resueltos y las preguntas de examen: [Casos resueltos](/structures/van-emde-boas-tree/examples) y [Preguntas de examen](/structures/van-emde-boas-tree/exercises). Prueba final: [Prueba de dominio](/structures/van-emde-boas-tree/mastery-check).
+
+*Fuente de clase: Sem11_Integers_I.pdf, pp. 27–60; Sem11_Integers_II.pdf, pp. 7–24 (versión compacta y vista de árbol).*

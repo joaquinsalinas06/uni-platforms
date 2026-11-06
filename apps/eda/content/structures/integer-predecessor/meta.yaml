@@ -3,7 +3,7 @@ title: Predecesor entero y modelos de cómputo
 type: concept
 week: week-11
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites: []
 complexity:
   Vecino en arreglo ordenado:

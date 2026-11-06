@@ -3,7 +3,7 @@ title: Función prefijo y KMP
 type: algorithm
 week: week-12
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites: []
 complexity:
   Preparación y búsqueda:

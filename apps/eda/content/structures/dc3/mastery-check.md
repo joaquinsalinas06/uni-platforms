@@ -2,11 +2,12 @@
 kind: mastery
 title: Prueba de dominio
 canExplain:
-- Para comparar un sufijo 0 con uno 2, ¿cuántas letras debes retirar antes de mirar rangos si hay
-  empate?
-- ¿Por qué reducir el problema a dos tercios da tiempo lineal?
+- Por qué basta ordenar sólo dos tercios de los sufijos y deducir el resto
+- Cuántas letras hacen falta al comparar residuo 0 con residuo 1, y cuántas con residuo 2
+- Por qué un nombre de tripleta repetido obliga a la recursión
 canDo:
-- ¿Qué residuos entran en la muestra?
-- Para comparar un sufijo 0 con uno 2, ¿cuántas letras debes retirar antes de mirar rangos si hay
-  empate?
+- Partir las posiciones de mississippi en tres clases por residuo módulo 3
+- Nombrar las tripletas de la muestra y construir la cadena reducida R
+- Ordenar B0 por el par (letra, rango de la cola) y mezclarlo con la muestra
+- Justificar con una suma geométrica que la recurrencia T(n) = T(2n/3) + O(n) es lineal
 ---

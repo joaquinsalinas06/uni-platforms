@@ -5,192 +5,559 @@ title: "Aho–Corasick"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Buscar por separado cada patrón en el mismo texto repite recorridos. Queremos que un solo estado represente la parte útil de lo que acabamos de leer.
+Sea $D$ un diccionario de $k$ patrones $S_1, \ldots, S_k$ y $T$ un texto de longitud $n$. Buscar cada patrón con [KMP](/structures/knuth-morris-pratt) cuesta una pasada completa de $T$ por patrón: con $k$ patrones, $k \cdot n$ lecturas del texto. Con $D$ = he, she, his, hers y el texto ushers (seis letras), eso son cuatro pasadas de seis letras para encontrar cuatro palabras que comparten casi todas sus letras.
 
-## Intuición
+La pregunta de esta estructura es: ¿se puede leer el texto **una sola vez** y reportar todos los patrones que terminan en cada posición?
 
-El trie contiene los prefijos de todos los patrones. Si la siguiente letra no prolonga el estado, un enlace de fallo conserva el sufijo más largo que todavía es prefijo de algún patrón.
+## Intuición dibujada
 
-## Estructura interna
+El [trie](/structures/trie) de $D$ guarda los prefijos de todos los patrones en un solo árbol. Si el texto va leyéndose letra a letra, el nodo en el que estamos es el prefijo de algún patrón que coincide con lo último leído. Cuando la siguiente letra no tiene arista en ese nodo, en vez de volver a la raíz se usa un **enlace de fallo** que lleva al sufijo más largo de lo leído que todavía es prefijo de algún patrón.
 
-El estado representa el sufijo más largo del texto leído que aparece en el trie. El enlace de fallo va a un sufijo propio de menor profundidad. Una coincidencia puede aparecer en el estado actual o en un terminal alcanzable por enlaces de salida.
-
-### Construir el fallo a partir de un estado más corto
-
-Los hijos de la raíz fallan al estado vacío. Supón que ya conoces el fallo de un nodo y quieres calcular el del hijo que añade una letra. Pregunta si el estado de fallo del padre puede extenderse con esa letra. Si no, continúa por fallos más cortos hasta poder extender o llegar a la raíz. La búsqueda en anchura garantiza que esas transiciones de estados menos profundos ya se resolvieron. Para she, el fallo de sh conserva h y añadir e desde h conduce a he.
-
-### Distinguir transición, fallo y reporte
-
-La transición de búsqueda consume la siguiente letra. Si la arista directa falta, los fallos que se recorren antes de consumirla preservan sufijos compatibles. El reporte ocurre después de saber cuál es el nuevo estado. Un estado terminal da una coincidencia por sí mismo. Sus terminales de salida corresponden a patrones más cortos que terminaron exactamente en la misma posición. En ushers, she y he se reportan al consumir e, y al consumir r se conserva he para llegar a her. Son usos distintos del mismo conocimiento de sufijos.
-
-Cuando piden sólo conteos, cada visita a un estado terminal largo contribuye también a sus fallos terminales. Procesar estados de mayor a menor profundidad permite sumar todas esas contribuciones una sola vez por arista de fallo.
-
-## Operaciones
-
-Construye fallos en orden BFS, desde prefijos cortos hacia largos. Para buscar, sigue la transición de la letra actual, resolviendo el fallo si falta la arista directa. Reporta todos los terminales relevantes, o acumula visitas y propágalas por fallos en orden BFS inverso si sólo se quieren conteos.
-
-### Enlaces de fallo sobre he, she, his y hers
+El primer diagrama es el trie completo. Los nodos ámbar son los terminales, es decir, los prefijos que son patrones completos.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "Las ramas h y s nacen en el prefijo vacío.",
+      note: "Trie de D = {he, she, his, hers}. Hay 9 nodos además de la raíz ε, porque los prefijos h, s, he, hi, sh se comparten. Un nodo es terminal (ámbar) si su cadena es un patrón completo: he, she, his y hers. Los demás son sólo prefijos y no reportan nada por sí solos.",
       nodes: [
-        {"id": "r", "value": "ε", "parent": null, "state": "active"},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh"},
-        {"id": "hi", "value": "hi", "parent": "h"},
-        {"id": "his", "value": "his", "parent": "hi"},
-        {"id": "her", "value": "her", "parent": "he"},
-        {"id": "hers", "value": "hers", "parent": "her"},
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
       ],
-    },
-    {
-      note: "El sufijo h de sh es un prefijo existente. Enlaza sh con h.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r", "state": "answer"},
-        {"id": "he", "value": "he", "parent": "h"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s", "state": "active"},
-        {"id": "she", "value": "she", "parent": "sh"},
-        {"id": "hi", "value": "hi", "parent": "h"},
-        {"id": "his", "value": "his", "parent": "hi"},
-        {"id": "her", "value": "her", "parent": "he"},
-        {"id": "hers", "value": "hers", "parent": "her"},
-      ],
-      links: [
-        {"to": "h", "kind": "pointer", "label": "fallo", "from": "sh"},
-      ],
-    },
-    {
-      note: "El sufijo he de she también existe y es terminal. Se deben reportar ambas palabras.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh", "state": "active"},
-        {"id": "hi", "value": "hi", "parent": "h"},
-        {"id": "his", "value": "his", "parent": "hi"},
-        {"id": "her", "value": "her", "parent": "he"},
-        {"id": "hers", "value": "hers", "parent": "her"},
-      ],
-      links: [
-        {"to": "he", "kind": "pointer", "label": "fallo", "from": "she"},
-      ],
-    },
-    {
-      note: "El sufijo s de hers existe, pero s no es terminal. No añade una coincidencia.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h"},
-        {"id": "s", "value": "s", "parent": "r", "state": "marked"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh"},
-        {"id": "hi", "value": "hi", "parent": "h"},
-        {"id": "his", "value": "his", "parent": "hi"},
-        {"id": "her", "value": "her", "parent": "he"},
-        {"id": "hers", "value": "hers", "parent": "her", "state": "active"},
-      ],
-      links: [
-        {"to": "s", "kind": "pointer", "label": "fallo", "from": "hers"},
-      ],
+      caption: "Trie de D. Ámbar = terminal, es decir, patrón completo.",
     },
   ],
 }} />
 
-### Leer ushers sin retroceder en el texto
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $V$ | nodos del trie, incluida la raíz $\varepsilon$ | crecen la tabla de transiciones y el trabajo de construcción |
+| $\Sigma$ | alfabeto de los caracteres que aparecen | cada nodo tiene $\lvert\Sigma\rvert$ transiciones en la tabla completa |
+| $\sum_i \lvert S_i \rvert$ | caracteres totales del diccionario | es la cantidad de aristas que crea el trie al insertar |
+| $\mathrm{fail}(v)$ | nodo del sufijo propio más largo de $\mathrm{str}(v)$ que también es nodo del trie | define el retroceso al fallar una transición |
+| $\delta(v, c)$ | nodo al que se llega desde $v$ leyendo $c$, ya con los fallos resueltos | es la única transición que se consulta al leer el texto |
+| $\mathrm{dic}(v)$ | primer terminal en la cadena de fallos de $v$, sin contar a $v$ | salta a la siguiente coincidencia sin recorrer nodos vacíos |
+| $z$ | número de coincidencias emitidas | es el costo de reportar, uno por ocurrencia |
+
+El enlace de fallo se define así: para un nodo $v$ con $\mathrm{str}(v) \neq \varepsilon$, $\mathrm{fail}(v)$ es el nodo del sufijo propio más largo de $\mathrm{str}(v)$ que también es nodo del trie. La raíz falla a sí misma. Los hijos de la raíz fallan a la raíz, por eso sus fallos no se dibujan.
+
+## Enlaces de fallo, nivel por nivel
+
+La construcción procede por niveles, de arriba hacia abajo: primero los nodos de profundidad 1, luego 2, y así. Para un hijo $u = \delta(v, c)$ del nodo $v$, el algoritmo hace lo siguiente:
+
+1. Toma el fallo del padre, $f = \mathrm{fail}(v)$. Ese nodo tiene profundidad menor, así que ya está resuelto.
+2. Pregunta si $f$ puede extenderse con $c$, es decir, si $\delta(f, c)$ existe como hijo de $f$.
+3. Si existe, $\mathrm{fail}(u) = \delta(f, c)$: el sufijo propio más largo que se puede extender con $c$ es el de $f$ extendido.
+4. Si no, sube por fallos hasta un nodo que sí tenga hijo $c$, o hasta la raíz. Como el estado de $f$ ya fue calculado, este salto cuesta lo que ya está en la tabla.
+
+Con el trie de $D$, los fallos se calculan así. Un nodo que falla a la raíz no se dibuja.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Desde ε, u no inicia ningún patrón.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["active", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Estado", "row": 1, "cells": ["ε"], "states": ["answer"]},
+      note: "Nivel 1. Miro h y s, hijos de la raíz. Su padre es ε y ε no tiene sufijo propio no vacío, así que fallan a la raíz. No hay nada que calcular: no se dibuja ningún enlace.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e", state: "active" },
+        { id: "s", value: "s", parent: "e", state: "active" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
       ],
-      bridges: [],
+      caption: "Nivel 1: fail(h) = fail(s) = ε (no se dibuja).",
     },
     {
-      note: "s inicia la rama s.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "active", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Estado", "row": 1, "cells": ["s"], "states": ["answer"]},
+      note: "Nivel 2. Miro sh, hijo de s con la letra h. Su padre s falla a ε, y δ(ε, h) = h existe. Entonces fail(sh) = h: el sufijo h de sh es un nodo del trie. Para he y hi, el sufijo de longitud uno es e o i, que no existen como hijos de la raíz, así que también fallan a ε.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s", state: "active" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
       ],
-      bridges: [],
+      links: [
+        { from: "sh", to: "h", kind: "pointer", dash: true },
+      ],
+      caption: "Nivel 2: fail(sh) = h. fail(he) = fail(hi) = ε.",
     },
     {
-      note: "h extiende el prefijo a sh.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "active", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Estado", "row": 1, "cells": ["sh"], "states": ["answer"]},
+      note: "Nivel 3. Miro she, hijo de sh con la letra e. Su padre sh tiene fail(sh) = h. Pregunto si h puede extenderse con e: δ(h, e) = he existe. Entonces fail(she) = he. Ese fallo es importante más adelante, porque he es terminal.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "active" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
       ],
-      bridges: [],
+      links: [
+        { from: "sh", to: "h", kind: "pointer", dash: true },
+        { from: "she", to: "he", kind: "pointer", dash: true },
+      ],
+      caption: "Nivel 3: fail(she) = he, porque δ(h, e) = he.",
     },
     {
-      note: "e completa she y su salida he. Ambas ocurrencias terminan aquí.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "idle", "active", "idle", "idle"]},
-        {"id": "row-1", "label": "Coincidencias", "row": 1, "cells": ["she", "he"], "states": ["answer", "answer"]},
+      note: "Nivel 3, otro nodo. Miro his, hijo de hi con la letra s. Su padre hi falla a ε, y δ(ε, s) = s existe. Entonces fail(his) = s. El sufijo s de his es un nodo del trie, aunque no es terminal.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "active" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
       ],
-      bridges: [],
+      links: [
+        { from: "sh", to: "h", kind: "pointer", dash: true },
+        { from: "she", to: "he", kind: "pointer", dash: true },
+        { from: "his", to: "s", kind: "pointer", dash: true },
+      ],
+      caption: "Nivel 3: fail(his) = s, porque δ(ε, s) = s.",
     },
     {
-      note: "r no prolonga she. El fallo lleva a he y la misma r prolonga a her.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "idle", "idle", "active", "idle"]},
-        {"id": "row-1", "label": "Transición", "row": 1, "cells": ["she", "he", "her"], "states": ["muted", "marked", "answer"]},
+      note: "Nivel 3, último. Miro her, hijo de he con la letra r. Su padre he falla a ε, y δ(ε, r) no existe: la raíz no tiene hijo r. Entonces fail(her) = ε y no se dibuja.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he", state: "active" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
       ],
-      bridges: [],
+      links: [
+        { from: "sh", to: "h", kind: "pointer", dash: true },
+        { from: "she", to: "he", kind: "pointer", dash: true },
+        { from: "his", to: "s", kind: "pointer", dash: true },
+      ],
+      caption: "Nivel 3: fail(her) = ε, porque la raíz no tiene hijo r.",
     },
     {
-      note: "s completa hers. En total hubo tres coincidencias.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "idle", "idle", "idle", "active"]},
-        {"id": "row-1", "label": "Coincidencias totales", "row": 1, "cells": ["she", "he", "hers"], "states": ["answer", "answer", "answer"]},
+      note: "Nivel 4. Miro hers, hijo de her con la letra s. Su padre her falla a ε, y δ(ε, s) = s existe. Entonces fail(hers) = s. Igual que en his, el sufijo s no es terminal, así que no añade coincidencias.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "active" },
       ],
-      bridges: [],
+      links: [
+        { from: "sh", to: "h", kind: "pointer", dash: true },
+        { from: "she", to: "he", kind: "pointer", dash: true },
+        { from: "his", to: "s", kind: "pointer", dash: true },
+        { from: "hers", to: "s", kind: "pointer", dash: true },
+      ],
+      caption: "Nivel 4: fail(hers) = s. Todos los fallos del trie están calculados.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+Los cuatro enlaces que quedan dibujados son los fallos de los nodos no triviales. Ninguno apunta a un nodo más profundo que el suyo: el fallo siempre es estrictamente más corto, y por eso la construcción por niveles termina.
 
-El enlace de fallo conserva el mayor sufijo que aún puede extenderse como prefijo de algún patrón. Un enlace de salida permite recorrer los terminales de esa cadena. Es útil dibujarlos con roles distintos: un estado puede servir para continuar, aunque no corresponda a una palabra completa. La construcción en BFS permite consultar los fallos de prefijos más cortos al calcular uno nuevo.
+## Enlaces de diccionario
 
-## Análisis de complejidad
+Un terminal no siempre está solo en su cadena de fallos. $\mathrm{dic}(v)$ es el primer terminal que aparece al seguir fallos desde $v$, sin contar a $v$. Se calcula al crear el fallo:
 
-Para $V$ nodos y alfabeto $\Sigma$, completar todas las transiciones cuesta $O(V|\Sigma|)$. Con ese autómata, leer $n$ caracteres cuesta $O(n)$ y emitir $z$ coincidencias añade $O(z)$. Si sólo se piden conteos, sumar visitas a cada fallo en orden BFS inverso cuesta $O(n+V)$ después del preprocesamiento. El costo de listar coincidencias y el de contarlas son preguntas distintas.
+- Si $\mathrm{fail}(v)$ es terminal, $\mathrm{dic}(v) = \mathrm{fail}(v)$.
+- Si no, $\mathrm{dic}(v) = \mathrm{dic}(\mathrm{fail}(v))$.
 
-### Cómo justificar la cota en el examen
+Así, cada nodo guarda un único salto a la siguiente coincidencia más corta que termina en la misma posición.
 
-Distingue construcción y consulta. Materializar todas las transiciones cuesta $O(V|Sigma|)$, una entrada por nodo y letra. Con esa tabla el texto cuesta $O(n)$ de recorrer. Si se emiten $z$ coincidencias, sumar $O(z)$ es indispensable porque varias pueden terminar en la misma posición. Para conteos, propagar una vez por nodo después del recorrido reemplaza la enumeración, dando $O(n+V)$ tras construir.
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes de los enlaces de diccionario, los terminales. Son los cuatro patrones, y cada uno se reporta cuando el estado llega a él.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      caption: "Terminales: he, she, his, hers.",
+    },
+    {
+      note: "Miro she. Es terminal, así que se reporta ella misma. Pero su fallo es he, que también es terminal, y he termina en la misma posición del texto. Por eso dic(she) = he, y se reportan las dos.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "answer" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "active" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      links: [
+        { from: "she", to: "he", kind: "pointer", label: "dic" },
+      ],
+      caption: "dic(she) = he: al llegar a she se reportan she y he.",
+    },
+    {
+      note: "Miro hers. Su fallo es s, que no es terminal. Como s no es patrón, dic(s) tampoco existe: la cadena de fallos de hers no tiene terminales. Al llegar a hers sólo se reporta hers, y no se dibuja ningún enlace de diccionario.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "answer" },
+      ],
+      links: [
+        { from: "she", to: "he", kind: "pointer", label: "dic" },
+      ],
+      caption: "dic(hers) no existe: el fallo s no es terminal y dic(s) tampoco.",
+    },
+  ],
+}} />
 
-## Tabla de complejidad
+La distinción es importante: $\mathrm{fail}$ sirve para seguir leyendo, y $\mathrm{dic}$ sirve para reportar. Un nodo puede ser terminal sin tener dic, y puede tener dic sin ser terminal.
 
-La tabla superior usa las unidades de costo de la explicación.
+## Construcción por niveles y eliminación del while
 
-## Ejemplos
+Sin tabla, cada transición fallida exige un bucle que sube por fallos. El trabajo de la búsqueda sería entonces variable. La idea es completar la tabla de transiciones una vez, de modo que cada celda $\delta(v, c)$ sea una sola consulta. Para todo nodo $v$ y todo carácter $c$:
 
-[Casos resueltos](/structures/aho-corasick/examples) y [preguntas con pistas](/structures/aho-corasick/exercises).
+$$
+\delta(v, c) =
+\begin{cases}
+\text{hijo de } v \text{ con etiqueta } c & \text{si existe,} \\
+\delta(\mathrm{fail}(v), c) & \text{si no, con } \delta(\text{raíz}, c) = \text{raíz}.
+\end{cases}
+$$
 
-## Comparación con estructuras relacionadas
+El caso `si no` usa $\delta$ de un nodo de menor profundidad, así que la tabla se llena por niveles. La construcción sigue este orden:
 
-KMP usa la cadena de bordes de un patrón. Aho–Corasick usa una red de enlaces de fallo sobre un trie con varios patrones.
+1. Pon en una cola los hijos de la raíz. Para cada letra $c$ sin hijo en la raíz, $\delta(\text{raíz}, c) = \text{raíz}$.
+2. Saca un nodo $v$ de la cola. Para cada letra $c$: si $v$ tiene hijo $u$ con etiqueta $c$, calcula $\mathrm{fail}(u) = \delta(\mathrm{fail}(v), c)$, fija $\delta(v, c) = u$ y encola $u$.
+3. Si $v$ no tiene hijo con $c$, fija $\delta(v, c) = \delta(\mathrm{fail}(v), c)$. Ese valor ya existe porque $\mathrm{fail}(v)$ salió antes de la cola.
+4. Repite hasta vaciar la cola. Calcula $\mathrm{dic}$ al crear cada fallo.
 
-## Prueba de dominio
+La tabla completa del diccionario de ejemplo, con alfabeto h, e, i, s, r, es la siguiente. La fila `she`, columna `r`, es la transición que el ejemplo de la búsqueda necesita.
 
-[Lista de comprobación](/structures/aho-corasick/mastery-check).
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tabla δ completa. Cada fila es un nodo del trie y cada columna una letra. Una celda da el destino tras leer esa letra desde ese nodo, con fallos ya resueltos. Así leer el texto cuesta una búsqueda por carácter.",
+      rows: [
+        { id: "hdr", label: "letra", cells: [{ value: "h" }, { value: "e" }, { value: "i" }, { value: "s" }, { value: "r" }] },
+        { id: "n0", label: "ε", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+        { id: "n1", label: "h", cells: [{ value: "h" }, { value: "he" }, { value: "hi" }, { value: "s" }, { value: "ε" }] },
+        { id: "n2", label: "s", cells: [{ value: "sh" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+        { id: "n3", label: "he", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "her" }] },
+        { id: "n4", label: "hi", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "his" }, { value: "ε" }] },
+        { id: "n5", label: "sh", cells: [{ value: "h" }, { value: "she" }, { value: "hi" }, { value: "s" }, { value: "ε" }] },
+        { id: "n6", label: "her", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "hers" }, { value: "ε" }] },
+        { id: "n7", label: "his", cells: [{ value: "sh" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+        { id: "n8", label: "she", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "her" }] },
+        { id: "n9", label: "hers", cells: [{ value: "sh" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+      ],
+      caption: "V = 10 filas (incluida la raíz ε) por |Σ| = 5 columnas: 50 celdas.",
+    },
+    {
+      note: "Dos celdas a la vez. La fila she, columna r, es la que usa la búsqueda. she no tiene hijo r, así que su celda copia la de su fallo: δ(she, r) = δ(he, r). Como he sí tiene hijo r, δ(he, r) = her. La celda de he ya estaba calculada, así que no hace falta subir por fallos otra vez.",
+      rows: [
+        { id: "hdr", label: "letra", cells: [{ value: "h" }, { value: "e" }, { value: "i" }, { value: "s" }, { value: "r" }] },
+        { id: "n0", label: "ε", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+        { id: "n1", label: "h", cells: [{ value: "h" }, { value: "he" }, { value: "hi" }, { value: "s" }, { value: "ε" }] },
+        { id: "n2", label: "s", cells: [{ value: "sh" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+        { id: "n3", label: "he", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "her" }], states: ["idle", "idle", "idle", "idle", "marked"] },
+        { id: "n4", label: "hi", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "his" }, { value: "ε" }] },
+        { id: "n5", label: "sh", cells: [{ value: "h" }, { value: "she" }, { value: "hi" }, { value: "s" }, { value: "ε" }] },
+        { id: "n6", label: "her", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "hers" }, { value: "ε" }] },
+        { id: "n7", label: "his", cells: [{ value: "sh" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+        { id: "n8", label: "she", cells: [{ value: "h" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "her" }], states: ["idle", "idle", "idle", "idle", "answer"] },
+        { id: "n9", label: "hers", cells: [{ value: "sh" }, { value: "ε" }, { value: "ε" }, { value: "s" }, { value: "ε" }] },
+      ],
+      caption: "δ(she, r) = δ(he, r) = her. La celda marcada en he es la que se reutiliza.",
+    },
+  ],
+}} />
 
-*Fuente de clase: Sem12_Strings_I.pdf · pp. 32-45.*
+El coste de construir la tabla es $O(V\lvert\Sigma\rvert)$: una celda por nodo y letra, y cada celda se calcula en tiempo constante a partir de una celda ya calculada. En el ejemplo, son 10 nodos y 5 letras.
+
+## Búsqueda paso a paso sobre ushers
+
+Con la tabla construida, la búsqueda es corta:
+
+1. Empieza en la raíz $v = \varepsilon$.
+2. Por cada letra $T[i]$, haz $v = \delta(v, T[i])$. Es una sola consulta.
+3. Si $v$ es terminal, $u = v$. Si no, $u = \mathrm{dic}(v)$.
+4. Mientras $u$ exista, reporta el patrón de $u$ que termina en la posición $i$, y avanza $u = \mathrm{dic}(u)$.
+
+Sobre el texto `ushers`, $T = \text{u s h e r s}$, el estado activo se mueve así. Cada paso consume una letra y el nodo activo es el estado tras la transición.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Índice 0, letra u. La raíz no tiene hijo u, así que δ(ε, u) = ε. El estado se queda en la raíz y no hay nada que reportar.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active" },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      caption: "i = 0, u: estado ε.",
+    },
+    {
+      note: "Índice 1, letra s. La raíz sí tiene hijo s, así que δ(ε, s) = s. El estado pasa a s. Todavía no es terminal y no tiene dic, así que no se reporta nada.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e", state: "active" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      caption: "i = 1, s: estado s.",
+    },
+    {
+      note: "Índice 2, letra h. El estado s tiene hijo h, así que δ(s, h) = sh. El estado es sh, que no es terminal. Su dic tampoco existe porque su fallo h no es terminal, así que no se reporta.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "marked" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s", state: "active" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      links: [
+        { from: "sh", to: "h", kind: "pointer", dash: true },
+      ],
+      caption: "i = 2, h: estado sh. No hay reporte.",
+    },
+    {
+      note: "Índice 3, letra e. El estado sh tiene hijo e, así que δ(sh, e) = she. she es terminal y se reporta. Su dic es he, que también es terminal y se reporta en la misma posición 3. Son dos coincidencias en un solo paso.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "answer" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "active" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      links: [
+        { from: "she", to: "he", kind: "pointer", label: "dic" },
+      ],
+      caption: "i = 3, e: estado she. Reporta she y he.",
+    },
+    {
+      note: "Índice 4, letra r. El estado she no tiene hijo r, así que se sigue su fallo he. he sí tiene hijo r, y llegamos a her. El fallo es el único salto que hace falta: el texto no se relee. her no es terminal y no tiene dic, así que no se reporta.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h", state: "active" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he", state: "answer" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "marked" },
+      ],
+      links: [
+        { from: "she", to: "he", kind: "pointer", dash: true },
+      ],
+      caption: "i = 4, r: estado her. No hay reporte.",
+    },
+    {
+      note: "Índice 5, letra s. El estado her tiene hijo s, así que δ(her, s) = hers. hers es terminal y se reporta. Su dic no existe, porque su fallo s no es terminal.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "h", value: "h", parent: "e" },
+        { id: "s", value: "s", parent: "e" },
+        { id: "he", value: "he", parent: "h" },
+        { id: "hi", value: "hi", parent: "h" },
+        { id: "sh", value: "sh", parent: "s" },
+        { id: "her", value: "her", parent: "he" },
+        { id: "his", value: "his", parent: "hi", state: "marked" },
+        { id: "she", value: "she", parent: "sh", state: "marked" },
+        { id: "hers", value: "hers", parent: "her", state: "answer" },
+      ],
+      caption: "i = 5, s: estado hers. Reporta hers. Total: she, he, hers.",
+    },
+  ],
+}} />
+
+El mismo recorrido, con la letra, el estado y lo reportado en cada posición:
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Índice 0. La letra u deja el estado en ε. Nada se reporta.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "u" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["active", "idle", "idle", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "ε" }, { value: "s" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["active", "idle", "idle", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }] },
+      ],
+      caption: "Leyendo u.",
+    },
+    {
+      note: "Índice 1. La letra s lleva el estado a s. Nada se reporta: s no es patrón.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "u" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "active", "idle", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "ε" }, { value: "s" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "active", "idle", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }] },
+      ],
+      caption: "Leyendo s.",
+    },
+    {
+      note: "Índice 2. La letra h lleva el estado a sh. Nada se reporta: sh no es patrón y su dic no existe.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "u" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "active", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "ε" }, { value: "s" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "active", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }] },
+      ],
+      caption: "Leyendo h.",
+    },
+    {
+      note: "Índice 3. La letra e lleva el estado a she. Se reporta she y, por dic, he. Ambas terminan en la posición 3 del texto.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "u" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "active", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "ε" }, { value: "s" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "active", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "she, he" }, { value: "—" }, { value: "—" }], states: ["idle", "idle", "idle", "answer", "idle", "idle"] },
+      ],
+      caption: "Leyendo e: dos coincidencias.",
+    },
+    {
+      note: "Índice 4. La letra r pasa por el fallo de she, que es he, y llega a her. No es terminal, así que no se reporta.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "u" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "idle", "active", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "ε" }, { value: "s" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "idle", "active", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "she, he" }, { value: "—" }, { value: "—" }], states: ["idle", "idle", "idle", "answer", "idle", "idle"] },
+      ],
+      caption: "Leyendo r: sin nueva coincidencia.",
+    },
+    {
+      note: "Índice 5. La letra s completa hers, que es terminal. Se reporta hers. En total hay tres coincidencias: she, he y hers.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "u" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "idle", "idle", "active"] },
+        { id: "est", label: "estado", cells: [{ value: "ε" }, { value: "s" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "idle", "idle", "active"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "she, he" }, { value: "—" }, { value: "hers" }], states: ["idle", "idle", "idle", "answer", "idle", "answer"] },
+      ],
+      caption: "Leyendo s. Total: z = 3.",
+    },
+  ],
+}} />
+
+## De dónde sale la cota
+
+La cota tiene dos partes, construcción y búsqueda. Cada término se deriva por separado.
+
+**Construcción del trie: $O(\sum_i \lvert S_i \rvert)$.** Insertar $S_i$ cuesta una arista por carácter, así que todo el diccionario cuesta la suma de sus longitudes. En el ejemplo son $\lvert \text{he} \rvert + \lvert \text{she} \rvert + \lvert \text{his} \rvert + \lvert \text{hers} \rvert = 2 + 3 + 3 + 4 = 12$ caracteres. El trie comparte prefijos, así que sólo quedan 9 nodos además de la raíz.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cada fila es un patrón y cada celda un carácter. La suma de longitudes es la cantidad de inserciones de aristas que hace el trie. La compartición de prefijos hace que el trie tenga menos nodos que caracteres.",
+      rows: [
+        { id: "p1", label: "he", cells: [{ value: "h" }, { value: "e" }] },
+        { id: "p2", label: "she", cells: [{ value: "s" }, { value: "h" }, { value: "e" }] },
+        { id: "p3", label: "his", cells: [{ value: "h" }, { value: "i" }, { value: "s" }] },
+        { id: "p4", label: "hers", cells: [{ value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }] },
+      ],
+      caption: "∑|S_i| = 2 + 3 + 3 + 4 = 12 caracteres. Son 9 nodos sin contar la raíz.",
+    },
+  ],
+}} />
+
+**Tabla completa: $O(V\lvert\Sigma\rvert)$.** Es el término que domina la construcción cuando el alfabeto es grande. Cada uno de los $V$ nodos tiene $\lvert\Sigma\rvert$ celdas, y cada celda cuesta $O(1)$ dado su fallo ya calculado. En el ejemplo, $V = 10$ y $\lvert\Sigma\rvert = 5$, así que son 50 celdas: el diagrama de la tabla las muestra todas.
+
+**Búsqueda: $O(n + z)$.** Hay una consulta a $\delta$ por cada letra del texto, así que $n$ transiciones en total. A cada letra se le suman las coincidencias emitidas, una por cada paso de la cadena $\mathrm{dic}$, y esa cadena no revisita nodos. Por tanto $O(n + z)$, sin depender del número de patrones $k$.
+
+El total queda $O(n + m + z)$ con $m = \sum_i \lvert S_i \rvert$, y el término $V\lvert\Sigma\rvert$ de la tabla se suma a $m$ en la construcción.
+
+## Errores típicos y casos límite
+
+- **Diccionario vacío.** El trie es sólo la raíz. Ninguna transición avanza y el texto no produce coincidencias.
+- **Un patrón que es prefijo de otro.** Si $\mathrm{he}$ y $\mathrm{hers}$ están en $D$, el nodo he es terminal y además tiene hijos. Ambos casos se reportan al llegar a sus posiciones.
+- **Un patrón que es sufijo de otro.** Si $\mathrm{she}$ y $\mathrm{he}$ están en $D$, llegar a she reporta he por dic. Es el caso de la misma posición final.
+- **Patrones duplicados.** Insertar dos veces el mismo patrón no crea nodos nuevos. Debe marcarse una sola vez como terminal, o se reporta dos veces.
+- **Un terminal sin dic.** El fallo puede ser un nodo no terminal, como s para hers. Entonces dic no existe y la cadena se detiene.
+- **Reportar en vez de contar.** Emitir todas las coincidencias cuesta $O(z)$, que puede ser grande si hay muchas. Para sólo contar, basta propagar visitas en orden inverso de BFS: $O(n + V)$ después de construir, sin enumerar.
+
+## Comparación con KMP
+
+Aho–Corasick es KMP sobre un trie. Con un solo patrón, el trie es una cadena, el fallo coincide con la función de prefijo $\pi$ y la tabla $\delta$ es el autómata de KMP. La diferencia es qué se guarda en el estado: un nodo del trie en vez de un entero $k$.
+
+| | KMP | Aho–Corasick |
+| --- | --- | --- |
+| Patrones | uno | muchos |
+| Estado | longitud $k$ del borde | nodo del trie |
+| Retroceso | $\pi[k-1]$ | $\mathrm{fail}(v)$ |
+| Reporte | cuando $k = m$ | enlaces de diccionario |
+| Costo | $O(n + m)$ | $O(n + m + z)$ |
+
+## Conexión
+
+Esta estructura necesita [KMP](/structures/knuth-morris-pratt), que da el fallo y la idea de no retroceder en el texto, y el [trie](/structures/trie), que comparte los prefijos de los patrones. Los ejemplos resueltos están en [casos resueltos](/structures/aho-corasick/examples), las preguntas con pistas en [preguntas con pistas](/structures/aho-corasick/exercises), y la prueba de dominio en [lista de comprobación](/structures/aho-corasick/mastery-check).

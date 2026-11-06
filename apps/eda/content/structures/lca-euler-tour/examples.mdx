@@ -1,0 +1,133 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Todos los casos usan la traza de clase: A tiene hijos B y C; B tiene hijos D y E. La traza es $E = A\,B\,D\,B\,E\,B\,A\,C\,A$ y la profundidad es $D = 0\,1\,2\,1\,2\,1\,0\,1\,0$. Cada figura sigue el mismo orden: primero las primeras apariciones, después el intervalo de la consulta y al final la posición del mínimo.
+
+## Mínimo: un solo nodo
+
+*(derivado de la definición; no aparece en las diapositivas)*
+
+Con $n = 1$ la traza tiene $2n-1 = 1$ entrada: sólo la raíz. Por tanto $\mathrm{first}[A] = 0$, y la consulta $\mathrm{LCA}(A,A)$ toma el intervalo $[0,0]$. Ese intervalo tiene una posición, el mínimo está ahí, y la respuesta es $A$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Árbol de un solo nodo. La traza tiene una entrada, así que cada nodo tiene una primera aparición y ningún retorno.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"}] },
+      ],
+      caption: "n = 1: 2n - 1 = 1 entrada.",
+    },
+    {
+      note: "LCA(A,A) toma first[A] = 0 para ambos extremos. El intervalo [0,0] tiene una sola posición y el mínimo es esa posición.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0",state:"answer"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0",state:"active"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 0, to: 0, label: "[0,0]", state: "marked" }],
+      caption: "LCA(A,A) = A. El caso u = v siempre se resuelve así.",
+    },
+  ],
+}} />
+
+## Normal: LCA(D,C) cruza la raíz
+
+Primera aparición de $D$ en la posición 2 y de $C$ en la posición 7. El intervalo es $[2,7]$ y su profundidad mínima es 0. Ese cero aparece en la posición 6, donde la traza regresa a A antes de bajar a C.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Primeras apariciones: first[D] = 2 y first[C] = 7. El intervalo consultado es D sobre [2,7], que incluye la vuelta a B y la subida a A.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1"},{value:"D",tag:"2",state:"active"},{value:"B",tag:"3"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7",state:"active"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2",state:"active"},{value:1,tag:"3"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7",state:"active"},{value:0,tag:"8"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 2, to: 7, label: "[2,7]", state: "marked" }],
+      caption: "LCA(D,C) consulta D sobre [2,7].",
+    },
+    {
+      note: "En el intervalo, las profundidades son 2,1,2,1,0,1. El mínimo 0 aparece en t = 6, y en la misma columna la letra es A. Esa es la respuesta.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1"},{value:"D",tag:"2"},{value:"B",tag:"3"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6",state:"answer"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:1,tag:"3"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6",state:"answer"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 2, to: 7, label: "[2,7]", state: "marked" }],
+      caption: "LCA(D,C) = A: mínimo 0 en t = 6.",
+    },
+  ],
+}} />
+
+## Límite: un extremo es ancestro del otro
+
+B es ancestro de E. Primera aparición de $B$ en 1 y de $E$ en 4. El intervalo $[1,4]$ tiene profundidades $1,2,1,2$. El mínimo 1 aparece dos veces, en $t = 1$ y en $t = 3$, pero ambas posiciones tienen la letra B. Dos apariciones del mismo mínimo no crean ambigüedad: son el mismo nodo.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "LCA(B,E) consulta B sobre [1,4]. first[B] = 1 es el extremo izquierdo; B aparece en ese punto antes de bajar a E.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1",state:"active"},{value:"D",tag:"2"},{value:"B",tag:"3"},{value:"E",tag:"4",state:"active"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"active"},{value:2,tag:"2"},{value:1,tag:"3"},{value:2,tag:"4",state:"active"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 1, to: 4, label: "[1,4]", state: "marked" }],
+      caption: "Profundidades en el intervalo: 1, 2, 1, 2.",
+    },
+    {
+      note: "El mínimo 1 aparece en t = 1 y en t = 3. Ambas columnas tienen B, así que la respuesta es B sin importar cuál se elija. Esto es lo que pasa cuando u es ancestro de v: el ancestro aparece en el inicio del tramo.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1",state:"answer"},{value:"D",tag:"2"},{value:"B",tag:"3",state:"answer"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"answer"},{value:2,tag:"2"},{value:1,tag:"3",state:"answer"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 1, to: 4, label: "[1,4]", state: "marked" }],
+      caption: "LCA(B,E) = B.",
+    },
+  ],
+}} />
+
+## Trampa de profundidad igual: LCA(B,C)
+
+B y C tienen la misma profundidad, 1. Si sólo miraras la profundidad de los extremos, pensarías que el ancestro está a ese nivel. Pero primero se busca el mínimo en el tramo: $[1,7]$ contiene un 0 en la posición 6, y la respuesta es A.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "first[B] = 1 y first[C] = 7. Ambos extremos tienen profundidad 1, así que el tramo debe revisarse completo.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1",state:"active"},{value:"D",tag:"2"},{value:"B",tag:"3"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7",state:"active"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"active"},{value:2,tag:"2"},{value:1,tag:"3"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7",state:"active"},{value:0,tag:"8"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 1, to: 7, label: "[1,7]", state: "marked" }],
+      caption: "LCA(B,C) consulta el tramo [1,7].",
+    },
+    {
+      note: "Dentro del tramo aparece A con profundidad 0 en t = 6. Ese mínimo es un ancestro común real: la raíz, que es ancestro de todos los nodos.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1"},{value:"D",tag:"2"},{value:"B",tag:"3"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6",state:"answer"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:1,tag:"3"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6",state:"answer"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+      ],
+      spans: [{ id: "v", row: "d", from: 1, to: 7, label: "[1,7]", state: "marked" }],
+      caption: "LCA(B,C) = A.",
+    },
+  ],
+}} />
+
+## Cuándo sirve cada fila
+
+| Consulta | Intervalo | Mínimo | Respuesta |
+| --- | --- | --- | --- |
+| LCA(A,A) | [0,0] | 0 en t = 0 | A |
+| LCA(D,E) | [2,4] | 1 en t = 3 | B |
+| LCA(D,C) | [2,7] | 0 en t = 6 | A |
+| LCA(B,E) | [1,4] | 1 en t = 1 y t = 3 | B |
+| LCA(B,C) | [1,7] | 0 en t = 6 | A |
+
+Cada respuesta sale de la misma regla: la columna del mínimo de profundidad dentro del intervalo de primeras apariciones.

@@ -5,164 +5,313 @@ title: "Función prefijo y KMP"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Después de una discrepancia, reiniciar el patrón y retroceder en el texto repite comparaciones que ya tenían respuesta.
+Buscar un patrón $P$ de longitud $m$ dentro de un texto $T$ de longitud $n$ parece trivial: se prueba cada posición. El problema es lo que se tira en cada intento. Con $T = \mathtt{aaaaaaaaab}$ y $P = \mathtt{aaab}$, el primer intento compara $P[0]$, $P[1]$, $P[2]$ con sus letras en el texto, todas coinciden, y falla recién en $P[3]$. Después el intento se descarta por completo y el siguiente empieza una posición más a la derecha, leyendo otra vez las mismas aes.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Intento en la posición 0. Las tres primeras letras de P coinciden con T[0..2]. En la posición 3 falla: T tiene a y P tiene b. Todo lo comparado se descarta.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"},{value:"a",tag:"5"},{value:"a",tag:"6"},{value:"a",tag:"7"},{value:"a",tag:"8"},{value:"b",tag:"9"}] },
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3",state:"marked"},{value:"",tag:"4"},{value:"",tag:"5"},{value:"",tag:"6"},{value:"",tag:"7"},{value:"",tag:"8"},{value:"",tag:"9"}] },
+      ],
+      spans: [ { id: "ok0", row: "P", from: 0, to: 2, label: "coincide" } ],
+      caption: "Intento 0: 4 comparaciones.",
+    },
+    {
+      note: "Intento en la posición 1. Vuelve a comparar las mismas aes de T[1..3] con P[0..2]. El trabajo del intento anterior no sirvió de nada.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"},{value:"a",tag:"5"},{value:"a",tag:"6"},{value:"a",tag:"7"},{value:"a",tag:"8"},{value:"b",tag:"9"}] },
+        { id: "P", label: "P", cells: [{value:"",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"b",tag:"4",state:"marked"},{value:"",tag:"5"},{value:"",tag:"6"},{value:"",tag:"7"},{value:"",tag:"8"},{value:"",tag:"9"}] },
+      ],
+      spans: [ { id: "ok1", row: "P", from: 1, to: 3, label: "coincide otra vez" } ],
+      caption: "Intento 1: otras 4 comparaciones, y la mayoría repite trabajo ya hecho.",
+    },
+  ],
+}} />
+
+Con $n = 10$ y $m = 4$, el algoritmo ingenuo hace 28 comparaciones de caracteres sobre este texto. La pregunta de la sesión es si el texto ya leído contiene información que permita saltar intentos sin releer.
 
 ## Intuición
 
-Lo que acabas de reconocer puede terminar con el comienzo del mismo patrón. Reutiliza el mayor borde y vuelve a comparar el carácter actual con el siguiente carácter de ese borde.
+Después de un fallo, sabemos qué letras del texto acabamos de leer: son exactamente las del prefijo de $P$ que llevábamos reconocido. Si ese prefijo termina con un trozo que también es **inicio** de $P$, ese trozo ya está leído y puede seguir siendo el inicio de una aparición. Lo único que falta es encontrar el trozo más largo que cumpla eso. Esa es toda la idea: el patrón se desplaza, el texto no.
 
-## Estructura interna
+La clave se llama **borde**: un trozo que es a la vez prefijo y sufijo de la misma cadena.
 
-$\pi[i]$ es la longitud del mayor prefijo propio de $P[0..i]$ que también es sufijo. Durante la búsqueda, $k$ es la longitud de un prefijo de $P$ que coincide con el sufijo del texto leído. Los siguientes candidatos son $\pi[k-1]$, luego el borde de ese borde.
+## Bordes
 
-### El borde es lo que permite mantener el texto quieto
-
-Supón que ya coincidieron $k$ letras y falla la siguiente. Si todavía hay una aparición parcial que termina justo antes del fallo, empieza dentro de ese fragmento leído. Su prefijo coincide con un sufijo de las $k$ letras conocidas. Por tanto sólo sirven los bordes del prefijo que acabas de reconocer. El mayor borde ofrece la coincidencia parcial más larga todavía compatible. Si también falla, sus propios bordes son exactamente los candidatos más cortos que quedan por probar.
-
-La función prefijo reúne esas alternativas antes de recorrer el texto. Para construir su entrada siguiente se usa la misma idea: intenta extender el borde anterior. Cuando el carácter nuevo no coincide con el que habría que agregar, recorta al siguiente borde disponible y repite la comparación. Si el borde vacío no se puede extender, la respuesta queda en cero.
-
-### Qué se conserva al reportar
-
-Al completar el patrón, las últimas letras podrían ser el inicio de otra aparición. Retener el mayor borde propio conserva esa posibilidad. En aba, el borde es a. Por eso reconocer una aparición que empieza en 0 todavía deja información para la que empieza en 2. El diagrama de solapamiento sirve para distinguir el fin de una coincidencia del fin de la búsqueda.
-
-## Operaciones
-
-Al comparar un carácter nuevo, retrocede por bordes mientras haya discrepancia. Incrementa $k$ si coincide. Si $k=m$, reporta el inicio y pasa a $\pi[m-1]$ para conservar solapamientos.
-
-### Función prefijo de ababaca · dos retrocesos en la misma letra
+Un borde de $S$ es una cadena no vacía que es a la vez **prefijo propio** y **sufijo propio** de $S$. Propio significa distinto de $S$ entero. Si $S$ tiene un borde de longitud $b$, entonces $S[0..b-1] = S[n-b..n-1]$: la cadena se superpone consigo misma.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Las cuatro primeras posiciones producen π=0,0,1,2.",
-      arrays: [
-        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "·", "·", "·"], "states": ["idle", "idle", "idle", "answer", "idle", "idle", "idle"]},
+      note: "Cadena S = aabaa. Su prefijo propio de longitud dos es aa. Lo marcamos en la primera fila.",
+      rows: [
+        { id: "S", label: "S", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"b",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"}] },
       ],
-      bridges: [],
+      spans: [ { id: "pre", row: "S", from: 0, to: 1, label: "prefijo aa" } ],
+      caption: "Prefijos propios: a, aa, aab, aaba.",
     },
     {
-      note: "La a de índice 4 extiende el prefijo ab y reconoce aba.",
-      arrays: [
-        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "idle", "active", "idle", "idle"]},
-        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "3", "·", "·"], "states": ["idle", "idle", "idle", "idle", "answer", "idle", "idle"]},
+      note: "El sufijo propio de longitud dos también es aa. Como coincide con el prefijo, aa es un borde. Como la longitud uno también coincide (a con a), S tiene también el borde a. El mayor es aa.",
+      rows: [
+        { id: "S", label: "S", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"b",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "En c esperamos b con k=3. Falla la comparación.",
-      arrays: [
-        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "marked", "idle", "active", "idle"]},
-        {"id": "row-1", "label": "k", "row": 1, "cells": ["3"], "states": ["answer"]},
+      spans: [
+        { id: "pre", row: "S", from: 0, to: 1, label: "prefijo aa" },
+        { id: "suf", row: "S", from: 3, to: 4, label: "sufijo aa", state: "marked" },
       ],
-      bridges: [],
-    },
-    {
-      note: "π[2]=1. Prueba c frente a P[1]=b. Vuelve a fallar.",
-      arrays: [
-        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "marked", "idle", "idle", "idle", "active", "idle"]},
-        {"id": "row-1", "label": "k", "row": 1, "cells": ["3", "1"], "states": ["muted", "answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "π[0]=0. Tampoco coincide con a. Guarda π[5]=0.",
-      arrays: [
-        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "idle", "idle", "idle", "active", "idle"]},
-        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "3", "0", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "answer", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "La última a coincide con P[0]. Guarda 1.",
-      arrays: [
-        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "idle", "idle", "idle", "idle", "active"]},
-        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "3", "0", "1"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "answer"]},
-      ],
-      bridges: [],
+      caption: "Bordes de aabaa: aa (el mayor) y a. Un borde se superpone al resto de la cadena.",
     },
   ],
 }} />
 
-### Patrón aba en abababa · conservar solapamientos
+Ejemplo de la clase: $\mathtt{abaab}$ tiene un único borde, $\mathtt{ab}$. La letra $\mathtt{a}$ no sirve porque la cadena termina en $\mathtt{b}$. El borde debe coincidir en los dos extremos, no sólo en el primero.
+
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $\Sigma$ | alfabeto ordenado | aumenta el número de letras posibles, no cambia la cota |
+| $T$, $n$ | texto y su longitud | el coste de búsqueda crece linealmente en $n$ |
+| $P$, $m$ | patrón y su longitud | el preprocesamiento de $\pi$ crece linealmente en $m$ |
+| $\pi[i]$ | longitud del mayor borde de $P[0..i]$, o $0$ si no tiene | nunca supera $i$ |
+| $k$ | longitud del prefijo de $P$ que coincide con el sufijo leído del texto | nunca supera $m$ |
+
+Escribimos $\pi[i] \le \pi[i-1] + 1$. Un borde de $P[0..i]$ de longitud $b \ge 1$ quita su última letra y da un borde de $P[0..i-1]$ de longitud $b-1$. Por eso el valor de $\pi$ sube a lo más una unidad por paso.
+
+## Función prefijo, paso a paso
+
+La función prefijo $\pi$ se calcula sobre el patrón, antes de leer el texto. La tabla se llena de izquierda a derecha. En cada paso $i$ se dibuja el prefijo $P[0..i]$ con su borde máximo: el tramo inicial y el tramo final que coinciden.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Reconoce el primer carácter del patrón.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "k", "row": 1, "cells": ["1"], "states": ["answer"]},
+      note: "π[0] vale siempre 0. Una sola letra no tiene prefijo propio no vacío que también sea sufijo propio.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0",state:"active"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0",state:"active"},{value:"?",tag:"1"},{value:"?",tag:"2"},{value:"?",tag:"3"},{value:"?",tag:"4"},{value:"?",tag:"5"},{value:"?",tag:"6"}] },
       ],
-      bridges: [],
+      caption: "P = ababaca. Celdas con ? aún no calculadas.",
     },
     {
-      note: "Lee b. El prefijo reconocido es ab.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "active", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "k", "row": 1, "cells": ["2"], "states": ["answer"]},
+      note: "Para i = 1 el prefijo es ab. Su inicio a no es igual a su final b, así que no hay borde: π[1] = 0.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1",state:"active"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1",state:"active"},{value:"?",tag:"2"},{value:"?",tag:"3"},{value:"?",tag:"4"},{value:"?",tag:"5"},{value:"?",tag:"6"}] },
       ],
-      bridges: [],
+      caption: "ab no tiene borde.",
     },
     {
-      note: "Lee a. Reporta inicio 0 y conserva el borde a.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["answer", "answer", "answer", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "k tras reportar", "row": 1, "cells": ["1"], "states": ["answer"]},
+      note: "Para i = 2 el prefijo es aba. Su prefijo a y su sufijo a coinciden, así que el borde mide 1: π[2] = 1.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2",state:"active"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2",state:"active"},{value:"?",tag:"3"},{value:"?",tag:"4"},{value:"?",tag:"5"},{value:"?",tag:"6"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "pre", row: "P", from: 0, to: 0, label: "prefijo" },
+        { id: "suf", row: "P", from: 2, to: 2, label: "sufijo", state: "marked" },
+      ],
+      caption: "aba: borde a, de longitud 1.",
     },
     {
-      note: "Desde ese borde, b y a completan otra aparición, inicio 2.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "answer", "answer", "answer", "idle", "idle"]},
-        {"id": "row-1", "label": "k tras reportar", "row": 1, "cells": ["1"], "states": ["answer"]},
+      note: "Para i = 3 el prefijo es abab. Su borde ab (inicio y final) mide 2, así que π[3] = 2. El borde ab sale de extender el borde a del paso anterior con la letra b.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3",state:"active"},{value:"a",tag:"4"},{value:"c",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2"},{value:2,tag:"3",state:"active"},{value:"?",tag:"4"},{value:"?",tag:"5"},{value:"?",tag:"6"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "pre", row: "P", from: 0, to: 1, label: "prefijo ab" },
+        { id: "suf", row: "P", from: 2, to: 3, label: "sufijo ab", state: "marked" },
+      ],
+      caption: "abab: borde ab, de longitud 2.",
     },
     {
-      note: "Los dos últimos caracteres completan la aparición de inicio 4.",
-      arrays: [
-        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "idle", "idle", "answer", "answer", "answer"]},
-        {"id": "row-1", "label": "Inicios", "row": 1, "cells": ["0", "2", "4"], "states": ["answer", "answer", "answer"]},
+      note: "Para i = 4 el prefijo es ababa. El borde aba mide 3 y se superpone al resto en la posición 2: los dos tramos comparten esa letra. Por eso π[4] = 3.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4",state:"active"},{value:"c",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2"},{value:2,tag:"3"},{value:3,tag:"4",state:"active"},{value:"?",tag:"5"},{value:"?",tag:"6"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "pre", row: "P", from: 0, to: 2, label: "prefijo aba" },
+        { id: "suf", row: "P", from: 2, to: 4, label: "sufijo aba", state: "marked" },
+      ],
+      caption: "ababa: borde aba, de longitud 3. Los tramos se solapan en la posición 2.",
+    },
+    {
+      note: "Para i = 5 el prefijo es ababac. La c no continúa ningún borde: el borde de ababa exigía b en esa posición. Como ningún borde más largo sirve y el primero de P es a, π[5] = 0.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5",state:"active"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2"},{value:2,tag:"3"},{value:3,tag:"4"},{value:0,tag:"5",state:"active"},{value:"?",tag:"6"}] },
+      ],
+      caption: "La c corta todos los bordes: π[5] = 0.",
+    },
+    {
+      note: "Para i = 6 el prefijo es ababaca. La última letra a coincide con el inicio de P, así que el borde es a y π[6] = 1.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5"},{value:"a",tag:"6",state:"active"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2"},{value:2,tag:"3"},{value:3,tag:"4"},{value:0,tag:"5"},{value:1,tag:"6",state:"active"}] },
+      ],
+      spans: [
+        { id: "pre", row: "P", from: 0, to: 0, label: "prefijo" },
+        { id: "suf", row: "P", from: 6, to: 6, label: "sufijo", state: "marked" },
+      ],
+      caption: "Tabla completa: π = 0 0 1 2 3 0 1.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+Para calcular $\pi[i]$ se parte del valor anterior, $k = \pi[i-1]$. Así sabemos que $P[0..k-1]$ es sufijo de $P[0..i-1]$. Si $P[i] = P[k]$, el borde se extiende: $\pi[i] = k+1$. Si no coincide, el siguiente candidato es el borde del borde, $k \leftarrow \pi[k-1]$, y se vuelve a comparar. Si $k$ llega a $0$ y $P[i] \neq P[0]$, entonces $\pi[i] = 0$.
 
-Al hacer la traza escribe el carácter actual una sola vez y debajo todos los valores de k probados para él. Pasar de k a π[k−1] conserva exactamente un sufijo que ya fue comparado, y la próxima comparación decide si puede crecer. Después de reportar, el mismo razonamiento explica cómo conservar el mayor borde propio sin reportar el mismo inicio dos veces.
+### El salto por borde
 
-## Análisis de complejidad
+La función prefijo reutiliza la misma idea: cuando una extensión falla, no se empieza desde cero, sino que se salta al siguiente borde. En la tabla anterior, al llegar a $i = 5$ el valor de $k$ es $3$ (el borde aba), y la letra $\mathtt{c}$ no es $P[3] = \mathtt{b}$. El salto es $k \leftarrow \pi[k-1] = \pi[2] = 1$.
 
-Cada avance del texto puede incrementar $k$ a lo sumo una vez. Cada retroceso disminuye $k$ al menos en uno y $k$ nunca es negativo. Por tanto el total de retrocesos es a lo sumo el total de incrementos, aunque un solo carácter pueda disparar varios. Aplicar el mismo argumento al patrón y al texto da $O(m+n)$ tiempo. El arreglo de prefijos usa $O(m)$ espacio.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Llegamos a i = 5 con k = 3 (prefijo aba). La letra nueva c se compara con P[3] = b. No coinciden: hay que saltar.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3",state:"marked"},{value:"a",tag:"4"},{value:"c",tag:"5",state:"active"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2"},{value:2,tag:"3"},{value:3,tag:"4"},{value:0,tag:"5"},{value:1,tag:"6"}] },
+      ],
+      caption: "k = 3. Comparamos c con P[3] = b.",
+    },
+    {
+      note: "El salto apunta al borde del prefijo aba, que es π[2] = 1: el prefijo a. Ahora comparamos c con P[1] = b. Tampoco coincide.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0"},{value:"b",tag:"1",state:"marked"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5",state:"active"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:1,tag:"2",state:"active"},{value:2,tag:"3"},{value:3,tag:"4"},{value:0,tag:"5"},{value:1,tag:"6"}] },
+      ],
+      links: [ { from: "pi-2", to: "P-1", kind: "pointer", label: "k = π[2] = 1" } ],
+      caption: "k = 1. La flecha une π[k-1] con la posición de P que se compara a continuación.",
+    },
+    {
+      note: "Último salto: π[0] = 0, la longitud vacía. Ahora comparamos c con P[0] = a. Tampoco coincide, así que k queda en 0 y π[5] = 0.",
+      rows: [
+        { id: "P", label: "P", cells: [{value:"a",tag:"0",state:"marked"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"c",tag:"5",state:"active"},{value:"a",tag:"6"}] },
+        { id: "pi", label: "π", cells: [{value:0,tag:"0",state:"active"},{value:0,tag:"1"},{value:1,tag:"2"},{value:2,tag:"3"},{value:3,tag:"4"},{value:0,tag:"5"},{value:1,tag:"6"}] },
+      ],
+      links: [
+        { from: "pi-2", to: "P-1", kind: "pointer", label: "k = π[2] = 1" },
+        { from: "pi-0", to: "P-0", kind: "pointer", label: "k = π[0] = 0" },
+      ],
+      caption: "Cadena de saltos: 3, luego 1, luego 0. Cada salto es un borde del anterior.",
+    },
+  ],
+}} />
 
-### Cómo justificar la cota en el examen
+## Búsqueda KMP
 
-Usa $k$ como contador de progreso. Cada carácter nuevo puede aportar una unidad y cada retroceso consume al menos una unidad disponible. Como $k$ no baja de cero, en todo el recorrido hay a lo sumo tantas disminuciones como unidades aportadas. Cuenta además las comparaciones que cierran el procesamiento de un carácter. Construir $pi$ aplica ese mismo argumento al patrón y la búsqueda lo aplica al texto.
+Con $\pi$ calculada, la búsqueda recorre el texto una sola vez con dos punteros: $i$ sobre $T$ y $k$ sobre $P$. El puntero $i$ nunca retrocede.
 
-## Tabla de complejidad
+1. Mientras $k > 0$ y el carácter $T[i]$ no coincide con $P[k]$, saltar: $k \leftarrow \pi[k-1]$. Se repite hasta que coincida o $k$ llegue a $0$.
+2. Si $T[i] = P[k]$, avanzar: $k \leftarrow k+1$.
+3. Si $k = m$, hay una aparición que termina en $i$ y empieza en $i - m + 1$. Para seguir buscando, se toma $k \leftarrow \pi[m-1]$, que conserva los solapamientos.
 
-La tabla superior usa las unidades de costo de la explicación.
+Lo que cambia respecto a la fuerza bruta es el paso 1. Cuando falla, el texto no vuelve atrás porque las $k$ letras ya leídas son conocidas: su borde más largo indica con qué parte del patrón seguir, sin releer.
 
-## Ejemplos
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Texto abababa y patrón aba, con π = 0 0 1. Se leen las tres primeras letras y k sube 1, 2, 3. En i = 2 se completa aba: hay una aparición que empieza en 0.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2",state:"active"},{value:"b",tag:"3"},{value:"a",tag:"4"},{value:"b",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "k", label: "k", cells: [{value:1,tag:"0"},{value:2,tag:"1"},{value:3,tag:"2",state:"answer"},{value:"",tag:"3"},{value:"",tag:"4"},{value:"",tag:"5"},{value:"",tag:"6"}] },
+      ],
+      caption: "Reporte en i = 2: aparición en 0. Después k se fija en π[2] = 1.",
+    },
+    {
+      note: "Tras el reporte, k = 1 (la a final sirve de inicio). En i = 3, T[3] = b coincide con P[1] = b, así que k vuelve a 2. Nunca se retrocedió en el texto.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3",state:"active"},{value:"a",tag:"4"},{value:"b",tag:"5"},{value:"a",tag:"6"}] },
+        { id: "k", label: "k", cells: [{value:1,tag:"0"},{value:2,tag:"1"},{value:3,tag:"2"},{value:2,tag:"3",state:"active"},{value:"",tag:"4"},{value:"",tag:"5"},{value:"",tag:"6"}] },
+      ],
+      caption: "El puntero del texto sigue en i = 3.",
+    },
+    {
+      note: "En i = 4 la a completa aba de nuevo: segunda aparición en 2. Con π[2] = 1, k vuelve a 1 y en i = 5 la b extiende hasta 2. En i = 6 la última a da la tercera aparición, en 4.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"b",tag:"1"},{value:"a",tag:"2"},{value:"b",tag:"3"},{value:"a",tag:"4",state:"answer"},{value:"b",tag:"5"},{value:"a",tag:"6",state:"active"}] },
+        { id: "k", label: "k", cells: [{value:1,tag:"0"},{value:2,tag:"1"},{value:3,tag:"2"},{value:2,tag:"3"},{value:3,tag:"4"},{value:2,tag:"5"},{value:3,tag:"6",state:"active"}] },
+      ],
+      caption: "Apariciones en 0, 2 y 4. Los solapamientos se encuentran porque π conserva el borde.",
+    },
+  ],
+}} />
 
-[Casos resueltos](/structures/knuth-morris-pratt/examples) y [preguntas con pistas](/structures/knuth-morris-pratt/exercises).
+## De dónde sale la cota $O(n+m)$
 
-## Comparación con estructuras relacionadas
+Hay dos fases. Calcular $\pi$ cuesta $O(m)$ y la búsqueda cuesta $O(n)$ comparaciones amortizadas. El argumento para la búsqueda usa el valor de $k$ como **potencial**: un número que no puede ser negativo y que cada comparación modifica en una cantidad acotada.
 
-La búsqueda directa prueba cada alineación desde cero. KMP resume las alineaciones compatibles con lo que ya leyó. Aho–Corasick comparte ese razonamiento entre patrones.
+Clasificamos cada comparación del texto en dos tipos:
 
-## Prueba de dominio
+- Una **subida**: la comparación coincide, $k$ crece en 1. Como sólo se avanza una posición de $T$ por letra, hay a lo más $n$ subidas.
+- Una **bajada**: la comparación falla y se hace $k \leftarrow \pi[k-1]$, de modo que $k$ baja al menos 1. Una bajada no se paga por sí misma: se paga con una subida previa.
 
-[Lista de comprobación](/structures/knuth-morris-pratt/mastery-check).
+Como $k$ empieza en $0$ y nunca es negativo, el número total de bajadas no supera al de subidas. Dibujamos cada término sobre el texto $\mathtt{aaaaaaaaab}$ con $P = \mathtt{aaab}$.
 
-*Fuente de clase: Sem12_Strings_I.pdf · pp. 12-26.*
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Texto de 10 letras. Cada letra que se lee corresponde a una comparación, y la primera fila es el texto sobre el que se cuenta.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"},{value:"a",tag:"5"},{value:"a",tag:"6"},{value:"a",tag:"7"},{value:"a",tag:"8"},{value:"b",tag:"9"}] },
+      ],
+      caption: "n = 10 letras.",
+    },
+    {
+      note: "Subidas: en cada letra el k sube, porque toda comparación que coincide sube exactamente 1. Sumadas dan el número de subidas, que es a lo más n.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"},{value:"a",tag:"5"},{value:"a",tag:"6"},{value:"a",tag:"7"},{value:"a",tag:"8"},{value:"b",tag:"9"}] },
+        { id: "up", label: "subidas", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:1,tag:"3"},{value:1,tag:"4"},{value:1,tag:"5"},{value:1,tag:"6"},{value:1,tag:"7"},{value:1,tag:"8"},{value:1,tag:"9"}] },
+      ],
+      caption: "Total de subidas: 10 = n.",
+    },
+    {
+      note: "Bajadas: en cada letra a partir de i = 3 la comparación con P[3] = b falla, se salta a π[2] = 2 y la a sí coincide. Eso son 6 bajadas, una por cada a entre i = 3 e i = 8. La b final no baja.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"},{value:"a",tag:"5"},{value:"a",tag:"6"},{value:"a",tag:"7"},{value:"a",tag:"8"},{value:"b",tag:"9"}] },
+        { id: "up", label: "subidas", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:1,tag:"3"},{value:1,tag:"4"},{value:1,tag:"5"},{value:1,tag:"6"},{value:1,tag:"7"},{value:1,tag:"8"},{value:1,tag:"9"}] },
+        { id: "down", label: "bajadas", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:0,tag:"2"},{value:1,tag:"3",state:"marked"},{value:1,tag:"4"},{value:1,tag:"5"},{value:1,tag:"6"},{value:1,tag:"7"},{value:1,tag:"8"},{value:0,tag:"9"}] },
+      ],
+      caption: "Total de bajadas: 6. Siempre son a lo más las subidas previas.",
+    },
+    {
+      note: "Cuadre: al final k = 4 antes del reporte, que es subidas menos bajadas, 10 - 6 = 4. Como el potencial k no baja de 0, bajadas ≤ subidas ≤ n. Cada letra de T participa en a lo más una subida y en un número de bajadas que se paga con esas subidas.",
+      rows: [
+        { id: "T", label: "T", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"a",tag:"4"},{value:"a",tag:"5"},{value:"a",tag:"6"},{value:"a",tag:"7"},{value:"a",tag:"8"},{value:"b",tag:"9"}] },
+        { id: "up", label: "subidas", cells: [{value:1,tag:"0"},{value:1,tag:"1"},{value:1,tag:"2"},{value:1,tag:"3"},{value:1,tag:"4"},{value:1,tag:"5"},{value:1,tag:"6"},{value:1,tag:"7"},{value:1,tag:"8"},{value:1,tag:"9"}] },
+        { id: "down", label: "bajadas", cells: [{value:0,tag:"0"},{value:0,tag:"1"},{value:0,tag:"2"},{value:1,tag:"3"},{value:1,tag:"4"},{value:1,tag:"5"},{value:1,tag:"6"},{value:1,tag:"7"},{value:1,tag:"8"},{value:0,tag:"9"}] },
+      ],
+      caption: "Comparaciones de búsqueda ≤ subidas + bajadas ≤ 2n. Más m para calcular π: O(n + m).",
+    },
+  ],
+}} />
+
+Resumiendo, con $u$ = subidas y $d$ = bajadas:
+
+$$\#\text{comparaciones en la búsqueda} = u + d \le 2n, \qquad u - d = k_{\text{final}} \ge 0$$
+
+Calcular $\pi$ usa el mismo argumento sobre $P$, con a lo más $m$ subidas y por tanto $O(m)$ bajadas. El total es $O(n + m)$, frente a $O(nm)$ de la fuerza bruta.
+
+## Errores típicos y casos límite
+
+- **$\pi[0] = 0$ siempre.** Un prefijo de una letra no tiene borde propio no vacío.
+- **Patrón con letras repetidas.** $\mathtt{aaaa}$ tiene $\pi = 0\,1\,2\,3$: cada letra extiende el borde anterior y no hay saltos. El caso opuesto, $\mathtt{abcd}$, tiene todos los $\pi = 0$.
+- **Reportar sin restaurar $k$.** Tras una aparición completa hay que tomar $k \leftarrow \pi[m-1]$. Si se deja $k = m$, la siguiente comparación usaría $P[m]$, que no existe.
+- **Texto más corto que el patrón.** No hay ventanas completas y no se reporta nada. La implementación debe tolerarlo.
+
+## Conexión
+
+- Los fundamentos de cadenas, prefijos y sufijos que usa esta sección se ven en la semana anterior y no se repiten aquí.
+- El mismo borde sirve para el periodo mínimo de una cadena: $p_{\min} = n - \pi[n-1]$. Una cadena es potencia de una más corta si $p_{\min}$ divide a $n$ y $p_{\min} < n$.
+- El trie (`/structures/trie`) organiza muchos patrones en un árbol de prefijos. El autómata de Aho–Corasick (`/structures/aho-corasick`) generaliza KMP para buscar muchos patrones a la vez, usando bordes en el trie.

@@ -5,217 +5,293 @@ title: Casos resueltos
 
 import Visualization from "../../../src/components/Visualization.astro";
 
+En cada caso llevamos dos cuentas. **Registros examinados** es el trabajo dentro de RAM, que es gratis en el modelo. **Transferencias** es lo que cruza entre el almacenamiento y la RAM, y es lo único que se cobra. Antes de aplicar una fórmula, dibuja los límites físicos de los bloques.
 
-En cada caso vamos a llevar dos cuentas. **Trabajo sobre registros** es lo que sucede una vez que los datos están en RAM. **Transferencias** es lo que cruza entre el almacenamiento y la RAM. Antes de aplicar una fórmula, dibuja los límites físicos de bloque. Los casos pequeños son ejemplos derivados del modelo de clase.
+## Caso mínimo: un archivo que cabe en un bloque
 
-## Un archivo de 19 registros, bloque de 4
+**Pregunta.** Un archivo tiene $N=3$ registros y $B=4$. ¿Cuántas transferencias cuesta escanearlo? ¿Y buscar un valor en él?
 
-**Pregunta.** Un programa cuenta cuántos registros cumplen una condición. Empieza con la RAM vacía y puede conservar un bloque. ¿Cuántas lecturas realiza? ¿Qué pasa si vuelve a verificar los últimos tres registros?
-
-| Lectura | Índices que entran a RAM | Registros examinados hasta aquí |
-| --- | --- | --- |
-| 1 | 0–3 | 4 |
-| 2 | 4–7 | 8 |
-| 3 | 8–11 | 12 |
-| 4 | 12–15 | 16 |
-| 5 | 16–18, más una celda sin registro | 19 |
-
-Mientras trabaja con el bloque 0, el programa aplica la condición cuatro veces sin tocar disco. Cuando llega al registro 4, necesita el bloque 1. Repite el mismo razonamiento hasta el bloque 4. La última lectura todavía cuesta una transferencia porque 16, 17 y 18 viven en ese bloque físico, aunque no esté lleno.
-
-**Resultado.** Cinco lecturas, 19 evaluaciones de la condición y cero escrituras para contar. El acumulador cabe en RAM. Si verifica de nuevo 16–18 antes de cargar otro bloque, suma tres evaluaciones y **cero lecturas**. Si primero vuelve al registro 0 y su única ranura se ocupa con el bloque 0, releer 18 sí exige cargar otra vez el bloque 4.
-
-## Mismos seis registros, distinto costo por alineación
-
-Con bloques de cuatro, compara leer el intervalo cerrado $[0,5]$ con leer $[3,8]$. Ambos tienen longitud seis. El primero toca los bloques 0 y 1. El segundo toca los bloques 0, 1 y 2: empieza en la última celda del primero y termina en la primera del tercero.
-
-Para un intervalo $[l,r]$ con índices desde cero, sus bloques extremos son $lfloor l/B
-floor$ y $lfloor r/B
-floor$. El número exacto de bloques es la diferencia de esos índices más uno. Esto explica por qué $lceil N/B
-ceil$ es exacto para el archivo alineado y por qué una subconsulta de la misma longitud puede requerir una lectura más.
-
-**Caso límite.** Leer el intervalo vacío cuesta cero. Leer un intervalo no vacío de menos de cuatro registros cuesta uno si cabe dentro de un bloque y dos si cruza la frontera. El tamaño de la consulta por sí solo no determina el costo exacto.
-
-## Dos recorridos sobre las mismas 16 celdas
-
-Supón cuatro bloques de cuatro, RAM para un bloque y lecturas en frío. El orden $0,1,2,ldots,15$ hace cuatro transferencias. Ahora recorre por columnas, $0,4,8,12,1,5,9,13,ldots$. Las primeras cuatro visitas cargan los bloques 0, 1, 2 y 3. Cuando la quinta visita pide el índice 1, el bloque 0 ya salió de RAM. El patrón se repite en cada columna.
+Los tres registros ocupan una sola posición de bloque, la 0, 1 y 2 del bloque 0. El bloque 0 tiene cuatro posiciones, y la última está vacía.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Dos filas de cuatro bastan para ver el cambio de bloque. La RAM tiene una sola ranura.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["·", "·", "·", "·"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "El archivo ocupa un solo bloque, aunque el bloque tenga una posición libre. Nada está en RAM todavía.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 5, tag: "0" }, { value: 9, tag: "1" }, { value: 12, tag: "2" }, { value: "·", tag: "3" },
+        ]},
+        { id: "ram", label: "RAM", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
       ],
-      bridges: [],
+      spans: [{ id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" }],
+      caption: "Transferencias: 0.",
     },
     {
-      note: "Solicita 0. Carga el bloque 0. Cuenta acumulada: 1.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["active", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["active", "idle", "idle", "idle"]},
+      note: "El escaneo o la búsqueda piden el bloque una sola vez. Esa lectura trae los tres registros, y todas las comparaciones posteriores son gratis.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 5, tag: "0", state: "active" }, { value: 9, tag: "1", state: "active" }, { value: 12, tag: "2", state: "active" }, { value: "·", tag: "3", state: "active" },
+        ]},
+        { id: "ram", label: "RAM", cells: [
+          { value: 5, state: "active" }, { value: 9, state: "active" }, { value: 12, state: "active" }, { value: "·", state: "active" },
+        ]},
       ],
-      bridges: [],
-    },
-    {
-      note: "Solicita 4. El bloque 1 reemplaza al bloque 0. Cuenta acumulada: 2.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["muted", "muted", "muted", "muted"]},
-        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["active", "idle", "idle", "idle"]},
-        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["active", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Solicita 1. Compartía bloque con 0, pero ese bloque ya salió. Cuenta acumulada: 3.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["idle", "active", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["muted", "muted", "muted", "muted"]},
-        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "active", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Solicita 5. Hay que traer de nuevo el bloque 1. Cuenta acumulada: 4.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["muted", "muted", "muted", "muted"]},
-        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "active", "idle", "idle"]},
-        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "active", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Con dos ranuras, las dos últimas visitas reutilizan los bloques. La cuenta baja a 2.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM · ranura 0", "cells": ["0", "1", "2", "3"], "states": ["idle", "answer", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "RAM · ranura 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "answer", "idle", "idle"]},
-      ],
-      bridges: [],
+      spans: [{ id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" }],
+      caption: "Transferencias: 1. Escaneo y búsqueda completos, incluso con búsqueda binaria.",
     },
   ],
 }} />
 
-**Resultado.** La traza por columnas hace 16 transferencias y el escaneo hace 4. Ambos inspeccionan 16 registros. Si la RAM pudiera retener los cuatro bloques, la segunda traza también pagaría sólo las cuatro cargas iniciales. Así se separan la localidad del recorrido y la capacidad de retención.
+**Resultado.** Escanear cuesta $\lceil 3/4\rceil = 1$ transferencia, y la búsqueda binaria también cuesta 1, porque todo el archivo ya está en RAM tras la primera lectura. El caso muestra que la cota con techo sí paga al menos una transferencia aunque $N \lt B$.
 
-## Cuatro llaves separan cinco resultados de ausencia
+**Caso límite del caso mínimo.** Un archivo vacío cuesta 0 transferencias. Pedir cero registros no toca el disco.
 
-Un bloque contiene $10,20,30,40$. Si la consulta es 27, sabemos que cae entre 20 y 30. Si la consulta es 5, queda antes de 10. Para obtener el punto de inserción de cualquier consulta ausente hay cinco intervalos posibles. Dos niveles con cinco ramas pueden distinguir como máximo $5^2=25$ intervalos. Si hay 100 llaves ordenadas, existen 101 huecos, así que dos niveles no alcanzan. Tres niveles ofrecen hasta 125 hojas. Eso es una capacidad del árbol de decisiones, y explica la cota inferior sin afirmar que cualquier organización de tres bloques alcance todos los casos.
+## Caso normal: el mismo largo, distinto costo
 
-En una respuesta de examen, indica primero el modelo de comparaciones y la pregunta de búsqueda ordenada. Después cuenta resultados distinguibles por lectura. La [teoría](/structures/external-memory-model#análisis-de-complejidad) desarrolla el paso al logaritmo.
-
-## Seguir cada acierto y cada fallo del búfer
-
-Derivado del modelo de clase. Bloques de cuatro, una ranura, RAM inicialmente vacía. Se piden las posiciones 0, 3, 4, 6, 1, 5, 7, 8, 11 y 2.
+Con $B=4$ y un archivo de 12 registros (bloques 0, 1 y 2), compara dos intervalos de seis registros: $[0,5]$ y $[3,8]$. Ambos tienen longitud 6, pero cruzan distinto número de bloques.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "La RAM empieza vacía. Las divisiones de cuatro posiciones están fijadas antes de visitar un registro.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["·", "·", "·", "·"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["0"], "states": ["idle"]},
+      note: "Intervalo [0, 5]. Empieza en la posición 0 del bloque 0 y termina en la posición 5, que está en el bloque 1. Toca dos bloques.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0", state: "active" }, { value: 1, tag: "1", state: "active" }, { value: 2, tag: "2", state: "active" }, { value: 3, tag: "3", state: "active" },
+          { value: 4, tag: "4", state: "active" }, { value: 5, tag: "5", state: "active" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "[0, 5]: bloques 0 y 1. Transferencias: 2.",
     },
     {
-      note: "Pide el índice 0. El bloque solicitado no estaba en RAM. Cárgalo. El contador queda en 1.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["answer", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["1"], "states": ["active"]},
+      note: "Intervalo [3, 8]. Empieza en la última posición del bloque 0, cruza todo el bloque 1 y termina en la primera posición del bloque 2. Toca tres bloques, aunque la longitud sea la misma.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3", state: "active" },
+          { value: 4, tag: "4", state: "active" }, { value: 5, tag: "5", state: "active" }, { value: 6, tag: "6", state: "active" }, { value: 7, tag: "7", state: "active" },
+          { value: 8, tag: "8", state: "active" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
       ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 3. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 1.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "idle", "answer"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["1"], "states": ["active"]},
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2", state: "active" },
       ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 4. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 2.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["answer", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["2"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 6. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 2.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "answer", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["2"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 1. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 3.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "answer", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["3"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 5. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 4.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "answer", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["4"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 7. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 4.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "idle", "answer"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["4"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 8. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 5.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["8", "9", "10", "11"], "states": ["answer", "idle", "idle", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["5"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 11. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 5.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["8", "9", "10", "11"], "states": ["idle", "idle", "idle", "answer"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["5"], "states": ["active"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Pide el índice 2. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 6.",
-      arrays: [
-        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "answer", "idle"]},
-        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["6"], "states": ["active"]},
-      ],
-      bridges: [],
+      caption: "[3, 8]: bloques 0, 1 y 2. Transferencias: 3.",
     },
   ],
 }} />
 
-1. Antes de leer, fija las fronteras: bloque 0 contiene [0,3], bloque 1 contiene [4,7] y bloque 2 contiene [8,11]. Los índices de acceso no son números de bloque.
-2. Solicita 0. La ranura está vacía, así que entra el bloque 0. El contador vale uno.
-3. Solicita 3. Pertenece al mismo bloque que 0. Extrae su registro de RAM y conserva el contador.
-4. Solicita 4. Cruzaste una frontera. Carga el bloque 1 y desaloja el 0. El contador vale dos.
-5. Solicita 6. El bloque 1 sigue residente. Esta visita añade trabajo de CPU y cero E/S.
-6. Solicita 1. Aunque ya se había leído su bloque, fue desalojado. Vuelve a traer el bloque 0. El contador vale tres.
-7. Solicita 5. Hay que volver a cargar el bloque 1. El contador vale cuatro.
-8. Solicita 7. Se reutiliza el bloque de 5. El contador queda en cuatro.
-9. Solicita 8. Entra el bloque 2 y sale el 1. El contador vale cinco.
-10. Solicita 11. Se reutiliza el bloque 2.
-11. Solicita 2. Vuelve a cargar el bloque 0. El contador final vale seis.
+Para un intervalo $[l,r]$ con índices desde cero, sus bloques extremos son $\lfloor l/B\rfloor$ y $\lfloor r/B\rfloor$. El número de bloques tocados es la diferencia de esos índices más uno. En $[0,5]$ son $\lfloor 5/4\rfloor - \lfloor 0/4\rfloor + 1 = 2$. En $[3,8]$ son $\lfloor 8/4\rfloor - \lfloor 3/4\rfloor + 1 = 3$.
 
-**Comprobación.** Hubo diez accesos a registros y seis lecturas. Si caben tres bloques simultáneamente, cada uno se carga una sola vez y son tres lecturas. La traza y la condición evaluada no cambian; sólo cambia qué se conserva en RAM.
+**Resultado.** Mismo trabajo en RAM, $6$ registros, pero $2$ frente a $3$ transferencias. Esto explica por qué $\lceil N/B\rceil$ es exacto sólo para el archivo recorrido completo desde el inicio, y por qué una subconsulta de la misma longitud puede costar una lectura más.
+
+## Caso límite: una ranura y acceso alternado
+
+Supón $N=12$, $B=4$ y RAM con **una sola ranura**, o sea $M=B$. La entrada está en tres bloques: 0 (posiciones 0 a 3), 1 (4 a 7) y 2 (8 a 11). Se piden, en orden, las posiciones 0, 3, 4, 6, 1, 5, 7, 8, 11 y 2. El recorrido visita 10 registros. ¿Cuántas transferencias cuestan?
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Punto de partida. La ranura está vacía. Ninguna posición está en RAM.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Transferencias: 0. Próxima petición: posición 0.",
+    },
+    {
+      note: "Pide la posición 0. No está en RAM, así que se carga el bloque 0. Fallo, primera transferencia.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0", state: "active" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 0, state: "active" }, { value: 1, state: "active" }, { value: 2, state: "active" }, { value: 3, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Fallo. Transferencias: 1.",
+    },
+    {
+      note: "Pide la posición 3. Está en el bloque 0, que sigue en la ranura. Acierto: no cuesta lectura.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3", state: "active" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 0, state: "shared" }, { value: 1, state: "shared" }, { value: 2, state: "shared" }, { value: 3, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Acierto. Transferencias: 1.",
+    },
+    {
+      note: "Pide la posición 4. Está en el bloque 1. Fallo: el bloque 0 sale de la ranura para dejar entrar al bloque 1.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4", state: "active" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 4, state: "active" }, { value: 5, state: "active" }, { value: 6, state: "active" }, { value: 7, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Fallo. Transferencias: 2.",
+    },
+    {
+      note: "Pide la posición 6. Está en el bloque 1, que ya está en la ranura. Acierto.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6", state: "active" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 4, state: "shared" }, { value: 5, state: "shared" }, { value: 6, state: "active" }, { value: 7, state: "shared" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Acierto. Transferencias: 2.",
+    },
+    {
+      note: "Pide la posición 1. Está en el bloque 0, que salió hace dos peticiones. Fallo: aunque el bloque ya se leyó, la ranura no lo conservó.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1", state: "active" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 0, state: "active" }, { value: 1, state: "active" }, { value: 2, state: "active" }, { value: 3, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Fallo. Transferencias: 3.",
+    },
+    {
+      note: "Pide la posición 5. Está en el bloque 1, que salió al cargar el bloque 0. Fallo otra vez: la ranura alterna entre los dos bloques.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5", state: "active" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 4, state: "active" }, { value: 5, state: "active" }, { value: 6, state: "active" }, { value: 7, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Fallo. Transferencias: 4.",
+    },
+    {
+      note: "Pide la posición 7. Está en el bloque 1, que acaba de cargarse. Acierto.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7", state: "active" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 4, state: "shared" }, { value: 5, state: "shared" }, { value: 6, state: "shared" }, { value: 7, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1", state: "active" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Acierto. Transferencias: 4.",
+    },
+    {
+      note: "Pide la posición 8. Está en el bloque 2. Fallo: el bloque 1 sale de la ranura.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8", state: "active" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 8, state: "active" }, { value: 9, state: "active" }, { value: 10, state: "active" }, { value: 11, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2", state: "active" },
+      ],
+      caption: "Fallo. Transferencias: 5.",
+    },
+    {
+      note: "Pide la posición 11. Está en el bloque 2, que acaba de cargarse. Acierto.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11", state: "active" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 8, state: "shared" }, { value: 9, state: "shared" }, { value: 10, state: "shared" }, { value: 11, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2", state: "active" },
+      ],
+      caption: "Acierto. Transferencias: 5.",
+    },
+    {
+      note: "Pide la posición 2. Está en el bloque 0, que se expulsó al cargar el bloque 2. Fallo final.",
+      rows: [
+        { id: "disco", label: "Disco", cells: [
+          { value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2", state: "active" }, { value: 3, tag: "3" },
+          { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }, { value: 7, tag: "7" },
+          { value: 8, tag: "8" }, { value: 9, tag: "9" }, { value: 10, tag: "10" }, { value: 11, tag: "11" },
+        ]},
+        { id: "ram", label: "RAM: 1 ranura", cells: [{ value: 0, state: "active" }, { value: 1, state: "active" }, { value: 2, state: "active" }, { value: 3, state: "active" }] },
+      ],
+      spans: [
+        { id: "b0", row: "disco", from: 0, to: 3, label: "bloque 0", state: "active" },
+        { id: "b1", row: "disco", from: 4, to: 7, label: "bloque 1" },
+        { id: "b2", row: "disco", from: 8, to: 11, label: "bloque 2" },
+      ],
+      caption: "Fallo. Transferencias totales: 6.",
+    },
+  ],
+}} />
+
+**Resultado.** Se hicieron 6 transferencias: fallos en las peticiones 0, 4, 1, 5, 8 y 2. Los aciertos fueron 3, 6, 7 y 11. Cada fallo ocurrió justo después de haber usado el bloque contrario, porque la ranura alterna entre dos bloques. Si la RAM tuviera dos ranuras, los bloques 0 y 1 convivirían, y las peticiones 1, 5 y 7 serían aciertos. Sólo fallarían 0, 4, 8 y 2, para un total de 4 transferencias (la expulsión por LRU saca el bloque 0 al cargar el 2). La diferencia viene de la **capacidad de retención**, no del orden de las peticiones.
+
+Esto separa dos ideas que en las cotas aparecen juntas: el recorrido es **local** si consume un bloque antes de pedir el siguiente, y la memoria es **suficiente** si puede retener los bloques que se reutilizan.
+
+**Caso límite del caso límite.** Si la secuencia fuera 0, 4, 0, 4 con una sola ranura, cada petición cambia de bloque y cuesta una transferencia: 4 en total. Con dos ranuras, sólo las dos primeras cargas cuestan.

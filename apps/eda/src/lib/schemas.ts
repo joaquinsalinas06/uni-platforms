@@ -5,7 +5,7 @@ import { NODE_STATES } from '../visualizations/canvas-types.ts';
 // (src/content.config.ts, src/lib/structures.ts) y scripts/check-knowledge-map.mjs.
 // No duplicar ninguno de estos schemas en otro archivo.
 
-export const VISUALIZATION_TYPES = ['tree', 'graph', 'persistent', 'range-tree', 'geometric', 'planar'] as const;
+export const VISUALIZATION_TYPES = ['tree', 'graph', 'persistent', 'range-tree', 'geometric', 'planar', 'array'] as const;
 
 // Los distintos "modos" de layout dentro de una familia. `tree` y `layers`
 // son de range-tree; los otros tres de persistent. hasVisualization/
@@ -64,6 +64,8 @@ const vizLink = z.object({
    * se ve en la lista de hermanos de un montículo binomial/Fibonacci. Sólo
    * para `kind: pointer`. Default `false` (una sola punta, como siempre). */
   bidirectional: z.boolean().default(false),
+  /** Trazo discontinuo (enlaces de falla/diccionario, saltos que no son aristas del árbol). Default `false`. */
+  dash: z.boolean().optional(),
 });
 
 const vizArray = z.object({
@@ -180,6 +182,13 @@ export const visualizationSchema = z.object({
         xLabels: z.array(z.string()).optional(),
         /** `geometric`: fila (tiempo) que se procesa en este paso; se resalta con una banda. */
         row: z.number().int().positive().optional(),
+        /** `array`: filas de celdas, tramos rodeados (`spans`) y flechas entre celdas (`links`). */
+        rows: z.array(z.object({
+          id: z.string().min(1),
+          label: z.string().optional(),
+          cells: z.array(z.object({ id: z.string().optional(), value: z.union([z.string(), z.number()]), tag: z.string().optional(), state: z.enum(NODE_STATES).optional() })).min(1),
+        })).optional(),
+        spans: z.array(z.object({ id: z.string().min(1), row: z.string(), from: z.number().int().min(0), to: z.number().int().min(0), label: z.string().optional(), state: z.enum(NODE_STATES).optional() })).optional(),
         /** La secuencia de Euler acumulada, la etiqueta `[l,r]` de una consulta, etc. */
         caption: z.string().optional(),
       }),

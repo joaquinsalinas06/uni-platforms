@@ -7,118 +7,438 @@ import Visualization from '../../../src/components/Visualization.astro';
 
 ## ¿Qué problema resuelve?
 
-Queremos mantener datos ordenados y recorribles en almacenamiento contiguo mientras aparecen llaves nuevas entre las existentes.
+Queremos guardar $N$ llaves en orden dentro de un arreglo de tamaño $O(N)$, de modo que recorrer $k$ llaves consecutivas cueste $O(1+k/B)$ transferencias, y que insertar o borrar una llave no obligue a mover todo el arreglo. Con un arreglo compacto, insertar un 8 delante de un arreglo de un millón de llaves mueve un millón de celdas. Con huecos bien repartidos, el mismo 8 debería mover unas pocas.
 
 ## Intuición
 
-Deja huecos para absorber inserciones y usa un índice de máximos para localizar dónde insertar. Los huecos reducen desplazamientos inmediatos. Cuando se concentran las llaves, se redistribuye una región.
+Piensa el archivo como una pizarra con espacios. Las llaves se escriben en orden y entre dos llaves consecutivas queda, a lo más, una celda vacía. Cuando una llave nueva no tiene su propio hueco, se corren unas cuantas llaves vecinas hasta encontrar uno. Si una región se llena demasiado, se reescribe esa región entera con sus llaves repartidas otra vez.
 
-## Estructura interna
-
-Las llaves ocupadas siguen en orden. Cada entrada del índice resume un tramo con su máximo. Si una redistribución altera límites de tramos, se reparan los resúmenes afectados.
-
-### Por qué los huecos se dejan entre elementos
-
-Con un arreglo compacto, insertar una llave pequeña puede mover todas las llaves posteriores. Reservar todas las celdas libres al final sólo facilita agregar llaves grandes. El archivo ordenado con huecos distribuye espacio entre regiones. Eso permite que algunas inserciones pequeñas se resuelvan moviendo unas pocas posiciones y mantiene el orden para recorrer rangos en almacenamiento secuencial.
-
-Un tramo del archivo es un intervalo físico. El índice de máximos describe intervalos lógicos de valores. Los dos coinciden mientras los máximos reflejan los registros reales de cada tramo. Si mueves una llave que determina una frontera, actualizar el índice forma parte de la operación. Un máximo antiguo demasiado bajo puede hacer que una búsqueda salte un tramo que ya contiene una llave candidata.
-
-### Cuándo mirar arriba y cuándo mirar abajo
-
-Primero usa el índice para ubicar una región. Dentro del tramo, una búsqueda de sucesor inspecciona registros que todavía pueden ser mayores que la consulta. En una actualización, distingue un desplazamiento interno, una redistribución que afecta vecinos y un cambio de grupos en la versión con indirección. Si el diagrama muestra celdas que cambian de lado, pregunta también qué resumen perdió o ganó su última llave. En el ejemplo de insertar 19, precisamente el 20 deja de ser el máximo del tramo izquierdo porque pasa a la derecha.
-
-## Operaciones
-
-Busca el primer tramo cuyo máximo alcanza la llave. Inserta conservando el orden, redistribuye si la región lo requiere y propaga los nuevos máximos donde cambien.
-
-### Buscar por máximos y reparar tras mover un límite
-
-*(Traza derivada de la explicación de clase.)*
+Esta es la primera imagen del archivo: seis llaves en ocho celdas. Los huecos están marcados con $\cdot$:
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Cada tramo contiene llaves en orden y huecos. Su máximo vive en el índice.",
-      arrays: [
-        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "20", "35"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Tramo 0", "row": 1, "cells": ["2", "·", "8", "·"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-2", "label": "Tramo 1", "row": 2, "cells": ["12", "16", "20", "·"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-3", "label": "Tramo 2", "row": 3, "cells": ["25", "·", "35", "·"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Seis llaves ocupan ocho celdas. Cada hueco es una celda libre entre dos llaves consecutivas; no hay dos huecos seguidos.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 9 },
+          { value: "·" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Para 18, 8 queda corto. 20 identifica el primer tramo candidato.",
-      arrays: [
-        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "20", "35"], "states": ["muted", "active", "idle"]},
-        {"id": "row-1", "label": "Tramo 1", "row": 1, "cells": ["12", "16", "20", "·"], "states": ["idle", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Inserta 18 antes de 20. El máximo permanece en 20.",
-      arrays: [
-        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "20", "35"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Tramo 1", "row": 1, "cells": ["12", "16", "18", "20"], "states": ["idle", "idle", "answer", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Para insertar 19, el tramo ya está lleno. Considera dos tramos juntos.",
-      arrays: [
-        {"id": "row-0", "label": "Tramo 1", "row": 0, "cells": ["12", "16", "18", "20"], "states": ["marked", "marked", "marked", "marked"]},
-        {"id": "row-1", "label": "Tramo 2", "row": 1, "cells": ["25", "·", "35", "·"], "states": ["marked", "idle", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Redistribuye las siete llaves conservando su orden.",
-      arrays: [
-        {"id": "row-0", "label": "Tramo 1", "row": 0, "cells": ["12", "16", "18", "19"], "states": ["idle", "idle", "idle", "answer"]},
-        {"id": "row-1", "label": "Tramo 2", "row": 1, "cells": ["20", "25", "35", "·"], "states": ["idle", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El resumen del tramo 1 cambia de 20 a 19. El tramo 2 conserva 35.",
-      arrays: [
-        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "19", "35"], "states": ["idle", "answer", "idle"]},
-      ],
-      bridges: [],
+      caption: "Recorrer el archivo es leer de izquierda a derecha: las llaves salen ordenadas sin saltos grandes.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Estructura interna
 
-Para decidir qué tramo responde una consulta, compara con sus máximos en el orden del archivo. Un máximo menor que la consulta elimina el tramo completo. Encontrar un máximo suficiente sólo dice dónde buscar; todavía falta comprobar cuáles llaves concretas quedaron dentro de ese tramo.
+El archivo tiene dos partes que se miran por separado. La primera son las celdas, con llaves en orden y huecos. La segunda es un índice de máximos: un árbol binario perfecto cuyas hojas son las celdas. Cada nodo interno guarda el máximo de su subárbol, y un hueco cuenta como $-\infty$. Así, el índice no necesita saber cuántas llaves hay en cada región; sólo necesita el máximo de cada una.
 
-La diapositiva de indirección añade otra distinción. En la versión superior se pueden indexar representantes de grupos, mientras que abajo se inspeccionan celdas contiguas. Que el índice de máximos cambie al mover fronteras no implica que todos los registros del grupo tengan que subir al índice.
+Para no confundir los dos lenguajes, usa estos nombres:
 
-## Análisis de complejidad
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $N$ | llaves guardadas | si se duplica o se reduce a la mitad, el archivo se reconstruye con otro tamaño |
+| $B$ | celdas por bloque (una transferencia) | cada bloque transporta más celdas, y el costo baja |
+| $\lg N$ | altura del índice binario | sube lentamente; define el tamaño de los grupos |
+| $w$ | tamaño de una ventana, siempre potencia de $2$ | cada nivel del índice cubre el doble de celdas |
 
-Separa tres costos. Localizar toca niveles del índice. Mover un intervalo contiguo de $s$ celdas cuesta $O(1+s/B)$ E/S. Reparar los máximos cuesta según cuántos tramos cambian. La estructura dinámica de clase usa **indirección**. Agrupa $\Theta(\lg N)$ llaves contiguas y arriba indexa un representante por grupo. Reescribir un grupo cuesta $O(1+\lg N/B)$ E/S. Con suficiente holgura, separar o fusionar un grupo se cobra a $\Omega(\lg N)$ cambios locales. Así, el término de redistribución del índice superior baja de $O(\lg^2 N/B)$ a $O(\lg N/B)$ amortizado. Sumando la búsqueda, la actualización de la estructura con indirección cuesta $O(\log_{B+1} N)$ E/S amortizadas en el análisis del mazo.
+En el índice de máximos, las ventanas son los tramos alineados del archivo: de 1, 2, 4 y 8 celdas. Una ventana de $w$ celdas que empieza en la posición $p$ ocupa las celdas $p, \dots, p+w-1$. Esta forma de ventanas es la que se usa para decidir dónde redistribuir.
 
-### Cómo justificar la cota en el examen
+### Por qué los huecos se dejan entre elementos
 
-Cuenta primero el costo que sí está determinado por la figura: mover una región de $s$ celdas ocupa $O(1+s/B)$ bloques. La cota amortizada de la estructura completa requiere además explicar con qué frecuencia se repite un movimiento grande. Agrupar $Theta(lg N)$ llaves separa las actualizaciones ordinarias de las particiones y fusiones que cambian el nivel superior. Una reparación de arriba se distribuye entre las operaciones que consumieron la holgura. Divide ese costo entre la cantidad de actualizaciones **del grupo afectado**, en vez de dividirlo entre todas las operaciones sin una razón de carga.
+Reservar todas las celdas libres al final sólo facilita agregar llaves grandes. Un hueco entre dos llaves consecutivas permite que una inserción pequeña se resuelva corriendo una o dos celdas. El costo se mide en transferencias: correr $s$ celdas contiguas cuesta $O(1+s/B)$, porque los $s$ elementos ocupan a lo más $s/B+1$ bloques.
 
-## Tabla de complejidad
+### Cuándo se reparte una región
 
-La tabla superior usa las unidades de costo de la explicación.
+Cuando una región se llena, el índice ayuda a decidir cuál. Se toma la ventana alineada más pequeña que contenga el punto de inserción y cuya densidad, con la llave nueva, siga dentro del umbral. Si ninguna ventana pequeña cabe, se sube un nivel. La regla se ve mejor en la sección de operaciones.
 
-## Ejemplos
+> **Concepto de apoyo — umbral ilustrativo.** Para estudiar el mecanismo se usa un umbral de ejemplo: una ventana de $w$ celdas admite hasta $2$, $3$ y $7$ llaves para $w=2$, $4$ y $8$. La regla exacta de densidades (cuántas celdas libres exige cada nivel) pertenece a la estructura de archivo ordenado con densidades (PMA) de la semana 11. Aquí sólo sirve para ver cómo se sube por la escalera de ventanas.
 
-[Casos resueltos](/structures/ordered-file-maintenance/examples) y [preguntas con pistas](/structures/ordered-file-maintenance/exercises).
+## Operaciones
 
-## Comparación con estructuras relacionadas
+### Buscar: el índice dice dónde mirar
 
-El layout estático van Emde Boas ordena el índice para buscar. OFM se ocupa del archivo ordenado que puede cambiar. PMA concreta cómo decidir el tamaño de la región a redistribuir.
+Buscar la llave $q$ es recorrer el índice desde la raíz. Estos son los pasos, con el índice de ventanas de 2 celdas sobre el archivo anterior (las hojas son ventanas de dos celdas, y el valor es su máximo):
 
-## Prueba de dominio
+1. Mira el máximo de la mitad izquierda de la raíz. Si es menor que $q$, toda esa mitad queda descartada, y $q$ sólo puede estar a la derecha.
+2. En la mitad derecha, mira el máximo de su hijo izquierdo. Si es $\ge q$, $q$ está en esa ventana; si no, baja a la derecha.
+3. Llegas a una ventana de dos celdas. Si la primera es un hueco, $-\infty < q$ y la respuesta está en la segunda celda.
 
-[Lista de comprobación](/structures/ordered-file-maintenance/mastery-check).
+El camino tiene longitud $O(\log_{B+1} N)$ transferencias cuando el índice se guarda en layout de van Emde Boas (ver [layout vEB](/structures/cache-oblivious-veb-layout)). El índice dice dónde buscar; la celda sólo se lee al final.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Buscar 16. La raíz divide el archivo en dos mitades. A la izquierda, el máximo es 9, menor que 16: toda esa mitad se descarta.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7", "state": "active"},
+        {"id": "M0", "value": "9", "parent": "R", "tag": "0–3", "state": "muted"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1", "state": "muted"},
+        {"id": "W1", "value": "9", "parent": "M0", "tag": "2–3", "state": "muted"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7"},
+      ],
+      links: [],
+    },
+    {
+      note: "Ahora en la mitad derecha, el hijo izquierdo tiene máximo 16, que alcanza a 16. La respuesta está en ese lado: baja a la izquierda.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7"},
+        {"id": "M0", "value": "9", "parent": "R", "tag": "0–3", "state": "muted"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7", "state": "active"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1", "state": "muted"},
+        {"id": "W1", "value": "9", "parent": "M0", "tag": "2–3", "state": "muted"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5", "state": "active"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7", "state": "muted"},
+      ],
+      links: [],
+    },
+    {
+      note: "En la ventana 4–5, la celda 4 es un hueco y la celda 5 contiene 16. Llegamos a la respuesta sin recorrer el resto del archivo.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7"},
+        {"id": "M0", "value": "9", "parent": "R", "tag": "0–3", "state": "muted"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1", "state": "muted"},
+        {"id": "W1", "value": "9", "parent": "M0", "tag": "2–3", "state": "muted"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5", "state": "answer"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7", "state": "muted"},
+      ],
+      links: [],
+    },
+  ],
+}} />
+
+### Insertar con un hueco cercano: correr una celda
+
+Insertar $8$ en el archivo anterior. Su sucesor es $9$, que ocupa la celda 3. El hueco más cercano está a la derecha, en la celda 4. Entonces:
+
+1. Localiza el sucesor $9$ con la búsqueda anterior. El $8$ va justo antes de $9$.
+2. Mueve $9$ a la celda 4, que estaba libre. Ahora la celda 3 queda libre.
+3. Escribe $8$ en la celda 3. El archivo queda $3,\cdot,7,8,9,16,21,42$ y sigue ordenado.
+
+Esta operación sólo tocó dos celdas. Pero el índice cambió: el máximo de la ventana 2–3 pasó de 9 a 8, y el de la mitad izquierda también. Un cambio de llaves siempre obliga a repasar los máximos de los ancestros de las celdas modificadas.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El 8 va entre 7 y 9. El 9 es el sucesor, y el hueco más cercano está en la celda 4, a la derecha del 9.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7, state: "marked" }, { value: 9, state: "marked" },
+          { value: "·", state: "active" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+        { id: "nueva", label: "Llave nueva", cells: [{ value: 8, state: "active" }] },
+      ],
+      caption: "Las celdas marcadas son el predecesor y el sucesor del 8.",
+    },
+    {
+      note: "Se mueve el 9 al hueco de la celda 4. Así queda libre la celda 3, justo delante del 9.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: "·", state: "active" },
+          { value: 9, state: "active" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+        { id: "nueva", label: "Llave nueva", cells: [{ value: 8, state: "active" }] },
+      ],
+      caption: "Una celda libre entre 7 y 9: ahí cabe el 8.",
+    },
+    {
+      note: "El 8 se escribe en la celda 3. Se reescribieron dos celdas contiguas, así que el costo es $O(1)$ transferencias.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 8, state: "answer" },
+          { value: 9 }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+      ],
+      caption: "Archivo final: 3, ·, 7, 8, 9, 16, 21, 42. El orden se conserva.",
+    },
+  ],
+}} />
+
+Los máximos del índice se corrigen de abajo hacia arriba, en postorden: primero la ventana 2–3, que pasa de 9 a 8, y después la ventana de 0–3, que también pasa de 9 a 8. El máximo de la raíz no cambia.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes de insertar 8, el índice dice que la ventana 2–3 tiene máximo 9 y la ventana 0–3 también.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7"},
+        {"id": "M0", "value": "9", "parent": "R", "tag": "0–3", "state": "marked"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1"},
+        {"id": "W1", "value": "9", "parent": "M0", "tag": "2–3", "state": "marked"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7"},
+      ],
+      links: [],
+    },
+    {
+      note: "Después de insertar 8, el máximo de la ventana 2–3 pasa a 8. Este cambio sube a la ventana 0–3, que también pasa a 8. La raíz y la mitad derecha no cambian.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7", "state": "shared"},
+        {"id": "M0", "value": "8", "parent": "R", "tag": "0–3", "state": "active"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7", "state": "shared"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1", "state": "shared"},
+        {"id": "W1", "value": "8", "parent": "M0", "tag": "2–3", "state": "active"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5", "state": "shared"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7", "state": "shared"},
+      ],
+      links: [],
+    },
+  ],
+}} />
+
+### Insertar sin hueco cercano: sobrepasar el umbral y redistribuir
+
+Ahora el caso que obliga a reorganizar. Parte del archivo original, $3,\cdot,7,9,\cdot,16,21,42$, e inserta $50$ al final, después de $42$. No hay celda libre a la derecha de $42$, y el hueco más cercano está en la celda 4, lejos.
+
+Correr $16, 21, 42$ una celda a la izquierda sí dejaría un hueco libre al final. Pero el umbral lo prohíbe: la ventana 4–7 quedaría con cuatro llaves en cuatro celdas, llena al 100 %, y su umbral es tres. Por eso se sube a la ventana de 8 celdas y se reparte todo el archivo:
+
+1. La ventana 6–7 tiene $21$ y $42$; con el $50$ serían tres llaves en dos celdas. Supera el umbral de dos. Sube.
+2. La ventana 4–7 tiene $16$, $21$ y $42$; con el $50$ serían cuatro llaves. Supera el umbral de tres. Sube.
+3. La ventana completa 0–7 tiene seis llaves; con el $50$ son siete. El umbral es siete. Cabe: se redistribuye la región entera.
+4. Se leen las siete llaves en orden: $3,7,9,16,21,42,50$.
+5. Se escriben de nuevo en las ocho celdas, con el único hueco al final. El costo son ocho celdas contiguas, es decir $O(1+8/B)$ transferencias.
+6. Se recalculan los máximos de todos los ancestros. Aquí cambian todos los del índice, incluida la raíz, que pasa de 42 a 50.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Inserta 50 después de 42. La ventana 6–7 tiene dos celdas y ya contiene 21 y 42. Con el 50 serían tres llaves en dos celdas, por encima del umbral de dos.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 9 },
+          { value: "·" }, { value: 16 }, { value: 21, state: "marked" }, { value: 42, state: "marked" } ] },
+        { id: "nueva", label: "Llave nueva", cells: [{ value: 50, state: "active" }] },
+      ],
+      spans: [ { id: "w2", row: "arch", from: 6, to: 7, label: "ventana 2", state: "marked" } ],
+      caption: "Ventana de 2 celdas: 2 llaves, con el 50 serían 3. Supera el umbral 2.",
+    },
+    {
+      note: "Sube a la ventana 4–7. Tiene 16, 21 y 42; con el 50 serían cuatro llaves. El hueco de la celda 4 existe, pero dejaría la ventana llena y el umbral es tres.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 9 },
+          { value: "·" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+        { id: "nueva", label: "Llave nueva", cells: [{ value: 50, state: "active" }] },
+      ],
+      spans: [ { id: "w4", row: "arch", from: 4, to: 7, label: "ventana 4", state: "marked" } ],
+      caption: "Ventana de 4 celdas: 3 llaves, con el 50 serían 4. Supera el umbral 3.",
+    },
+    {
+      note: "Sube a la ventana completa 0–7. Tiene seis llaves; con el 50 son siete, y el umbral es siete. Cabe, así que se redistribuye todo el archivo.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 9 },
+          { value: "·" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+        { id: "nueva", label: "Llave nueva", cells: [{ value: 50, state: "active" }] },
+      ],
+      spans: [ { id: "w8", row: "arch", from: 0, to: 7, label: "ventana 8: 7 llaves, umbral 7", state: "active" } ],
+      caption: "Ventana completa: 7 llaves en 8 celdas. Queda un hueco.",
+    },
+    {
+      note: "Se leen las siete llaves en orden: 3, 7, 9, 16, 21, 42 y 50. El orden lógico ya está decidido, aunque las celdas todavía no se han reescrito.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 9 },
+          { value: "·" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+        { id: "orden", label: "Orden", cells: [
+          { value: 3 }, { value: 7 }, { value: 9 }, { value: 16 },
+          { value: 21 }, { value: 42 }, { value: 50, state: "answer" } ] },
+      ],
+      caption: "Copia ordenada de la región: siete llaves, sin huecos.",
+    },
+    {
+      note: "Se escriben las siete llaves en las celdas 0 a 6, con el único hueco al final. Se reescribieron ocho celdas contiguas: una sola escritura de región, no una por llave.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: 7 }, { value: 9 }, { value: 16 },
+          { value: 21 }, { value: 42 }, { value: 50, state: "answer" }, { value: "·" } ] },
+      ],
+      caption: "Archivo final: 3, 7, 9, 16, 21, 42, 50, ·. Costo: 1 + 8/B transferencias.",
+    },
+  ],
+}} />
+
+El índice cambia en toda su altura. La figura siguiente compara antes y después: todos los máximos cambian, y por eso la reparación cuesta más que la inserción sin redistribución.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes de la redistribución, el índice describe el archivo 3, ·, 7, 9, ·, 16, 21, 42.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7"},
+        {"id": "M0", "value": "9", "parent": "R", "tag": "0–3"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1"},
+        {"id": "W1", "value": "9", "parent": "M0", "tag": "2–3"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7"},
+      ],
+      links: [],
+    },
+    {
+      note: "Después de la redistribución, el archivo es 3, 7, 9, 16, 21, 42, 50, ·. Cambian los siete nodos: cada máximo depende de celdas que se movieron.",
+      nodes: [
+        {"id": "R", "value": "50", "parent": null, "tag": "0–7", "state": "active"},
+        {"id": "M0", "value": "16", "parent": "R", "tag": "0–3", "state": "active"},
+        {"id": "M1", "value": "50", "parent": "R", "tag": "4–7", "state": "active"},
+        {"id": "W0", "value": "7", "parent": "M0", "tag": "0–1", "state": "active"},
+        {"id": "W1", "value": "16", "parent": "M0", "tag": "2–3", "state": "active"},
+        {"id": "W2", "value": "42", "parent": "M1", "tag": "4–5", "state": "active"},
+        {"id": "W3", "value": "50", "parent": "M1", "tag": "6–7", "state": "active"},
+      ],
+      links: [],
+    },
+  ],
+}} />
+
+### Recorrer el archivo
+
+Recorrer llaves consecutivas es leer celdas contiguas. Si el rango ocupa $k$ celdas, cuesta $O(1+k/B)$ transferencias: un bloque inicial y un bloque por cada $B$ celdas. Los huecos no hacen el recorrido más caro en orden de magnitud, pero sí lo alargan. Una celda vacía es una celda que se lee sin llave.
+
+## De dónde sale la cota
+
+Ahora la pregunta de fondo: ¿por qué insertar cuesta $O(\lg^2 N)$ celdas amortizadas y no $O(N)$? La argumentación se reduce a contar cuántas celdas se reescriben, por cada nivel de ventanas, durante una secuencia de inserciones.
+
+Cada inserción puede disparar a lo más una redistribución. El nivel $k$ reescribe ventanas de $2^k$ celdas. La lámina de clase no demuestra el espaciado entre redistribuciones; lo deja para la siguiente clase. Lo tomamos como hecho de la estructura: una ventana de $2^k$ celdas se reescribe, en promedio, una vez cada $2^k/\lg N$ inserciones que caen dentro de ella. Esa es la holgura que el umbral exige entre dos redistribuciones.
+
+Con ese hecho, el costo de nivel $k$ se reparte así:
+
+- Una reescritura del nivel $k$ mueve $2^k$ celdas.
+- Ocurre una vez cada $2^k/\lg N$ inserciones.
+- Por inserción, el nivel $k$ aporta $2^k \cdot (\lg N / 2^k) = \lg N$ celdas movidas.
+- Hay $\lg N + 1$ niveles, cada uno aporta $\lg N$.
+
+La figura muestra esa suma. Cada fila es un nivel; las celdas de la fila son las que el nivel reescribe, y la fila siguiente es el doble de ancha.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nivel 0: ventanas de una celda. Se reescriben una vez cada lg N inserciones. Por inserción aporta lg N celdas movidas.",
+      rows: [
+        { id: "n0", label: "Nivel 0", cells: [{ value: "·", state: "active" }] },
+        { id: "n1", label: "Nivel 1", cells: [{ value: "·" }, { value: "·" }] },
+        { id: "n2", label: "Nivel 2", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+        { id: "n3", label: "Nivel 3", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Cuatro niveles para un archivo de ocho celdas, con lg N = 3.",
+    },
+    {
+      note: "Nivel 1: ventanas de dos celdas. Se reescriben una vez cada 2 / lg N inserciones. Por inserción aporta de nuevo lg N celdas movidas.",
+      rows: [
+        { id: "n0", label: "Nivel 0", cells: [{ value: "·" }] },
+        { id: "n1", label: "Nivel 1", cells: [{ value: "·", state: "active" }, { value: "·", state: "active" }] },
+        { id: "n2", label: "Nivel 2", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+        { id: "n3", label: "Nivel 3", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Cada nivel suma lg N celdas por inserción.",
+    },
+    {
+      note: "Nivel 2: ventanas de cuatro celdas. Se reescriben una vez cada 4 / lg N inserciones, y por inserción aportan lg N celdas.",
+      rows: [
+        { id: "n0", label: "Nivel 0", cells: [{ value: "·" }] },
+        { id: "n1", label: "Nivel 1", cells: [{ value: "·" }, { value: "·" }] },
+        { id: "n2", label: "Nivel 2", cells: [{ value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }] },
+        { id: "n3", label: "Nivel 3", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+      ],
+      caption: "Por inserción, cuatro celdas cada 4/lg N inserciones dan lg N celdas.",
+    },
+    {
+      note: "Nivel 3: la ventana completa de ocho celdas. Por inserción aporta lg N celdas. Sumando los niveles, (lg N + 1) lg N celdas por inserción es O(lg² N).",
+      rows: [
+        { id: "n0", label: "Nivel 0", cells: [{ value: "·" }] },
+        { id: "n1", label: "Nivel 1", cells: [{ value: "·" }, { value: "·" }] },
+        { id: "n2", label: "Nivel 2", cells: [{ value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }] },
+        { id: "n3", label: "Nivel 3", cells: [{ value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }, { value: "·", state: "active" }] },
+      ],
+      caption: "Suma: (lg N + 1) niveles, cada uno con lg N celdas por inserción, es O(lg² N).",
+    },
+  ],
+}} />
+
+Con eso se obtiene la cota del archivo. Cada inserción mueve, amortizadamente, $O(\lg^2 N)$ celdas. Esas celdas forman a lo más una región contigua por inserción, así que el costo de transferencia es el de una región más el de sus celdas:
+
+$$
+\text{transferencias por inserción} \;=\; O\!\left(1+\frac{\lg^2 N}{B}\right)
+$$
+
+El término $1$ paga el bloque inicial de la región; el término $\lg^2 N / B$ paga las celdas movidas, que se reparten en bloques de $B$.
+
+### El índice también cuesta
+
+Hay que sumar la búsqueda: $O(\log_{B+1} N)$ transferencias para llegar a la celda. La reparación de los máximos recorre ese mismo camino hacia la raíz, así que no cambia la cota. Así, el costo de insertar en el archivo con índice es
+
+$$
+O\!\left(\log_{B+1} N + \frac{\lg^2 N}{B}\right).
+$$
+
+El segundo término es el molesto. Compara con el árbol B, que cuesta $O(\log_{B+1} N)$. La diferencia entre ambos es $\lg^2 N / B$ frente a $\log_{B+1} N$. Con $B$ grande el término es pequeño. Con $B$ pequeño comparado con $\lg N$, domina. Como no conocemos $B$, la estructura debe funcionar para todo $B$.
+
+## Indirección: quitar un factor $\lg N$
+
+La salida es agrupar. Se parten las $N$ llaves en grupos de tamaño $\Theta(\lg N)$, guardados en celdas contiguas. Arriba se pone la misma estructura, pero sobre $N/\lg N$ elementos, y en ella sólo entra el mínimo de cada grupo.
+
+Así, buscar cuesta lo mismo: el índice superior ubica el grupo en $O(\log_{B+1} N)$ transferencias y el recorrido del grupo cuesta $O(1+\lg N/B)$. Insertar reescribe sólo el grupo; el índice superior no se entera, salvo que cambie el mínimo o el grupo cambie de tamaño.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Grupos de tamaño dos (en el toy lg N = 2). Cada grupo ocupa celdas consecutivas. Arriba, sólo se guarda el mínimo de cada grupo.",
+      rows: [
+        { id: "mins", label: "Mínimos", cells: [{ value: 3 }, { value: 7 }, { value: 16 }, { value: 21 }] },
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 9 },
+          { value: "·" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+      ],
+      spans: [
+        { id: "g1", row: "arch", from: 0, to: 1, label: "grupo 1" },
+        { id: "g2", row: "arch", from: 2, to: 3, label: "grupo 2" },
+        { id: "g3", row: "arch", from: 4, to: 5, label: "grupo 3" },
+        { id: "g4", row: "arch", from: 6, to: 7, label: "grupo 4" },
+      ],
+      caption: "El índice superior tiene N/lg N representantes, no N hojas.",
+    },
+    {
+      note: "Insertar 8 en el grupo 2 reescribe sólo ese grupo. El mínimo del grupo sigue siendo 7, y el índice superior no cambia.",
+      rows: [
+        { id: "mins", label: "Mínimos", cells: [{ value: 3 }, { value: 7, state: "shared" }, { value: 16 }, { value: 21 }] },
+        { id: "arch", label: "Archivo", cells: [
+          { value: 3 }, { value: "·" }, { value: 7 }, { value: 8, state: "active" },
+          { value: 9, state: "active" }, { value: 16 }, { value: 21 }, { value: 42 } ] },
+      ],
+      spans: [ { id: "g2", row: "arch", from: 2, to: 3, label: "grupo 2", state: "active" } ],
+      caption: "Sólo cambian las celdas del grupo. Un grupo que se llena se parte en dos.",
+    },
+  ],
+}} />
+
+El costo amortizado sale de contar particiones. Un grupo que se llena se parte en dos. Un grupo que queda muy vacío se fusiona con un vecino. Después de cualquiera de las dos operaciones hacen falta $\Omega(\lg N)$ actualizaciones en ese grupo para volver a dispararla. Por eso el índice superior, que cuesta $O(\log_{B+1}N + \lg^2 N / B)$, sólo se toca una de cada $\Omega(\lg N)$ veces. Repartido así, su costo por actualización es
+
+$$
+\frac{\log_{B+1} N + \lg^2 N / B}{\lg N} = O\!\left(\frac{\log_{B+1} N}{\lg N} + \frac{\lg N}{B}\right).
+$$
+
+Al sumar la parte de grupo, $O(1+\lg N/B)$, el término molesto queda en $\lg N / B$. Ese término ya no es un problema: para todo $B \ge 1$ se cumple $\lg(B+1) \le B$, así que $\lg N / B \le \lg N / \lg(B+1) = \log_{B+1} N$. Por lo tanto, la actualización cuesta $O(\log_{B+1} N)$ transferencias amortizadas, la misma cota que el árbol B. Y de todas formas hay que buscar antes de insertar.
+
+## Errores típicos y casos límite
+
+- **Máximo obsoleto.** Si mueves una llave que era el máximo de una ventana y no actualizas el índice, una búsqueda puede descartar esa ventana. Corregir el índice es parte de la operación, no un paso opcional.
+- **Insertar después del último máximo.** Con máximos $8, 20, 35$, buscar el sucesor de $36$ no encuentra nada. La búsqueda termina sin leer el archivo, pero la inserción sí debe ubicar una celda al final y actualizar el máximo global.
+- **Archivo lleno.** Si el umbral de la ventana completa se excede, no hay región mayor donde repartir. Se reconstruye el archivo con un arreglo de tamaño doble. Como en una tabla dinámica, eso cuesta $O(1)$ amortizado por operación.
+- **Máximos que no cambian.** No todos los ancestros cambian. En la inserción de $8$, la raíz y la mitad derecha quedaron iguales. Al actualizar, revisa qué ancestros cambiaron de verdad.
+
+## Conexión
+
+Esta estructura se apoya en el layout de van Emde Boas para guardar el índice de máximos, y en el [árbol B](/structures/b-tree) para la cota de búsqueda $O(\log_{B+1} N)$. La parte de densidades y el tamaño de la región a redistribuir se estudian en la estructura de archivo ordenado con densidades (PMA). El umbral de esta página es ilustrativo; la regla exacta es la de esa estructura.
+
+Ejemplos resueltos en [casos resueltos](/structures/ordered-file-maintenance/examples), preguntas con pistas en [preguntas de examen](/structures/ordered-file-maintenance/exercises) y la prueba de dominio en [lista de comprobación](/structures/ordered-file-maintenance/mastery-check).
 
 *Fuente de clase: Sem10_Memory_Hierarchy_III.pdf · pp. 26-61.*

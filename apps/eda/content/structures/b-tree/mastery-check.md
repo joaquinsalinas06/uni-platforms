@@ -2,9 +2,11 @@
 kind: mastery
 title: Prueba de dominio
 canExplain:
-- ¿Cuándo aumenta la altura?
-- Justifica por qué la cascada no hace cuadrático el costo.
+- Por qué una búsqueda cuesta un bloque por nivel y no una comparación por llave.
+- Qué diferencia hay entre una hoja llena con B llaves y una desbordada con B+1.
+- De dónde sale la cota de altura, nivel a nivel, y por qué ambas cotas son Theta de log en base B.
 canDo:
-- ¿Qué dispara la partición de una hoja?
-- En [10,15,17,20], sube 15. ¿Qué queda en cada hoja?
+- Buscar una llave en un B-tree dibujado y contar los bloques leídos.
+- Insertar una llave en una hoja llena, partirla y subir la mediana al padre.
+- Decir cuándo sube la altura y dibujar la raíz nueva tras partir la raíz.
 ---

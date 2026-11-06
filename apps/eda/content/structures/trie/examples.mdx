@@ -1,0 +1,202 @@
+---
+kind: "examples"
+title: "Casos resueltos"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos usan el conjunto de la lámina, $\{$he, she, his, hers$\}$, salvo el primero. Los casos marcados como *derivado* no aparecen en las diapositivas: se obtienen aplicando el mismo algoritmo a mano.
+
+## Mínimo: una sola cadena
+
+Sea $\mathcal{S} = \{$ab$\}$. Insertar ab crea dos nodos y marca el último. El trie tiene $1 + \lvert S \rvert = 3$ nodos, que es la cota del caso de una sola cadena.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Insertar ab. v empieza en la raíz ε y la primera letra es a. La raíz no tiene hijo a: se crea.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active", edge: false },
+        { id: "a", value: "a", parent: "e", state: "copied", edge: false },
+      ],
+      links: [
+        { from: "e", to: "a", kind: "tree", label: "a" },
+      ],
+      caption: "Paso 1: se crea a.",
+    },
+    {
+      note: "Segunda letra b. a no tiene hijo b: se crea ab y v pasa a ab. La cadena termina aquí.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "a", value: "a", parent: "e", state: "shared", edge: false },
+        { id: "ab", value: "ab", parent: "a", state: "active", edge: false },
+      ],
+      links: [
+        { from: "e", to: "a", kind: "tree", label: "a" },
+        { from: "a", to: "ab", kind: "tree", label: "b" },
+      ],
+      caption: "Paso 2: se crea b bajo a.",
+    },
+    {
+      note: "Se marca ab como terminal. El nodo a queda como prefijo intermedio, sin marca: a no pertenece al conjunto.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "a", value: "a", parent: "e", state: "shared", edge: false },
+        { id: "ab", value: "ab", parent: "a", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "a", kind: "tree", label: "a" },
+        { from: "a", to: "ab", kind: "tree", label: "b" },
+      ],
+      caption: "ab queda terminal. Total: 3 nodos.",
+    },
+  ],
+}} />
+
+Buscar `a` en este trie recorre una arista y termina en un nodo sin marca: `a` es prefijo, no palabra.
+
+## Normal: insertar her cuando hers ya existe (derivado)
+
+Partimos del trie completo de la lámina. `her` ya es un camino, pero no es palabra: su nodo no está marcado. Insertarla no crea nodos; sólo recorre tres aristas y cambia una marca. Ésta es la diferencia entre el costo de recorrer ($\lvert S \rvert$ aristas) y el costo de asignar nodos (cero aquí).
+
+*(derivado del algoritmo de inserción; no aparece en la diapositiva)*
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Estado inicial: el trie de la lámina. her existe, pero sin marca. Insertar her empieza en la raíz.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active", edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Antes: 10 nodos, her sin marca.",
+    },
+    {
+      note: "Recorrer h y e: los dos nodos existen, así que se reutilizan. Nada se crea.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "active", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 2: v = he, sin nodos nuevos.",
+    },
+    {
+      note: "Última letra r: el nodo her existe. Al terminar la cadena se marca her como terminal. El trie sigue con 10 nodos: sólo cambió una marca.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "marked", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "her queda terminal. Siguen 10 nodos.",
+    },
+  ],
+}} />
+
+Este caso separa dos costos. Recorrer cuesta lo mismo que cualquier búsqueda; asignar nodos cuesta sólo lo que falte en el camino. La operación sigue leyendo tres letras aunque no cree nada.
+
+## Límite: la cadena vacía (derivado)
+
+¿Qué pasa si la cadena es $\varepsilon$? El algoritmo de inserción no hace ningún paso del ciclo, así que marca la raíz. La búsqueda de $\varepsilon$ tampoco recorre aristas y responde según la marca de la raíz. En el conjunto de la lámina la raíz no está marcada, así que $\varepsilon \notin \mathcal{S}$. Insertarla cambiaría sólo esa marca.
+
+*(derivado del algoritmo; la lámina no trata la cadena vacía)*
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Buscar la cadena vacía: no hay letras que leer. v queda en la raíz ε, que no está marcada. La respuesta es «no»: ε no pertenece al conjunto.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "answer", edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Buscar ε: la raíz no está marcada.",
+    },
+    {
+      note: "Si insertáramos la cadena vacía, sólo cambiaría la marca de la raíz: el trie no crearía ni un nodo. La raíz existe siempre, por eso la cota 1 + Σ|Sᵢ| la cuenta una sola vez.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "marked", edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Tras insertar ε: sólo cambia la marca de la raíz.",
+    },
+  ],
+}} />

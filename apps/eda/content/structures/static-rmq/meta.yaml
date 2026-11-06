@@ -3,7 +3,7 @@ title: RMQ estático y sparse table
 type: structure
 week: week-12
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites: []
 complexity:
   Preprocesamiento:

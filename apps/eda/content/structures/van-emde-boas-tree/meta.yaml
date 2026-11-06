@@ -3,7 +3,7 @@ title: Árbol van Emde Boas
 type: structure
 week: week-11
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites:
 - integer-predecessor
 complexity:

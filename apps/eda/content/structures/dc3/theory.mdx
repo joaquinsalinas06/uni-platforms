@@ -5,189 +5,324 @@ title: "Construcción lineal con DC3"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-La duplicación de prefijos repite un ordenamiento para cada potencia de dos. DC3 obtiene una construcción lineal ordenando recursivamente sólo parte de los sufijos.
+La duplicación de prefijos ([suffix array](/structures/suffix-array)) ordena los sufijos en $O(n \lg n)$: cada ronda duplica la longitud comparada y reordena todas las posiciones. Con $n = 10^6$ eso son unas veinte rondas sobre el arreglo completo. La pregunta de clase es si se puede ordenar **todos** los sufijos en $O(n)$ sin repetir el trabajo sobre cada posición en cada ronda.
 
-## Intuición
+## Intuición dibujada
 
-Separa comienzos por su residuo módulo tres. Ordena primero los residuos 1 y 2. Con esos rangos, ordena el residuo 0 y mezcla. En la mezcla, lee hasta dos letras para que ambas colas caigan en clases con rango conocido.
+La estrategia es siempre la misma: **ordenar poco y deducir mucho**. Se elige un subconjunto pequeño de sufijos, se ordena recursivamente sobre una cadena más corta, y el orden de los demás se deduce en tiempo lineal. La recurrencia que lo resume es
 
-## Estructura interna
+$$
+T(n) = T(\alpha n) + O(n) = O(n), \qquad \alpha < 1.
+$$
 
-La muestra contiene residuos 1 y 2. Ordena sus ternas y asigna el mismo nombre a ternas iguales. Si hay empates, resuélvelos en el texto reducido. Usa un centinela menor que cualquier carácter al completar una terna.
-
-### Qué compra muestrear dos de los tres residuos
-
-Queremos comparar sufijos leyendo pocas letras antes de mirar rangos ya resueltos. Si ambos comienzos están en la muestra, esos rangos ya permiten compararlos. Si un comienzo es de residuo cero, quitar una letra lo lleva a residuo uno y quitar dos lo lleva a residuo dos. Frente a un residuo uno basta quitar una, pues la otra cola llega a residuo dos. Frente a un residuo dos se quitan dos, pues la otra cola llega a residuo uno. Las dos reglas aseguran que ambos rangos existan al momento de consultarlos.
-
-### Los empates de ternas son empates locales
-
-En mississippi se repiten iss y ssi. Radix puede ordenar los prefijos de tres letras sin saber todavía cómo se comparan dos sufijos que empiezan igual. Nombrar una terna convierte ese bloque en un símbolo del problema reducido. La recursión conserva el orden de los símbolos y distingue qué secuencia de nombres sigue después de cada terna repetida. Cuando los nombres ya separan todos los comienzos de la muestra, se conocen los rangos sin esa llamada adicional.
-
-Con los rangos definitivos, cada comienzo de residuo cero se puede ordenar por la primera letra y el rango de su cola. Entonces quedan dos listas ordenadas para la mezcla final. Si dos primeras letras difieren, no hace falta tocar los rangos. Se consultan precisamente cuando las primeras letras no bastan.
-
-## Operaciones
-
-Ordena las ternas con radix. Asigna nombres y recurre si no son únicos. Ordena los sufijos del residuo 0 por su primera letra y el rango de su cola. Mezcla comparando letra y rango cuando el otro sufijo es residuo 1, o dos letras y rango cuando es residuo 2.
-
-### mississippi · detectar las ternas que exigen recursión
+DC3 toma $\alpha = 2/3$. Partes las posiciones en tres clases por su residuo módulo 3, recurres sobre dos de ellas y deduces la tercera.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Marca los comienzos de residuo 1 y 2. Los de residuo 0 quedan para después.",
-      arrays: [
-        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], "states": ["muted", "active", "active", "muted", "active", "active", "muted", "active", "active", "muted", "active"]},
-        {"id": "row-1", "label": "Texto", "row": 1, "cells": ["m", "i", "s", "s", "i", "s", "s", "i", "p", "p", "i"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "El texto mississippi con sus índices. El último carácter del texto está en la posición 10; los centinelas $ van después y sólo sirven para completar tripletas.",
+      rows: [
+        { id: "txt", label: "S", cells: [
+          { value: "m", tag: "0" }, { value: "i", tag: "1" }, { value: "s", tag: "2" }, { value: "s", tag: "3" },
+          { value: "i", tag: "4" }, { value: "s", tag: "5" }, { value: "s", tag: "6" }, { value: "i", tag: "7" },
+          { value: "p", tag: "8" }, { value: "p", tag: "9" }, { value: "i", tag: "10" },
+        ]},
       ],
-      bridges: [],
+      caption: "n = 11 posiciones. Cada posición $i$ es el comienzo de un sufijo.",
     },
     {
-      note: "En residuo 1 se leen las ternas que empiezan en 1, 4, 7 y 10.",
-      arrays: [
-        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["1", "4", "7", "10"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Ternas", "row": 1, "cells": ["iss", "iss", "ipp", "i$$"], "states": ["marked", "marked", "idle", "idle"]},
+      note: "Partición por residuo: $B_k = \\{ i : i \\equiv k \\pmod 3 \\}$. $B_0$ queda apagado; la muestra $C = B_1 \\cup B_2$ es lo que se ordena con recursión.",
+      rows: [
+        { id: "b0", label: "B0 (i mod 3 = 0)", cells: [
+          { value: "m", tag: "0", state: "muted" }, { value: "·", state: "muted" }, { value: "·", state: "muted" }, { value: "s", tag: "3", state: "muted" },
+          { value: "·", state: "muted" }, { value: "·", state: "muted" }, { value: "s", tag: "6", state: "muted" }, { value: "·", state: "muted" },
+          { value: "·", state: "muted" }, { value: "p", tag: "9", state: "muted" }, { value: "·", state: "muted" },
+        ]},
+        { id: "b1", label: "B1 (mod 3 = 1)", cells: [
+          { value: "·" }, { value: "i", tag: "1", state: "marked" }, { value: "·" }, { value: "·" },
+          { value: "i", tag: "4", state: "marked" }, { value: "·" }, { value: "·" }, { value: "i", tag: "7", state: "marked" },
+          { value: "·" }, { value: "·" }, { value: "i", tag: "10", state: "marked" },
+        ]},
+        { id: "b2", label: "B2 (mod 3 = 2)", cells: [
+          { value: "·" }, { value: "·" }, { value: "s", tag: "2", state: "marked" }, { value: "·" },
+          { value: "·" }, { value: "s", tag: "5", state: "marked" }, { value: "·" }, { value: "·" },
+          { value: "p", tag: "8", state: "marked" }, { value: "·" }, { value: "·" },
+        ]},
       ],
-      bridges: [],
-    },
-    {
-      note: "En residuo 2 se leen las que empiezan en 2, 5 y 8.",
-      arrays: [
-        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["2", "5", "8"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Ternas", "row": 1, "cells": ["ssi", "ssi", "ppi"], "states": ["marked", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Ordena las ternas distintas y asigna sus nombres.",
-      arrays: [
-        {"id": "row-0", "label": "Ternas únicas", "row": 0, "cells": ["i$$", "ipp", "iss", "ppi", "ssi"], "states": ["idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Nombres", "row": 1, "cells": ["0", "1", "2", "3", "4"], "states": ["idle", "idle", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Concatena los nombres de residuo 1 y luego los de residuo 2 según el ejemplo de clase.",
-      arrays: [
-        {"id": "row-0", "label": "Texto reducido", "row": 0, "cells": ["2", "2", "1", "0", "4", "4", "3"], "states": ["marked", "marked", "idle", "idle", "marked", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Las ternas repetidas conservan el empate local. El orden de las colas se resuelve en el problema reducido.",
-      arrays: [
-        {"id": "row-0", "label": "Nombres repetidos", "row": 0, "cells": ["2", "4"], "states": ["answer", "answer"]},
-      ],
-      bridges: [],
+      caption: "Tres clases de 4, 4 y 3 posiciones. C = B1 ∪ B2 tiene 7 de 11, cerca de dos tercios.",
     },
   ],
 }} />
 
-### Mezclar comparando hasta dos caracteres
+## Definición y notación
 
-*(Traza derivada de la explicación de clase.)*
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | longitud de la cadena $S$ | el trabajo lineal por nivel crece proporcionalmente |
+| $B_k$ | posiciones $i$ con $i \equiv k \pmod 3$ | cada clase tiene alrededor de $n/3$ elementos |
+| $C = B_1 \cup B_2$ | la muestra, unos $2n/3$ posiciones | es lo que se ordena recursivamente |
+| tripleta de $i$ | $S[i]\,S[i+1]\,S[i+2]$, con centinela $\perp$ si se sale | su nombre es el rango entre todas las tripletas distintas |
+| $R = R_1 \cdot R_2$ | cadena reducida: nombres de $B_1$ y luego de $B_2$ | tiene unos $2n/3$ caracteres; es la entrada de la recursión |
+| $\mathrm{rnk}[i]$ | rango del sufijo $i \in C$ dentro de la muestra | sirve para comparar sufijos de $B_0$ con los de $C$ |
+
+El teorema de Kärkkäinen, Sanders y Burkhardt afirma que si se conoce el orden de los sufijos de $C$, el orden de **todos** los sufijos se deduce en $O(n)$. Por eso sólo hay que ordenar $C$, y ahí es donde entra la recursión.
+
+### Qué compra muestrear dos de las tres clases
+
+Para comparar dos sufijos hace falta leer letras hasta que decidan, o usar un rango ya calculado. Si ambos comienzos están en $C$, sus rangos ya bastan. Un comienzo de $B_0$ no está en la muestra, pero si le quitas una letra cae en $B_1$ o en $B_2$ según la distancia, y si le quitas dos cae en la otra. Frente a un $B_1$ basta quitar una letra; frente a un $B_2$ hacen falta dos. Así siempre se consulta un rango que existe.
+
+### Los empates de tripletas son empates locales
+
+En mississippi las tripletas $\mathtt{iss}$ y $\mathtt{ssi}$ se repiten. Radix ordena las tripletas sin saber cómo siguen los sufijos que empiezan igual, así que un nombre repetido es un **empate local**. La recursión sobre la cadena reducida $R$ distingue esos empates mirando la secuencia de nombres que sigue a cada tripleta. Si todos los nombres fueran distintos, el rango de cada tripleta daría directamente el orden y no haría falta recursión.
+
+## Operaciones paso a paso
+
+Todo el algoritmo se sigue sobre $S = $ mississippi, el ejemplo de clase. El paso 1 es la única llamada recursiva.
+
+### Paso 1: ordenar los sufijos de $C$
+
+Para cada $i \in C$ se toma la tripleta $S[i]S[i+1]S[i+2]$ y se ordenan con radix (tres pasadas, una por letra). Después se asigna a cada tripleta el nombre de su posición entre las distintas.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Compara los sufijos de mississippi en 3 y 2. Sus residuos son 0 y 2.",
-      arrays: [
-        {"id": "row-0", "label": "Inicio 3", "row": 0, "cells": ["s", "i", "s", "s", "i", "p", "p", "i"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Inicio 2", "row": 1, "cells": ["s", "s", "i", "s", "s", "i", "p", "p", "i"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Se leen las tripletas de B1 en orden de posición. El último sufijo, en la posición 10, tiene dos centinelas: i seguida de ⊥⊥, donde ⊥ es el $ de la presentación, menor que cualquier letra.",
+      rows: [
+        { id: "pos1", label: "Posición en B1", cells: [{ value: "1", tag: "1" }, { value: "4", tag: "4" }, { value: "7", tag: "7" }, { value: "10", tag: "10" }] },
+        { id: "tri1", label: "Tripleta", cells: [{ value: "iss", state: "marked" }, { value: "iss", state: "marked" }, { value: "ipp", state: "marked" }, { value: "i⊥⊥", state: "marked" }] },
       ],
-      bridges: [],
+      caption: "R1 = (iss)(iss)(ipp)(i⊥⊥).",
     },
     {
-      note: "La primera s coincide. La segunda letra decide: i es menor que s.",
-      arrays: [
-        {"id": "row-0", "label": "Inicio 3", "row": 0, "cells": ["s", "i", "s", "s", "i", "p", "p", "i"], "states": ["idle", "answer", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Inicio 2", "row": 1, "cells": ["s", "s", "i", "s", "s", "i", "p", "p", "i"], "states": ["idle", "active", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Se leen las de B2 en orden de posición. Son tres tripletas de tres letras, sin centinelas.",
+      rows: [
+        { id: "pos2", label: "Posición en B2", cells: [{ value: "2", tag: "2" }, { value: "5", tag: "5" }, { value: "8", tag: "8" }] },
+        { id: "tri2", label: "Tripleta", cells: [{ value: "ssi", state: "marked" }, { value: "ssi", state: "marked" }, { value: "ppi", state: "marked" }] },
       ],
-      bridges: [],
+      caption: "R2 = (ssi)(ssi)(ppi).",
     },
     {
-      note: "Si las dos letras coincidieran, compararías los rangos de 3+2 y 2+2. Ambas colas ya están en la muestra.",
-      arrays: [
-        {"id": "row-0", "label": "Colas de muestra", "row": 0, "cells": ["5:residuo_2", "4:residuo_1"], "states": ["answer", "answer"]},
+      note: "Se ordenan las tripletas distintas. La primera posición del nombre es la de su orden: i⊥⊥ < ipp < iss < ppi < ssi. Las repetidas comparten nombre.",
+      rows: [
+        { id: "uni", label: "Tripleta única", cells: [{ value: "i⊥⊥" }, { value: "ipp" }, { value: "iss" }, { value: "ppi" }, { value: "ssi" }] },
+        { id: "nom", label: "Nombre", cells: [{ value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2", state: "answer" }, { value: 3, tag: "3" }, { value: 4, tag: "4", state: "answer" }] },
       ],
-      bridges: [],
+      caption: "iss aparece dos veces, lo mismo ssi: hay nombres repetidos y la recursión es necesaria.",
+    },
+    {
+      note: "Se construye la cadena reducida R = R1 · R2 con los nombres en el orden de posición. Tiene 7 caracteres, unos 2n/3.",
+      rows: [
+        { id: "R", label: "R", cells: [
+          { value: 2, tag: "0", state: "answer" }, { value: 2, tag: "1", state: "answer" }, { value: 1, tag: "2" }, { value: 0, tag: "3" },
+          { value: 4, tag: "4", state: "answer" }, { value: 4, tag: "5", state: "answer" }, { value: 3, tag: "6" },
+        ]},
+      ],
+      caption: "R = 2210443. Los caracteres en ámbar son nombres repetidos; la recursión los ordena.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+### Paso 1b: la recursión sobre $R$ y los rangos de $C$
 
-Los nombres de ternas ordenan prefijos de longitud tres. La recursión distingue la sucesión de ternas cuando esos nombres empatan. Después, la mezcla tiene dos listas ya ordenadas: los residuos de muestra y el residuo restante. Cada comparación elige una cabeza y la emite. La parte crítica es que, cuando quedan letras empatadas, las colas estén en clases cuyos rangos ya fueron calculados.
-
-## Análisis de complejidad
-
-Ordenar ternas y pares de enteros en rangos lineales cuesta $O(n)$ por nivel con radix y alfabeto entero adecuado. La mezcla consume $O(n)$ porque cada comparación emite un sufijo y usa hasta dos caracteres y un rango por lado. El único subproblema tiene tamaño $2n/3+O(1)$. Sumando $n+2n/3+4n/9+\cdots$ se obtiene $O(n)$.
-
-### Contar el trabajo por nivel de la recursión
-
-*(Traza derivada de la explicación de clase.)*
+Se llama a DC3 sobre $R$, que es una cadena de alfabeto entero y longitud $7 \approx 2n/3$. Su suffix array indica el orden de los sufijos de $R$, y como cada posición de $R$ corresponde a una posición de $S$, de ahí sale el orden de $C$ en $S$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "En el nivel inicial se preparan ternas y se mezclan n sufijos.",
-      arrays: [
-        {"id": "row-0", "label": "Nivel 0", "row": 0, "cells": ["n"], "states": ["answer"]},
+      note: "Posiciones de R y el sufijo de S que representan. Por ejemplo, la posición 0 de R es la tripleta de S en 1, y la posición 4 es la de S en 2.",
+      rows: [
+        { id: "rpos", label: "Posición en R", cells: [{ value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" }, { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }] },
+        { id: "rval", label: "R", cells: [{ value: 2 }, { value: 2 }, { value: 1 }, { value: 0 }, { value: 4 }, { value: 4 }, { value: 3 }] },
+        { id: "spos", label: "Posición en S", cells: [{ value: 1 }, { value: 4 }, { value: 7 }, { value: 10 }, { value: 2 }, { value: 5 }, { value: 8 }] },
       ],
-      bridges: [],
+      caption: "Las primeras cuatro posiciones de R son B1 y las tres siguientes son B2.",
     },
     {
-      note: "El único subproblema tiene unos 2n/3 comienzos.",
-      arrays: [
-        {"id": "row-0", "label": "Nivel 0", "row": 0, "cells": ["n"], "states": ["idle"]},
-        {"id": "row-1", "label": "Nivel 1", "row": 1, "cells": ["2n/3"], "states": ["answer"]},
+      note: "El suffix array de R da el rango de cada posición entre los sufijos de C. El sufijo de S en 10 es el más pequeño de la muestra (rango 0), y el de 2 es el mayor (rango 6).",
+      rows: [
+        { id: "rpos2", label: "Posición en R", cells: [{ value: 0, tag: "0" }, { value: 1, tag: "1" }, { value: 2, tag: "2" }, { value: 3, tag: "3" }, { value: 4, tag: "4" }, { value: 5, tag: "5" }, { value: 6, tag: "6" }] },
+        { id: "rnk", label: "rnk en C", cells: [{ value: 3 }, { value: 2 }, { value: 1 }, { value: 0, state: "answer" }, { value: 6 }, { value: 5 }, { value: 4 }] },
+        { id: "spos2", label: "Posición en S", cells: [{ value: 1 }, { value: 4 }, { value: 7 }, { value: 10 }, { value: 2 }, { value: 5 }, { value: 8 }] },
       ],
-      bridges: [],
-    },
-    {
-      note: "En el siguiente quedan unos 4n/9. El trabajo por nivel es proporcional a su tamaño.",
-      arrays: [
-        {"id": "row-0", "label": "Nivel 0", "row": 0, "cells": ["n"], "states": ["idle"]},
-        {"id": "row-1", "label": "Nivel 1", "row": 1, "cells": ["2n/3"], "states": ["idle"]},
-        {"id": "row-2", "label": "Nivel 2", "row": 2, "cells": ["4n/9"], "states": ["answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "La suma geométrica n(1+2/3+4/9+…) está acotada por 3n, ignorando redondeos del caso base.",
-      arrays: [
-        {"id": "row-0", "label": "Costo total", "row": 0, "cells": ["O(n)"], "states": ["answer"]},
-      ],
-      bridges: [],
+      caption: "rnk[i] da el orden de $i \\in C$: 10 < 7 < 4 < 1 < 8 < 5 < 2.",
     },
   ],
 }} />
 
-### Cómo justificar la cota en el examen
+### Paso 2: ordenar los sufijos de $B_0$
 
-En cada nivel hay trabajo lineal para formar la muestra, ordenar ternas con radix, ordenar los comienzos de residuo cero y mezclar. Sólo hay una llamada recursiva con aproximadamente $2n/3$ posiciones. Desplegar $T(n)$ produce $n+2n/3+4n/9+cdots$. Que la suma sea geométrica depende de que el **tamaño** disminuye, no de que cada nivel cueste $O(n)$ respecto a la entrada original.
+Con los rangos de $C$ ya completos, cada $i \in B_0$ se ordena por el par $(S[i],\ \mathrm{rnk}[i+1])$ con radix de dos claves. El par lo decide casi todo: la primera letra es la clave principal y el rango de la cola, la secundaria. La cola $i+1$ está en $B_1$, así que su rango existe.
 
-## Tabla de complejidad
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Las cuatro posiciones de B0 con su par (letra, rango de i+1). Se ordenan primero por letra: m < p < s.",
+      rows: [
+        { id: "b0pos", label: "i en B0", cells: [{ value: 0, tag: "0" }, { value: 3, tag: "3" }, { value: 6, tag: "6" }, { value: 9, tag: "9" }] },
+        { id: "b0key", label: "(S[i], rnk[i+1])", cells: [{ value: "(m, 3)" }, { value: "(s, 2)" }, { value: "(s, 1)" }, { value: "(p, 0)" }] },
+      ],
+      caption: "rnk[1] = 3, rnk[4] = 2, rnk[7] = 1, rnk[10] = 0.",
+    },
+    {
+      note: "Orden final de B0: 0, 9, 6, 3. Los dos sufijos que empiezan por s se separan por el rango de su cola: 6 tiene rango 1 en la cola 7, y 3 tiene rango 2 en la cola 4.",
+      rows: [
+        { id: "b0sorted", label: "B0 ordenado", cells: [{ value: 0, tag: "0", state: "answer" }, { value: 9, tag: "1", state: "answer" }, { value: 6, tag: "2", state: "answer" }, { value: 3, tag: "3", state: "answer" }] },
+      ],
+      caption: "Dos listas ya ordenadas: B0 = 0, 9, 6, 3 y C = 10, 7, 4, 1, 8, 5, 2.",
+    },
+  ],
+}} />
 
-La tabla superior usa las unidades de costo de la explicación.
+### Paso 3: mezclar $B_0$ y $C$ con dos comparaciones
 
-## Ejemplos
+La mezcla es la de Merge Sort. Lo que falta es comparar $x \in B_0$ con $y \in C$ en $O(1)$, y eso dependen de la clase de $y$:
 
-[Casos resueltos](/structures/dc3/examples) y [preguntas con pistas](/structures/dc3/exercises).
+1. Si $y \in B_1$: se comparan $S[x]$ con $S[y]$ y, si empatan, $\mathrm{rnk}(x+1)$ con $\mathrm{rnk}(y+1)$. Aquí $x+1 \in B_1$ e $y+1 \in B_2$, así que ambos rangos están en la muestra.
+2. Si $y \in B_2$: se comparan $S[x],\, S[x+1],\, \mathrm{rnk}(x+2)$ con $S[y],\, S[y+1],\, \mathrm{rnk}(y+2)$. Aquí hacen falta dos letras, porque $y+1$ cae en $B_0$ y su rango no está en la muestra.
 
-## Comparación con estructuras relacionadas
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado inicial: cabezas 0 (de B0) y 10 (de C). Compara m con i. Como y = 10 está en B1, basta la primera letra: i es menor, así que sale 10 primero.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "marked" }, { value: 9, tag: "1" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "active" }, { value: 7, tag: "1" }, { value: 4, tag: "2" }, { value: 1, tag: "3" }, { value: 8, tag: "4" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: "·", tag: "0" }, { value: "·", tag: "1" }, { value: "·", tag: "2" }, { value: "·", tag: "3" }, { value: "·", tag: "4" }, { value: "·", tag: "5" }, { value: "·", tag: "6" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "Comparación m frente a i: decide la primera letra.",
+    },
+    {
+      note: "Sale 10. Ahora 0 contra 7 (B1): m frente a i; sale 7. Lo mismo para 4 y 1, que son B1 y empiezan con i. Las cuatro primeras salidas son todas de C.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "marked" }, { value: 9, tag: "1" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "active" }, { value: 8, tag: "4" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "active" }, { value: "·", tag: "4" }, { value: "·", tag: "5" }, { value: "·", tag: "6" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "Las cabezas de C ya salieron tres veces; la cuarta comparación es 0 frente a 1.",
+    },
+    {
+      note: "Ahora la cabeza de C es 8, que está en B2. Se comparan dos letras y un rango: m, i frente a p, p. La m decide, así que sale 0 de B0.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "active" }, { value: 9, tag: "1" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "marked" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "copied" }, { value: 0, tag: "4", state: "active" }, { value: "·", tag: "5" }, { value: "·", tag: "6" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "Aquí se usan dos letras y un rango: la primera letra de cada lado sale en la misma posición de la comparación.",
+    },
+    {
+      note: "Cabeza de B0 es 9 (p, de B0) contra 8 (p, de B2). Primera letra igual. Segunda: S[10] = i frente a S[9] = p. La i es menor, sale 9. El rango de la cola en 11 no existe, pero la segunda letra ya decidió.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "muted" }, { value: 9, tag: "1", state: "active" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "marked" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "copied" }, { value: 0, tag: "4", state: "copied" }, { value: 9, tag: "5", state: "active" }, { value: "·", tag: "6" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "Se decidió con la segunda letra; no hubo que mirar rango.",
+    },
+    {
+      note: "Cabeza de B0 es 6 (s) contra 8 (p). La s es mayor, así que sale 8 de C. Ninguna letra empata, sólo se compara una vez.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "muted" }, { value: 9, tag: "1", state: "muted" }, { value: 6, tag: "2", state: "marked" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "active" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "copied" }, { value: 0, tag: "4", state: "copied" }, { value: 9, tag: "5", state: "copied" }, { value: 8, tag: "6", state: "active" }, { value: "·", tag: "7" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "Sale 8. La cabeza de B0 sigue en 6.",
+    },
+    {
+      note: "Cabeza de B0 es 6 (y de C es 5, de B2). Primera letra s frente a s. Segunda: S[7] = i frente a S[6] = s; la i es menor, así que sale 6 de B0.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "muted" }, { value: 9, tag: "1", state: "muted" }, { value: 6, tag: "2", state: "active" }, { value: 3, tag: "3", state: "marked" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "muted" }, { value: 5, tag: "5", state: "marked" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "copied" }, { value: 0, tag: "4", state: "copied" }, { value: 9, tag: "5", state: "copied" }, { value: 8, tag: "6", state: "copied" }, { value: 6, tag: "7", state: "active" }, { value: "·", tag: "8" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "El rango de la cola decidió sólo si las dos primeras letras empataban.",
+    },
+    {
+      note: "Cabeza de B0 es 3, cabeza de C es 5. Comparación s, i frente a s, s: la i es menor, sale 3. Con esto B0 se agota.",
+      rows: [
+        { id: "B0", label: "B0 (cabeza en ámbar)", cells: [{ value: 0, tag: "0", state: "muted" }, { value: 9, tag: "1", state: "muted" }, { value: 6, tag: "2", state: "muted" }, { value: 3, tag: "3", state: "active" }] },
+        { id: "C", label: "C (cabeza en azul)", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "muted" }, { value: 5, tag: "5", state: "marked" }, { value: 2, tag: "6" }] },
+        { id: "out", label: "Salida", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "copied" }, { value: 0, tag: "4", state: "copied" }, { value: 9, tag: "5", state: "copied" }, { value: 8, tag: "6", state: "copied" }, { value: 6, tag: "7", state: "copied" }, { value: 3, tag: "8", state: "active" }, { value: "·", tag: "9" }, { value: "·", tag: "10" }] },
+      ],
+      caption: "B0 está vacía. El resto de C se copia tal cual.",
+    },
+    {
+      note: "Queda sólo C: se copian 5 y 2. La salida tiene los 11 sufijos en orden: i, ippi, issippi, ississippi, mississippi, pi, ppi, sippi, sissippi, ssippi, ssissippi.",
+      rows: [
+        { id: "out", label: "Salida = SA", cells: [{ value: 10, tag: "0", state: "copied" }, { value: 7, tag: "1", state: "copied" }, { value: 4, tag: "2", state: "copied" }, { value: 1, tag: "3", state: "copied" }, { value: 0, tag: "4", state: "copied" }, { value: 9, tag: "5", state: "copied" }, { value: 8, tag: "6", state: "copied" }, { value: 6, tag: "7", state: "copied" }, { value: 3, tag: "8", state: "copied" }, { value: 5, tag: "9", state: "active" }, { value: 2, tag: "10", state: "active" }] },
+      ],
+      caption: "Suffix array de mississippi: 10, 7, 4, 1, 0, 9, 8, 6, 3, 5, 2.",
+    },
+  ],
+}} />
 
-Manber–Myers duplica el prefijo en todas las posiciones. DC3 reduce el número de posiciones del subproblema. La presentación también menciona SA-IS entre las construcciones lineales.
+## De dónde sale la cota
 
-## Prueba de dominio
+El costo tiene tres partes por nivel: formar las tripletas y ordenarlas con radix (tres pasadas sobre $n$ elementos), ordenar $B_0$ con radix de dos claves (dos pasadas sobre $n/3$), y la mezcla (una comparación por sufijo emitido, con $O(1)$ cada una). Todo es lineal en el tamaño del nivel. Sólo hay una llamada recursiva, sobre $2n/3 + O(1)$ caracteres. Desplegando la recurrencia:
 
-[Lista de comprobación](/structures/dc3/mastery-check).
+$$
+T(n) = T\!\left(\tfrac{2n}{3}\right) + O(n) = O(n) \quad\text{porque}\quad n + \tfrac{2n}{3} + \tfrac{4n}{9} + \cdots \le 3n.
+$$
 
-*Fuente de clase: Sem13_Strings_II.pdf · pp. 31-40.*
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nivel 0: la cadena original de longitud n. Se forman C y B0, y se hace trabajo lineal sobre n posiciones.",
+      rows: [
+        { id: "lvl", label: "Tamaño del nivel", cells: [{ value: "n", state: "answer" }] },
+      ],
+      caption: "Trabajo del nivel 0: O(n).",
+    },
+    {
+      note: "Nivel 1: la recursión sobre R con unos 2n/3 caracteres. El trabajo de este nivel es proporcional a su tamaño, no al de n.",
+      rows: [
+        { id: "lvl", label: "Tamaño del nivel", cells: [{ value: "n" }, { value: "2n/3", state: "answer" }] },
+      ],
+      caption: "Trabajo del nivel 1: O(2n/3).",
+    },
+    {
+      note: "Nivel 2: la recursión sobre una cadena de unos 4n/9 caracteres. Así sigue la cadena: cada nivel es dos tercios del anterior.",
+      rows: [
+        { id: "lvl", label: "Tamaño del nivel", cells: [{ value: "n" }, { value: "2n/3" }, { value: "4n/9", state: "answer" }] },
+      ],
+      caption: "Trabajo del nivel 2: O(4n/9).",
+    },
+    {
+      note: "Se suman todos los niveles: n(1 + 2/3 + 4/9 + ...) es una serie geométrica de razón 2/3, así que el total es como mucho 3n. El tiempo es lineal.",
+      rows: [
+        { id: "lvl", label: "Total", cells: [{ value: "n", state: "answer" }, { value: "+ 2n/3" }, { value: "+ 4n/9" }, { value: "+ ..." }, { value: "≤ 3n", state: "answer" }] },
+      ],
+      caption: "La suma geométrica da O(n). Que sea geométrica depende de que el tamaño disminuya por un factor fijo.",
+    },
+  ],
+}} />
+
+Con el suffix array en mano se calcula el LCP con [Kasai](/structures/kasai-lcp) en $O(n)$; DC3 sólo se ocupa de construir el arreglo de sufijos.
+
+## Casos límite
+
+- **Nombres todos distintos.** Si las tripletas de la muestra son únicas, no hay recursión: el nombre de cada tripleta ya es el rango. Aún queda ordenar $B_0$ y mezclar.
+- **Cadenas con finales cortos.** Los centinelas $\perp$ completan las tripletas de $i$ cerca del final. Un sufijo más corto siempre va antes que uno con el mismo prefijo, así que el centinela debe ser menor que cualquier letra.
+- **Empates de cola.** Si dos sufijos de $B_0$ empatan en letra, la comparación usa el rango de la cola, y ese rango existe por la elección de clases. No se necesita recursión adicional en la mezcla.
+- **Residuo 0 frente a residuo 2.** Quitar una sola letra dejaría la cola en residuo 0, cuyo rango no está en la muestra. Por eso se leen dos.
+
+## Errores típicos
+
+- Pensar que $B_0$ se ordena por la tripleta. Sólo se ordena por la letra y el rango de la cola; la tripleta de $B_0$ ya no se usa.
+- Aplicar la regla de una letra a todas las mezclas. Sólo vale cuando el otro sufijo es de residuo 1.
+- Confundir el nombre de la tripleta con el rango final. Un nombre repetido indica que el rango aún no está resuelto.
+
+## Conexión
+
+Esta construcción es la alternativa lineal a la duplicación de [suffix-array](/structures/suffix-array), que es $O(n \lg n)$. Con el [LCP de Kasai](/structures/kasai-lcp) se obtiene el índice completo. SA-IS también es lineal y más rápido en la práctica; sólo se menciona aquí, y su teoría queda fuera del curso.
+
+Ejemplos resueltos: [casos](/structures/dc3/examples). Preguntas con pistas: [ejercicios](/structures/dc3/exercises). Prueba de dominio: [lista de comprobación](/structures/dc3/mastery-check).
+
+*Fuente de clase: Sem13_Strings_II.pdf, pp. 25-34.*

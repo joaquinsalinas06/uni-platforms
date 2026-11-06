@@ -7,160 +7,340 @@ import Visualization from '../../../src/components/Visualization.astro';
 
 ## ¿Qué problema resuelve?
 
-Buscamos preservar localidad en múltiples tamaños de bloque con un solo orden de almacenamiento.
+Un árbol de búsqueda grande vive en memoria externa: caché, RAM o disco. Cada vez que una búsqueda entra en un bloque nuevo se paga una transferencia. Con un árbol binario y el orden por niveles, cada comparación cae en un bloque distinto, así que buscar cuesta del orden de $\lg N$ transferencias. Un B-tree resuelve esto con nodos de tamaño $B$, pero necesita conocer $B$ al construirse. Esta lección muestra un único orden físico que obtiene localidad para todo $B$ a la vez, sin que el árbol sepa cuál es.
 
-## Intuición
+## Intuición dibujada
 
-Parte el árbol por altura. Escribe primero el árbol superior y después cada subárbol inferior, aplicando la misma regla dentro de cada fragmento.
-
-## Estructura interna
-
-Cada subárbol producido por la descomposición recursiva ocupa un intervalo contiguo de la representación. El orden de almacenamiento cambia. Los separadores y las decisiones del BST se conservan.
-
-### Dos árboles para dos preguntas
-
-El árbol de búsqueda determina qué comparación sigue. El árbol de descomposición describe cómo se colocan fragmentos en memoria. Sus nodos representan objetos diferentes. Por ejemplo, la pieza con raíz 2 y hojas 1 y 3 puede ser un nodo de la descomposición aunque contenga tres nodos del BST. Seguir la arista de 4 hacia 2 cambia de pieza; seguir la de 2 hacia 1 puede permanecer en la misma pieza.
-
-Un layout por niveles pone toda la profundidad uno junta y después la profundidad dos. Para un recorrido que visita muchos nodos de un mismo nivel, esa organización puede ser útil. Una búsqueda toma uno por nivel. Al agrupar recursivamente varios niveles de un mismo subárbol, el layout vEB favorece ese patrón de acceso. El contraste se entiende al colorear la misma ruta en los dos arreglos físicos y contar cuántas fronteras cruza.
-
-### La máquina elige la escala al ejecutar
-
-El corte se calcula a partir de la altura, no de un valor particular de $B$. Un bloque pequeño verá útiles los cortes más profundos. Un bloque grande puede contener piezas formadas varios niveles antes. Para la prueba, imagina una línea de corte distinta en el árbol de descomposición por cada tamaño de bloque. El archivo resultante sigue siendo el mismo. Lo que cambia es cómo lo agrupas para contar transferencias.
-
-## Operaciones
-
-Corta por la mitad del número de niveles, redondeando hacia abajo para el fragmento superior y dejando al menos un nivel cuando hay más de uno. La parte superior y las partes inferiores se procesan recursivamente hasta que cada fragmento tiene un nodo. Busca siguiendo comparaciones del BST.
-
-### Cortar el BST por altura
-
-*(Traza derivada de la explicación de clase.)*
+Imagina el árbol cortado a media altura. La mitad superior queda como una pieza. Cada subárbol que cuelga de ella es otra pieza, y cada pieza se corta otra vez a media altura, hasta llegar a nodos sueltos. Escribir las piezas una tras otra en el arreglo da el layout. Una búsqueda atraviesa pocas piezas, y cada pieza ocupa un trozo contiguo de memoria.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "BST completo de tres niveles. La consulta será 7.",
+      note: "Un árbol completo de altura 4 con 15 nodos. Los nombres 1 a 15 son los nodos en orden por niveles, no llaves de búsqueda. Así cada nodo tiene un nombre fijo que luego se puede ubicar en el arreglo.",
       nodes: [
-        {"id": "a", "value": "4", "parent": null},
-        {"id": "b", "value": "2", "parent": "a"},
-        {"id": "c", "value": "6", "parent": "a"},
-        {"id": "d", "value": "1", "parent": "b"},
-        {"id": "e", "value": "3", "parent": "b"},
-        {"id": "f", "value": "5", "parent": "c"},
-        {"id": "g", "value": "7", "parent": "c"},
+        {"id": "1", "value": "1", "parent": null},
+        {"id": "2", "value": "2", "parent": "1"},
+        {"id": "3", "value": "3", "parent": "1"},
+        {"id": "4", "value": "4", "parent": "2"},
+        {"id": "5", "value": "5", "parent": "2"},
+        {"id": "6", "value": "6", "parent": "3"},
+        {"id": "7", "value": "7", "parent": "3"},
+        {"id": "8", "value": "8", "parent": "4"},
+        {"id": "9", "value": "9", "parent": "4"},
+        {"id": "10", "value": "10", "parent": "5"},
+        {"id": "11", "value": "11", "parent": "5"},
+        {"id": "12", "value": "12", "parent": "6"},
+        {"id": "13", "value": "13", "parent": "6"},
+        {"id": "14", "value": "14", "parent": "7"},
+        {"id": "15", "value": "15", "parent": "7"},
       ],
     },
     {
-      note: "Con un corte después del primer nivel, 4 queda en el fragmento superior.",
+      note: "Se corta a media altura (altura 4 entre dos). La pieza superior tiene los nodos 1, 2 y 3. Los nodos 4 a 7 son raíces de subárboles de altura 2: se dibujan como triángulos, sin mostrar su interior.",
       nodes: [
-        {"id": "a", "value": "4", "parent": null, "state": "marked"},
-        {"id": "b", "value": "2", "parent": "a"},
-        {"id": "c", "value": "6", "parent": "a"},
-        {"id": "d", "value": "1", "parent": "b"},
-        {"id": "e", "value": "3", "parent": "b"},
-        {"id": "f", "value": "5", "parent": "c"},
-        {"id": "g", "value": "7", "parent": "c"},
+        {"id": "1", "value": "1", "parent": null, "state": "active"},
+        {"id": "2", "value": "2", "parent": "1", "state": "active"},
+        {"id": "3", "value": "3", "parent": "1", "state": "active"},
+        {"id": "4", "value": "4", "parent": "2", "collapsed": true, "state": "marked"},
+        {"id": "5", "value": "5", "parent": "2", "collapsed": true, "state": "marked"},
+        {"id": "6", "value": "6", "parent": "3", "collapsed": true, "state": "marked"},
+        {"id": "7", "value": "7", "parent": "3", "collapsed": true, "state": "marked"},
       ],
     },
     {
-      note: "El subárbol izquierdo forma su propio intervalo contiguo.",
+      note: "Cada subárbol inferior se corta otra vez con la misma regla. Abro el subárbol de 4: tiene altura 2, así que se queda como una pieza de 3 nodos (4, 8 y 9). Los demás siguen cerrados.",
       nodes: [
-        {"id": "a", "value": "4", "parent": null},
-        {"id": "b", "value": "2", "parent": "a", "state": "active"},
-        {"id": "c", "value": "6", "parent": "a"},
-        {"id": "d", "value": "1", "parent": "b", "state": "active"},
-        {"id": "e", "value": "3", "parent": "b", "state": "active"},
-        {"id": "f", "value": "5", "parent": "c"},
-        {"id": "g", "value": "7", "parent": "c"},
-      ],
-    },
-    {
-      note: "El subárbol derecho forma el siguiente intervalo.",
-      nodes: [
-        {"id": "a", "value": "4", "parent": null},
-        {"id": "b", "value": "2", "parent": "a"},
-        {"id": "c", "value": "6", "parent": "a", "state": "active"},
-        {"id": "d", "value": "1", "parent": "b"},
-        {"id": "e", "value": "3", "parent": "b"},
-        {"id": "f", "value": "5", "parent": "c", "state": "active"},
-        {"id": "g", "value": "7", "parent": "c", "state": "active"},
-      ],
-    },
-    {
-      note: "Buscar 7 consume el fragmento superior y luego el derecho.",
-      nodes: [
-        {"id": "a", "value": "4", "parent": null, "state": "active"},
-        {"id": "b", "value": "2", "parent": "a", "state": "muted"},
-        {"id": "c", "value": "6", "parent": "a", "state": "active"},
-        {"id": "d", "value": "1", "parent": "b", "state": "muted"},
-        {"id": "e", "value": "3", "parent": "b", "state": "muted"},
-        {"id": "f", "value": "5", "parent": "c"},
-        {"id": "g", "value": "7", "parent": "c", "state": "answer"},
+        {"id": "1", "value": "1", "parent": null},
+        {"id": "2", "value": "2", "parent": "1"},
+        {"id": "3", "value": "3", "parent": "1"},
+        {"id": "4", "value": "4", "parent": "2", "state": "active"},
+        {"id": "5", "value": "5", "parent": "2", "collapsed": true, "state": "muted"},
+        {"id": "6", "value": "6", "parent": "3", "collapsed": true, "state": "muted"},
+        {"id": "7", "value": "7", "parent": "3", "collapsed": true, "state": "muted"},
+        {"id": "8", "value": "8", "parent": "4", "state": "active"},
+        {"id": "9", "value": "9", "parent": "4", "state": "active"},
       ],
     },
   ],
 }} />
 
-### Leer el mismo recorrido en el arreglo
+En el layout, cada pieza es un intervalo de celdas consecutivas. Las piezas $\{1,2,3\}$, $\{4,8,9\}$, $\{5,10,11\}$, $\{6,12,13\}$ y $\{7,14,15\}$ aparecen una tras otra. Esa es la idea completa: el orden de almacenamiento sigue la recursión, no el nivel.
 
-*(Traza derivada de la explicación de clase.)*
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $N$ | número de nodos del árbol | el camino de la búsqueda crece como $\lg N$ |
+| $h$ | altura del árbol (niveles) | la pieza superior tiene altura $h/2$ |
+| $B$ | nodos por bloque de memoria | sólo aparece en el análisis, nunca en la construcción |
+| $\lg B$ | altura de la pieza en la escala de $B$ | a más $B$, piezas más grandes que caben en un bloque |
+
+El layout van Emde Boas se define así. Dado un árbol de altura $h$, se corta a media altura: queda un árbol superior $A$ de altura $\lfloor h/2 \rfloor$ y debajo los subárboles inferiores $C_1, \dots, C_k$, cada uno de altura aproximadamente $h/2$. En memoria se escribe primero $A$ y después $C_1, C_2, \dots, C_k$, uno tras otro. Cada pieza se escribe con la misma regla, hasta llegar a un nodo.
+
+Para el árbol de 15 nodos, el orden físico es:
+
+| Casilla (1 a 15) | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Nodo van Emde Boas | 1 | 2 | 3 | 4 | 8 | 9 | 5 | 10 | 11 | 6 | 12 | 13 | 7 | 14 | 15 |
+
+Compárese con el orden por niveles, que es simplemente $1, 2, \dots, 15$. En el layout van Emde Boas el nodo 4 queda junto a sus hijos 8 y 9. En el orden por niveles están a 4 y 5 casillas de distancia, y esa distancia se duplica en cada nivel.
+
+## Operaciones paso a paso
+
+Construir el layout es escribir la recursión. Buscar no cambia respecto a un BST normal: en cada nodo se compara la llave y se sigue el hijo izquierdo o derecho. Lo que cambia es **dónde** están los nodos del camino. Para entender por qué ayuda, sigue la búsqueda del nodo 15 (la ruta $1 \to 3 \to 7 \to 15$) en el arreglo físico, con bloques de 4 casillas.
+
+### Ruta de búsqueda sobre el arreglo
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Los fragmentos superiores de cada corte se escriben antes que sus descendientes.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["4", "2", "1", "3", "6", "5", "7"], "states": ["marked", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Orden físico del layout. Cada casilla muestra el nodo que guarda, y la etiqueta pequeña arriba indica la casilla (de 1 a 15).",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
       ],
-      bridges: [],
+      caption: "15 casillas consecutivas. Todavía no hay piezas marcadas.",
     },
     {
-      note: "Se consulta 4 y se descarta el fragmento izquierdo.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["4", "2", "1", "3", "6", "5", "7"], "states": ["active", "muted", "muted", "muted", "idle", "idle", "idle"]},
+      note: "Las piezas son intervalos contiguos. La superior ocupa las casillas 1 a 3. Las cuatro inferiores ocupan 3 casillas cada una: 4 a 6, 7 a 9, 10 a 12 y 13 a 15. Cada pieza se escribe entera antes que la siguiente.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
       ],
-      bridges: [],
+      spans: [
+        { id: "A", row: "mem", from: 0, to: 2, label: "A: 1,2,3" },
+        { id: "C1", row: "mem", from: 3, to: 5, label: "C1: 4,8,9" },
+        { id: "C2", row: "mem", from: 6, to: 8, label: "C2: 5,10,11" },
+        { id: "C3", row: "mem", from: 9, to: 11, label: "C3: 6,12,13" },
+        { id: "C4", row: "mem", from: 12, to: 14, label: "C4: 7,14,15" },
+      ],
+      caption: "Cinco piezas: una superior y cuatro inferiores, cada una en un intervalo contiguo.",
     },
     {
-      note: "Las dos llaves siguientes de la ruta caen en el fragmento derecho.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["4", "2", "1", "3", "6", "5", "7"], "states": ["idle", "idle", "idle", "idle", "active", "idle", "answer"]},
+      note: "Paso 1 de la búsqueda de 15: se visita el nodo 1 (casilla 1). Se decide ir a la izquierda o a la derecha en el árbol lógico. Aquí la siguiente decisión es ir a la derecha, al nodo 3.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1", state: "active" }, { value: "2", tag: "2" }, { value: "3", tag: "3" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
       ],
-      bridges: [],
+      caption: "Visitado: 1. Siguiente nodo lógico: 3 (casilla 3, la misma pieza superior).",
+    },
+    {
+      note: "Paso 2: se visita el nodo 3 (casilla 3). Su hijo derecho es 7, que vive en la casilla 13, dentro de la pieza C4. La búsqueda cambia de pieza aquí.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1", state: "idle" }, { value: "2", tag: "2" }, { value: "3", tag: "3", state: "active" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
+      ],
+      spans: [
+        { id: "A", row: "mem", from: 0, to: 2, label: "A" },
+        { id: "C4", row: "mem", from: 12, to: 14, label: "C4" },
+      ],
+      caption: "Visitados: 1, 3. Falta bajar a 7 y luego a 15, ambos dentro de C4.",
+    },
+    {
+      note: "Paso 3: se visita 7 (casilla 13) y luego 15 (casilla 15). Las dos últimas comparaciones caen en la misma pieza C4. La búsqueda tocó dos piezas en total: A y C4.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3", state: "active" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13", state: "active" }, { value: "14", tag: "14" }, { value: "15", tag: "15", state: "answer" },
+        ]},
+      ],
+      spans: [
+        { id: "A", row: "mem", from: 0, to: 2, label: "A" },
+        { id: "C4", row: "mem", from: 12, to: 14, label: "C4" },
+      ],
+      caption: "Encontrado 15. La ruta del árbol tiene 4 nodos y sólo toca 2 piezas.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+Para contar transferencias, sobre ese mismo arreglo se dibujan bloques de $B = 4$ casillas. Los bloques son fijos: $[1..4]$, $[5..8]$, $[9..12]$ y $[13..15]$.
 
-Para reconstruir el layout a mano, dibuja primero el corte de la raíz por niveles. Conserva la parte superior como un árbol y trata cada subárbol inferior como otro fragmento. Dentro de cada fragmento vuelve a cortar antes de concatenarlo con el siguiente. Si dos fragmentos son hermanos en esta descomposición, escribe uno entero antes de empezar el otro.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Bloques de 4 casillas sobre el layout. La fila de bloques no cambia la memoria, sólo agrupa las casillas por transferencia.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
+        { id: "blk", label: "bloques", cells: [
+          { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" },
+        ]},
+      ],
+      spans: [
+        { id: "b1", row: "blk", from: 0, to: 3, label: "bloque 1" },
+        { id: "b2", row: "blk", from: 4, to: 7, label: "bloque 2" },
+        { id: "b3", row: "blk", from: 8, to: 11, label: "bloque 3" },
+        { id: "b4", row: "blk", from: 12, to: 14, label: "bloque 4" },
+      ],
+      caption: "Con B = 4 hay cuatro bloques. La pieza C1 (casillas 4 a 6) cruza la frontera entre el bloque 1 y el 2.",
+    },
+    {
+      note: "La ruta 1, 3, 7, 15 usa las casillas 1, 3, 13 y 15. Las casillas 1 y 3 caen en el bloque 1. Las casillas 13 y 15 caen en el bloque 4. Son dos transferencias para cuatro comparaciones.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1", state: "active" }, { value: "2", tag: "2" }, { value: "3", tag: "3", state: "active" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13", state: "active" }, { value: "14", tag: "14" }, { value: "15", tag: "15", state: "answer" },
+        ]},
+        { id: "blk", label: "bloques", cells: [
+          { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" },
+        ]},
+      ],
+      spans: [
+        { id: "b1", row: "blk", from: 0, to: 3, label: "bloque 1" },
+        { id: "b2", row: "blk", from: 4, to: 7, label: "bloque 2" },
+        { id: "b3", row: "blk", from: 8, to: 11, label: "bloque 3" },
+        { id: "b4", row: "blk", from: 12, to: 14, label: "bloque 4" },
+      ],
+      caption: "Transferencias de la ruta: bloque 1 y bloque 4. Dos en total.",
+    },
+  ],
+}} />
 
-Las aristas originales no se vuelven saltos al vecino inmediato del arreglo. Cuando consultas, las comparaciones siguen usando el árbol. La ventaja física es que varias aristas consecutivas de una ruta pueden terminar dentro del mismo trozo contiguo.
+Compara con el orden por niveles para la misma ruta. Ahí los nodos 1, 3, 7 y 15 están en las casillas 1, 3, 7 y 15, que caen en los bloques 1, 1, 2 y 4. Tres transferencias. El layout de van Emde Boas gana en esta ruta porque el bloque 4 contiene la pieza completa del nodo 7 y su hijo 15.
 
-## Análisis de complejidad
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Dos órdenes físicos de los mismos 15 nodos, con los mismos bloques de 4 casillas. Arriba, por niveles. Abajo, van Emde Boas.",
+      rows: [
+        { id: "niv", label: "niveles", cells: [
+          { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7" }, { value: "8" }, { value: "9" }, { value: "10" }, { value: "11" }, { value: "12" }, { value: "13" }, { value: "14" }, { value: "15" },
+        ]},
+        { id: "vEB", label: "van Emde Boas", cells: [
+          { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "8" }, { value: "9" }, { value: "5" }, { value: "10" }, { value: "11" }, { value: "6" }, { value: "12" }, { value: "13" }, { value: "7" }, { value: "14" }, { value: "15" },
+        ]},
+      ],
+      spans: [
+        { id: "n1", row: "niv", from: 0, to: 3, label: "bloque 1" },
+        { id: "n2", row: "niv", from: 4, to: 7, label: "bloque 2" },
+        { id: "n3", row: "niv", from: 8, to: 11, label: "bloque 3" },
+        { id: "n4", row: "niv", from: 12, to: 14, label: "bloque 4" },
+        { id: "v1", row: "vEB", from: 0, to: 3, label: "bloque 1" },
+        { id: "v2", row: "vEB", from: 4, to: 7, label: "bloque 2" },
+        { id: "v3", row: "vEB", from: 8, to: 11, label: "bloque 3" },
+        { id: "v4", row: "vEB", from: 12, to: 14, label: "bloque 4" },
+      ],
+      caption: "Mismos nodos, distinto orden. Se cuentan bloques distintos para la misma ruta.",
+    },
+    {
+      note: "Ruta 1, 3, 7, 15 en el orden por niveles. Las casillas son 1, 3, 7 y 15. Los bloques tocados son el 1 (casillas 1 y 3), el 2 (casilla 7) y el 4 (casilla 15). Tres transferencias.",
+      rows: [
+        { id: "niv", label: "niveles", cells: [
+          { value: "1", state: "active" }, { value: "2" }, { value: "3", state: "active" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7", state: "active" }, { value: "8" }, { value: "9" }, { value: "10" }, { value: "11" }, { value: "12" }, { value: "13" }, { value: "14" }, { value: "15", state: "answer" },
+        ]},
+        { id: "vEB", label: "van Emde Boas", cells: [
+          { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "8" }, { value: "9" }, { value: "5" }, { value: "10" }, { value: "11" }, { value: "6" }, { value: "12" }, { value: "13" }, { value: "7" }, { value: "14" }, { value: "15" },
+        ]},
+      ],
+      spans: [
+        { id: "n1", row: "niv", from: 0, to: 3, label: "bloque 1" },
+        { id: "n2", row: "niv", from: 4, to: 7, label: "bloque 2" },
+        { id: "n3", row: "niv", from: 8, to: 11, label: "bloque 3" },
+        { id: "n4", row: "niv", from: 12, to: 14, label: "bloque 4" },
+        { id: "v1", row: "vEB", from: 0, to: 3, label: "bloque 1" },
+        { id: "v2", row: "vEB", from: 4, to: 7, label: "bloque 2" },
+        { id: "v3", row: "vEB", from: 8, to: 11, label: "bloque 3" },
+        { id: "v4", row: "vEB", from: 12, to: 14, label: "bloque 4" },
+      ],
+      caption: "Por niveles: 3 bloques para la ruta.",
+    },
+    {
+      note: "La misma ruta en van Emde Boas: casillas 1, 3, 13 y 15. Sólo se tocan el bloque 1 y el bloque 4. Dos transferencias.",
+      rows: [
+        { id: "niv", label: "niveles", cells: [
+          { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7" }, { value: "8" }, { value: "9" }, { value: "10" }, { value: "11" }, { value: "12" }, { value: "13" }, { value: "14" }, { value: "15" },
+        ]},
+        { id: "vEB", label: "van Emde Boas", cells: [
+          { value: "1", state: "active" }, { value: "2" }, { value: "3", state: "active" }, { value: "4" }, { value: "8" }, { value: "9" }, { value: "5" }, { value: "10" }, { value: "11" }, { value: "6" }, { value: "12" }, { value: "13" }, { value: "7", state: "active" }, { value: "14" }, { value: "15", state: "answer" },
+        ]},
+      ],
+      spans: [
+        { id: "n1", row: "niv", from: 0, to: 3, label: "bloque 1" },
+        { id: "n2", row: "niv", from: 4, to: 7, label: "bloque 2" },
+        { id: "n3", row: "niv", from: 8, to: 11, label: "bloque 3" },
+        { id: "n4", row: "niv", from: 12, to: 14, label: "bloque 4" },
+        { id: "v1", row: "vEB", from: 0, to: 3, label: "bloque 1" },
+        { id: "v2", row: "vEB", from: 4, to: 7, label: "bloque 2" },
+        { id: "v3", row: "vEB", from: 8, to: 11, label: "bloque 3" },
+        { id: "v4", row: "vEB", from: 12, to: 14, label: "bloque 4" },
+      ],
+      caption: "Van Emde Boas: 2 bloques. Con B = 4 gana, pero la ventaja depende de la ruta y de dónde caiga la frontera.",
+    },
+  ],
+}} />
 
-Fija $B$ sólo para analizar el arreglo resultante. Considera los fragmentos máximos que caben en $B$ registros. Cada fragmento toca a lo sumo dos bloques, incluso si no está alineado. Como el padre de descomposición excedía $B$, el fragmento tiene altura $\Omega(\lg B)$ en el árbol completo. Una búsqueda de altura $O(\lg N)$ cruza $O(1+\log_B N)$ fragmentos. El algoritmo elige los cortes por altura sin recibir $B$.
+## De dónde sale la cota
 
-### Cómo justificar la cota en el examen
+Fija $B$ sólo para el análisis. El layout no lo conoce. Sigue la recursión del layout hasta el primer nivel en que las piezas tienen altura a lo sumo $\lg B$. En ese nivel cada pieza tiene altura entre $\tfrac12 \lg B$ y $\lg B$, es decir, entre $\sqrt{B}$ y $B$ nodos.
 
-Para contar E/S, fija $B$ y sigue una sola ruta. Cada vez que entra en un fragmento pequeño paga hasta dos bloques. El fragmento existe porque su padre de descomposición era demasiado grande. En un árbol completo, partir por altura deja subproblemas cuya altura es aproximadamente la mitad de la del padre, de modo que las piezas de la escala analizada aportan del orden de $lg B$ niveles consecutivos. La parte final incompleta puede añadir una pieza. Dividir la altura total por $lg B$ da la cantidad de piezas atravesadas. El razonamiento usa la altura de **cada pieza de la escala elegida**, no el número total de piezas almacenadas.
+Ahora cuenta dos cosas sobre una búsqueda, que es un camino de la raíz a una hoja de longitud $\lg N$:
 
-## Tabla de complejidad
+1. **Cuántas piezas atraviesa.** El camino baja $\lg N$ niveles. Cada pieza de la escala le aporta al menos $\tfrac12 \lg B$ de ellos. Entonces el número de piezas es a lo sumo $\dfrac{\lg N}{\tfrac12 \lg B} = 2\log_B N$.
+2. **Cuántos bloques ocupa cada pieza.** Una pieza tiene a lo sumo $B$ nodos consecutivos. Si cabe dentro de un bloque, toca 1 bloque. Si cae partida entre dos, toca 2. Nunca más de 2.
 
-La tabla superior usa las unidades de costo de la explicación.
+El producto da el costo total:
 
-## Ejemplos
+$$\text{transferencias} \le 2 \cdot 2\log_B N = 4\log_B N = O(\log_{B+1} N)$$
 
-[Casos resueltos](/structures/cache-oblivious-veb-layout/examples) y [preguntas con pistas](/structures/cache-oblivious-veb-layout/exercises).
+El análisis se ve en el diagrama de escala, con $B = 4$ (así $\lg B = 2$, y las piezas de la escala son de altura 2, es decir, 3 nodos).
 
-## Comparación con estructuras relacionadas
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Escala de B = 4. Las piezas de altura lg B = 2 tienen 3 nodos cada una, entre sqrt(B) = 2 y B = 4. Se resaltan las dos piezas que atraviesa la ruta 1, 3, 7, 15.",
+      nodes: [
+        {"id": "1", "value": "1", "parent": null, "state": "marked"},
+        {"id": "2", "value": "2", "parent": "1", "state": "marked"},
+        {"id": "3", "value": "3", "parent": "1", "state": "marked"},
+        {"id": "4", "value": "4", "parent": "2", "collapsed": true, "state": "muted"},
+        {"id": "5", "value": "5", "parent": "2", "collapsed": true, "state": "muted"},
+        {"id": "6", "value": "6", "parent": "3", "collapsed": true, "state": "muted"},
+        {"id": "7", "value": "7", "parent": "3", "state": "marked"},
+        {"id": "14", "value": "14", "parent": "7", "state": "muted"},
+        {"id": "15", "value": "15", "parent": "7", "state": "marked"},
+      ],
+    },
+    {
+      note: "La ruta de altura lg N = 4 atraviesa dos piezas, A y la pieza de 7. Cada una aporta 2 niveles. Dos piezas, dentro de la cota 2 log_4 15, que vale casi 4.",
+      nodes: [
+        {"id": "1", "value": "1", "parent": null, "state": "active"},
+        {"id": "2", "value": "2", "parent": "1", "state": "muted"},
+        {"id": "3", "value": "3", "parent": "1", "state": "active"},
+        {"id": "4", "value": "4", "parent": "2", "collapsed": true, "state": "muted"},
+        {"id": "5", "value": "5", "parent": "2", "collapsed": true, "state": "muted"},
+        {"id": "6", "value": "6", "parent": "3", "collapsed": true, "state": "muted"},
+        {"id": "7", "value": "7", "parent": "3", "state": "active"},
+        {"id": "14", "value": "14", "parent": "7", "state": "muted"},
+        {"id": "15", "value": "15", "parent": "7", "state": "answer"},
+      ],
+    },
+  ],
+}} />
 
-El B-tree ajusta su capacidad al bloque. El layout recursivo obtiene localidad con cortes a varias escalas. El árbol van Emde Boas de Enteros usa otra representación y divide el universo de llaves.
+En el diagrama de arreglo de la ruta, la pieza $\{4,8,9\}$ ocupa las casillas 4, 5 y 6. Como la frontera del bloque 1 está entre las casillas 4 y 5, esa pieza toca dos bloques. Es el caso del "2" en "a lo sumo 2".
 
-## Prueba de dominio
+La cota no usa $B$ en la construcción: el mismo arreglo, sin reescribirse, sirve para $B = 4$, para $B = 64$ y para cualquier otro. Cada frontera de la jerarquía (caché–RAM, RAM–disco) recibe la misma garantía.
 
-[Lista de comprobación](/structures/cache-oblivious-veb-layout/mastery-check).
+## Errores típicos y casos límite
 
-*Fuente de clase: Sem10_Memory_Hierarchy_III.pdf · pp. 9-25.*
+- **Confundir el orden de almacenamiento con el orden de búsqueda.** La búsqueda sigue las aristas del BST. Las posiciones físicas sólo importan para contar bloques.
+- **Creer que una pieza siempre cabe en un bloque.** Una pieza de $B$ casillas puede empezar en mitad de un bloque. Por eso el análisis dice "a lo sumo 2" y no "1".
+- **Usar una sola traza para juzgar el layout.** Para la ruta 1, 3, 7, 15 van Emde Boas gana. Para otras rutas puede ganar menos. La cota describe el peor caso, no cada caso.
+- **Un árbol de un solo nodo.** Ocupa una casilla y una transferencia. La cota $O(1 + \log_B N)$ tiene ese término constante.
+- **Olvidar que la altura de la pieza depende de la escala.** En el análisis hay que medir la altura de cada pieza de la escala elegida, no la altura total del árbol.
+
+## Conexión
+
+Para llegar aquí conviene manejar el [modelo de memoria externa](/structures/external-memory-model) y el [B-tree](/structures/b-tree), que ajusta su nodo a $B$. El layout van Emde Boas consigue algo parecido sin conocer $B$. Su limitación es que es estático: un árbol con posiciones fijas no admite inserciones baratas sin reorganizar.
+
+Ejemplos: [casos resueltos](/structures/cache-oblivious-veb-layout/examples). Ejercicios: [preguntas con pistas](/structures/cache-oblivious-veb-layout/exercises). Prueba de dominio: [lista de comprobación](/structures/cache-oblivious-veb-layout/mastery-check).
+
+*Fuente de clase: Sem10_Memory_Hierarchy_III.pdf · pp. 9-25 (layout van Emde Boas, cota con $B$) y CS3014 (9).pdf · pp. 38-61 (modelo cache-oblivious).*

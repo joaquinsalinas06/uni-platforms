@@ -3,41 +3,42 @@ kind: exercises
 title: Preguntas de examen
 items:
 - level: 1
-  statement: ¿Qué dispara la partición de una hoja?
+  statement: "Con $B = 3$, una hoja queda con cuatro llaves tras una inserción. ¿Qué pasa?"
   hints:
-  - Compara el número de llaves tras insertar con la capacidad.
-  solution: Exceder la capacidad B, aunque las llaves sigan en orden.
+  - Compara el número de llaves con la capacidad de un bloque.
+  solution: Se parte en dos mitades y la mediana sube al padre.
   label: reconocer
 - level: 2
-  statement: En [10,15,17,20], sube 15. ¿Qué queda en cada hoja?
+  statement: "Tras insertar 55 en la hoja $[40, 50, 55, 60]$ con $B = 3$, ¿qué queda en la hoja izquierda?"
   hints:
-  - La mediana se mueve al padre.
-  solution: Izquierda [10], derecha [17,20].
+  - Identifica la mediana de las cuatro llaves.
+  solution: "La hoja izquierda queda con 40; la mediana 50 sube al padre."
   label: trazar
 - level: 3
-  statement: Busca 45 después de promover 50 en el ejemplo de clase. ¿Qué intervalos descartas?
+  statement: "En el árbol de la lámina, ¿cuántos bloques lee la búsqueda de 75?"
   hints:
-  - Compara primero con 30 y 50.
-  - Distingue dirigir la consulta de encontrarla.
-  solution: 45 cae en el intervalo (30,50). La hoja contiene 40 y la consulta falla.
+  - Cuenta un bloque por cada nivel que baja la búsqueda.
+  - Son la raíz, el nodo 60·80 y una hoja.
+  solution: "Tres: 40, luego 60·80, luego la hoja 70·75."
   label: resolver
 - level: 4
-  statement: ¿Cuándo aumenta la altura?
+  statement: ¿Cuándo aumenta la altura de un B-tree?
   hints:
-  - Distingue un padre existente de una raíz.
-  solution: Cuando se parte la raíz y se crea otra encima.
+  - Distingue partir un nodo con padre de partir la raíz.
+  solution: Sólo cuando se parte la raíz y nace una raíz nueva encima de ella.
   label: comparar
 - level: 5
-  statement: En el ejemplo de raíz nueva, ¿dónde se conecta la hoja [65]?
+  statement: "Tras partir la raíz $[20, 40, 60, 80]$ con $B = 3$, ¿qué llave sube y qué hijos quedan?"
   hints:
-  - Mira el nodo interno [60,70].
-  solution: En el hijo del medio, porque 60<65<70. Tras promover 40 permanece bajo el subárbol derecho.
+  - La mediana de cuatro llaves es la segunda.
+  solution: "Sube 40. Los hijos son [20] y [60, 80]."
   label: justificar
 - level: 6
-  statement: Justifica por qué la cascada no hace cuadrático el costo.
+  statement: "Demuestra que con $N$ llaves la altura $h$ cumple $h \\le 1 + \\log_f \\frac{N+1}{2}$."
   hints:
-  - Cuenta nodos reparados por nivel.
-  solution: Sólo se propaga a un padre por nivel y cada reparación mueve O(1) bloques.
+  - Cuenta el número mínimo de nodos en cada nivel.
+  - Cada nodo no raíz guarda al menos $f-1$ llaves.
+  solution: "El nivel $d$ tiene al menos $2f^{d-1}$ nodos, así que $N \\ge 2f^{h-1}-1$; despejando $f^{h-1} \\le (N+1)/2$."
   label: demostrar
 ---
 

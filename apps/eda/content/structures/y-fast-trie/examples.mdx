@@ -1,0 +1,106 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos usan el conjunto de la teoría, $S = \{1, 3, 4, 6, 9, 10, 12, 14, 15\}$, con $w = 4$. Grupos $G_0 = \{1, 3, 4, 6\}$ con representante 1 y $G_1 = \{9, 10, 12, 14, 15\}$ con representante 9. *(Derivados de aplicar el algoritmo de las láminas al conjunto; no aparecen en las diapositivas.)*
+
+## Caso mínimo: el sucesor no existe
+
+Sucesor de 15. El mayor representante menor o igual que 15 es 9, así que el X-fast elige $G_1$. Dentro de $G_1$ no hay llave mayor que 15. No existe $G_2$, así que el sucesor es nulo. Es el caso de frontera: la consulta cae en el último grupo y se sale de la estructura.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El índice elige G1 con el representante 9. La consulta es 15 y la última llave del grupo también es 15, así que no hay ninguna mayor.",
+      rows: [
+        { id: "rep", label: "Representantes", cells: [{id: "r0", value: 1}, {id: "r1", value: 9, state: "active"}] },
+        { id: "keys", label: "Llaves", cells: [
+          {id: "k0", value: 1}, {id: "k1", value: 3}, {id: "k2", value: 4}, {id: "k3", value: 6},
+          {id: "k4", value: 9}, {id: "k5", value: 10}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15, state: "marked"} ] },
+      ],
+      spans: [ { id: "G1", row: "keys", from: 4, to: 8, label: "G1", state: "active" } ],
+      caption: "Consulta: sucesor de 15.",
+    },
+    {
+      note: "No hay grupo G2, así que la respuesta es nula. Nada en la estructura es mayor que 15, y la búsqueda termina sin volver a mirar G0.",
+      rows: [
+        { id: "rep", label: "Representantes", cells: [{id: "r0", value: 1, state: "muted"}, {id: "r1", value: 9, state: "muted"}] },
+        { id: "keys", label: "Llaves", cells: [
+          {id: "k0", value: 1, state: "muted"}, {id: "k1", value: 3, state: "muted"}, {id: "k2", value: 4, state: "muted"}, {id: "k3", value: 6, state: "muted"},
+          {id: "k4", value: 9, state: "muted"}, {id: "k5", value: 10, state: "muted"}, {id: "k6", value: 12, state: "muted"}, {id: "k7", value: 14, state: "muted"}, {id: "k8", value: 15, state: "marked"} ] },
+      ],
+      spans: [ { id: "G1", row: "keys", from: 4, to: 8, label: "sin G2", state: "muted" } ],
+      caption: "Resultado: nulo.",
+    },
+  ],
+}} />
+
+## Caso normal: predecesor que cruza dentro del grupo
+
+Predecesor de 12. El representante más grande menor o igual que 12 es 9, así que el X-fast elige $G_1$. En $G_1$, la mayor llave menor que 12 es 10. El resultado sale del mismo grupo, sin cruzar.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El índice elige G1 porque su representante 9 es el mayor menor o igual que 12. Dentro de G1, la búsqueda de llaves menores que 12 empieza en el mayor elemento del tramo.",
+      rows: [
+        { id: "rep", label: "Representantes", cells: [{id: "r0", value: 1}, {id: "r1", value: 9, state: "active"}] },
+        { id: "keys", label: "Llaves", cells: [
+          {id: "k0", value: 1}, {id: "k1", value: 3}, {id: "k2", value: 4}, {id: "k3", value: 6},
+          {id: "k4", value: 9}, {id: "k5", value: 10}, {id: "k6", value: 12, state: "marked"}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [ { id: "G1", row: "keys", from: 4, to: 8, label: "G1", state: "active" } ],
+      caption: "Consulta: predecesor de 12.",
+    },
+    {
+      note: "12 no cuenta, porque el predecesor es estricto. Bajando, 10 es menor que 12 y es la mayor de esas. La respuesta es 10 y no se mira G0.",
+      rows: [
+        { id: "rep", label: "Representantes", cells: [{id: "r0", value: 1, state: "muted"}, {id: "r1", value: 9, state: "active"}] },
+        { id: "keys", label: "Llaves", cells: [
+          {id: "k0", value: 1, state: "muted"}, {id: "k1", value: 3, state: "muted"}, {id: "k2", value: 4, state: "muted"}, {id: "k3", value: 6, state: "muted"},
+          {id: "k4", value: 9, state: "muted"}, {id: "k5", value: 10, state: "answer"}, {id: "k6", value: 12, state: "marked"}, {id: "k7", value: 14, state: "muted"}, {id: "k8", value: 15, state: "muted"} ] },
+      ],
+      spans: [ { id: "G1", row: "keys", from: 4, to: 8, label: "G1", state: "active" } ],
+      caption: "Resultado: 10.",
+    },
+  ],
+}} />
+
+## Caso límite: la consulta coincide con un representante
+
+Sucesor de 9. El representante 9 es menor o igual que 9, así que el X-fast elige $G_1$. Pero el sucesor es **estricto**: el propio 9 no cuenta. En $G_1$ la siguiente llave es 10. Si la consulta fuera predecesor de 9, en cambio, el 9 tampoco serviría, y como no hay llave menor en $G_1$, habría que cruzar a $G_0$ y tomar su máximo, que es 6.
+
+Este caso muestra por qué la comparación debe ser estricta en ambos sentidos y por qué el representante no es necesariamente una llave del grupo que se pueda devolver.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Consulta: sucesor de 9. El representante 9 coincide con la consulta y el X-fast elige G1. El 9 no puede devolverse, porque el sucesor debe ser estrictamente mayor.",
+      rows: [
+        { id: "rep", label: "Representantes", cells: [{id: "r0", value: 1}, {id: "r1", value: 9, state: "marked"}] },
+        { id: "keys", label: "Llaves", cells: [
+          {id: "k0", value: 1}, {id: "k1", value: 3}, {id: "k2", value: 4}, {id: "k3", value: 6},
+          {id: "k4", value: 9, state: "marked"}, {id: "k5", value: 10}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [ { id: "G1", row: "keys", from: 4, to: 8, label: "G1", state: "active" } ],
+      caption: "Consulta: sucesor de 9 (estricto).",
+    },
+    {
+      note: "Dentro de G1, la menor llave mayor que 9 es 10. Ésa es la respuesta; no hace falta cruzar al grupo anterior.",
+      rows: [
+        { id: "rep", label: "Representantes", cells: [{id: "r0", value: 1, state: "muted"}, {id: "r1", value: 9, state: "idle"}] },
+        { id: "keys", label: "Llaves", cells: [
+          {id: "k0", value: 1, state: "muted"}, {id: "k1", value: 3, state: "muted"}, {id: "k2", value: 4, state: "muted"}, {id: "k3", value: 6, state: "muted"},
+          {id: "k4", value: 9, state: "marked"}, {id: "k5", value: 10, state: "answer"}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [ { id: "G1", row: "keys", from: 4, to: 8, label: "G1", state: "active" } ],
+      caption: "Resultado: 10.",
+    },
+  ],
+}} />

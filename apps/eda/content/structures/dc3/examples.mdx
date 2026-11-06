@@ -1,0 +1,130 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Tres casos: uno mínimo sin recursión, uno normal con mississippi y uno límite con aaa donde todas las tripletas empatan. Cada uno sigue los mismos pasos de la teoría: partir por residuo, nombrar, recurrir sólo si hace falta, ordenar $B_0$ y mezclar.
+
+## Mínimo: abc, sin recursión
+
+Con $S = $ abc, $C = \{1, 2\}$. Las tripletas son bc⊥ (posición 1) y c⊥⊥ (posición 2). Son distintas, así que el rango de cada una ya es el orden de los sufijos de $C$. No hay recursión.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tripletas de C: bc⊥ en la posición 1 y c⊥⊥ en la posición 2. Son distintas, así que se nombran 0 y 1 sin recursión.",
+      rows: [
+        { id: "tri", label: "Tripleta", cells: [{ value: "bc⊥", tag: "1", state: "marked" }, { value: "c⊥⊥", tag: "2", state: "marked" }] },
+        { id: "nom", label: "Nombre", cells: [{ value: 0, tag: "1" }, { value: 1, tag: "2" }] },
+      ],
+      caption: "Nombres todos distintos: el rango de cada tripleta da el orden de C.",
+    },
+    {
+      note: "Para B0 = {0} el par es (a, rnk[1]) = (a, 0). Sólo hay un elemento, así que la mezcla emite primero 0 frente a 1 con una letra: a es menor que b.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0", state: "active" }] },
+        { id: "C", label: "C", cells: [{ value: 1, tag: "0", state: "active" }, { value: 2, tag: "1" }] },
+        { id: "out", label: "Salida", cells: [{ value: 0, tag: "0", state: "copied" }, { value: 1, tag: "1", state: "copied" }, { value: 2, tag: "2", state: "copied" }] },
+      ],
+      caption: "Suffix array de abc: 0, 1, 2 (abc, bc, c).",
+    },
+  ],
+}} />
+
+## Normal: mississippi
+
+Es el ejemplo de la teoría completa, con las cuatro comparaciones de mezcla que usan una o dos letras. El caso cierra con la comprobación: la salida coincide con el suffix array que se obtiene ordenando los sufijos a mano.
+
+Para la mezcla, la clave es ver en qué clase cae la cabeza de $C$. Frente a 8 (residuo 2) se leen dos letras y el rango de la cola. Frente a 7 (residuo 1), una letra basta.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Antes de mezclar, el orden de C y el de B0 ya están resueltos. C = 10, 7, 4, 1, 8, 5, 2 y B0 = 0, 9, 6, 3.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0" }, { value: 9, tag: "1" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C", cells: [{ value: 10, tag: "0" }, { value: 7, tag: "1" }, { value: 4, tag: "2" }, { value: 1, tag: "3" }, { value: 8, tag: "4" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+      ],
+      caption: "Dos listas ordenadas: falta sólo decidir cada comparación entre cabezas.",
+    },
+    {
+      note: "Cabeza de C = 10 (residuo 1) frente a cabeza de B0 = 0. Basta la primera letra: i es menor que m, así que sale 10.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0", state: "marked" }, { value: 9, tag: "1" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C", cells: [{ value: 10, tag: "0", state: "active" }, { value: 7, tag: "1" }, { value: 4, tag: "2" }, { value: 1, tag: "3" }, { value: 8, tag: "4" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+      ],
+      caption: "x = 0 frente a y = 10: S[x] = m y S[y] = i.",
+    },
+    {
+      note: "Cabeza de C = 8 (residuo 2). Si la cabeza de B0 fuera de residuo 0, la comparación leería dos letras y un rango. Aquí la primera letra m frente a p ya decide: sale 0.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0", state: "active" }, { value: 9, tag: "1" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "marked" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+      ],
+      caption: "Con residuo 2 se leen dos letras de cada lado. Aquí ya decide la primera.",
+    },
+    {
+      note: "Cabeza de B0 = 9 (p) frente a 8 (p). Se empata la primera letra; la segunda decide: S[10] = i es menor que S[9] = p. Sale 9. El rango de la cola en 11 no hace falta.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0", state: "muted" }, { value: 9, tag: "1", state: "active" }, { value: 6, tag: "2" }, { value: 3, tag: "3" }] },
+        { id: "C", label: "C", cells: [{ value: 10, tag: "0", state: "muted" }, { value: 7, tag: "1", state: "muted" }, { value: 4, tag: "2", state: "muted" }, { value: 1, tag: "3", state: "muted" }, { value: 8, tag: "4", state: "marked" }, { value: 5, tag: "5" }, { value: 2, tag: "6" }] },
+      ],
+      caption: "Empate de primera letra. La segunda letra resuelve sin mirar rangos.",
+    },
+  ],
+}} />
+
+Las comparaciones restantes son las de la teoría: 6 contra 8, 6 contra 5, 3 contra 5. Al final quedan 5 y 2 en $C$, que se copian. La salida es 10, 7, 4, 1, 0, 9, 8, 6, 3, 5, 2.
+
+## Límite: aaa, todas las tripletas empatan
+
+Con $S = $ aaa, $C = \{1, 2\}$. Las tripletas son aa⊥ (posición 1) y a⊥⊥ (posición 2). Son distintas, así que tampoco hay recursión. Lo interesante está en la mezcla, donde se usa el rango de la cola para resolver empates de letra.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nombres de C: a⊥⊥ es menor que aa⊥ porque el segundo carácter, ⊥, es menor que a. Posición 2 recibe el rango 0 y posición 1 el rango 1.",
+      rows: [
+        { id: "pos", label: "Posición", cells: [{ value: 1, tag: "1" }, { value: 2, tag: "2" }] },
+        { id: "rnk", label: "rnk", cells: [{ value: 1 }, { value: 0, state: "answer" }] },
+      ],
+      caption: "rnk[1] = 1 y rnk[2] = 0. El orden de C es 2, 1.",
+    },
+    {
+      note: "Mezcla: cabeza de B0 = 0 frente a cabeza de C = 2, de residuo 2. Se comparan S[0] S[1] rnk(2) = a a 0 con S[2] S[3] = a ⊥. La segunda letra decide: ⊥ es menor, así que sale 2 primero.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0", state: "active" }] },
+        { id: "C", label: "C", cells: [{ value: 2, tag: "0", state: "marked" }, { value: 1, tag: "1" }] },
+        { id: "out", label: "Salida", cells: [{ value: 2, tag: "0", state: "copied" }, { value: "·", tag: "1" }, { value: "·", tag: "2" }] },
+      ],
+      caption: "Sale 2, el sufijo más corto. Un sufijo más corto es menor si es prefijo del otro.",
+    },
+    {
+      note: "Cabeza de B0 = 0 frente a cabeza de C = 1, de residuo 1. Se compara S[0] = a con S[1] = a: empatan, así que se decide con rnk(x+1) = rnk(1) = 1 frente a rnk(y+1) = rnk(2) = 0. El rango menor es el de 1, así que sale 1 antes que 0.",
+      rows: [
+        { id: "B0", label: "B0", cells: [{ value: 0, tag: "0", state: "marked" }] },
+        { id: "C", label: "C", cells: [{ value: 1, tag: "0", state: "active" }] },
+        { id: "out", label: "Salida", cells: [{ value: 2, tag: "0", state: "copied" }, { value: 1, tag: "1", state: "active" }, { value: "·", tag: "2" }] },
+      ],
+      caption: "Empate de letra resuelto con el rango de la cola: 1 precede a 0.",
+    },
+    {
+      note: "Queda el sufijo 0 de B0, que se copia. La salida es 2, 1, 0 (a, aa, aaa), el orden correcto.",
+      rows: [
+        { id: "out", label: "Salida = SA", cells: [{ value: 2, tag: "0", state: "copied" }, { value: 1, tag: "1", state: "copied" }, { value: 0, tag: "2", state: "active" }] },
+      ],
+      caption: "Suffix array de aaa: 2, 1, 0.",
+    },
+  ],
+}} />
+
+## Qué se verifica en cada caso
+
+- Mínimo: las tripletas son únicas, así que la recursión no se llama.
+- Normal: la recursión es necesaria, porque iss y ssi se repiten. Se compara por una o dos letras y por rango.
+- Límite: con letras repetidas, los empates de letra se resuelven siempre con el rango de la cola.

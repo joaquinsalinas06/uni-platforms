@@ -14,6 +14,7 @@ import TimelineVisualization from './timeline/TimelineVisualization';
 import XyChartVisualization from './xy-chart/XyChartVisualization';
 import PlanarVisualization from './planar/PlanarVisualization';
 import GeometricVisualization from './geometric/GeometricVisualization';
+import ArrayVisualization from './array/ArrayVisualization';
 
 import { ALL_VISUALIZATION_TYPES, type VisualizationType } from './schemas';
 
@@ -33,4 +34,5 @@ export const VISUALIZATIONS: Record<VisualizationFamily, ComponentType<any>> = {
   'xy-chart': XyChartVisualization,
   geometric: GeometricVisualization,
   planar: PlanarVisualization,
+  array: ArrayVisualization,
 };

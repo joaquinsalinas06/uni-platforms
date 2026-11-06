@@ -5,144 +5,382 @@ title: "Kasai y aplicaciones de LCP"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Dos sufijos vecinos pueden compartir muchos caracteres. Recontar sus prefijos desde cero puede hacer que construir LCP sea cuadrático.
+Con el suffix array de $banana\mathdollar $ ya tenemos los sufijos ordenados: $\mathdollar $, $a\mathdollar $, $ana\mathdollar $, $anana\mathdollar $, $banana\mathdollar $, $na\mathdollar $, $nana\mathdollar $. Pero el orden no dice cuánto se parecen dos sufijos vecinos, y muchas preguntas dependen justamente de ese parecido: la subcadena repetida más larga, cuántas subcadenas distintas tiene el texto, o cuánto comparten dos sufijos cualesquiera. Si calculamos el prefijo común de cada par de vecinos comparando letra a letra desde el principio, cada par puede costar $\Theta(n)$ y el total se va a $\Theta(n^2)$ en textos como $a^n$. La pregunta es si podemos obtener todos los valores $\mathrm{LCP}$ en tiempo lineal.
 
-## Intuición
+## Intuición dibujada
 
-Si dos sufijos comparten $h$ letras, al eliminar la primera de ambos conservan al menos $h-1$. El vecino lexicográfico del nuevo sufijo comparte al menos ese prefijo cuando queda entre ambos.
+Pensemos en el suffix array como una lista ordenada de sufijos. Cada celda de la lista de LCP es el "pegamento" entre dos sufijos vecinos: cuántas letras iniciales comparten. La idea de Kasai es que estos pegamentos no son independientes entre sí: si recorremos el texto en el orden de sus posiciones, el pegamento de un sufijo queda casi determinado por el del anterior en el texto. Quitar una letra inicial común a dos sufijos conserva su orden y les deja una letra menos en común. Así, la coincidencia se hereda y sólo hay que comprobar lo que falta.
 
-## Estructura interna
-
-Usamos $LCP[r]=\operatorname{lcp}(SA[r-1],SA[r])$ para $r>0$. El inverso de SA convierte una posición de texto en su rango. Kasai recorre posiciones del texto y mantiene una longitud inicial segura.
-
-### Por qué el nuevo vecino puede heredar la coincidencia
-
-Supón que en rango el sufijo de $j$ precede al de $i$ y coinciden durante $h>0$ letras. Quitarles la primera conserva al menos $h-1$ letras. Después de quitar un carácter común, sus colas mantienen el orden lexicográfico. Si el sufijo en $j+1$ ya no es el vecino inmediato de $i+1$, ese vecino queda entre ambas colas. Todo sufijo situado entre dos que comparten un prefijo comparte ese mismo prefijo. La longitud heredada es un piso; puede haber más letras por comprobar.
-
-La cuenta se guarda usando el rango, porque LCP describe parejas vecinas en el orden de sufijos. El recorrido, en cambio, avanza por la posición de texto para que quitar el primer carácter sea pasar de $i$ a $i+1$. Tener el inverso del SA evita buscar el rango desde cero en cada paso.
-
-### Cuándo usar mínimo y cuándo usar máximo
-
-Para preguntar cuánto coinciden dos sufijos elegidos, se necesita un prefijo común a todos los sufijos que están entre ambos. La cadena de LCP intermedios queda limitada por su mínimo. Para buscar la repetición más larga en todo el texto, basta una pareja vecina que coincida lo más posible. En ese caso se toma el máximo de toda la tabla. Las dos consultas usan la misma información con objetivos distintos.
-
-## Operaciones
-
-Para cada posición $i$, compara con su vecino anterior en SA a partir de la longitud ya conocida. Guarda el LCP, reduce esa longitud en uno para la próxima posición y usa cero cuando no hay vecino anterior.
-
-### banana$ · heredar comparaciones en orden de texto
+La primera figura muestra la tabla de $banana\mathdollar $ alineada por rango. Las filas $SA$, sufijo y $\mathrm{LCP}$ comparten columnas: la columna $k$ es el rango $k$. Las aristas entre celdas vecinas son el prefijo que cada par comparte.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Alinea rangos y posiciones. El primer sufijo, $, no tiene vecino anterior.",
-      arrays: [
-        {"id": "row-0", "label": "SA", "row": 0, "cells": ["6", "5", "3", "1", "0", "4", "2"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "LCP", "row": 1, "cells": ["·", "0", "1", "3", "0", "0", "2"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Tabla de banana$ con filas alineadas por rango. Columna k = rango k en el orden lexicográfico. SA[k] dice en qué posición del texto empieza ese sufijo; LCP[k] dice cuántas letras iniciales comparten el sufijo de rango k y el de rango k−1.",
+      rows: [
+        { id: "sa", label: "SA[k]", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3},{value:0},{value:0},{value:2}] },
       ],
-      bridges: [],
+      caption: "Columna 0 = rango 0 (el sentinela, sin vecino anterior). La fila LCP es la única que compara pares.",
     },
     {
-      note: "En i=1, compara anana$ con el vecino ana$. Coinciden en ana y luego difieren.",
-      arrays: [
-        {"id": "row-0", "label": "Sufijo i=1", "row": 0, "cells": ["a", "n", "a", "n", "a", "$"], "states": ["active", "active", "active", "marked", "idle", "idle"]},
-        {"id": "row-1", "label": "Vecino i=3", "row": 1, "cells": ["a", "n", "a", "$"], "states": ["active", "active", "active", "marked"]},
-        {"id": "row-2", "label": "LCP", "row": 2, "cells": ["3"], "states": ["answer"]},
+      note: "Par de rangos 1 y 2: a$ y ana$. Su LCP es 1 porque sólo comparten la letra a antes de que el segundo siga con n y el primero con $.",
+      rows: [
+        { id: "sa", label: "SA[k]", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$",state:"active"},{value:"ana$",state:"active"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1,state:"answer"},{value:3},{value:0},{value:0},{value:2}] },
       ],
-      bridges: [],
+      spans: [ { id: "p12", row: "suf", from: 1, to: 2, label: "comparten a", state: "marked" } ],
+      caption: "LCP[2] = 1.",
     },
     {
-      note: "Al pasar a i=2 conserva 2. nana$ y na$ ya coinciden en na.",
-      arrays: [
-        {"id": "row-0", "label": "Sufijo i=2", "row": 0, "cells": ["n", "a", "n", "a", "$"], "states": ["answer", "answer", "marked", "idle", "idle"]},
-        {"id": "row-1", "label": "Vecino i=4", "row": 1, "cells": ["n", "a", "$"], "states": ["answer", "answer", "marked"]},
-        {"id": "row-2", "label": "LCP", "row": 2, "cells": ["2"], "states": ["answer"]},
+      note: "Par de rangos 2 y 3: ana$ y anana$. Comparten ana, tres letras, y después el primero tiene $ mientras el segundo tiene n. Por eso LCP[3] = 3, el valor más alto de la tabla.",
+      rows: [
+        { id: "sa", label: "SA[k]", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$",state:"active"},{value:"anana$",state:"active"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3,state:"answer"},{value:0},{value:0},{value:2}] },
       ],
-      bridges: [],
+      spans: [ { id: "p23", row: "suf", from: 2, to: 3, label: "comparten ana", state: "marked" } ],
+      caption: "LCP[3] = 3.",
     },
     {
-      note: "Al pasar a i=3 conserva 1. ana$ y a$ ya coinciden en a.",
-      arrays: [
-        {"id": "row-0", "label": "Sufijo i=3", "row": 0, "cells": ["a", "n", "a", "$"], "states": ["answer", "marked", "idle", "idle"]},
-        {"id": "row-1", "label": "Vecino i=5", "row": 1, "cells": ["a", "$"], "states": ["answer", "marked"]},
-        {"id": "row-2", "label": "LCP", "row": 2, "cells": ["1"], "states": ["answer"]},
+      note: "Par de rangos 4 y 5: banana$ y na$. La primera letra ya difiere: b frente a n. Ningún prefijo común, así que LCP[5] = 0.",
+      rows: [
+        { id: "sa", label: "SA[k]", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$",state:"active"},{value:"na$",state:"active"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3},{value:0},{value:0,state:"answer"},{value:2}] },
       ],
-      bridges: [],
+      caption: "LCP[5] = 0: el par no comparte ni la primera letra.",
     },
     {
-      note: "El valor conservado baja a 0. El vecino anterior de na$ empieza por b.",
-      arrays: [
-        {"id": "row-0", "label": "Sufijo i=4", "row": 0, "cells": ["n", "a", "$"], "states": ["marked", "idle", "idle"]},
-        {"id": "row-1", "label": "Vecino i=0", "row": 1, "cells": ["b", "a", "n", "a", "n", "a", "$"], "states": ["marked", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-2", "label": "LCP", "row": 2, "cells": ["0"], "states": ["answer"]},
+      note: "Par de rangos 5 y 6: na$ y nana$. Comparten na, dos letras; después el primero tiene $ y el segundo a. LCP[6] = 2.",
+      rows: [
+        { id: "sa", label: "SA[k]", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$",state:"active"},{value:"nana$",state:"active"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3},{value:0},{value:0},{value:2,state:"answer"}] },
       ],
-      bridges: [],
+      spans: [ { id: "p56", row: "suf", from: 5, to: 6, label: "comparten na", state: "marked" } ],
+      caption: "LCP[6] = 2.",
     },
   ],
 }} />
 
-### Un máximo y un RMQ responden preguntas distintas
+## Definición y notación
 
-*(Traza derivada de la explicación de clase.)*
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $S$, $n$ | texto, con $n = \lvert S\rvert$ sin contar el sentinela $\mathdollar $ | el costo de construir todo es lineal en $n$ |
+| $SA[k]$ | posición del texto donde empieza el sufijo de rango $k$ | es una permutación de $0,\ldots,n$ |
+| $\mathrm{rank}[i]$ | rango $k$ tal que $SA[k] = i$; es la inversa de $SA$ | permite pasar de una posición del texto a su vecino en el orden |
+| $\mathrm{LCP}[k]$ | $\operatorname{lcp}(S[SA[k-1]..], S[SA[k]..])$ para $k \ge 1$ | $\mathrm{LCP}[0]$ no existe: el primer sufijo no tiene vecino anterior |
+| $h$ | longitud que se hereda de la posición anterior en el recorrido del texto | nunca supera $n$ y baja a lo más $1$ por paso |
+
+La celda $\mathrm{LCP}[k]$ mira hacia atrás: compara el rango $k$ con $k-1$. Ésa es la convención de la clase, y es la que usaremos en todas las figuras.
+
+### Por qué el inverso de SA
+
+Kasai no recorre los rangos en orden, recorre las posiciones del texto $i = 0, 1, 2, \ldots$. Para cada $i$ necesitamos saber cuál es su vecino anterior en el orden, es decir, el sufijo de rango $\mathrm{rank}[i]-1$. Por eso se construye primero $\mathrm{rank}$, la inversa de $SA$. La figura siguiente muestra la relación para $banana\mathdollar $.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "El máximo de LCP es 3. El substring repetido más largo es ana.",
-      arrays: [
-        {"id": "row-0", "label": "LCP", "row": 0, "cells": ["·", "0", "1", "3", "0", "0", "2"], "states": ["idle", "idle", "idle", "answer", "idle", "idle", "idle"]},
+      note: "Texto y su inversa. Fila i: posición en el texto. Fila rank[i]: su rango. El sufijo de posición 1 (anana$) tiene rango 3, porque es el cuarto de la lista ordenada empezando en 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "t", label: "S[i]", cells: [{value:"b"},{value:"a"},{value:"n"},{value:"a"},{value:"n"},{value:"a"},{value:"$"}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6},{value:2},{value:5},{value:1},{value:0}] },
       ],
-      bridges: [],
+      caption: "Ejemplo de la rama de Kasai: rank[i] lleva la posición del texto al orden lexicográfico.",
     },
     {
-      note: "Para los rangos 1 y 3, toma el mínimo entre las dos aristas de LCP intermedias.",
-      arrays: [
-        {"id": "row-0", "label": "Rangos", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6"], "states": ["idle", "marked", "idle", "marked", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "LCP", "row": 1, "cells": ["·", "0", "1", "3", "0", "0", "2"], "states": ["idle", "idle", "answer", "active", "idle", "idle", "idle"]},
+      note: "Mismo texto, mirando i = 1: el sufijo anana$ tiene rango 3. Su vecino anterior en el orden es el de rango 2, que es SA[2] = 3, es decir ana$.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1,state:"active"},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "t", label: "S[i]", cells: [{value:"b"},{value:"a"},{value:"n"},{value:"a"},{value:"n"},{value:"a"},{value:"$"}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3,state:"answer"},{value:6},{value:2},{value:5},{value:1},{value:0}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "El resultado es 1: a$ y anana$ comparten sólo a.",
-      arrays: [
-        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["a", "longitud:1"], "states": ["answer", "answer"]},
-      ],
-      bridges: [],
+      caption: "Vecino anterior de i = 1: SA[rank[1] − 1] = SA[2] = 3, el sufijo ana$.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Operaciones paso a paso
 
-La traza recorre posiciones del texto, no rangos del SA. Primero busca el rango de i usando el inverso; después obtiene el vecino en el arreglo ordenado. Al quitar el primer carácter de ambos sufijos previos, se mantiene una coincidencia de al menos h−1. El nuevo vecino lexicográfico queda en el intervalo apropiado y conserva ese prefijo común.
+El algoritmo de Kasai tiene dos ideas que se usan a la vez: recorrer las posiciones del texto en orden, y heredar una longitud $h$ de la posición anterior. Para $banana\mathdollar $ el recorrido se hace así:
 
-## Análisis de complejidad
+1. Construye $\mathrm{rank}$ con el inverso de $SA$. Ya lo tenemos: $\mathrm{rank} = [4,3,6,2,5,1,0]$.
+2. Empieza con $h = 0$. Para cada posición $i$ en orden de texto, mira su rango. Si el rango es $0$, es el sentinela: no tiene vecino anterior, así que $h$ vuelve a $0$ y seguimos.
+3. Si el rango es mayor que $0$, toma el vecino anterior $j = SA[\mathrm{rank}[i]-1]$. Compara $S[i+h]$ con $S[j+h]$ y avanza $h$ mientras coincidan. Ese $h$ inicial no es cero: es lo que quedó heredado del paso anterior, y se garantiza sin comparar.
+4. Guarda $\mathrm{LCP}[\mathrm{rank}[i]] = h$.
+5. Si $h > 0$, baja $h$ en uno antes de la siguiente posición. Ésa es la herencia: el sufijo $i+1$ comparte al menos $h-1$ letras con su vecino anterior.
 
-Las extensiones exitosas aumentan $h$. Entre posiciones, $h$ disminuye a lo sumo una vez, salvo el reinicio en el único sufijo sin vecino anterior. Ese caso aporta como mucho $O(n)$ en todo el recorrido. Cada comparación que falla cierra una extensión para una posición dada. El total es $O(n)$. Para LCP de dos sufijos de rangos $a<b$, toma el mínimo de $LCP[a+1..b]$. Esa consulta reutiliza el RMQ estudiado en Árboles estáticos.
+El recorrido completo en la figura. La fila de rangos sigue la posición $i$; la fila LCP se llena por rango, así que la celda que se escribe está en la columna del rango.
 
-### Cómo justificar la cota en el examen
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Antes de empezar: h = 0 y ninguna entrada de LCP está calculada. Recorremos i = 0, 1, ..., 6 en orden de texto, y rank[i] nos dice la columna donde escribir.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6},{value:2},{value:5},{value:1},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+      ],
+      caption: "Filas i y rank[i] indexadas por posición del texto. La fila LCP[r] está indexada por rango.",
+    },
+    {
+      note: "i = 0 con rango 4. Vecino anterior: posición 1, anana$. banana$ y anana$ difieren en la primera letra, así que h = 0 y LCP[4] = 0. h se queda en 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0,state:"active"},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4,state:"active"},{value:3},{value:6},{value:2},{value:5},{value:1},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:"·"},{value:"·"},{value:0,state:"answer"},{value:"·"},{value:"·"}] },
+      ],
+      caption: "1 comparación fallida. LCP[4] = 0.",
+    },
+    {
+      note: "i = 1 con rango 3. Empieza con h = 0 y vecino ana$. Compara a con a, n con n, a con a y después n con $: tres coincidencias y un fallo. LCP[3] = 3 y h baja de 3 a 2 para la siguiente posición.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1,state:"active"},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3,state:"active"},{value:6},{value:2},{value:5},{value:1},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:0},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:"·"},{value:3,state:"answer"},{value:0},{value:"·"},{value:"·"}] },
+      ],
+      caption: "3 coincidencias y 1 fallo. LCP[3] = 3, y h se hereda como 2.",
+    },
+    {
+      note: "i = 2 con rango 6. Hereda h = 2: los dos primeros caracteres de nana$ y na$ ya coinciden por herencia, sin volver a compararlos. Sólo falla la comparación en la posición 2 del sufijo: LCP[6] = 2 y h baja a 1.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2,state:"active"},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6,state:"active"},{value:2},{value:5},{value:1},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:0},{value:2},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:"·"},{value:3},{value:0},{value:"·"},{value:2,state:"answer"}] },
+      ],
+      caption: "Entra con h = 2 y sale con LCP[6] = 2, después de una comparación fallida.",
+    },
+    {
+      note: "i = 3 con rango 2. Hereda h = 1: la letra a ya coincide. Compara en la posición siguiente y falla: LCP[2] = 1 y h baja a 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3,state:"active"},{value:4},{value:5},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6},{value:2,state:"active"},{value:5},{value:1},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:0},{value:2},{value:1},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:1,state:"answer"},{value:3},{value:0},{value:"·"},{value:2}] },
+      ],
+      caption: "Entra con h = 1 y sale con LCP[2] = 1.",
+    },
+    {
+      note: "i = 4 con rango 5. Hereda h = 0. Vecino anterior: banana$ en la posición 0. La primera comparación es n contra b, falla. LCP[5] = 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4,state:"active"},{value:5},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6},{value:2},{value:5,state:"active"},{value:1},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:0},{value:2},{value:1},{value:0},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:1},{value:3},{value:0,state:"answer"},{value:"·"},{value:2}] },
+      ],
+      caption: "h = 0 al entrar. LCP[5] = 0.",
+    },
+    {
+      note: "i = 5 con rango 1. Vecino anterior: el sentinela $ en la posición 6. a contra $ falla de inmediato. LCP[1] = 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5,state:"active"},{value:6}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6},{value:2},{value:5},{value:1,state:"active"},{value:0}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:0},{value:2},{value:1},{value:0},{value:0},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:0,state:"answer"},{value:1},{value:3},{value:0},{value:0},{value:2}] },
+      ],
+      caption: "h = 0 al entrar. LCP[1] = 0.",
+    },
+    {
+      note: "i = 6 con rango 0. Es el sentinela, sin vecino anterior: no hay comparación. h vuelve a 0 y la entrada LCP[0] queda en guion.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6,state:"active"}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:6},{value:2},{value:5},{value:1},{value:0,state:"active"}] },
+        { id: "h", label: "h al entrar", cells: [{value:0},{value:0},{value:2},{value:1},{value:0},{value:0},{value:0}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:0},{value:1},{value:3},{value:0},{value:0},{value:2}] },
+      ],
+      caption: "Tabla final: LCP = [–, 0, 1, 3, 0, 0, 2], igual que en la figura de la intuición.",
+    },
+  ],
+}} />
 
-Cuenta extensiones exitosas de $h$, no la longitud completa de los prefijos medidos. Entre dos posiciones ordinarias pierdes como máximo una unidad de lo ya medido. Las comparaciones que fallan ocurren a lo sumo una vez por posición que extiende. Al sumar el trabajo durante las $n$ posiciones obtienes tiempo lineal aunque algunos valores individuales de LCP sean grandes.
+## Por qué la herencia es correcta
 
-## Tabla de complejidad
+Esta es la parte que hay que dominar, porque sin ella el algoritmo no sería lineal. Sea $S[j..]$ el sufijo que va justo antes de $S[i..]$ en el orden, con $h = \operatorname{lcp}(S[j..], S[i..]) > 0$. Quitar la primera letra, que es común, conserva el orden: $S[j+1..] \prec S[i+1..]$. Y ahora comparten $h-1$ letras, porque antes compartían $h$ y ya quitamos una.
 
-La tabla superior usa las unidades de costo de la explicación.
+La consecuencia es la que hace que $h$ no tenga que empezar de cero. Como $S[j+1..]$ es menor que $S[i+1..]$ y comparten $h-1$ letras, cualquier sufijo que quede entre ellos en el orden también comparte esas $h-1$ letras, porque están acotados por dos sufijos que las tienen. El vecino anterior de $S[i+1..]$ está entre $S[j+1..]$ y $S[i+1..]$, o es exactamente $S[j+1..]$. En ambos casos comparte al menos $h-1$ letras con $S[i+1..]$.
 
-## Ejemplos
+La figura siguiente hace el argumento con un par real de $banana\mathdollar $: $j = 3$ (ana$, rango 2) e $i = 1$ (anana$, rango 3), con $h = 3$.
 
-[Casos resueltos](/structures/kasai-lcp/examples) y [preguntas con pistas](/structures/kasai-lcp/exercises).
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Par de rangos consecutivos 2 y 3: ana$ antes de anana$. Comparten tres letras, ana. Este es el h de partida, con i = 1 y j = 3.",
+      rows: [
+        { id: "jj", label: "S[j..]", cells: [{value:"a"},{value:"n"},{value:"a"},{value:"$"}] },
+        { id: "ii", label: "S[i..]", cells: [{value:"a"},{value:"n"},{value:"a"},{value:"n"},{value:"a"},{value:"$"}] },
+      ],
+      spans: [
+        { id: "pre", row: "jj", from: 0, to: 2, label: "h = 3 comunes", state: "marked" },
+        { id: "pre2", row: "ii", from: 0, to: 2, label: "h = 3 comunes", state: "marked" },
+      ],
+      caption: "j = 3 (ana$) precede a i = 1 (anana$) en el orden, con h = 3.",
+    },
+    {
+      note: "Quitamos la primera letra de ambos. El orden se conserva, na$ sigue antes que nana$, y ahora comparten dos letras, na. Ésta es la herencia: h − 1 = 2 para la posición i + 1 = 2.",
+      rows: [
+        { id: "jj", label: "S[j+1..]", cells: [{value:"n"},{value:"a"},{value:"$"}] },
+        { id: "ii", label: "S[i+1..]", cells: [{value:"n"},{value:"a"},{value:"n"},{value:"a"},{value:"$"}] },
+      ],
+      spans: [
+        { id: "h1", row: "jj", from: 0, to: 1, label: "h − 1 = 2 comunes", state: "active" },
+        { id: "h2", row: "ii", from: 0, to: 1, label: "h − 1 = 2 comunes", state: "active" },
+      ],
+      caption: "na$ ≺ nana$, con dos letras en común. El punto de partida para i = 2 es h = 2.",
+    },
+  ],
+}} />
 
-## Comparación con estructuras relacionadas
+Para el algoritmo basta ver la consecuencia sobre $h$. Cuando pasamos de $i$ a $i+1$, el valor $h$ que se hereda no puede bajar más de uno, porque $\operatorname{lcp}(S[i+1..], \text{vecino}) \ge h-1$. Sin embargo, la herencia es un piso, no una respuesta: puede haber letras más allá que coinciden y hay que seguir comparando.
 
-El suffix array da orden. LCP añade cuánto coinciden los vecinos. La consulta de rango extiende esa información a pares que no son adyacentes.
+## De dónde sale la cota $O(n)$
 
-## Prueba de dominio
+El algoritmo tiene dos tipos de comparaciones: las que tienen éxito, que aumentan $h$ o confirman letras, y las que fallan, que terminan el bucle para esa posición. Cada posición $i$ con rango positivo produce a lo más una comparación fallida, así que las fallidas suman a lo más $n$. Para las exitosas usamos la variable $h$ como función potencial: $h$ empieza en $0$, termina en $0$ y cambia de dos maneras, sube una vez por cada comparación exitosa y baja a lo más una vez por posición. Como $h$ nunca es negativa, la suma de subidas es igual a la suma de bajadas más el valor final, y la suma de bajadas es a lo más $n$, porque cada $i$ baja a lo más una vez. Por tanto, las exitosas suman a lo más $2n$.
 
-[Lista de comprobación](/structures/kasai-lcp/mastery-check).
+$$\text{comparaciones} \le \underbrace{n}_{\text{fallidas}} + \underbrace{2n}_{\text{exitosas}} = O(n)$$
 
-*Fuente de clase: Sem13_Strings_II.pdf · pp. 21-29.*
+La figura muestra cada término para $banana\mathdollar $: éxitos, bajadas y fallos, sumados.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Valor de h al entrar en cada posición. Es el mismo que la figura del recorrido: 0, 0, 2, 1, 0, 0, 0. Es la cantidad que el algoritmo carga de una posición a otra.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "hin", label: "h entrada", cells: [{value:0},{value:0},{value:2},{value:1},{value:0},{value:0},{value:0}] },
+      ],
+      caption: "h empieza en 0 y termina en 0. Su trayectoria es la que vamos a contar.",
+    },
+    {
+      note: "Comparaciones exitosas por posición: en i = 1 se confirman tres letras, a, n y a. En el resto no se confirma ninguna letra más allá de la herencia. El total de exitosas es 3.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "ok", label: "exitosas", cells: [{value:0},{value:3,state:"active"},{value:0},{value:0},{value:0},{value:0},{value:0}] },
+      ],
+      caption: "Suma de exitosas = 3. Cada una sube h en 1.",
+    },
+    {
+      note: "Bajadas de h: cada posición con h > 0 baja h en uno antes de seguir. En i = 1, 2 y 3 hay una bajada cada una. El total de bajadas es 3, igual que el de exitosas, porque h termina en 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "dn", label: "bajadas", cells: [{value:0},{value:1,state:"marked"},{value:1,state:"marked"},{value:1,state:"marked"},{value:0},{value:0},{value:0}] },
+      ],
+      caption: "Suma de bajadas = 3. Cada posición baja a lo más una vez, así que bajadas ≤ n.",
+    },
+    {
+      note: "Comparaciones fallidas: una por cada posición con rango positivo. Las posiciones 0 a 5 fallan una vez cada una; la 6 no compara porque su rango es 0. Total: 6 = n − 1.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "fail", label: "fallidas", cells: [{value:1,state:"muted"},{value:1,state:"muted"},{value:1,state:"muted"},{value:1,state:"muted"},{value:1,state:"muted"},{value:1,state:"muted"},{value:0}] },
+      ],
+      caption: "Fallidas = 6, a lo más n. Con exitosas (3) hay 9 comparaciones en total para n = 7.",
+    },
+  ],
+}} />
+
+## Aplicaciones
+
+Con la tabla $\mathrm{LCP}$ se resuelven varias preguntas sin volver a mirar el texto. Cada una usa el mismo SA y el mismo LCP, pero con una operación distinta: máximo global, mínimo de un tramo o suma.
+
+### Subcadenas distintas
+
+Toda subcadena es prefijo de algún sufijo. Si ordenamos los sufijos, el sufijo de rango $k$ aporta los prefijos que no compartía con el sufijo de rango $k-1$: son $\text{longitud} - \mathrm{LCP}[k]$ prefijos nuevos. Sumando sobre $k$ y sin contar el sentinela:
+
+$$\#\text{distintas} = \frac{n(n+1)}{2} - \sum_{k=1}^{n} \mathrm{LCP}[k]$$
+
+El término $n(n+1)/2$ cuenta todos los prefijos de todos los sufijos, con repetición; cada LCP es un prefijo que ya aparecía antes en el orden, y se resta una vez.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Sufijos de banana$ en orden de rango, sin el sentinela. Para cada rango k, la longitud es la cantidad de prefijos que el sufijo aporta si no hubiera nada antes. Sumadas dan 1+3+5+6+2+4 = 21 = n(n+1)/2 con n = 6.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"a"},{value:"ana"},{value:"anana"},{value:"banana"},{value:"na"},{value:"nana"}] },
+        { id: "len", label: "longitud", cells: [{value:1},{value:3},{value:5},{value:6},{value:2},{value:4}] },
+      ],
+      caption: "Suma de longitudes = 21 = 6·7/2.",
+    },
+    {
+      note: "LCP[k] es el prefijo que el sufijo de rango k ya tenía en el sufijo anterior. Esos prefijos no son nuevos: se restan. Por ejemplo, anana comparte tres con ana, así que aporta cinco menos tres.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"a"},{value:"ana"},{value:"anana"},{value:"banana"},{value:"na"},{value:"nana"}] },
+        { id: "len", label: "longitud", cells: [{value:1},{value:3},{value:5},{value:6},{value:2},{value:4}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:0,state:"marked"},{value:1,state:"marked"},{value:3,state:"marked"},{value:0,state:"marked"},{value:0,state:"marked"},{value:2,state:"marked"}] },
+      ],
+      caption: "Suma de LCP = 0 + 1 + 3 + 0 + 0 + 2 = 6.",
+    },
+    {
+      note: "Prefijos nuevos por sufijo: longitud menos LCP. El sufijo banana no comparte nada con na, así que aporta sus seis prefijos. Suma: 1 + 2 + 2 + 6 + 2 + 2 = 15 subcadenas distintas.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"a"},{value:"ana"},{value:"anana"},{value:"banana"},{value:"na"},{value:"nana"}] },
+        { id: "new", label: "nuevos", cells: [{value:1,state:"answer"},{value:2,state:"answer"},{value:2,state:"answer"},{value:6,state:"answer"},{value:2,state:"answer"},{value:2,state:"answer"}] },
+      ],
+      caption: "21 − 6 = 15 subcadenas distintas de banana.",
+    },
+  ],
+}} />
+
+### Subcadena repetida más larga
+
+Dos sufijos que comparten un prefijo lo repiten. El prefijo común más largo entre dos sufijos cualesquiera es el mayor valor de $\mathrm{LCP}$ entre dos vecinos, porque el orden lleva a los sufijos con más prefijo común a quedar contiguos. Para $banana\mathdollar $ es $\max \mathrm{LCP} = 3$, que corresponde a ana.
+
+### Dos sufijos cualesquiera: mínimo de un tramo
+
+Para $k < l$, el prefijo común de $SA[k]$ y $SA[l]$ es el mínimo de la tabla en el intervalo de rangos $k+1..l$. Es un RMQ sobre $\mathrm{LCP}$, y la idea de la prueba es que todos los sufijos entre los extremos comparten el prefijo común de los extremos, pero en algún par adyacente se pierde exactamente el carácter que los extremos aún conservaban. El mínimo es lo que sobrevive a todos los pares intermedios.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Consulta: lcp(a$, anana$). Son los rangos 1 y 3. No son vecinos, así que la tabla no tiene su valor directo; hay que mirar los pares intermedios.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3},{value:0},{value:0},{value:2}] },
+      ],
+      caption: "Extremos: rangos 1 y 3.",
+    },
+    {
+      note: "Los pares intermedios son LCP[2] y LCP[3]: (a$, ana$) y (ana$, anana$). Tomamos el mínimo de esos dos valores, porque el prefijo común que sobrevive a todo el tramo es el que se pierde primero.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$",state:"active"},{value:"ana$"},{value:"anana$",state:"active"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1,state:"marked"},{value:3,state:"marked"},{value:0},{value:0},{value:2}] },
+      ],
+      spans: [ { id: "tramo", row: "lcp", from: 2, to: 3, label: "mín = 1", state: "marked" } ],
+      caption: "min{LCP[2], LCP[3]} = min{1, 3} = 1. Respuesta: 1, la letra a.",
+    },
+  ],
+}} />
+
+## Errores típicos y casos límite
+
+- Confundir convenciones. $\mathrm{LCP}[k]$ compara $k$ con $k-1$. Si se usa $k$ con $k+1$ el resultado está desplazado una columna.
+- Olvidar el sentinela. Su rango es $0$ y no tiene vecino anterior: la entrada queda sin valor. Si se cuenta como sufijo real, la fórmula de subcadenas distintas da un número demasiado grande.
+- Empezar $h$ en cero en cada posición. Esa versión sigue siendo correcta, pero pierde la cota lineal: cada posición vuelve a comparar letras que ya se sabían.
+- Usar el mínimo para la repetición más larga. Para la pareja más parecida en todo el texto hay que tomar el máximo de la tabla; el mínimo sirve para tramos entre dos rangos dados.
+- Texto de longitud uno. $\mathrm{LCP}$ tiene un único valor $\mathrm{LCP}[1] = 0$ y las fórmulas siguen valiendo.
+- Texto con todos los caracteres iguales, como $a^n$: es el caso en que $h$ llega a $n-1$ y el algoritmo más se aprovecha de la herencia.
+
+## Conexión
+
+Esta sección supone el suffix array de la semana 13 ([suffix-array](/structures/suffix-array)): el orden de los sufijos y su construcción por duplicación no se repiten aquí. El RMQ sobre $\mathrm{LCP}$ usa la idea de [plus-minus-one-rmq](/structures/plus-minus-one-rmq) y [static-rmq](/structures/static-rmq), que sirven para responder el mínimo de un tramo en $O(1)$ tras un preprocesamiento lineal. Con esas piezas, el suffix array más LCP resuelve buena parte de los problemas de subcadenas de la asignatura.

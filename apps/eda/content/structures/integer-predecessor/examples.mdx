@@ -1,0 +1,128 @@
+---
+kind: "examples"
+title: "Casos resueltos"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos usan universos de pocos bits para poder dibujar todo el universo. Antes de empezar, fija la convención: aquí los vecinos son **estrictos**, es decir, $\operatorname{pred}(x)=\max\{y\in S\mid y<x\}$ y $\operatorname{succ}(x)=\min\{y\in S\mid y>x\}$.
+
+## Caso mínimo: un solo elemento
+
+*(Derivado; no aparece en las diapositivas.)* Universo $u=4$ ($w=2$), $S=\{3\}$. Consulta $x=0$.
+
+1. Dibuja el universo $0..3$ y marca la única llave, 3.
+2. Busca llaves menores que 0: no hay ninguna. Entonces $\operatorname{pred}(0)=\emptyset$.
+3. Busca llaves mayores que 0: la única es 3. Entonces $\operatorname{succ}(0)=3$.
+
+El caso enseña que la ausencia es un resultado. Un 0 en su lugar sería un valor falso, porque 0 sí es un elemento del universo.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Universo 0..3 con S = {3}. La única llave es el valor 3; las demás celdas están vacías.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3, state: "marked"}] },
+      ],
+      caption: "S = {3}, u = 4.",
+    },
+    {
+      note: "Consulta x=0. Miramos a la izquierda: no hay celdas con llave antes de 0, así que el predecesor no existe.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0, state: "active"}, {value: 1}, {value: 2}, {value: 3, state: "marked"}] },
+      ],
+      caption: "pred(0) = ∅.",
+    },
+    {
+      note: "Miramos a la derecha: la primera llave es 3. Ese es el sucesor.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0, state: "active"}, {value: 1}, {value: 2}, {value: 3, state: "answer"}] },
+      ],
+      caption: "succ(0) = 3.",
+    },
+  ],
+}} />
+
+## Caso normal: la consulta coincide con una llave
+
+Universo $u=16$ ($w=4$), $S=\{2,5,9,13\}$. Consulta $x=9$, que sí está en $S$.
+
+1. La búsqueda exacta encuentra 9 de inmediato. Ese es el primer punto donde el ejercicio pide una decisión: ¿la coincidencia cuenta como respuesta?
+2. Con la convención estricta, se excluye. El predecesor estricto es la llave anterior, 5.
+3. El sucesor estricto es la llave siguiente, 13.
+4. Si cambiamos a la versión no estricta, $\operatorname{pred}(9)=9$. Son dos pruebas distintas: la primera llave mayor o igual que $x$ y la primera estrictamente mayor. Confundirlas afecta justo al caso de coincidencia.
+
+Para bits: en cuatro bits, 9 es 1001. Su mitad alta 10 da el cluster 2, su mitad baja 01 da la posición 1, así que 9 = 2·4 + 1. La partición no cambia la respuesta, pero ubica el valor dentro de su cluster.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Universo 0..15 con S = {2,5,9,13} marcadas. La consulta es x=9, que ya está en S.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2, state: "marked"}, {value: 3}, {value: 4}, {value: 5, state: "marked"}, {value: 6}, {value: 7}, {value: 8}, {value: 9, state: "active"}, {value: 10}, {value: 11}, {value: 12}, {value: 13, state: "marked"}, {value: 14}, {value: 15}] },
+      ],
+      caption: "x = 9 está en S: la búsqueda exacta lo encuentra.",
+    },
+    {
+      note: "Versión estricta: se descarta la coincidencia y se mira a la izquierda. La llave anterior es 5, así que pred(9) = 5.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2, state: "marked"}, {value: 3}, {value: 4}, {value: 5, state: "answer"}, {value: 6}, {value: 7}, {value: 8}, {value: 9, state: "active"}, {value: 10}, {value: 11}, {value: 12}, {value: 13, state: "marked"}, {value: 14}, {value: 15}] },
+      ],
+      caption: "pred(9) = 5 con la convención estricta.",
+    },
+    {
+      note: "Versión estricta, lado derecho: la primera llave mayor que 9 es 13. Ese es el sucesor.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2, state: "marked"}, {value: 3}, {value: 4}, {value: 5, state: "answer"}, {value: 6}, {value: 7}, {value: 8}, {value: 9, state: "active"}, {value: 10}, {value: 11}, {value: 12}, {value: 13, state: "answer"}, {value: 14}, {value: 15}] },
+      ],
+      caption: "succ(9) = 13. Con la versión no estricta, pred(9) sería el propio 9.",
+    },
+  ],
+}} />
+
+## Caso límite: la consulta cruza una frontera de cluster
+
+Universo $u=16$ ($w=4$), $S=\{3,7,8,12\}$. Los clusters tienen 4 valores: $[0,3]$, $[4,7]$, $[8,11]$, $[12,15]$. Las llaves 7 y 8 están en clusters distintos, en la frontera entre dos clusters.
+
+Compara las dos consultas.
+
+- **Consulta $x=8$.** Es una llave, así que la versión estricta descarta la coincidencia. $\operatorname{pred}(8)=7$, que está en el cluster anterior. $\operatorname{succ}(8)=12$, en el cluster siguiente.
+- **Consulta $x=7$.** $\operatorname{pred}(7)=3$, en el primer cluster. $\operatorname{succ}(7)=8$, en el cluster siguiente.
+
+En ambos casos la respuesta cruza un límite de cluster. Una búsqueda que sólo mirara dentro de un cluster fallaría aquí. Por eso las estructuras de enteros necesitan un resumen que permita saltar entre clusters: esa es la razón de la estructura de vEB en la unidad siguiente.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Universo 0..15 con clusters de tamaño 4. La frontera entre el cluster 1 y el cluster 2 está entre 7 y 8.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3, state: "marked"}, {value: 4}, {value: 5}, {value: 6}, {value: 7, state: "marked"}, {value: 8, state: "marked"}, {value: 9}, {value: 10}, {value: 11}, {value: 12, state: "marked"}, {value: 13}, {value: 14}, {value: 15}] },
+      ],
+      spans: [ { id: "c0", row: "u", from: 0, to: 3, label: "c=0" }, { id: "c1", row: "u", from: 4, to: 7, label: "c=1" }, { id: "c2", row: "u", from: 8, to: 11, label: "c=2" }, { id: "c3", row: "u", from: 12, to: 15, label: "c=3" } ],
+      caption: "S = {3, 7, 8, 12}: 7 y 8 están en clusters distintos.",
+    },
+    {
+      note: "Consulta x=8 con la versión estricta. El predecesor está en el cluster 1 (el valor 7), no en el cluster de 8.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7, state: "answer"}, {value: 8, state: "active"}, {value: 9}, {value: 10}, {value: 11}, {value: 12, state: "answer"}, {value: 13}, {value: 14}, {value: 15}] },
+      ],
+      spans: [ { id: "c0", row: "u", from: 0, to: 3, label: "c=0" }, { id: "c1", row: "u", from: 4, to: 7, label: "c=1" }, { id: "c2", row: "u", from: 8, to: 11, label: "c=2" }, { id: "c3", row: "u", from: 12, to: 15, label: "c=3" } ],
+      caption: "pred(8) = 7 (cluster 1). succ(8) = 12 (cluster 3).",
+    },
+    {
+      note: "Consulta x=7: el sucesor, 8, queda en el cluster siguiente. El predecesor, 3, queda en el cluster anterior. Ninguna respuesta sale del mismo cluster que 7.",
+      rows: [
+        { id: "u", label: "Universo", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3, state: "answer"}, {value: 4}, {value: 5}, {value: 6}, {value: 7, state: "active"}, {value: 8, state: "answer"}, {value: 9}, {value: 10}, {value: 11}, {value: 12}, {value: 13}, {value: 14}, {value: 15}] },
+      ],
+      spans: [ { id: "c0", row: "u", from: 0, to: 3, label: "c=0" }, { id: "c1", row: "u", from: 4, to: 7, label: "c=1" }, { id: "c2", row: "u", from: 8, to: 11, label: "c=2" }, { id: "c3", row: "u", from: 12, to: 15, label: "c=3" } ],
+      caption: "pred(7) = 3, succ(7) = 8: ambas respuestas cruzan la frontera.",
+    },
+  ],
+}} />
+
+## Comprobación
+
+Los tres casos usan la misma regla: primero se decide la convención (estricta o no), después se busca hacia cada lado. Un caso en el que la respuesta sale del mismo cluster es el caso fácil. Los casos cruzando una frontera son los que obligan a tener un resumen de los clusters.

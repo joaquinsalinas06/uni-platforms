@@ -139,6 +139,8 @@ export type CanvasEdge = {
   arrowStart?: boolean;
   /** Desviación perpendicular del control cuadrático, en px. default 0 (recta). */
   curve?: number;
+  /** Trazo discontinuo, sea cual sea el `kind`. */
+  dash?: boolean;
   label?: string;
   /** Esta arista representa datos moviéndose literalmente por la red (un
    * mensaje/paquete), no sólo una relación — sólo se anima si además está

@@ -5,282 +5,287 @@ title: "B-tree"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Un índice en disco necesita reducir el número de bloques que toca cada búsqueda, aunque dentro de cada bloque se comparen varias llaves.
+Un índice en disco paga por bloque leído, no por comparación. Un árbol binario de búsqueda sobre $N = 10^9$ llaves tiene altura cercana a $\lg N \approx 30$: cada nivel es un nodo en otro bloque, así que una búsqueda toca unos 30 bloques. El B-tree mete hasta $B$ llaves en cada nodo, de modo que cada lectura decide entre varios intervalos a la vez y la altura baja a $\log_{B+1} N$ niveles. Con $B = 10^3$ son 3 o 4 lecturas.
 
-## Intuición
+## Intuición dibujada
 
-Un nodo reúne hasta $B$ llaves ordenadas. Al leerlo, sus separadores determinan cuál de hasta $B+1$ intervalos puede contener la llave.
-
-## Estructura interna
-
-Las hojas están a la misma profundidad. Cada hijo queda entre separadores consecutivos. El mínimo de hijos por nodo interno no raíz es del orden de $B$ en el modelo de clase. El desborde dibujado es un estado temporal: se corrige antes de terminar la inserción.
-
-### Lee los separadores como fronteras de intervalos
-
-Un nodo con $[20,40,60]$ dirige las consultas a cuatro subárboles. El primero contiene llaves menores que 20. Los centrales contienen respectivamente llaves entre 20 y 40 y entre 40 y 60. El último contiene llaves mayores que 60. Una consulta igual a un separador se resuelve en ese nodo. Esta interpretación sirve también durante el ascenso: si aparece un nuevo separador, aumenta en uno el número de intervalos del padre y hay que crear exactamente un hijo más.
-
-### Qué permanece al partir un nodo interno
-
-Al partir una hoja, basta repartir llaves. Un nodo interno también tiene subárboles enteros. Un desborde de cuatro llaves significa cinco intervalos, y el corte por la mediana debe dejar esos cinco subárboles en el orden que tenían. Si promueves la segunda llave, el nodo de la izquierda queda con una llave y dos hijos, el de la derecha con dos llaves y tres hijos. El padre separa ambas mitades. Ninguna hoja cambia de nivel durante una partición normal. Cuando se parte la raíz, todas bajan un nivel relativo a la nueva raíz a la vez.
-
-## Operaciones
-
-Busca el intervalo y desciende hasta la hoja. Si al insertar sobran llaves, divide el nodo, sube una mediana y reconecta los hijos por rango. Repite si el padre se desborda. Una raíz nueva agrega un nivel a todas las hojas a la vez.
-
-### Caso de clase · insertar 55 con B=3
+Un nodo con $B$ llaves ordenadas reparte el espacio en $B+1$ intervalos. Al leer el nodo basta comparar la consulta con los separadores para saber qué hijo leer después. Este es el primer diagrama: buscar 75 en el árbol de la lámina (B = 3, cada nodo tiene como máximo 3 llaves).
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "55 pertenece a la rama derecha de 30.",
+      note: "Se trae la raíz, un bloque. Tiene la llave 40. 75 es mayor que 40, así que la búsqueda sigue por la derecha. El subárbol izquierdo no se toca.",
+      nodes: [
+        {"id": "r", "value": "40", "parent": null, "state": "active"},
+        {"id": "a", "value": "20", "parent": "r"},
+        {"id": "b", "value": "60·80", "parent": "r"},
+        {"id": "a1", "value": "10", "parent": "a"},
+        {"id": "a2", "value": "30·35", "parent": "a"},
+        {"id": "b1", "value": "50", "parent": "b"},
+        {"id": "b2", "value": "70·75", "parent": "b"},
+        {"id": "b3", "value": "90·95·99", "parent": "b"},
+      ],
+    },
+    {
+      note: "Se trae el nodo [60, 80], segunda transferencia. 60 es menor que 75 y 75 es menor que 80, así que sólo el hijo del medio puede contener 75. El subárbol de la izquierda queda descartado con una sola comparación.",
+      nodes: [
+        {"id": "r", "value": "40", "parent": null},
+        {"id": "a", "value": "menores que 40", "parent": "r", "collapsed": true, "state": "muted"},
+        {"id": "b", "value": "60·80", "parent": "r", "state": "active"},
+        {"id": "b1", "value": "50", "parent": "b", "state": "muted"},
+        {"id": "b2", "value": "70·75", "parent": "b"},
+        {"id": "b3", "value": "90·95·99", "parent": "b", "state": "muted"},
+      ],
+    },
+    {
+      note: "Se trae la hoja [70, 75], tercera transferencia. Contiene 75 y la búsqueda termina. Tres bloques leídos, uno por nivel: la altura de este árbol es 3.",
+      nodes: [
+        {"id": "r", "value": "40", "parent": null},
+        {"id": "a", "value": "menores que 40", "parent": "r", "collapsed": true, "state": "muted"},
+        {"id": "b", "value": "60·80", "parent": "r"},
+        {"id": "b1", "value": "50", "parent": "b", "state": "muted"},
+        {"id": "b2", "value": "70·75", "parent": "b", "state": "answer"},
+        {"id": "b3", "value": "90·95·99", "parent": "b", "state": "muted"},
+      ],
+    },
+  ],
+}} />
+
+Cada paso es una transferencia de bloque. Dentro de un nodo las comparaciones son gratis en el modelo de memoria externa, así que lo que cuenta es cuántos nodos se leen.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Disco en bloques. Cada nodo del B-tree es un bloque de hasta tres llaves; un bloque leído es una transferencia. Las flechas son punteros a los hijos.",
+      rows: [{ id: "disco", label: "Disco", cells: [{"value": "40"}, {"value": "20"}, {"value": "60"}, {"value": "80"}, {"value": "10"}, {"value": "30"}, {"value": "35"}, {"value": "50"}, {"value": "70"}, {"value": "75"}, {"value": "90"}, {"value": "95"}, {"value": "99"}] }],
+      spans: [{"id": "s40", "row": "disco", "from": 0, "to": 0, "label": "nodo 40", "state": "active"}, {"id": "s20", "row": "disco", "from": 1, "to": 1, "label": "nodo 20"}, {"id": "s6080", "row": "disco", "from": 2, "to": 3, "label": "nodo 60·80"}, {"id": "s10", "row": "disco", "from": 4, "to": 4, "label": "nodo 10"}, {"id": "s3035", "row": "disco", "from": 5, "to": 6, "label": "nodo 30·35"}, {"id": "s50", "row": "disco", "from": 7, "to": 7, "label": "nodo 50"}, {"id": "s7075", "row": "disco", "from": 8, "to": 9, "label": "nodo 70·75"}, {"id": "s9099", "row": "disco", "from": 10, "to": 12, "label": "nodo 90·95·99"}],
+      links: [{"from": "disco-0", "to": "disco-1", "kind": "pointer"}, {"from": "disco-0", "to": "disco-2", "kind": "pointer"}, {"from": "disco-1", "to": "disco-4", "kind": "pointer"}, {"from": "disco-1", "to": "disco-5", "kind": "pointer"}, {"from": "disco-2", "to": "disco-7", "kind": "pointer"}, {"from": "disco-2", "to": "disco-8", "kind": "pointer"}, {"from": "disco-3", "to": "disco-10", "kind": "pointer"}],
+      caption: "Trece llaves en ocho bloques.",
+    },
+    {
+      note: "Búsqueda de 75: se trae el bloque 60·80 y se descarta el bloque 20 con su subárbol. Las flechas que no se usan no cambian.",
+      rows: [{ id: "disco", label: "Disco", cells: [{"value": "40"}, {"value": "20"}, {"value": "60"}, {"value": "80"}, {"value": "10"}, {"value": "30"}, {"value": "35"}, {"value": "50"}, {"value": "70"}, {"value": "75"}, {"value": "90"}, {"value": "95"}, {"value": "99"}] }],
+      spans: [{"id": "s40", "row": "disco", "from": 0, "to": 0, "label": "nodo 40", "state": "idle"}, {"id": "s20", "row": "disco", "from": 1, "to": 1, "label": "nodo 20", "state": "muted"}, {"id": "s6080", "row": "disco", "from": 2, "to": 3, "label": "nodo 60·80", "state": "active"}, {"id": "s10", "row": "disco", "from": 4, "to": 4, "label": "nodo 10"}, {"id": "s3035", "row": "disco", "from": 5, "to": 6, "label": "nodo 30·35"}, {"id": "s50", "row": "disco", "from": 7, "to": 7, "label": "nodo 50"}, {"id": "s7075", "row": "disco", "from": 8, "to": 9, "label": "nodo 70·75"}, {"id": "s9099", "row": "disco", "from": 10, "to": 12, "label": "nodo 90·95·99"}],
+      links: [{"from": "disco-0", "to": "disco-1", "kind": "pointer"}, {"from": "disco-0", "to": "disco-2", "kind": "pointer"}, {"from": "disco-1", "to": "disco-4", "kind": "pointer"}, {"from": "disco-1", "to": "disco-5", "kind": "pointer"}, {"from": "disco-2", "to": "disco-7", "kind": "pointer"}, {"from": "disco-2", "to": "disco-8", "kind": "pointer"}, {"from": "disco-3", "to": "disco-10", "kind": "pointer"}],
+      caption: "Dos transferencias hasta aquí.",
+    },
+    {
+      note: "Se trae el bloque 70·75: contiene 75. Tres transferencias en total, una por nivel.",
+      rows: [{ id: "disco", label: "Disco", cells: [{"value": "40"}, {"value": "20"}, {"value": "60"}, {"value": "80"}, {"value": "10"}, {"value": "30"}, {"value": "35"}, {"value": "50"}, {"value": "70"}, {"value": "75"}, {"value": "90"}, {"value": "95"}, {"value": "99"}] }],
+      spans: [{"id": "s40", "row": "disco", "from": 0, "to": 0, "label": "nodo 40", "state": "idle"}, {"id": "s20", "row": "disco", "from": 1, "to": 1, "label": "nodo 20"}, {"id": "s6080", "row": "disco", "from": 2, "to": 3, "label": "nodo 60·80", "state": "muted"}, {"id": "s10", "row": "disco", "from": 4, "to": 4, "label": "nodo 10"}, {"id": "s3035", "row": "disco", "from": 5, "to": 6, "label": "nodo 30·35"}, {"id": "s50", "row": "disco", "from": 7, "to": 7, "label": "nodo 50"}, {"id": "s7075", "row": "disco", "from": 8, "to": 9, "label": "nodo 70·75", "state": "answer"}, {"id": "s9099", "row": "disco", "from": 10, "to": 12, "label": "nodo 90·95·99"}],
+      links: [{"from": "disco-0", "to": "disco-1", "kind": "pointer"}, {"from": "disco-0", "to": "disco-2", "kind": "pointer"}, {"from": "disco-1", "to": "disco-4", "kind": "pointer"}, {"from": "disco-1", "to": "disco-5", "kind": "pointer"}, {"from": "disco-2", "to": "disco-7", "kind": "pointer"}, {"from": "disco-2", "to": "disco-8", "kind": "pointer"}, {"from": "disco-3", "to": "disco-10", "kind": "pointer"}],
+      caption: "Tres bloques leídos para la búsqueda.",
+    },
+  ],
+}} />
+
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $B$ | llaves máximas por nodo (capacidad de un bloque) | menos niveles, nodos más anchos |
+| $N$ | llaves guardadas en el árbol | más niveles, sólo logarítmicamente |
+| $h$ | número de niveles (altura) | es lo que cuesta una búsqueda |
+| $f = \lceil (B+1)/2 \rceil$ | mínimo de hijos de un nodo interno no raíz | cota inferior de ramificación |
+
+Reglas del árbol: todas las hojas están a la misma profundidad. Cada nodo tiene como máximo $B$ llaves y, si es interno, una llave más hijos que llaves. Un nodo no raíz tiene al menos $f-1$ llaves. La raíz puede tener una sola llave.
+
+Con $k$ llaves ordenadas en un nodo interno, los separadores $s_1 < \dots < s_k$ definen $k+1$ intervalos. El hijo $i$ contiene las llaves del intervalo entre $s_i$ y $s_{i+1}$. Una consulta igual a un separador se resuelve en ese nodo.
+
+## Operaciones paso a paso
+
+El ejemplo que sigue usa siempre el mismo árbol de la lámina con $B = 3$. Búsqueda, inserción con partición y crecimiento de la raíz se leen en ese orden.
+
+### Búsqueda
+
+1. Lee el nodo de la raíz y compara la consulta con todas sus llaves. Qué miras: en qué intervalo cae. Por qué: ese intervalo es el único hijo que puede contener la llave.
+2. Baja al hijo correspondiente y repite. Qué decides: el hijo, no la llave. Cada descenso es una transferencia nueva.
+3. Si llegas a una hoja y la llave está, la búsqueda tiene éxito. Si la hoja no la tiene, la llave no existe, porque el intervalo ya era el único candidato.
+
+El diagrama de arriba es la búsqueda completa. Cuenta tres bloques para $h = 3$.
+
+### Inserción con partición
+
+1. Busca la hoja que le corresponde a la llave, igual que en la búsqueda. Qué miras: qué intervalo de la hoja la contiene. Por qué: las llaves nuevas van a hojas, nunca a nodos internos directamente.
+2. Si la hoja tiene menos de $B$ llaves, inserta en orden y termina. Si ya tiene $B$, la inserción la deja con $B+1$ llaves y no cabe en un bloque.
+3. Parte los $B+1$ elementos en dos mitades. La mediana sube al padre como separador. Las dos mitades quedan como hijos del padre a cada lado de la mediana.
+4. Si el padre se desborda, repite el paso 3 hacia arriba. Un nodo interno con $B+1$ llaves tiene $B+2$ hijos; al partirlo se reparten sus subárboles enteros, no sólo claves.
+5. Si se parte la raíz, nace una raíz nueva con una sola llave y la altura sube en uno.
+
+El caso de clase: insertar 55 con $B = 3$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Insertar 55. La raíz 30 manda a la derecha porque 55 es mayor que 30. Baja a la hoja [40, 50, 60].",
       nodes: [
         {"id": "r", "value": "30", "parent": null, "state": "active"},
-        {"id": "l", "value": "10·20", "parent": "r"},
+        {"id": "a", "value": "10·20", "parent": "r"},
         {"id": "d", "value": "40·50·60", "parent": "r"},
       ],
     },
     {
-      note: "La hoja derecha ya tiene tres llaves. Marca el nodo lleno.",
+      note: "La hoja ya tiene B = 3 llaves, así que está llena. No hay sitio para 55 sin partir.",
       nodes: [
         {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
+        {"id": "a", "value": "10·20", "parent": "r"},
         {"id": "d", "value": "40·50·60", "parent": "r", "state": "marked"},
       ],
     },
     {
-      note: "Inserta temporalmente 55 en orden. Cuatro llaves exceden la capacidad.",
+      note: "Se inserta 55 en orden dentro de la hoja. Quedan cuatro llaves: 40, 50, 55, 60. Cuatro llaves no caben en un bloque de capacidad 3.",
       nodes: [
         {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
+        {"id": "a", "value": "10·20", "parent": "r"},
         {"id": "d", "value": "40·50·55·60", "parent": "r", "state": "active"},
       ],
     },
     {
-      note: "Parte alrededor de 50. A la izquierda queda 40 y a la derecha quedan 55 y 60.",
-      nodes: [
-        {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "d", "value": "40", "parent": "r", "state": "marked"},
-        {"id": "m", "value": "50", "parent": null, "state": "active"},
-        {"id": "e", "value": "55·60", "parent": "r", "state": "marked"},
-      ],
-    },
-    {
-      note: "El padre recibe 50 entre sus separadores y queda con tres hijos.",
+      note: "Se parte la hoja. La mediana 50 sube al padre: el padre pasa a tener las llaves 30 y 50 y tres hijos. A la izquierda queda 40, a la derecha quedan 55 y 60. El padre no se desborda, así que la partición termina aquí.",
       nodes: [
         {"id": "r", "value": "30·50", "parent": null, "state": "active"},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "d", "value": "40", "parent": "r"},
-        {"id": "e", "value": "55·60", "parent": "r"},
+        {"id": "a", "value": "10·20", "parent": "r"},
+        {"id": "d1", "value": "40", "parent": "r", "state": "marked"},
+        {"id": "d2", "value": "55·60", "parent": "r", "state": "marked"},
       ],
     },
     {
-      note: "Ahora la consulta 55 toma el último intervalo y llega a la hoja que lo contiene.",
+      note: "Comprobación: buscar 55 con la estructura nueva. 55 es mayor que 50, así que baja por el último intervalo y la hoja [55, 60] lo contiene.",
       nodes: [
         {"id": "r", "value": "30·50", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "d", "value": "40", "parent": "r"},
-        {"id": "e", "value": "55·60", "parent": "r", "state": "answer"},
+        {"id": "a", "value": "10·20", "parent": "r"},
+        {"id": "d1", "value": "40", "parent": "r"},
+        {"id": "d2", "value": "55·60", "parent": "r", "state": "answer"},
       ],
     },
   ],
 }} />
 
-### Caso derivado · de una hoja llena a una raíz nueva
+### Crecimiento de la raíz
+
+Un B-tree sólo crece hacia arriba. La raíz es el único nodo que puede partirse sin que exista un padre que la reciba. Al partirla nace una raíz nueva con una sola llave, y todas las hojas bajan un nivel a la vez. Por eso las hojas siguen a la misma profundidad y no hacen falta rotaciones.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "Raíz y hoja derecha llenas. Buscamos dónde cae 85.",
+      note: "La raíz tiene cuatro llaves 20, 40, 60 y 80. Con B = 3 no cabe. No hay padre que la reciba, así que se parte en el mismo nivel.",
       nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null, "state": "active"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65·70·80", "parent": "r"},
+        {"id": "r", "value": "20·40·60·80", "parent": null, "state": "marked"},
       ],
     },
     {
-      note: "85 supera los tres separadores. Desciende al cuarto hijo.",
+      note: "La mediana 40 sube a una raíz nueva. A la izquierda queda 20 y a la derecha quedan 60 y 80. La altura pasó de 1 a 2 y las hojas ahora están todas en el nivel 2.",
       nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65·70·80", "parent": "r", "state": "active"},
-      ],
-    },
-    {
-      note: "Inserta 85 temporalmente en la hoja. Su cuarta llave dispara la partición.",
-      nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65·70·80·85", "parent": "r", "state": "marked"},
-      ],
-    },
-    {
-      note: "Elige 70 para subir. 65 queda a su izquierda, 80 y 85 a su derecha.",
-      nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65", "parent": "r"},
-        {"id": "p", "value": "70", "parent": null, "state": "active"},
-        {"id": "e", "value": "80·85", "parent": "r"},
-      ],
-    },
-    {
-      note: "La raíz recibe 70. Ahora tiene cuatro llaves y cinco hijos.",
-      nodes: [
-        {"id": "r", "value": "20·40·60·70", "parent": null, "state": "marked"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65", "parent": "r"},
-        {"id": "e", "value": "80·85", "parent": "r"},
-      ],
-    },
-    {
-      note: "Parte la raíz por 40. Los dos hijos menores quedan con 20.",
-      nodes: [
-        {"id": "r", "value": "20", "parent": null, "state": "active"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "x", "value": "40", "parent": null, "state": "marked"},
-        {"id": "s", "value": "60·70", "parent": null},
-        {"id": "c", "value": "45·50", "parent": "s"},
-        {"id": "d", "value": "65", "parent": "s"},
-        {"id": "e", "value": "80·85", "parent": "s"},
-      ],
-    },
-    {
-      note: "El nodo [60,70] conserva tres intervalos. 65 queda entre 60 y 70.",
-      nodes: [
-        {"id": "r", "value": "20", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "x", "value": "40", "parent": null},
-        {"id": "s", "value": "60·70", "parent": null, "state": "active"},
-        {"id": "c", "value": "45·50", "parent": "s"},
-        {"id": "d", "value": "65", "parent": "s", "state": "marked"},
-        {"id": "e", "value": "80·85", "parent": "s"},
-      ],
-    },
-    {
-      note: "40 crea la raíz nueva y enlaza las dos mitades.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null, "state": "active"},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "s", "value": "60·70", "parent": "x"},
-        {"id": "c", "value": "45·50", "parent": "s"},
-        {"id": "d", "value": "65", "parent": "s"},
-        {"id": "e", "value": "80·85", "parent": "s"},
-      ],
-    },
-    {
-      note: "Comprueba profundidad: las cinco hojas están a dos aristas de la raíz.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r", "state": "marked"},
-        {"id": "b", "value": "25·30", "parent": "r", "state": "marked"},
-        {"id": "s", "value": "60·70", "parent": "x"},
-        {"id": "c", "value": "45·50", "parent": "s", "state": "marked"},
-        {"id": "d", "value": "65", "parent": "s", "state": "marked"},
-        {"id": "e", "value": "80·85", "parent": "s", "state": "marked"},
-      ],
-    },
-    {
-      note: "Para buscar 85 se leen tres bloques: [40], [60,70], [80,85].",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null, "state": "active"},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "s", "value": "60·70", "parent": "x", "state": "active"},
-        {"id": "c", "value": "45·50", "parent": "s"},
-        {"id": "d", "value": "65", "parent": "s"},
-        {"id": "e", "value": "80·85", "parent": "s", "state": "answer"},
+        {"id": "r", "value": "40", "parent": null, "state": "active"},
+        {"id": "a", "value": "20", "parent": "r"},
+        {"id": "b", "value": "60·80", "parent": "r"},
       ],
     },
   ],
 }} />
 
-## Análisis de complejidad
+### Eliminación
 
-**Vía del profesor, altura.** Si el mínimo de hijos es $f=\lceil(B+1)/2\rceil$, el número de hojas crece al menos geométricamente con la altura. Por tanto se visitan $O(\log_{B+1} N)$ niveles y se toca un bloque por nivel. **Vía de información, búsqueda.** En el modelo de comparaciones, un bloque permite distinguir hasta $B+1$ destinos y se necesitan $N+1$ intervalos de ausencia. Esto da la cota inferior del modelo. **Inserción.** El descenso y el ascenso cuestan $O(1)$ E/S por nivel. Aunque el peor caso parte cada nodo de la ruta, sigue tocando sólo una ruta y un número constante de bloques vecinos por nivel.
+La lámina describe la eliminación en prosa, sin un ejemplo dibujado. Se sigue esa descripción:
 
-### La altura cuenta bloques y la ramificación explica el logaritmo
+1. Busca la llave y bórrala de su nodo.
+2. Si el nodo queda con menos de $f-1$ llaves, pide una prestada a un hermano. La llave del padre que separa a ambos baja al nodo corto, y una llave del hermano sube al padre.
+3. Si el hermano tampoco tiene de sobra, los dos nodos se fusionan con el separador del padre en medio. El padre pierde una llave.
+4. Si el padre queda con menos de su mínimo, repite el paso 2 o 3 hacia arriba. Si la raíz se queda sin llaves, baja un nivel. La altura sólo cae cuando la raíz desaparece.
 
-*(Traza derivada de la explicación de clase.)*
+Qué no está en la lámina: el caso de borrar una llave interna y cómo se reemplaza. Aquí no se inventa.
+
+## De dónde sale la cota
+
+Hay dos cotas, una por cada lado. Ambas salen de contar nodos por nivel.
+
+**Cota superior.** Cada nodo no raíz tiene al menos $f$ hijos. La raíz tiene al menos 2 hijos si no es hoja. Entonces el nivel $d \ge 1$ tiene al menos $2f^{d-1}$ nodos. Cada nodo no raíz guarda al menos $f-1$ llaves. Sumando sobre los niveles 1 a $h-1$:
+
+$$N \ge 1 + 2(f-1)\frac{f^{h-1}-1}{f-1} = 2f^{h-1} - 1$$
+
+De ahí $f^{h-1} \le (N+1)/2$ y, tomando logaritmo en base $f$:
+
+$$h \le 1 + \log_f \frac{N+1}{2} = O(\log_f N)$$
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Una raíz con dos hijos ya abre dos rutas. La raíz es la única excepción al mínimo de ocupación.",
-      arrays: [
-        {"id": "row-0", "label": "Niveles", "row": 0, "cells": ["raíz", "2"], "states": ["idle", "active"]},
+      note: "Nivel 0: la raíz, con al menos 2 hijos. Los dos hijos son subárboles colapsados; cada uno guarda al menos f menos 1 llaves y tiene al menos f hijos.",
+      nodes: [
+        {"id": "r", "value": "raíz", "parent": null, "state": "active"},
+        {"id": "a", "value": "subárbol", "parent": "r", "collapsed": true},
+        {"id": "b", "value": "subárbol", "parent": "r", "collapsed": true},
       ],
-      bridges: [],
     },
     {
-      note: "Con dos hijos por nodo interno, un nivel más basta para tener al menos cuatro hojas.",
-      arrays: [
-        {"id": "row-0", "label": "Niveles", "row": 0, "cells": ["raíz", "2", "4"], "states": ["idle", "idle", "answer"]},
+      note: "Nivel 1 tiene al menos 2 nodos. Cada uno de ellos tiene al menos f hijos, así que el nivel 2 tiene al menos 2f nodos. El número de nodos crece por un factor f en cada nivel.",
+      nodes: [
+        {"id": "r", "value": "raíz", "parent": null},
+        {"id": "a", "value": "nodo 1", "parent": "r", "state": "active"},
+        {"id": "b", "value": "nodo 2", "parent": "r"},
+        {"id": "a1", "value": "hijo 1", "parent": "a", "collapsed": true},
+        {"id": "a2", "value": "hijo f", "parent": "a", "collapsed": true},
+        {"id": "b1", "value": "hijo 1", "parent": "b", "collapsed": true},
+        {"id": "b2", "value": "hijo f", "parent": "b", "collapsed": true},
       ],
-      bridges: [],
-    },
-    {
-      note: "Para llegar a una sola hoja, el camino lee uno de los bloques de cada nivel.",
-      arrays: [
-        {"id": "row-0", "label": "Camino", "row": 0, "cells": ["raíz", "interno", "hoja"], "states": ["answer", "answer", "answer"]},
-        {"id": "row-1", "label": "Lecturas", "row": 1, "cells": ["1", "2", "3"], "states": ["answer", "answer", "answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "La cascada repara en sentido inverso. Una partición sólo puede propagarse al padre de su ruta.",
-      arrays: [
-        {"id": "row-0", "label": "Reparaciones", "row": 0, "cells": ["hoja", "interno", "raíz"], "states": ["active", "active", "active"]},
-      ],
-      bridges: [],
     },
   ],
 }} />
 
-### Dos formas de llegar al logaritmo
+Con $N$ llaves el árbol no puede ser más alto que el número de veces que puedes multiplicar por $f$ antes de pasarte de $N$. Eso es el logaritmo en base $f$.
 
-**Altura de la estructura.** Toma una raíz interna con al menos dos hijos y nodos internos no raíz con al menos $f$ hijos. Si hay $h$ aristas hasta una hoja, hay al menos $2f^{h-1}$ hojas para $hge1$. La cantidad de hojas no puede superar el número de llaves en un árbol válido. Al despejar, $h=O(1+log_f N)$. Como $f$ es del orden de $B$, el cambio de base da la cota de clase. Para un árbol que cabe en un solo bloque, la raíz se lee una vez.
+**Cota inferior.** Cada nodo tiene como máximo $B$ llaves y $B+1$ hijos. Con altura $h$ hay como mucho $1 + (B+1) + \dots + (B+1)^{h-1}$ nodos, y cada uno guarda como mucho $B$ llaves. Entonces $N + 1 \le (B+1)^h$:
 
-**Árbol de decisiones.** Un bloque con hasta $B$ separadores distingue como máximo $B+1$ huecos para una consulta ausente. Un método por comparaciones necesita cubrir los $N+1$ huecos del conjunto ordenado. De ahí sale un límite para el problema, incluso antes de diseñar el árbol. El argumento de altura muestra que el B-tree logra ese orden de crecimiento. El argumento de información explica por qué no puede mejorarse en general bajo esos supuestos.
+$$h \ge \log_{B+1}(N+1)$$
 
-**Actualización.** En el ejemplo de la raíz nueva, la reparación no visita las otras tres hojas. Sólo redistribuye la hoja modificada y los separadores y punteros de sus ancestros. Por eso la cascada más costosa sigue siendo proporcional a la altura. Esto es una cota de peor caso para una sola inserción.
+La lámina escribe la búsqueda como $\Theta(\log_{B+1} N)$. Con $f = \lceil (B+1)/2 \rceil$ la cota superior tiene base $f$, no $B+1$, pero ambas bases son $\Theta(B)$ para $B$ grande. Así que la altura, y el costo de la búsqueda en transferencias, es
 
-## Tabla de complejidad
+$$\Theta(\log_B N)$$
 
-La tabla superior usa las unidades de costo de la explicación.
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Cota inferior: la raíz puede tener hasta B+1 hijos. Aquí se dibujan tres de ellos como subárboles colapsados, con B llaves por nodo como máximo.",
+      nodes: [
+        {"id": "r", "value": "raíz: B llaves", "parent": null, "state": "active"},
+        {"id": "a", "value": "subárbol", "parent": "r", "collapsed": true},
+        {"id": "b", "value": "subárbol", "parent": "r", "collapsed": true},
+        {"id": "c", "value": "subárbol", "parent": "r", "collapsed": true},
+      ],
+    },
+    {
+      note: "Cada nivel multiplica por B+1 el número de nodos como máximo. Si el árbol tiene altura h, N no supera (B+1)^h menos 1; por eso la altura no puede ser menor que el logaritmo en base B+1 de N.",
+      nodes: [
+        {"id": "r", "value": "raíz", "parent": null},
+        {"id": "a", "value": "nodo 1", "parent": "r", "state": "active"},
+        {"id": "a1", "value": "hasta B+1 hijos", "parent": "a", "collapsed": true},
+        {"id": "b", "value": "nodo 2", "parent": "r"},
+        {"id": "b1", "value": "hasta B+1 hijos", "parent": "b", "collapsed": true},
+      ],
+    },
+  ],
+}} />
 
-## Ejemplos
+### Cuánto ahorra frente al binario
 
-[Casos resueltos](/structures/b-tree/examples) y [preguntas con pistas](/structures/b-tree/exercises).
+Con $N = 10^9$ y $B = 10^3$, $\log_{1001} 10^9 \approx 3.0$. Con la cota superior con $f = 501$, la altura es a lo sumo $1 + \log_{501}(5 \cdot 10^8) \approx 4.2$, así que son 3 o 4 niveles. El binario usa $\lg N \approx 30$. El 20 de la lámina coincide con $\lg(N/B) = \lg 10^6 \approx 20$, que es una búsqueda binaria sobre los bloques; esa lectura es nuestra, la lámina no la desarrolla. El B-tree gana por el factor $\lg(B+1)$.
 
-## Comparación con estructuras relacionadas
+## Errores típicos y casos límite
 
-El BST tiene hasta dos hijos por nodo. El B-tree organiza los separadores del bloque para obtener ramificación proporcional a $B$. La cota cuenta E/S. El trabajo de CPU dentro de un nodo se analiza aparte.
+- **Llena no es desbordada.** Una hoja con exactamente $B$ llaves cabe. Sólo con $B+1$ se parte. En el ejemplo de la inserción, meter 55 en una hoja con dos llaves la deja con tres y no parte nada.
+- **Partir no pierde llaves.** Un nodo con $B+1$ llaves queda con la mediana en el padre y el resto repartido entre dos nodos. Con $B = 3$ son 1 y 2 llaves, más la mediana arriba. Ninguna se pierde.
+- **Un nodo interno con $k$ llaves tiene $k+1$ hijos.** Al partirlo, cada subárbol se reconecta por intervalo. Si tratas un subárbol como una llave suelta, pierdes punteros.
+- **La altura sube sólo por la raíz.** Un padre que se desborda no baja la altura de nadie: sólo mueve la mediana hacia arriba hasta la raíz.
+- **Árbol vacío.** Una raíz sin llaves no es un B-tree válido; el primer insert crea una hoja que es raíz.
 
-## Prueba de dominio
+## Conexión
 
-[Lista de comprobación](/structures/b-tree/mastery-check).
-
-*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf · pp. 19-33.*
+Este árbol usa el modelo de memoria externa: el costo es número de bloques transferidos. Para el arreglo ordenado de bloques y la búsqueda binaria sobre él, ver `/structures/external-memory-model`. La versión sin partir nodos, el árbol binario de búsqueda balanceado, se estudia en `/structures/balanced-bst`. Las estructuras que dependen de esta idea (índices sobre disco, árboles de rango) se enlazan desde sus propias páginas.

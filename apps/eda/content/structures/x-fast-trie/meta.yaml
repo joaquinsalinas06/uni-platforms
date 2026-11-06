@@ -3,7 +3,7 @@ title: X-fast trie
 type: structure
 week: week-11
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: tree
 prerequisites:
 - integer-predecessor
 complexity:

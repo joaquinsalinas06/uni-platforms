@@ -1,0 +1,132 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos usan el árbol de 15 nodos y el layout de la lección. Distingue siempre el orden de almacenamiento (las casillas) del orden de búsqueda (las aristas del árbol).
+
+## Mínimo: árbol de tres nodos
+
+Un árbol con raíz 1 e hijos 2 y 3 tiene altura 2. Se corta a media altura: la pieza superior es $\{1\}$ y hay dos piezas inferiores de altura 1, que son nodos sueltos. El layout queda $[1,2,3]$.
+
+Con $B = 4$ las tres casillas caben en un bloque. Buscar 3 visita 1 y 3, las casillas 1 y 3, y ambas están en el bloque 1. Una transferencia. El término constante de la cota $O(1 + \log_B N)$ cubre justo este caso: el árbol cabe en un bloque y aun así hay que leerlo.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Árbol de tres nodos en memoria. Todo el layout cabe en un único bloque de 4 casillas.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3" },
+        ]},
+      ],
+      spans: [ { id: "b1", row: "mem", from: 0, to: 2, label: "bloque 1" } ],
+      caption: "Buscar 3 visita las casillas 1 y 3. Ambas están en el bloque 1: una transferencia.",
+    },
+    {
+      note: "Se visita 1 (casilla 1) y después 3 (casilla 3). Las dos casillas están dentro del mismo bloque.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1", state: "active" }, { value: "2", tag: "2" }, { value: "3", tag: "3", state: "answer" },
+        ]},
+      ],
+      spans: [ { id: "b1", row: "mem", from: 0, to: 2, label: "bloque 1" } ],
+      caption: "Encontrado 3 con una sola lectura de bloque.",
+    },
+  ],
+}} />
+
+## Normal: la ruta 1, 3, 7, 15
+
+Este es el caso de la lección. Con $B = 4$ el layout toca dos bloques (el 1 y el 4), mientras que el orden por niveles toca tres (el 1, el 2 y el 4). Una sola ruta no demuestra la cota, pero ilustra por qué las piezas contiguas ahorran lecturas.
+
+Las comparaciones son: en 1, ir a la derecha (3); en 3, ir a la derecha (7); en 7, ir a la derecha (15). Son 4 nodos visitados, 2 piezas (A y C4) y 2 bloques.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Ruta 1, 3, 7, 15 en van Emde Boas. Las casillas tocadas son 1, 3, 13 y 15, dentro de los bloques 1 y 4.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1", state: "active" }, { value: "2", tag: "2" }, { value: "3", tag: "3", state: "active" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13", state: "active" }, { value: "14", tag: "14" }, { value: "15", tag: "15", state: "answer" },
+        ]},
+      ],
+      spans: [
+        { id: "A", row: "mem", from: 0, to: 2, label: "A" },
+        { id: "C4", row: "mem", from: 12, to: 14, label: "C4" },
+      ],
+      caption: "Dos piezas: A (nodos 1 y 3) y C4 (nodos 7 y 15). La pieza A cae en el bloque 1 y C4 en el bloque 4.",
+    },
+    {
+      note: "Mismos nodos con el orden por niveles: las casillas 1, 3, 7 y 15 caen en los bloques 1, 1, 2 y 4.",
+      rows: [
+        { id: "niv", label: "niveles", cells: [
+          { value: "1", state: "active" }, { value: "2" }, { value: "3", state: "active" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7", state: "active" }, { value: "8" }, { value: "9" }, { value: "10" }, { value: "11" }, { value: "12" }, { value: "13" }, { value: "14" }, { value: "15", state: "answer" },
+        ]},
+      ],
+      spans: [
+        { id: "n1", row: "niv", from: 0, to: 3, label: "bloque 1" },
+        { id: "n2", row: "niv", from: 4, to: 7, label: "bloque 2" },
+        { id: "n3", row: "niv", from: 8, to: 11, label: "bloque 3" },
+        { id: "n4", row: "niv", from: 12, to: 14, label: "bloque 4" },
+      ],
+      caption: "Por niveles: tres bloques distintos (1, 2 y 4) para la misma ruta.",
+    },
+  ],
+}} />
+
+## Límite: una pieza que cruza una frontera
+
+La pieza $C_1 = \{4,8,9\}$ ocupa las casillas 4, 5 y 6. Con $B = 4$ la frontera entre bloques cae entre las casillas 4 y 5, así que la pieza toca dos bloques aunque tiene sólo 3 nodos. Una búsqueda que entre en $C_1$ paga dos transferencias por esa pieza, no una.
+
+Este es el caso que obliga a escribir "a lo sumo 2 bloques" en la cota, y no "1". Si la pieza empezara en la casilla 5, cabría entera en el bloque 2 y costaría una transferencia. La posición de la pieza depende de la construcción, no de $B$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Pieza C1 = {4, 8, 9} en las casillas 4 a 6. Los bloques de 4 casillas son [1..4] y [5..8].",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3" }, { value: "4", tag: "4" }, { value: "8", tag: "5" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
+        { id: "blk", label: "bloques", cells: [
+          { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" },
+        ]},
+      ],
+      spans: [
+        { id: "C1", row: "mem", from: 3, to: 5, label: "C1" },
+        { id: "b1", row: "blk", from: 0, to: 3, label: "bloque 1" },
+        { id: "b2", row: "blk", from: 4, to: 7, label: "bloque 2" },
+      ],
+      caption: "C1 cruza la frontera entre el bloque 1 y el bloque 2.",
+    },
+    {
+      note: "Una búsqueda que visita 4 y después 8 lee el bloque 1 para la casilla 4 y el bloque 2 para la casilla 5. Dos transferencias por una pieza de tres nodos.",
+      rows: [
+        { id: "mem", label: "memoria", cells: [
+          { value: "1", tag: "1" }, { value: "2", tag: "2" }, { value: "3", tag: "3" }, { value: "4", tag: "4", state: "active" }, { value: "8", tag: "5", state: "active" }, { value: "9", tag: "6" }, { value: "5", tag: "7" }, { value: "10", tag: "8" }, { value: "11", tag: "9" }, { value: "6", tag: "10" }, { value: "12", tag: "11" }, { value: "13", tag: "12" }, { value: "7", tag: "13" }, { value: "14", tag: "14" }, { value: "15", tag: "15" },
+        ]},
+        { id: "blk", label: "bloques", cells: [
+          { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" }, { value: "·" },
+        ]},
+      ],
+      spans: [
+        { id: "C1", row: "mem", from: 3, to: 5, label: "C1" },
+        { id: "b1", row: "blk", from: 0, to: 3, label: "bloque 1" },
+        { id: "b2", row: "blk", from: 4, to: 7, label: "bloque 2" },
+      ],
+      caption: "Casillas 4 y 5 en bloques distintos: dos lecturas por la misma pieza.",
+    },
+  ],
+}} />
+
+## Qué pasa si todo cabe en un bloque
+
+Si $N \le B$, el árbol entero es una sola pieza y una búsqueda fría sobre el arreglo lee un bloque. Esa lectura es el término constante. La fórmula $\log_B N$ de la cota da un valor menor que 1 en ese caso, y por eso se escribe $1 + \log_B N$.
+
+Conexión: [volver a la teoría](/structures/cache-oblivious-veb-layout). Preguntas con pistas: [ejercicios](/structures/cache-oblivious-veb-layout/exercises).

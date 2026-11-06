@@ -2,9 +2,11 @@
 kind: mastery
 title: Prueba de dominio
 canExplain:
-- Traza la llegada de 4 en el ejemplo.
-- ¿Cómo puede una inserción hacer muchos retiros sin volver cuadrática la construcción?
+- Por qué el mínimo de un intervalo es el LCA de sus extremos en el árbol cartesiano
+- Por qué la construcción de izquierda a derecha con una pila cuesta O(n) aunque una inserción desapile muchos nodos
+- Por qué el primer mínimo de un intervalo con empates queda arriba
 canDo:
-- ¿Qué orden recupera el inorden?
-- Traza la llegada de 4 en el ejemplo.
+- Construir el árbol cartesiano de un arreglo pequeño dibujando la pila en cada paso
+- Responder RMQ sobre el árbol encontrando el LCA de dos posiciones
+- Distinguir posición (inorden) de valor (heap) en cada nodo
 ---

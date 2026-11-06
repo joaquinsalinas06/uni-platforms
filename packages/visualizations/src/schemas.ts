@@ -19,6 +19,7 @@ export const ALL_VISUALIZATION_TYPES = [
   'memory-layout',
   'geometric',
   'planar',
+  'array',
 ] as const;
 
 export const VISUALIZATION_TYPES = ALL_VISUALIZATION_TYPES;

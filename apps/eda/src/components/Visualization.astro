@@ -19,7 +19,7 @@ import { AiDiagramFrame } from '@uni/ui/astro';
 import TreeVisualization from '../visualizations/tree/TreeVisualization';
 import PersistentVisualization from '../visualizations/persistent/PersistentVisualization';
 import RangeTreeVisualization from '../visualizations/range-tree/RangeTreeVisualization';
-import { GeometricVisualization, PlanarVisualization } from '@uni/visualizations';
+import { ArrayVisualization, GeometricVisualization, PlanarVisualization } from '@uni/visualizations';
 
 interface Props {
   viz: { type: keyof typeof VISUALIZATIONS; mode?: string; steps: any[] };
@@ -54,6 +54,7 @@ const steps = viz.mode ? viz.steps.map((s) => ({ mode: viz.mode, ...s })) : viz.
   {viz.type === 'persistent' && <PersistentVisualization client:visible steps={steps} />}
   {viz.type === 'range-tree' && <RangeTreeVisualization client:visible steps={steps} />}
   {viz.type === 'planar' && <PlanarVisualization client:visible steps={steps} />}
+  {viz.type === 'array' && <ArrayVisualization client:visible steps={steps} />}
   {viz.type === 'geometric' && <GeometricVisualization client:visible steps={steps} />}
 </AiDiagramFrame>
 

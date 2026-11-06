@@ -5,142 +5,257 @@ title: "Predecesor entero y modelos de cómputo"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Buscar por igualdad y encontrar el vecino ordenado son preguntas distintas. Una tabla hash puede reconocer 12 rápidamente y aun así no decir cuál es la mayor llave por debajo de 12.
+Una tabla hash reconoce la llave 12 en tiempo esperado constante, pero no dice cuál es la mayor llave menor que 12. Esa pregunta, el predecesor, aparece en cualquier índice ordenado: "dame la última fecha anterior a esta", "cuál es el siguiente bloque libre". Un árbol de búsqueda balanceado la responde en $\Theta(\lg n)$ por operación. Con $n=10^9$ llaves, eso son unos 30 pasos por consulta. La pregunta de esta unidad es si con enteros de palabra fija se puede bajar ese costo.
 
-## Intuición
+## Intuición dibujada
 
-Piensa en un universo de $u=2^w$ posiciones. Cada llave es un patrón de $w$ bits. Comparar llaves sólo informa el orden. Operar sobre una palabra permite inspeccionar varios bits en una operación.
+Las llaves son enteros de $w$ bits. El universo es $U=\{0,1,\dots,u-1\}$ con $u=2^w$, y una palabra es una celda de memoria de $w$ bits. Ese dato cambia la pregunta: un entero ya no es sólo algo que se compara, también es una cadena de bits que se puede partir.
 
-## Estructura interna
+El primer diagrama muestra la operación que la teoría usa una y otra vez: partir una palabra en su mitad alta y su mitad baja. Con $w=4$ y $x=13$, los bits son 1101.
 
-Usaremos predecesor estricto, máximo $x<q$, y sucesor estricto, mínimo $x>q$. La respuesta puede estar ausente. Word RAM cuenta operaciones sobre palabras de $w$ bits. Cell probe cuenta accesos a celdas y permite cómputo gratuito entre ellos. Pointer machine se mueve siguiendo punteros.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "La palabra de $w=4$ bits que representa x=13. Las etiquetas pequeñas son la posición de cada bit, de derecha a izquierda, empezando en 0.",
+      rows: [
+        { id: "bits", label: "Bits de x", cells: [{value: 1, tag: "3"}, {value: 1, tag: "2"}, {value: 0, tag: "1"}, {value: 1, tag: "0"}] },
+        { id: "univ", label: "Universo u=16", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}, {value: 9}, {value: 10}, {value: 11}, {value: 12}, {value: 13}, {value: 14}, {value: 15}] },
+      ],
+      caption: "Hay u = 16 valores posibles, y x es uno de ellos.",
+    },
+    {
+      note: "Partimos la palabra en dos mitades de $w/2=2$ bits. La mitad alta (11) es el índice del cluster; la mitad baja (01) es la posición dentro de ese cluster.",
+      rows: [
+        { id: "bits", label: "Bits de x", cells: [{value: 1, tag: "3"}, {value: 1, tag: "2"}, {value: 0, tag: "1"}, {value: 1, tag: "0"}] },
+        { id: "univ", label: "Universo u=16", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}, {value: 9}, {value: 10}, {value: 11}, {value: 12}, {value: 13}, {value: 14}, {value: 15}] },
+      ],
+      spans: [ { id: "alto", row: "bits", from: 0, to: 1, label: "alto: c=3", state: "marked" }, { id: "bajo", row: "bits", from: 2, to: 3, label: "bajo: i=1", state: "shared" } ],
+      caption: "Mitad alta 11 = 3 y mitad baja 01 = 1.",
+    },
+    {
+      note: "Los clusters tienen 4 valores cada uno: [0,3], [4,7], [8,11] y [12,15]. El valor 13 cae en el cluster 3, en la posición 1 dentro de él. Eso es x = 3·4 + 1.",
+      rows: [
+        { id: "bits", label: "Bits de x", cells: [{value: 1, tag: "3"}, {value: 1, tag: "2"}, {value: 0, tag: "1"}, {value: 1, tag: "0"}] },
+        { id: "univ", label: "Universo u=16", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}, {value: 9}, {value: 10}, {value: 11}, {value: 12}, {value: 13, state: "active"}, {value: 14}, {value: 15}] },
+      ],
+      spans: [ { id: "c0", row: "univ", from: 0, to: 3, label: "c=0" }, { id: "c1", row: "univ", from: 4, to: 7, label: "c=1" }, { id: "c2", row: "univ", from: 8, to: 11, label: "c=2" }, { id: "c3", row: "univ", from: 12, to: 15, label: "c=3", state: "marked" } ],
+      caption: "x = ⟨c, i⟩ = ⟨3, 1⟩ con u = 16 y clusters de tamaño √u = 4.",
+    },
+  ],
+}} />
 
-### Dónde vive la respuesta a una búsqueda ordenada
+## Definición y notación
 
-En el conjunto {2,5,9,13} hay huecos antes de 2, después de 13 y entre cada par consecutivo. Todas las consultas ausentes que caen dentro del mismo hueco comparten sus vecinos. Encontrar el predecesor es identificar el borde izquierdo de ese hueco. Si la consulta coincide con una llave, el ejercicio debe decir si esa llave puede ser su propia respuesta. El caso estricto desplaza el resultado al elemento anterior. Dibuja la consulta entre llaves, incluso si es una posición ausente del universo.
-
-### Tres cuentas que conviene escribir por separado
-
-| Modelo | Qué operación guía la cota | Qué debes declarar |
+| Símbolo | Qué mide | Qué pasa si crece |
 | --- | --- | --- |
-| Comparaciones | Decisiones de orden entre llaves | Cada decisión ofrece pocas alternativas |
-| Word RAM | Operaciones y accesos sobre palabras | Una palabra tiene $w$ bits y se especifican sus operaciones |
-| Cell probe | Lecturas y escrituras de celdas | El cálculo entre accesos queda fuera del conteo |
+| $w$ | Bits por palabra; $u=2^w$ | Los enteros caben menos holgados en una celda |
+| $u$ | Tamaño del universo | Una tabla indexada por $U$ crece con $u$ |
+| $n$ | Número de llaves en $S\subseteq U$ | Los árboles de comparación crecen con $\lg n$ |
+| $\operatorname{pred}(x)$ | $\max\{y\in S \mid y<x\}$, o vacío | |
+| $\operatorname{succ}(x)$ | $\min\{y\in S \mid y>x\}$, o vacío | |
 
-Una cota dependiente de $w$ puede ser mejor o peor que otra dependiente de $n$, según la relación entre cantidad de llaves y tamaño del universo. Si sólo hay pocas llaves, un arreglo puede ser suficiente. Si los prefijos informan sobre grandes regiones y el modelo permite acceder a ellos eficientemente, agrupar por bits ofrece otra vía de búsqueda.
+La consulta $x$ **no tiene que estar en $S$**. Es el problema de la tabla de rutas, y el de "cuál es la siguiente llave" en cualquier índice ordenado. Las versiones estrictas excluyen la coincidencia: si $x\in S$, $\operatorname{pred}(x)$ es la llave anterior a $x$, no $x$ misma. Escribe qué convención usas antes de comparar respuestas.
 
-## Operaciones
+## Operaciones paso a paso
 
-En una lista ordenada, localiza el punto de inserción. Para el vecino estricto, descarta una coincidencia exacta antes de elegir el lado. En las estructuras siguientes, divide la palabra en prefijo y sufijo para localizar primero la región.
+Ejemplo corrido: $u=16$, $w=4$, $S=\{2,5,9,13\}$. Consulta $x=11$, que no está en $S$.
 
-### Consulta entre llaves, coincidencia y extremo
+1. Mira el universo. Las llaves de $S$ son los únicos valores que cuentan como respuesta.
+2. Ubica $x=11$ en la recta ordenada. Hay llaves a ambos lados: 9 a la izquierda y 13 a la derecha.
+3. El predecesor es el máximo de las llaves menores que 11, que es 9. El sucesor es el mínimo de las mayores, que es 13.
+4. La respuesta depende del hueco en el que cae $x$, no de si $x$ existe.
 
-*(Traza derivada de la explicación de clase.)*
+El segundo diagrama hace lo mismo con toda la tabla de respuestas. Cada celda de la fila inferior es $\operatorname{pred}(x)$ para el $x$ de arriba, calculado a partir de $S$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Consulta 6. Sus vecinos pueden estar a ambos lados de una posición vacía.",
-      arrays: [
-        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["2", "5", "6", "9", "13"], "states": ["idle", "idle", "marked", "idle", "idle"]},
+      note: "Universo $x=0..15$ y, debajo, el predecesor estricto de cada x con $S=\\{2,5,9,13\\}$. Cada celda de la fila inferior se deriva de $S$; no es una estructura que ya exista.",
+      rows: [
+        { id: "x", label: "x", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}, {value: 9}, {value: 10}, {value: 11}, {value: 12}, {value: 13}, {value: 14}, {value: 15}] },
+        { id: "pred", label: "pred(x)", cells: [{value: "∅"}, {value: "∅"}, {value: "∅"}, {value: 2}, {value: 2}, {value: 2}, {value: 5}, {value: 5}, {value: 5}, {value: 5}, {value: 9}, {value: 9}, {value: 9}, {value: 9}, {value: 13}, {value: 13}] },
       ],
-      bridges: [],
+      caption: "Tabla de rutas completa: 16 entradas para 4 llaves.",
     },
     {
-      note: "El predecesor estricto es 5 y el sucesor estricto es 9.",
-      arrays: [
-        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["2", "5", "6", "9", "13"], "states": ["idle", "answer", "marked", "answer", "idle"]},
+      note: "Consulta x=11: la celda de la columna 11 es la que se lee. Su predecesor es 9, porque 9 es la última llave menor que 11.",
+      rows: [
+        { id: "x", label: "x", cells: [{value: 0}, {value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}, {value: 9}, {value: 10}, {value: 11, state: "active"}, {value: 12}, {value: 13}, {value: 14}, {value: 15}] },
+        { id: "pred", label: "pred(x)", cells: [{value: "∅"}, {value: "∅"}, {value: "∅"}, {value: 2}, {value: 2}, {value: 2}, {value: 5}, {value: 5}, {value: 5}, {value: 5}, {value: 9}, {value: 9, state: "answer"}, {value: 9}, {value: 9}, {value: 13}, {value: 13}] },
       ],
-      bridges: [],
+      caption: "pred(11) = 9. El sucesor, leído en la misma columna de la tabla de sucesores, sería 13.",
     },
     {
-      note: "Consulta 9. La coincidencia se excluye de la respuesta estricta.",
-      arrays: [
-        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["2", "5", "9", "13"], "states": ["idle", "answer", "marked", "answer"]},
+      note: "Consulta x=1: no hay llave menor que 1, así que el predecesor no existe. El sucesor es 2, la primera llave a la derecha.",
+      rows: [
+        { id: "x", label: "x", cells: [{value: 0}, {value: 1, state: "active"}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}, {value: 7}, {value: 8}, {value: 9}, {value: 10}, {value: 11}, {value: 12}, {value: 13}, {value: 14}, {value: 15}] },
+        { id: "pred", label: "pred(x)", cells: [{value: "∅", state: "answer"}, {value: "∅"}, {value: "∅"}, {value: 2}, {value: 2}, {value: 2}, {value: 5}, {value: 5}, {value: 5}, {value: 5}, {value: 9}, {value: 9}, {value: 9}, {value: 9}, {value: 13}, {value: 13}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Consulta 1. Queda a la izquierda de todas las llaves.",
-      arrays: [
-        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["1", "2", "5", "9", "13"], "states": ["marked", "answer", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El vecino derecho es 2. No existe vecino izquierdo.",
-      arrays: [
-        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["sucesor:2", "predecesor:∅"], "states": ["answer", "answer"]},
-      ],
-      bridges: [],
+      caption: "Ausencia es una respuesta válida. No conviene representarla con 0 si 0 es una llave del universo.",
     },
   ],
 }} />
 
-### Separar una palabra por prefijo y sufijo
+Esa tabla responde en $O(1)$, pero ocupa $u$ celdas y cada cambio en $S$ puede obligarnos a reescribir un intervalo entero. Un árbol de búsqueda balanceado ocupa $n$ celdas y responde en $\Theta(\lg n)$.
 
-*(Traza derivada de la explicación de clase.)*
+## Los dos extremos
+
+La unidad compara dos puntos de partida. Son las dos respuestas que hay que superar.
+
+- **Tabla de respuestas.** Un arreglo de tamaño $u$ con $\operatorname{pred}(x)$ para cada $x\in U$. Consulta en $O(1)$, pero cuesta $\Theta(u)$ de espacio y $\Theta(u)$ de tiempo por actualización.
+- **Árbol balanceado.** $\Theta(n)$ de espacio y $\Theta(\lg n)$ por operación. Es óptimo en el modelo de comparación, porque cada comparación sólo descarta una porción del orden.
+
+La pregunta de la clase es si hay algo entre ambos extremos, con tiempo mucho menor que $\lg n$. La respuesta llega por una vía distinta: no comparar, sino leer bits.
+
+El siguiente diagrama compara el espacio de ambos extremos con $u=16$ y $n=4$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "En cuatro bits, 13 se escribe 1101.",
-      arrays: [
-        {"id": "row-0", "label": "Palabra", "row": 0, "cells": ["1", "1", "0", "1"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Tabla de respuestas: una celda por cada valor del universo. Con u=16 son 16 celdas aunque sólo haya 4 llaves.",
+      rows: [
+        { id: "tabla", label: "Tabla, u=16", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "arbol", label: "Árbol, n=4", cells: [{value: 2}, {value: 5}, {value: 9}, {value: 13}] },
       ],
-      bridges: [],
+      caption: "Espacio: u celdas en la tabla frente a n en el árbol.",
     },
     {
-      note: "Los bits altos 11 identifican el grupo de 12 a 15.",
-      arrays: [
-        {"id": "row-0", "label": "Bits altos", "row": 0, "cells": ["1", "1"], "states": ["active", "active"]},
-        {"id": "row-1", "label": "Intervalo", "row": 1, "cells": ["12", "13", "14", "15"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Con u mucho mayor que n la tabla domina. Si u es 2^64 y n es 10^9, la tabla es impracticable, y el árbol sigue ocupando sólo n celdas.",
+      rows: [
+        { id: "tabla", label: "Tabla, u=16", cells: [{value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}, {value: "·", state: "muted"}] },
+        { id: "arbol", label: "Árbol, n=4", cells: [{value: 2, state: "answer"}, {value: 5, state: "answer"}, {value: 9, state: "answer"}, {value: 13, state: "answer"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Los bits bajos 01 dan el desplazamiento 1 dentro del grupo.",
-      arrays: [
-        {"id": "row-0", "label": "Bits bajos", "row": 0, "cells": ["0", "1"], "states": ["active", "active"]},
-        {"id": "row-1", "label": "Intervalo", "row": 1, "cells": ["12", "13", "14", "15"], "states": ["idle", "answer", "idle", "idle"]},
-      ],
-      bridges: [],
+      caption: "El espacio del árbol depende de n, no de u.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Modelos de cómputo
 
-Para una consulta en el universo dibuja primero la posición solicitada aunque no sea una llave. Marca los candidatos a cada lado. Una estructura de vecinos debe localizar ese hueco, mientras que una estructura de pertenencia puede parar con un sí o un no. Las estructuras de enteros sacan información de la representación de las llaves para localizar el hueco.
+Para comparar cotas hay que decir qué modelo las mide. Estas son las cuatro piezas de la clase, de débil a fuerte.
 
-## Análisis de complejidad
+| Modelo | Qué cuesta | Uso típico |
+| --- | --- | --- |
+| Comparación (BST) | Cada comparación de llaves | Cota inferior de buscar y ordenar |
+| Pointer machine | Seguir un puntero | Estructuras de punteros, sin acceso directo a celdas |
+| Word RAM | Operaciones de C sobre palabras de $w$ bits en $O(1)$ | Diseño de estructuras de enteros |
+| Cell probe | Lectura o escritura de celdas; cómputo gratis | Demostrar cotas inferiores |
 
-La búsqueda binaria sobre $n$ llaves descarta la mitad en cada comparación. Después de $t$ comparaciones quedan del orden de $n/2^t$ candidatos, por lo que necesita $O(\lg n)$. Las cotas de las estructuras de enteros usan parámetros adicionales como $w$ y operaciones de palabra. Especificar ambos modelos permite comparar las afirmaciones.
+Word RAM tiene operaciones $+$, $-$, $\times$, $\div$, $\%$, $\&$, $|$, $\oplus$, $\sim$, $\ll$, $\gg$, $<$, $>$. Es el modelo que mejor describe un computador real. Cell probe sirve para demostrar cotas inferiores: si una estructura no puede hacerlo rápido ni aunque el cómputo fuera gratis, ningún modelo más débil lo logrará.
+
+La regla práctica de la clase: una cota superior en un modelo débil vale en los fuertes, y una cota inferior en un modelo fuerte vale en los débiles. Por eso se prueban cotas inferiores en cell probe y se diseñan estructuras en word RAM.
+
+## De dónde sale la cota
+
+La cota de la búsqueda binaria es $\Theta(\lg n)$ comparaciones. Cada comparación descarta la mitad de los candidatos, así que después de $t$ comparaciones quedan del orden de $n/2^t$. Con $t=\lg n$ no queda ninguno.
+
+La cota para enteros usa otro parámetro. Escribe el razonamiento de la clase:
+
+$$T(u) = T(\sqrt{u}) + O(1)$$
+
+Cada llamada recursiva opera sobre un universo de raíz cuadrada, es decir, un cluster. Con $m=\lg u$, el universo de la llamada $k$ tiene $2^{m/2^k}$ valores. La recurrencia $S(m)=S(m/2)+O(1)$ da $S(m)=O(\lg m)$, por lo que
+
+$$T(u) = O(\lg\lg u) = O(\lg w),$$
+
+porque $\lg u = w$. Cada llamada divide por dos la cantidad de bits. Tras $\lg w$ llamadas queda una palabra de un bit.
+
+El siguiente diagrama muestra esa división en cada nivel. Las filas no cambian entre pasos: sólo se resalta la que se procesa.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nivel 0: la palabra tiene w=16 bits. Una llamada procesa el universo entero.",
+      rows: [
+        { id: "l0", label: "w=16", cells: [{value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}], },
+        { id: "l1", label: "w=8", cells: [{value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}] },
+        { id: "l2", label: "w=4", cells: [{value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}] },
+        { id: "l3", label: "w=2", cells: [{value: "b"}, {value: "b"}] },
+        { id: "l4", label: "w=1", cells: [{value: "b"}] },
+      ],
+      caption: "Cada fila es una llamada recursiva. Se procesa la fila activa.",
+    },
+    {
+      note: "Nivel 1: el universo pasa a √u, es decir, 8 bits. Sigue siendo una llamada recursiva sobre la mitad de los bits.",
+      rows: [
+        { id: "l0", label: "w=16", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l1", label: "w=8", cells: [{value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}] },
+        { id: "l2", label: "w=4", cells: [{value: "b"}, {value: "b"}, {value: "b"}, {value: "b"}] },
+        { id: "l3", label: "w=2", cells: [{value: "b"}, {value: "b"}] },
+        { id: "l4", label: "w=1", cells: [{value: "b"}] },
+      ],
+      caption: "Tras 1 llamada quedan 8 bits. Tras 2 quedarán 4.",
+    },
+    {
+      note: "Nivel 2: 4 bits. Dos llamadas consumidas, cuatro bits por procesar.",
+      rows: [
+        { id: "l0", label: "w=16", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l1", label: "w=8", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l2", label: "w=4", cells: [{value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}, {value: "b", state: "active"}] },
+        { id: "l3", label: "w=2", cells: [{value: "b"}, {value: "b"}] },
+        { id: "l4", label: "w=1", cells: [{value: "b"}] },
+      ],
+      caption: "Dos llamadas consumidas. La palabra ya cabe en 4 bits.",
+    },
+    {
+      note: "Nivel lg w: después de cuatro llamadas en total queda una palabra de un bit. Como hay w=16 bits, son lg 16 = 4 llamadas. Esa es la profundidad de la recursión.",
+      rows: [
+        { id: "l0", label: "w=16", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l1", label: "w=8", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l2", label: "w=4", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l3", label: "w=2", cells: [{value: "b", state: "muted"}, {value: "b", state: "muted"}] },
+        { id: "l4", label: "w=1", cells: [{value: "b", state: "active"}] },
+      ],
+      caption: "Cuatro llamadas para w=16: lg w = 4. La cota es $O(\\lg w)$.",
+    },
+  ],
+}} />
+
+Para ver por qué $\lg w$ puede ser mucho menor que $\lg n$, compara con la cuenta del propio profesor: con $n=10^9$ y $w=64$, $\lg n\approx 30$, pero $\lg w = 6$ y $\lg\lg u = \lg w = 6$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Costo de un árbol de comparación con n=10^9 llaves: lg n ≈ 30 niveles, uno por celda.",
+      rows: [
+        { id: "lgn", label: "lg n ≈ 30", cells: [{value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}] },
+        { id: "lgw", label: "lg w = 6", cells: [{value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}, {value: "1"}] },
+      ],
+      caption: "Mismo universo, dos costos por consulta: 30 frente a 6 unidades.",
+    },
+    {
+      note: "Con w=64 la recursión sobre bits necesita lg w = 6 llamadas, sin importar cuántas llaves haya.",
+      rows: [
+        { id: "lgn", label: "lg n ≈ 30", cells: [{value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}, {value: "1", state: "muted"}] },
+        { id: "lgw", label: "lg w = 6", cells: [{value: "1", state: "answer"}, {value: "1", state: "answer"}, {value: "1", state: "answer"}, {value: "1", state: "answer"}, {value: "1", state: "answer"}, {value: "1", state: "answer"}] },
+      ],
+      caption: "Lo que no depende de n es lo que la cota de enteros aprovecha.",
+    },
+  ],
+}} />
 
 ### Cómo justificar la cota en el examen
 
-En un arreglo ordenado, la cantidad de comparaciones se obtiene contando cuántas veces puedes partir el intervalo por la mitad. Una cota en función de $w$ dice algo distinto: puede aprovechar operaciones que ven muchos bits a la vez. En cell probe incluso se separa el costo de consultar celdas del costo de computar con lo leído. Escribe qué mide cada cota antes de comparar los logaritmos.
+Escribe primero qué mide cada cota. Una cota en función de $n$ cuenta comparaciones de llaves. Una cota en función de $w$ cuenta operaciones de palabra. Son afirmaciones de modelos distintos, y comparar logaritmos sin decir el modelo no prueba nada.
 
-## Tabla de complejidad
+## Errores típicos y casos límite
 
-La tabla superior usa las unidades de costo de la explicación.
+- **Conjunto vacío.** Faltan predecesor y sucesor. No devuelvas 0 para representar ausencia si 0 puede ser una llave.
+- **Un solo elemento.** Si $x$ es esa llave, el predecesor estricto no existe; si $x$ es otra cosa, existe sólo uno de los dos lados.
+- **Consulta igual a una llave.** La versión estricta excluye la coincidencia. La versión no estricta la devuelve. Son respuestas distintas.
+- **Borde de bloque.** Con $w=4$, el valor 15 está en el cluster 3, posición 3. El valor 12 está en el mismo cluster, posición 0. Confundir el cociente con el resto cambia de cluster.
+- **Confundir modelos.** Una cota de cell probe no es una cota de word RAM. La primera no cuenta cómputo, la segunda sí cuenta operaciones de palabra en $O(1)$.
 
-## Ejemplos
+## Conexión
 
-[Casos resueltos](/structures/integer-predecessor/examples) y [preguntas con pistas](/structures/integer-predecessor/exercises).
+- Prerrequisito natural: búsqueda binaria y árboles de búsqueda balanceados. Se usan aquí como punto de comparación, no se reexplican.
+- Lo que sigue: [van Emde Boas](/structures/van-emde-boas-tree) toma la idea de partir palabras y la convierte en una estructura de predecesor con $O(\lg\lg u)$. [X-fast trie](/structures/x-fast-trie) y [Y-fast trie](/structures/y-fast-trie) reducen el espacio que vEB necesita.
+- Preguntas de práctica: [casos resueltos](/structures/integer-predecessor/examples) y [preguntas con pistas](/structures/integer-predecessor/exercises).
 
-## Comparación con estructuras relacionadas
-
-La comparación ordena cualquier tipo con una relación de orden. Las estructuras de enteros explotan una codificación de longitud acotada.
-
-## Prueba de dominio
-
-[Lista de comprobación](/structures/integer-predecessor/mastery-check).
-
-*Fuente de clase: Sem11_Integers_I.pdf · pp. 7-26.*
+*Fuente de clase: Sem11_Integers_I.pdf, pp. 7–26.*

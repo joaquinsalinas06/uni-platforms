@@ -5,171 +5,232 @@ title: "Packed-Memory Array"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Un arreglo ordenado muy compacto hace cara una inserción. Demasiados huecos desperdician espacio y dañan el escaneo.
+La estructura de [archivo ordenado con huecos](/structures/ordered-file-maintenance) deja celdas libres entre llaves, pero no dice cuántas ni dónde. Si los huecos se llenan en una región, una inserción puede mover todo el arreglo. Con $N = 16$ celdas basta para verlo: si el trozo donde cae la llave ya está lleno, hay que correr sus vecinos, y si los vecinos también están llenos, sus vecinos, hasta llegar a un tramo con espacio.
 
-## Intuición
+La pregunta de la clase es cuánto cuesta esa cadena de corridas en promedio. La respuesta es que, con umbrales de densidad bien escalonados, una inserción cuesta $O(\lg^2 N)$ amortizado, aunque una sola inserción pueda reescribir el arreglo entero.
 
-Organiza los intervalos en una jerarquía binaria. Los intervalos grandes tienen límites de densidad más estrictos, de modo que una redistribución grande deje margen para futuras inserciones.
+## Intuición dibujada
 
-## Estructura interna
+El arreglo se divide en trozos de $\Theta(\lg N)$ celdas. Sobre los trozos se imagina un árbol binario completo: cada nodo es un intervalo contiguo del arreglo, y la raíz es el arreglo entero. El árbol no existe en memoria; cada nodo es sólo un par de extremos que se calculan con aritmética.
 
-Para profundidad $d$ y altura $h$, la cota superior de clase es $\tau_d=3/4+d/(4h)$. La cota inferior es $1/2-d/(4h)$. Con $h=2$, los máximos son $3/4$ para la raíz, $7/8$ para una mitad y $1$ para una hoja.
-
-### Cómo leer los intervalos en el árbol implícito
-
-Con 16 celdas y trozos de cuatro, la capa inferior tiene [0,3], [4,7], [8,11] y [12,15]. Arriba aparecen [0,7] y [8,15]. La raíz representa [0,15]. Subir desde [4,7] lleva a [0,7], aunque [8,11] esté al lado en el arreglo. La jerarquía elige regiones alineadas de tamaño creciente. El algoritmo necesita sus límites y ocupaciones; el dibujo del árbol permite calcular esos límites sin imaginar punteros que se hayan almacenado.
-
-### Por qué dejar umbrales diferentes
-
-Si la hoja y el padre admitieran la misma densidad, repartir un padre muy lleno podría dejar sus hijos casi al límite. Una inserción posterior volvería a provocar el mismo movimiento grande. El padre más estricto obliga a repartir con margen frente a los umbrales de sus hijos. Esa diferencia de umbrales es la cantidad que aparece después en el análisis amortizado.
-
-Los límites inferiores cumplen el papel dual al eliminar. Una región muy vacía malgasta espacio y obliga a escanear muchos huecos para pocos registros. Redistribuir dentro de una región admisible restaura una densidad útil. Cuando la raíz misma incumple, redistribuir cambia la posición de los registros, pero conserva su número y su capacidad total. Para corregir la densidad global tiene que cambiar la capacidad.
-
-## Operaciones
-
-Localiza la hoja por orden. Evalúa la densidad con la nueva llave incluida. Sube hasta el primer intervalo admisible y reparte sus llaves uniformemente en el mismo orden. Si la raíz supera su umbral, se necesita redimensionar.
-
-### Dos inserciones que disparan rebalanceos distintos
+El primer diagrama muestra el arreglo con 16 celdas, trozos de 4 y el árbol imaginario de altura $h=2$. Las etiquetas de cada celda son índices; los tramos son los nodos.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Ejemplo de densidad de clase. Capacidad de hoja 4, mitad 8 y raíz 16.",
-      arrays: [
-        {"id": "row-0", "label": "Capacidad", "row": 0, "cells": ["4", "8", "16"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Umbral", "row": 1, "cells": ["1", "7/8", "3/4"], "states": ["idle", "idle", "idle"]},
-        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "30", "40", "50", "·", "·", "·"]},
-        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"]},
+      note: "El arreglo de 16 celdas se parte en cuatro trozos de 4 celdas (hojas). Cada nodo interno es la unión de sus dos hijos. La altura es h = 2.",
+      nodes: [
+        {"id": "R", "value": "16", "parent": null, "tag": "0–15", "state": "active"},
+        {"id": "M0", "value": "8", "parent": "R", "tag": "0–7"},
+        {"id": "M1", "value": "8", "parent": "R", "tag": "8–15"},
+        {"id": "L0", "value": "4", "parent": "M0", "tag": "0–3"},
+        {"id": "L1", "value": "4", "parent": "M0", "tag": "4–7"},
+        {"id": "L2", "value": "4", "parent": "M1", "tag": "8–11"},
+        {"id": "L3", "value": "4", "parent": "M1", "tag": "12–15"}
       ],
-      bridges: [],
-    },
-    {
-      note: "Insertar 25 deja la hoja candidata con cinco llaves en cuatro huecos.",
-      arrays: [
-        {"id": "row-0", "label": "Hoja", "row": 0, "cells": ["5", "4"], "states": ["active", "marked"]},
-        {"id": "row-1", "label": "Densidad", "row": 1, "cells": ["5/4"], "states": ["answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Sube a la mitad. Sus seis llaves en ocho celdas cumplen el límite.",
-      arrays: [
-        {"id": "row-0", "label": "Mitad", "row": 0, "cells": ["6", "8"], "states": ["active", "marked"]},
-        {"id": "row-1", "label": "Densidad", "row": 1, "cells": ["6/8", "7/8"], "states": ["answer", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Redistribuye. Tres llaves por hoja dejan un hueco en cada una.",
-      arrays: [
-        {"id": "row-0", "label": "Hoja izquierda", "row": 0, "cells": ["3", "·"], "states": ["answer", "idle"]},
-        {"id": "row-1", "label": "Hoja derecha", "row": 1, "cells": ["3", "·"], "states": ["answer", "idle"]},
-        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "25", "·", "30", "40", "50", "·"]},
-        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Insertar 26 todavía cabe en la hoja. Se consume el hueco local.",
-      arrays: [
-        {"id": "row-0", "label": "Hoja", "row": 0, "cells": ["4/4"], "states": ["answer"]},
-        {"id": "row-1", "label": "Mitad", "row": 1, "cells": ["7/8"], "states": ["answer"]},
-        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "25", "26", "30", "40", "50", "·"]},
-        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Insertar 27 vuelve a exceder la hoja y la mitad llega a 8/8.",
-      arrays: [
-        {"id": "row-0", "label": "Hoja", "row": 0, "cells": ["5/4"], "states": ["active"]},
-        {"id": "row-1", "label": "Mitad", "row": 1, "cells": ["8/8", "7/8"], "states": ["active", "marked"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "La raíz queda exactamente en 12/16. La igualdad con el umbral se admite.",
-      arrays: [
-        {"id": "row-0", "label": "Raíz", "row": 0, "cells": ["12/16", "3/4"], "states": ["answer", "marked"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Reparte las doce llaves entre las cuatro hojas. Cada hoja recupera un hueco.",
-      arrays: [
-        {"id": "row-0", "label": "Ocupación por hoja", "row": 0, "cells": ["3", "3", "3", "3"], "states": ["answer", "answer", "answer", "answer"]},
-        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "25", "·", "26", "27", "30", "·"]},
-        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["40", "50", "60", "·", "70", "80", "90", "·"]},
-      ],
-      bridges: [],
+      caption: "Valor: número de celdas del intervalo. Tag: rango de índices. Ningún nodo se guarda; se calcula desde la posición.",
     },
   ],
 }} />
 
-### El margen entre dos niveles paga el movimiento
+Cada trozo tiene el tamaño de una pequeña pila de bloques, así que reescribirlo es barato. La jerarquía es la que decide cuántas celdas hay que tocar cuando un trozo ya no sirve.
 
-*(Traza derivada de la explicación de clase.)*
+## Definición y notación
+
+| Símbolo | Qué mide | Si crece |
+| --- | --- | --- |
+| $N$ | celdas del arreglo (proporcional al número de llaves) | cada reconstrucción global cuesta más |
+| $\lg N$ | tamaño de un trozo, $\Theta(\lg N)$ celdas | trozos más largos, pero más barato reescribir un trozo entero |
+| $h$ | altura del árbol imaginario, $h = \Theta(\lg N)$ | más niveles con umbrales, cada uno más cerca del anterior |
+| $d$ | profundidad de un nodo ($d=0$ en la raíz, $d=h$ en las hojas) | los umbrales se acercan a los de la hoja |
+| $\rho$ | densidad de un intervalo: llaves dividido entre celdas | se compara contra los dos umbrales de su nivel |
+| $\tau_d$ | umbral superior de densidad a profundidad $d$ | cuanto más arriba, más estricto |
+| $\rho_d$ | umbral inferior de densidad a profundidad $d$ | sólo se usa al borrar |
+
+Los umbrales son una banda por nivel. Para un nodo a profundidad $d$:
+
+$$\frac{1}{2} - \frac{1}{4}\cdot\frac{d}{h} \le \rho \le \frac{3}{4} + \frac{1}{4}\cdot\frac{d}{h}$$
+
+Con $d=0$ (raíz) la banda es $[1/2,\ 3/4]$. Con $d=h$ (hoja) es $[1/4,\ 1]$. Entre un nivel y el siguiente, cada extremo se mueve $1/(4h)$. El diagrama siguiente pone las bandas en el árbol para $h = 2$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Tras repartir, la mitad hereda aproximadamente la densidad de su padre.",
-      arrays: [
-        {"id": "row-0", "label": "Densidad", "row": 0, "cells": ["τ_padre", "τ_hijo"], "states": ["active", "marked"]},
+      note: "Umbrales para h = 2. La raíz debe quedar entre 1/2 y 3/4 de llena. Cada nivel se acerca a la hoja, donde la banda va de 1/4 a completamente llena.",
+      nodes: [
+        {"id": "R", "value": "1/2 – 3/4", "parent": null, "tag": "d = 0", "state": "active"},
+        {"id": "M0", "value": "3/8 – 7/8", "parent": "R", "tag": "d = 1"},
+        {"id": "M1", "value": "3/8 – 7/8", "parent": "R", "tag": "d = 1"},
+        {"id": "L0", "value": "1/4 – 1", "parent": "M0", "tag": "d = 2"},
+        {"id": "L1", "value": "1/4 – 1", "parent": "M0", "tag": "d = 2"},
+        {"id": "L2", "value": "1/4 – 1", "parent": "M1", "tag": "d = 2"},
+        {"id": "L3", "value": "1/4 – 1", "parent": "M1", "tag": "d = 2"}
       ],
-      bridges: [],
-    },
-    {
-      note: "Cada inserción eleva su densidad en 1/m.",
-      arrays: [
-        {"id": "row-0", "label": "Margen", "row": 0, "cells": ["1/m", "1/m", "…", "1/(4h)"], "states": ["active", "idle", "idle", "marked"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Para agotar ese margen se necesitan del orden de m/h inserciones.",
-      arrays: [
-        {"id": "row-0", "label": "Balance", "row": 0, "cells": ["O(m)_movimientos", "O(h)_por_inserción"], "states": ["marked", "answer"]},
-      ],
-      bridges: [],
+      caption: "Superior en el nivel medio: 3/4 + (1/4)(1/2) = 7/8. Inferior: 1/2 − (1/4)(1/2) = 3/8.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+La banda superior es el límite para insertar; la inferior, para borrar. Los umbrales son más estrictos arriba porque un intervalo grande se reparte de forma pareja y su holgura se hereda a sus hijos, como se verá en la cota.
 
-Al seguir el diagrama, toma la ocupación que resultaría **incluyendo** la llave nueva. Compara cada cociente con el umbral de su propio nivel. Que una hoja admita densidad uno no autoriza la misma densidad en la mitad o en la raíz. El árbol que usamos para razonar representa intervalos del arreglo. Puedes encontrar el padre de un intervalo duplicando su tamaño y alineando su comienzo, sin guardar un nodo para cada región.
+## Operaciones paso a paso
 
-Redistribuir no altera el orden relativo. Cambia la cantidad de espacio disponible entre llaves futuras y, por tanto, cuántas actualizaciones pueden pasar antes de repetir el trabajo.
+El arreglo empieza con nueve llaves en las 16 celdas. Es el ejemplo de clase, y lo seguimos en toda la sección.
 
-## Análisis de complejidad
+Estado inicial: `10 20 30 40 | 50 · · · | 60 · 70 · | 80 · 90 ·`. Cada barra separa trozos de 4 celdas; el punto es un hueco.
 
-Si un padre con dos mitades de tamaño $m$ se redistribuye, cada mitad queda cerca de la densidad del padre. Los umbrales de dos niveles difieren en $1/(4h)$. Hacen falta del orden de $m/h$ inserciones en una mitad para volver a disparar una reescritura de $O(m)$ celdas, salvo redondeos de intervalos pequeños. Repartir ese costo da $O(h)$ por nivel y $O(\log^2 N)$ movimientos amortizados con $h=O(\log N)$. Una inserción concreta aún puede reescribir todo el arreglo.
+### Insertar: subir hasta un intervalo con holgura
 
-### Cómo justificar la cota en el examen
+1. Inserta la llave en su trozo y reescribe el trozo entero. Cuesta $\Theta(\lg N)$ celdas, es decir $O(1 + \lg N / B)$ transferencias.
+2. Si el trozo queda dentro de su umbral (para una hoja, $\rho \le 1$), termina. Este es el caso común.
+3. Si no, sube por el árbol hasta el primer ancestro cuyo intervalo sí cumple su umbral. Cada subida duplica el intervalo que se examina, contando llaves con un escaneo.
+4. Reparte de forma pareja todas las llaves del intervalo de ese ancestro. Como el intervalo es contiguo, esto son dos escaneos, $O(1 + K/B)$ si tiene $K$ celdas.
 
-Después de una redistribución de tamaño $2m$, un hijo de $m$ celdas vuelve aproximadamente a la densidad del padre. Para alcanzar su propio umbral debe absorber unas $m/(4h)$ inserciones, pues cada una aumenta la densidad en $1/m$. El costo de reescribir el padre se cobra a esas inserciones. Así sale $O(h)$ de cargo en un nivel. Una operación puede recibir cargos de $O(h)$ niveles y el total amortizado es $O(h^2)$. En una traza concreta la última inserción puede mover muchas celdas; el cálculo explica quién paga ese movimiento acumulado.
+El diagrama sigue la inserción de 25, 26 y 27 en ese orden. La primera sube a la mitad izquierda, la segunda cabe, y la tercera obliga a llegar a la raíz.
 
-## Tabla de complejidad
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Inserción de 25. El trozo 1 (celdas 0–3) ya tiene 4 llaves en 4 celdas. Con la nueva llave tendría 5/4, y no hay cómo meterla sin mover llaves fuera del trozo.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 30}, {value: 40}, {value: 50}, {value: "·"}, {value: "·"}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
+        { id: "nueva", label: "Llave", cells: [{value: 25, state: "marked"}] },
+      ],
+      spans: [ { id: "t1", row: "arch", from: 0, to: 3, label: "trozo 1: 4/4" } ],
+      caption: "Densidad del trozo con la llave: 5/4 > 1. Sube un nivel.",
+    },
+    {
+      note: "El padre es la mitad izquierda, celdas 0–7, con 5 llaves más la nueva: 6 de 8. Su umbral superior en d = 1 es 7/8 = 0,875, y 6/8 = 0,75 lo cumple. Ese intervalo se reparte.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 30}, {value: 40}, {value: 50}, {value: "·"}, {value: "·"}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
+        { id: "nueva", label: "Llave", cells: [{value: 25, state: "marked"}] },
+      ],
+      spans: [ { id: "m0", row: "arch", from: 0, to: 7, label: "mitad izq.: 6/8 ≤ 7/8" } ],
+      caption: "Ancestro encontrado en la primera subida: el trozo no cumple, la mitad sí.",
+    },
+    {
+      note: "Se reparten las 6 llaves de la mitad izquierda de forma pareja en sus 8 celdas. Cada hueco queda entre dos llaves, y ningún trozo se pasa de su umbral.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10, state: "active"}, {value: 20, state: "active"}, {value: 25, state: "answer"}, {value: "·"}, {value: 30, state: "active"}, {value: 40, state: "active"}, {value: 50, state: "active"}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
+        { id: "nueva", label: "Llave", cells: [{value: "·"}] },
+      ],
+      spans: [ { id: "m0", row: "arch", from: 0, to: 7, label: "reparto parejo" } ],
+      caption: "Insertar 25 costó la subida y el reparto de 8 celdas.",
+    },
+    {
+      note: "Inserción de 26. Cae en el trozo 1, que tiene un hueco después de 25. El trozo queda 4/4, lo cual es válido porque la banda de la hoja llega hasta 1. No hace falta subir.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 25}, {value: 26, state: "active"}, {value: 30}, {value: 40}, {value: 50}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
+        { id: "nueva", label: "Llave", cells: [{value: "·"}] },
+      ],
+      spans: [ { id: "t1", row: "arch", from: 0, to: 3, label: "trozo 1: 4/4 ≤ 1" } ],
+      caption: "Mitad izquierda con 26 incluida: 7/8, en el umbral. El trozo 1 ya no tiene huecos.",
+    },
+    {
+      note: "Inserción de 27. El trozo 1 se pasa otra vez. La mitad izquierda tendría 8 llaves en 8 celdas, 8/8 = 1 > 7/8, así que tampoco sirve. Se sube a la raíz.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10}, {value: 20}, {value: 25}, {value: 26}, {value: 30}, {value: 40}, {value: 50}, {value: "·"}, {value: 60}, {value: "·"}, {value: 70}, {value: "·"}, {value: 80}, {value: "·"}, {value: 90}, {value: "·"}] },
+        { id: "nueva", label: "Llave", cells: [{value: 27, state: "marked"}] },
+      ],
+      spans: [ { id: "m0", row: "arch", from: 0, to: 7, label: "8/8 > 7/8" }, { id: "rt", row: "arch", from: 0, to: 15, label: "raíz: 12/16 ≤ 3/4" } ],
+      caption: "Con la llave nueva, la raíz tiene 12 llaves en 16 celdas: 12/16 = 3/4, justo en el umbral. Se admite.",
+    },
+    {
+      note: "Se reparten las 12 llaves en la raíz de forma pareja: tres por trozo. Cada trozo queda con 3/4 de ocupación, dentro de su umbral, y tiene holgura para las próximas inserciones.",
+      rows: [
+        { id: "arch", label: "Arreglo", cells: [{value: 10, state: "active"}, {value: 20, state: "active"}, {value: 25, state: "active"}, {value: "·"}, {value: 26, state: "active"}, {value: 27, state: "active"}, {value: 30, state: "active"}, {value: "·"}, {value: 40, state: "active"}, {value: 50, state: "active"}, {value: 60, state: "active"}, {value: "·"}, {value: 70, state: "active"}, {value: 80, state: "active"}, {value: 90, state: "active"}, {value: "·"}] },
+        { id: "nueva", label: "Llave", cells: [{value: "·"}] },
+      ],
+      spans: [ { id: "rt", row: "arch", from: 0, to: 15, label: "raíz repartida" } ],
+      caption: "Insertar 25, 26 y 27 costó un reparto de 8 celdas y uno de 16 celdas.",
+    },
+  ],
+}} />
 
-La tabla superior usa las unidades de costo de la explicación.
+### Eliminar: los umbrales inferiores
 
-## Ejemplos
+Borrar es simétrico. Tras quitar una llave, se revisa la densidad del trozo contra la banda inferior $\rho_d$. Si cae por debajo, se sube igual que al insertar, buscando el primer ancestro que sí cumple su umbral inferior, y se reparte su intervalo. El umbral superior no interviene.
 
-[Casos resueltos](/structures/packed-memory-array/examples) y [preguntas con pistas](/structures/packed-memory-array/exercises).
+Por eso los dos umbrales deben estar separados. Si el mismo número sirviera para insertar y borrar, un par de operaciones alternadas podría reescribir una región cada vez. La banda deja una zona de amortiguación en la que no se hace nada.
 
-## Comparación con estructuras relacionadas
+## De dónde sale la cota
 
-OFM es el problema de sostener un archivo ordenado con actualizaciones. PMA lo aborda con umbrales y redistribución de intervalos.
+Una inserción puede reescribir el arreglo entero. Lo que importa es cuánto cuesta en promedio, sobre una secuencia de operaciones. El argumento tiene tres términos.
 
-## Prueba de dominio
+**Holgura al repartir.** Mira un nodo $x$ a profundidad $d$ cuyo intervalo tiene $2m$ celdas, justo después de repartirlo. Sus dos hijos tienen $m$ celdas cada uno y quedan con la misma densidad que $x$, que es como mucho $\tau_d$. Cada hijo tiene umbral $\tau_{d+1} = \tau_d + \frac{1}{4h}$. Para que un hijo se pase, hacen falta más de $\frac{m}{4h}$ inserciones dentro de ese hijo, porque cada una agrega $1/m$ de densidad.
 
-[Lista de comprobación](/structures/packed-memory-array/mastery-check).
+**Quién paga la redistribución.** Si $x$ se reparte, fue porque un hijo se pasó. Ese reparto cuesta $2m$ movimientos. La redistribución se cobra a las $\frac{m}{4h}$ actualizaciones que hubo en el hijo desde la última vez. Cada una paga
 
-*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf · pp. 19-43.*
+$$\frac{2m}{m/(4h)} = 8h = O(\lg N).$$
+
+**Cuántos cobros recibe una actualización.** Una inserción cae dentro de un intervalo por cada nivel del árbol que la contiene. Como hay $h+1$ niveles, a lo más $h = O(\lg N)$ intervalos pueden pagarle. Cada uno cobra $O(\lg N)$.
+
+Juntos, la cota amortizada es $O(h)\cdot O(\lg N) = O(\lg^2 N)$ por inserción.
+
+El diagrama muestra de dónde sale cada término. La fila de arriba es el intervalo $x$ de $2m$ celdas, dividido en dos hijos de $m$. La fila de abajo es la cadena de ancestros que pagan.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El intervalo de x tiene 2m celdas. Justo después de repartirlo, cada hijo tiene m celdas y la misma densidad que x. Para que un hijo se pase, debe recibir más de m/(4h) inserciones.",
+      rows: [
+        { id: "x", label: "x: 2m celdas", cells: [{value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "·"}] },
+      ],
+      spans: [ { id: "h1", row: "x", from: 0, to: 7, label: "hijo izq.: m" }, { id: "h2", row: "x", from: 8, to: 15, label: "hijo der.: m" } ],
+      caption: "Densidad de x justo después de repartir: 12/16 = 3/4, dentro de su umbral.",
+    },
+    {
+      note: "Cada hijo necesita m/(4h) inserciones para pasarse. Con m = 8 y h = 2, eso es 1 inserción. El margen 1/(4h) es lo que se cobra a cada inserción de ese hijo.",
+      rows: [
+        { id: "x", label: "x: 2m celdas", cells: [{value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "·"}] },
+      ],
+      spans: [ { id: "h1", row: "x", from: 0, to: 7, label: "hijo izq. con margen" } ],
+      caption: "Una inserción más en el hijo izquierdo lo pasa; entonces se reparte x entero, 2m = 16 celdas.",
+    },
+    {
+      note: "Para el cobro, la inserción que pasó al hijo paga el reparto de x. La misma inserción aparece en cada uno de los h ancestros que la contienen; el diagrama de abajo cuenta esos cobros.",
+      rows: [
+        { id: "x", label: "x: 2m celdas", cells: [{value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "•"}, {value: "·"}, {value: "•"}, {value: "·"}] },
+      ],
+      spans: [],
+      caption: "Cobro por actualización: 2m / (m/(4h)) = 8h = O(lg N). Cobros por actualización: h = O(lg N). Total: O(lg² N).",
+    },
+  ],
+}} />
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Una inserción en una hoja puede cobrar a cada ancestro que se redistribuye por ella. Hay h + 1 nodos en la cadena de la hoja a la raíz. El término h es la altura, y cada cobro es O(lg N).",
+      nodes: [
+        {"id": "R", "value": "cobro", "parent": null, "tag": "d = 0", "state": "active"},
+        {"id": "M0", "value": "cobro", "parent": "R", "tag": "d = 1", "state": "active"},
+        {"id": "L0", "value": "cobro", "parent": "M0", "tag": "d = 2", "state": "active"},
+        {"id": "L1", "value": "hoja", "parent": "M0", "tag": "d = h", "state": "muted"}
+      ],
+      caption: "Ruta de cobro de la inserción en la hoja. Sólo los ancestros que se redistribuyen cobran; el resto del árbol no paga nada.",
+    },
+  ],
+}} />
+
+## Errores típicos y casos límite
+
+- **Dos umbrales iguales.** Si el umbral superior y el inferior coinciden, insertar y borrar en alternancia puede reescribir la misma región sin fin. La banda de amortiguación es lo que evita eso.
+- **Empates.** Una densidad exactamente igual al umbral sí se admite. En el ejemplo, $12/16 = 3/4$ no obliga a subir.
+- **Reescritura del trozo.** Reescribir el trozo de $\Theta(\lg N)$ celdas cuesta $O(1 + \lg N / B)$ transferencias. Es el único costo que paga toda inserción, aunque no suba.
+- **Raíz llena.** Si la raíz supera su umbral superior no hay ancestro que la reciba. Las láminas no detallan ese caso.
+
+> **Nota de apoyo** (no está en las diapositivas): cuando la raíz no admite más llaves, el arreglo debe crecer. Esa reconstrucción no aparece en las láminas revisadas; no se usa en la cota.
+
+## Conexión
+
+- Prerrequisito: [archivo ordenado con huecos](/structures/ordered-file-maintenance). PMA es la versión con umbrales exactos del mecanismo de huecos que allí se estudia.
+- Su índice de máximos se reemplaza aquí por la jerarquía de densidades. Las ventanas alineadas de [ordered-file-maintenance](/structures/ordered-file-maintenance) son los mismos intervalos, pero ahora con banda.
+- Lo que sigue en el curso: el layout de [vEB](/structures/cache-oblivious-veb-layout) sirve para recorrer estos intervalos con pocas transferencias.

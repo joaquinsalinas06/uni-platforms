@@ -7,7 +7,7 @@ import { VISUALIZATION_TYPES } from '../lib/schemas';
 import TreeVisualization from './tree/TreeVisualization';
 import PersistentVisualization from './persistent/PersistentVisualization';
 import RangeTreeVisualization from './range-tree/RangeTreeVisualization';
-import { GeometricVisualization, PlanarVisualization } from '@uni/visualizations';
+import { ArrayVisualization, GeometricVisualization, PlanarVisualization } from '@uni/visualizations';
 
 type Family = (typeof VISUALIZATION_TYPES)[number];
 
@@ -21,5 +21,6 @@ export const VISUALIZATIONS = {
   'range-tree': RangeTreeVisualization,
   geometric: GeometricVisualization,
   planar: PlanarVisualization,
+  array: ArrayVisualization,
   graph: null,
 } satisfies Record<Family, ComponentType<{ steps: any[] }> | null>;

@@ -5,139 +5,378 @@ title: "Fusion tree y operaciones de palabra"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-En word RAM, un nodo con muchas ramas sólo acelera la búsqueda si elegir una rama cuesta poco.
+Sea $n$ un conjunto de llaves de $w$ bits y $q$ una consulta. El problema es el predecesor: la mayor llave $\leq q$. Hay dos caminos conocidos. Un árbol de búsqueda cuesta $\lg n$ comparaciones. Van Emde Boas y Y-fast trie cuestan $\lg w$. Con $w = 64$ y $n = 10^9$ son 6 contra 30.
 
-## Intuición
+Pero si $w$ crece con $n$, por ejemplo $w = n^{0.5}$, entonces $\lg w = \tfrac{1}{2}\lg n$ ya no es pequeño. Hay otra medida que baja cuando $w$ sube:
 
-Un nodo fusiona varias comparaciones en una palabra. Conserva los bits que distinguen las llaves del nodo y empaqueta sus sketches para obtener un rango provisional.
+$$\log_w n = \frac{\lg n}{\lg w}$$
 
-## Estructura interna
+Con $w = n^{0.5}$ vale 2. La pregunta de la sesión es si una palabra de $w$ bits puede decidir entre muchas llaves a la vez.
 
-Los bits relevantes son las posiciones de ramificación del trie de las llaves del nodo. Comparar los sketches preserva el orden relativo de esas llaves. Para una consulta ajena, su sketch puede omitir el primer bit en el que se aparta del conjunto.
+## Intuición dibujada
 
-### De dónde salen los bits que vale la pena guardar
+La idea es un B-tree cuyo grado (número de llaves por nodo) es $k = w^{1/5}$. Un árbol así tiene altura $\log_k n = 5\log_w n = \Theta(\log_w n)$. Sólo falta que cada nodo se resuelva en tiempo constante.
 
-Dibuja un trie de las llaves de un nodo. Un bit relevante es una posición en la que dos ramas existentes se separan. Entre dos llaves almacenadas, su primer bit distinto tiene que corresponder a alguna bifurcación. Por eso ese primer desacuerdo sigue presente al comparar sus sketches. Si una posición tiene el mismo valor en toda una rama y no separa pares almacenados, puede desaparecer sin cambiar su orden relativo.
+El diagrama usa $k = 3$ para que quepa en la pantalla. En la estructura real $k = w^{1/5}$.
 
-La consulta puede traer un patrón que no aparecía en las llaves. Entonces un bit omitido puede ser justo su primer desacuerdo con la rama candidata. Comparar la consulta comprimida localiza vecinos provisionales. La segunda fase busca el prefijo real que comparte con las llaves candidatas. El primer bit distinto identifica la frontera del rango correcto. Este caso explica por qué no basta con una tabla de sketches aunque todos los separadores estén perfectamente ordenados en ella.
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Un nodo con k llaves reparte el espacio en k+1 intervalos. Con k = w elevado a 1/5, cada nivel descarta una fracción grande de llaves, así que la altura baja a Theta de log base w de n.",
+      nodes: [
+        {"id": "r", "value": "20·40·60", "parent": null, "state": "active"},
+        {"id": "a", "value": "10·15", "parent": "r"},
+        {"id": "b", "value": "25·30", "parent": "r"},
+        {"id": "c", "value": "45·50", "parent": "r"},
+        {"id": "d", "value": "70·80", "parent": "r"},
+      ],
+    },
+  ],
+}} />
 
-### Cómo interpretar las comparaciones empaquetadas
+Esto no basta por sí solo. Un nodo tiene $k$ llaves de $w$ bits, es decir $k \cdot w = w^{6/5}$ bits, y eso no cabe en una palabra. Hay que comprimir las llaves del nodo en un número de un solo registro. Esa compresión es el sketch.
 
-Cada separador ocupa un campo. Replica la consulta en campos correspondientes y reserva bits de guarda para que una resta o comparación paralela no mezcle resultados entre campos. Los bits resultantes indican qué separadores quedan de un lado. El mecanismo usa el paralelismo interno de la palabra: la operación sobre la palabra se cobra una vez, aunque el resultado represente varias comparaciones.
+## Estructura interna de un nodo
+
+### Bits de ramificación
+
+Considera el trie binario de las llaves del nodo. Un nodo del trie **ramifica** cuando dos llaves comparten el prefijo hasta ahí y siguen por bits distintos. Llamamos $c_0 < c_1 < \dots < c_{r-1}$ a los exponentes de esos bits, donde el exponente 0 es el bit menos significativo. Hay a lo más $k - 1$ de ellos, así que $r \le k-1$.
+
+Todos los demás bits son iguales en todas las llaves del trie o no separan ninguna pareja. Por eso pueden ignorarse para ordenar las llaves.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cuatro llaves de 6 bits. Las columnas en ámbar son los bits de ramificación: exponentes 3, 1 y 0. Las demás columnas son iguales en las cuatro llaves o no separan ninguna pareja.",
+      rows: [
+        { id: "k0", label: "010000", cells: [{"value": "0", "tag": "5"}, {"value": "1", "tag": "4"}, {"value": "0", "tag": "3", "state": "marked"}, {"value": "0", "tag": "2"}, {"value": "0", "tag": "1", "state": "marked"}, {"value": "0", "tag": "0", "state": "marked"}] },
+        { id: "k1", label: "010001", cells: [{"value": "0"}, {"value": "1"}, {"value": "0", "state": "marked"}, {"value": "0"}, {"value": "0", "state": "marked"}, {"value": "1", "state": "marked"}] },
+        { id: "k2", label: "010011", cells: [{"value": "0"}, {"value": "1"}, {"value": "0", "state": "marked"}, {"value": "0"}, {"value": "1", "state": "marked"}, {"value": "1", "state": "marked"}] },
+        { id: "k3", label: "011011", cells: [{"value": "0"}, {"value": "1"}, {"value": "1", "state": "marked"}, {"value": "0"}, {"value": "1", "state": "marked"}, {"value": "1", "state": "marked"}] },
+      ],
+      caption: "Exponentes 3, 1 y 0 son los bits de ramificación. Los exponentes 5 y 4 son iguales en las cuatro llaves; el exponente 2 tampoco separa ninguna pareja.",
+    },
+  ],
+}} />
+
+Las posiciones marcadas tienen un patrón concreto. Cada una es el primer bit donde dos llaves consecutivas se separan. Por ejemplo, 010000 y 010001 difieren por primera vez en el exponente 0. 010001 y 010011 difieren en el exponente 1. 010011 y 011011 difieren en el exponente 3.
+
+### El sketch perfecto
+
+El sketch de $x$ es el número de $r$ bits que reúne los bits $x_{c_j}$ de la llave:
+
+$$\mathrm{sk}(x) = \sum_{j=0}^{r-1} x_{c_j}\, 2^j$$
+
+Con $x_c$ el bit de peso $2^c$. El bit $c_0$ queda en el peso más bajo del sketch. Para las llaves 010000, 010001, 010011, 011011 da los sketches 000, 001, 011, 111.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cuatro llaves y su sketch. Los bits c_0, c_1, c_2 de cada llave se leen en orden y forman un número de 3 bits.",
+      rows: [
+        { id: "llaves", label: "Llave", cells: [{"value": "010000"}, {"value": "010001"}, {"value": "010011"}, {"value": "011011"}] },
+        { id: "sk", label: "Sketch", cells: [{"value": "000"}, {"value": "001"}, {"value": "011"}, {"value": "111"}] },
+      ],
+      caption: "Tres bits por llave, cuatro llaves. El total de bits del sketch del nodo es k por r, como mucho k al cuadrado.",
+    },
+    {
+      note: "Los sketches crecen de izquierda a derecha, igual que las llaves. El orden se conserva sin mirar los bits que no ramifican.",
+      rows: [
+        { id: "llaves", label: "Llave", cells: [{"value": "010000"}, {"value": "010001"}, {"value": "010011"}, {"value": "011011"}] },
+        { id: "sk", label: "Sketch", cells: [{"value": "000", "state": "answer"}, {"value": "001", "state": "answer"}, {"value": "011", "state": "answer"}, {"value": "111", "state": "answer"}] },
+      ],
+      caption: "sk(x0) < sk(x1) < sk(x2) < sk(x3).",
+    },
+  ],
+}} />
+
+### Por qué el sketch conserva el orden
+
+Sean $x < x'$ dos llaves del nodo. Su primer bit distinto (el de mayor exponente) está en un exponente $c$. Como $x < x'$, $x$ tiene 0 en $c$ y $x'$ tiene 1.
+
+Ese $c$ es un bit de ramificación, porque el trie de las llaves del nodo se separa exactamente ahí. Así que $c = c_j$ para algún $j$. Todos los bits de ramificación mayores que $c$ son iguales en $x$ y en $x'$, porque $c$ era el primer distinto. Entonces el sketch de $x$ y el de $x'$ coinciden en los bits $j' > j$ y difieren en el bit $j$, donde $x$ vale 0 y $x'$ vale 1. Por eso $\mathrm{sk}(x) < \mathrm{sk}(x')$.
+
+Como sólo hay $k$ llaves y $r \le k-1$, todos los sketches del nodo caben en $k \cdot r \le k^2 = w^{2/5}$ bits. Eso es mucho menos que $w$.
 
 ## Operaciones
 
-Empaqueta sketches en campos con bits de guarda. Una operación aritmética permite comparar varios campos en paralelo. Para una consulta no presente, usa el vecino con mayor prefijo común, localiza el primer bit distinto y corrige el rango con una consulta a la frontera del prefijo, como en el mazo.
+El nodo se busca siguiendo estos pasos. Los pasos 4 y 5 corrigen la búsqueda cuando $q$ no es una llave, y son el centro de la teoría.
 
-### Los sketches ordenan llaves y requieren corrección para q
+1. Calcula $\mathrm{sk}(q)$ con los mismos bits $c_j$. Qué miras: los bits de $q$ en las posiciones de ramificación. Por qué: el sketch de la consulta debe ubicarse entre los sketches del nodo.
+2. Cuenta cuántas llaves tienen sketch menor o igual a $\mathrm{sk}(q)$. Ese conteo es el rango provisional. Qué decides: uno de los dos vecinos $x_i$ o $x_{i+1}$ es el candidato.
+3. Compara $q$ con el candidato completo, sobre toda la palabra. Si coinciden, la llave existe y la búsqueda termina.
+4. Si no coinciden, busca $p$, el prefijo común más largo de $q$ con alguna llave. Qué miras: el primer bit distinto $j$ entre $q$ y el candidato. Por qué: ahí $q$ se sale del trie.
+5. Construye la palabra $e$, que tiene el prefijo $p$, el bit $\bar\beta$ y después sólo ceros o unos. Calcula su sketch y cuenta otra vez. El conteo da el predecesor. El sucesor es la llave siguiente.
 
-*(Traza derivada de la explicación de clase.)*
+El paso 4 existe porque el sketch de $q$ puede engañar. Un ejemplo sencillo lo muestra.
+
+Llaves 0000, 0010, 1100, 1111. Sus bits de ramificación son 3 y 1, así que sus sketches son 00, 01, 10 y 11. Ahora busca $q = 0101$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Llaves de cuatro bits: 0000, 0010 y 1000.",
-      arrays: [
-        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["0000", "0010", "1000"], "states": ["idle", "idle", "idle"]},
+      note: "Trie de ramificación. La raíz separa por el bit 3. Cada rama vuelve a separar por el bit 1. Las hojas son las llaves 0000, 0010, 1100 y 1111.",
+      nodes: [
+        {"id": "r", "value": "bit 3", "parent": null},
+        {"id": "L", "value": "bit 1", "parent": "r"},
+        {"id": "R", "value": "bit 1", "parent": "r"},
+        {"id": "l0", "value": "0000", "parent": "L"},
+        {"id": "l1", "value": "0010", "parent": "L"},
+        {"id": "r0", "value": "1100", "parent": "R"},
+        {"id": "r1", "value": "1111", "parent": "R"},
       ],
-      bridges: [],
     },
     {
-      note: "Las primeras diferencias entre ramas ocurren en los bits 3 y 1.",
-      arrays: [
-        {"id": "row-0", "label": "Posiciones", "row": 0, "cells": ["3", "2", "1", "0"], "states": ["active", "idle", "active", "idle"]},
-        {"id": "row-1", "label": "Sketches", "row": 1, "cells": ["00", "01", "10"], "states": ["idle", "idle", "idle"]},
+      note: "Consulta q = 0101. Sus bits 3 y 1 son 0 y 0, así que su sketch 00 cae junto a 0000. Pero el camino real de q no existe en el trie: después del bit 3 viene el bit 2, que no ramifica en la rama 0, y q tiene 1 allí. Ahí q se sale del trie.",
+      nodes: [
+        {"id": "r", "value": "bit 3", "parent": null},
+        {"id": "L", "value": "bit 1", "parent": "r", "state": "active"},
+        {"id": "R", "value": "bit 1", "parent": "r", "state": "muted"},
+        {"id": "l0", "value": "0000", "parent": "L", "state": "marked"},
+        {"id": "l1", "value": "0010", "parent": "L"},
+        {"id": "r0", "value": "1100", "parent": "R", "state": "muted"},
+        {"id": "r1", "value": "1111", "parent": "R", "state": "muted"},
       ],
-      bridges: [],
     },
     {
-      note: "Consulta q=0100. Sus bits 3 y 1 son 00.",
-      arrays: [
-        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["0", "1", "0", "0"], "states": ["idle", "active", "idle", "idle"]},
-        {"id": "row-1", "label": "Sketches", "row": 1, "cells": ["00", "01", "10"], "states": ["marked", "idle", "idle"]},
+      note: "Prefijo común más largo p = 0. El bit siguiente de q es 1, así que e = p 0 1 1 = 0011. El sketch de e es 01, que cae entre 00 y 10. Las llaves con sketch menor o igual que 01 son 0000 y 0010: el predecesor es 0010 y el sucesor es 1100.",
+      nodes: [
+        {"id": "r", "value": "bit 3", "parent": null},
+        {"id": "L", "value": "bit 1", "parent": "r", "state": "active"},
+        {"id": "R", "value": "bit 1", "parent": "r", "state": "muted"},
+        {"id": "l0", "value": "0000", "parent": "L"},
+        {"id": "l1", "value": "0010", "parent": "L", "state": "answer"},
+        {"id": "r0", "value": "1100", "parent": "R", "state": "answer"},
+        {"id": "r1", "value": "1111", "parent": "R", "state": "muted"},
       ],
-      bridges: [],
-    },
-    {
-      note: "El sketch coincide con 0000, pero 0100 también supera a 0010.",
-      arrays: [
-        {"id": "row-0", "label": "Orden real", "row": 0, "cells": ["0000", "0010", "0100", "1000"], "states": ["idle", "answer", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El bit 2 descartado es el primer desacuerdo con las llaves del prefijo 0. Corregir en esa frontera recupera el rango real.",
-      arrays: [
-        {"id": "row-0", "label": "Bits", "row": 0, "cells": ["3", "2", "1", "0"], "states": ["idle", "answer", "idle", "idle"]},
-        {"id": "row-1", "label": "Vecinos reales", "row": 1, "cells": ["0010", "0100", "1000"], "states": ["answer", "marked", "answer"]},
-      ],
-      bridges: [],
     },
   ],
 }} />
 
-### Qué compra la comparación empaquetada
+El sketch de $q$ no dice dónde cae $q$ en el orden. El sketch sólo es confiable para las llaves, no para consultas arbitrarias. La corrección usa el prefijo común más largo para llegar a una palabra $e$ cuyo sketch sí sirve.
 
-*(Traza derivada de la explicación de clase.)*
+### Prefijo común y la palabra $e$
+
+Sea $p$ el prefijo más largo de $q$ que también es prefijo de alguna llave. Todas las llaves con prefijo $p$ forman un bloque $B$. Ninguna llave tiene prefijo $p\beta$, con $\beta$ el bit siguiente de $q$. Entonces todo $B$ comparte el prefijo $p\bar\beta$.
+
+- Si $\beta = 1$, todo $B$ es menor que $q$. El predecesor es $\max B$. Sea $e = p\,0\,1\cdots1$.
+- Si $\beta = 0$, todo $B$ es mayor que $q$. El sucesor es $\min B$. Sea $e = p\,1\,0\cdots0$.
+
+La palabra $e$ es la más cercana a $q$ con prefijo $p\bar\beta$. Se decide sólo con $p$ y $\beta$. Ahora queda una pregunta: ¿dónde cae $\mathrm{sk}(e)$ entre los sketches de las llaves? Dentro de $B$, $e$ es el máximo (o el mínimo), así que su sketch queda en el extremo del bloque. Fuera de $B$, la llave difiere de $p$ en una posición que ya ramifica y el sketch la separa. Por eso el conteo con $\mathrm{sk}(e)$ da el lugar correcto.
+
+Para encontrar $p$ sin mirar todas las llaves, basta mirar a los vecinos del sketch de $q$. Uno de los dos vecinos $x_i$ o $x_{i+1}$ está en $B$. De ellos se elige el que minimiza $q \oplus y$. El bit más significativo de $q \oplus y$ da $|p|$ y el bit $j$ donde se separan.
+
+## Cómo calcular el sketch con una multiplicación
+
+El sketch perfecto usa un bucle sobre los bits, y eso no es $O(1)$. La idea de Fredman y Willard es calcular un sketch aproximado con una sola multiplicación.
+
+Primero se enmascara $x$ con $M = \sum_j 2^{c_j}$, de modo que sólo quedan los bits de ramificación. Después se multiplica por un número $m = \sum_j 2^{m_j}$. Cada bit $x_{c_i}$ se copia a posiciones $c_i + m_j$. Un último enmascarado con $D$ deja sólo las copias en las diagonales $P_j = c_j + m_j$, y un desplazamiento las lleva a la posición baja.
+
+Las copias fuera de la diagonal se pueden ignorar. Lo que se necesita es que no colisionen, y que las posiciones $P_j$ crezcan con $j$. Para eso se eligen los $m_j$ con dos pasos. El primero evita colisiones módulo $r^3$. El segundo coloca cada $P_j$ en una ventana creciente. La lámina lo ilustra con $w = 6$, $c = (0, 1, 3)$, $r^3 = 27$ y $m = (27, 58, 62)$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Cada separador ocupa un campo propio en la palabra.",
-      arrays: [
-        {"id": "row-0", "label": "Campos", "row": 0, "cells": ["00", "01", "10"], "states": ["idle", "idle", "idle"]},
+      note: "Exponentes c_i + m_j para c = (0, 1, 3) y m = (27, 58, 62). Los nueve valores son distintos, así que las copias no chocan.",
+      rows: [
+        { id: "c0", label: "c0 = 0", cells: [{"value": "27", "tag": "m0"}, {"value": "58", "tag": "m1"}, {"value": "62", "tag": "m2"}] },
+        { id: "c1", label: "c1 = 1", cells: [{"value": "28"}, {"value": "59"}, {"value": "63"}] },
+        { id: "c2", label: "c2 = 3", cells: [{"value": "30"}, {"value": "61"}, {"value": "65"}] },
       ],
-      bridges: [],
+      caption: "Nueve exponentes distintos. Las copias de cada bit caen en lugares separados.",
     },
     {
-      note: "Replica la consulta en campos correspondientes.",
-      arrays: [
-        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["01", "01", "01"], "states": ["active", "active", "active"]},
+      note: "La diagonal P = (27, 59, 65) son los exponentes c_j + m_j. Cada P_j cae en su ventana: 27 en [6, 33), 59 en [33, 60), 65 en [60, 87). Por eso crecen con j y el sketch queda compacto.",
+      rows: [
+        { id: "c0", label: "c0 = 0", cells: [{"value": "27", "state": "answer"}, {"value": "58"}, {"value": "62"}] },
+        { id: "c1", label: "c1 = 1", cells: [{"value": "28"}, {"value": "59", "state": "answer"}, {"value": "63"}] },
+        { id: "c2", label: "c2 = 3", cells: [{"value": "30"}, {"value": "61"}, {"value": "65", "state": "answer"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Con bits de guarda, los resultados por campo se pueden leer juntos.",
-      arrays: [
-        {"id": "row-0", "label": "¿Separador ≤ consulta?", "row": 0, "cells": ["sí", "sí", "no"], "states": ["answer", "answer", "idle"]},
-      ],
-      bridges: [],
+      caption: "Diagonal en ámbar. D = 2^27 + 2^59 + 2^65 deja sólo estas tres copias. El desplazamiento de P_0 = 27 las lleva a 0, 32 y 38.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+Para una llave $x$ el cálculo es $\mathrm{sk}(x) = ((x \,\&\, M)\cdot m \,\&\, D) \gg P_0$. Son una conjunción, una multiplicación, otra conjunción y un desplazamiento. Eso es $O(1)$, siempre que el producto completo quepa en el modelo (la lámina supone que la instrucción de multiplicación da $2w$ bits).
 
-En un nodo, el rango entre sketches sirve para acotar qué llaves merece la pena comparar con la consulta completa. El argumento de corrección vuelve al prefijo común más largo y a la primera posición donde la consulta deja de coincidir con la rama. Una corrección por esa frontera recupera el intervalo real. Esto es distinto del costo de seguir la rama al siguiente nodo.
+El sketch aproximado mide a lo más $r^4$ bits en vez de $r$, pero conserva el orden. Es el mismo sketch con los bits separados en posiciones crecientes. Comparar dos aproximados equivale a comparar los perfectos.
 
-## Análisis de complejidad
+## Comparación en paralelo
 
-En el modelo word RAM de clase, la representación del nodo permite seleccionar una rama en $O(1)$ operaciones de palabra. Con grado $w^{\Theta(1)}$, una ruta tiene $O(1+\log_w n)$ niveles. La deducción depende de que la extracción, el empaquetado y la comparación quepan en un número constante de palabras. Si se recorren los separadores uno a uno, se pierde esa cota.
+Una vez que los sketches de un nodo están en una palabra, la búsqueda del rango se hace con una resta. Cada llave ocupa un bloque de $r^4 + 1$ bits: un bit 1 al frente, llamado centinela, y su sketch aproximado. Con $k$ llaves el nodo ocupa $k(r^4+1)$ bits, menos de $w$.
 
-### Cómo justificar la cota en el examen
+Para comparar con $\mathrm{sk}(q)$, se replica $\mathrm{sk}(q)$ en los $k$ bloques, se resta y se mira el centinela. En cada bloque la resta vale $1\,\mathrm{sk}(x_i) - 0\,\mathrm{sk}(q)$, que es positiva. No hay préstamos entre bloques. El centinela sobrevive si y sólo si $\mathrm{sk}(x_i) \ge \mathrm{sk}(q)$.
 
-Primero calcula la altura con grado $w^c$: $log_{w^c} n = (lg n)/(clg w)$. Después justifica el multiplicador por nivel. La cota exige obtener sketches y comparar los campos con un número constante de operaciones de palabra bajo las hipótesis del mazo. Si para elegir el hijo recorrieras separadores uno por uno, el factor por nivel ya no sería constante. El árbol ancho por sí solo no demuestra la mejora.
+Los centinelas se suman con una multiplicación por un número con un 1 cada $r^4+1$ bits. En el bloque de más a la izquierda aparece la suma, porque $k < 2^{r^4}$ y cabe en un bloque. Enmascarar y desplazar da el rango en $O(1)$.
 
-## Tabla de complejidad
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Palabra del nodo. Cada bloque es un centinela 1 seguido de un sketch de 3 bits, para este ejemplo chico. Las llaves x0, x1, x2, x3 tienen sketches 000, 001, 011, 111.",
+      rows: [
+        { id: "nodo", label: "Nodo", cells: [{"value": "1000"}, {"value": "1001"}, {"value": "1011"}, {"value": "1111"}] },
+      ],
+    },
+    {
+      note: "Sketch de la consulta 010 replicado en cada bloque, con su centinela 0 delante. Se resta bloque a bloque de la palabra del nodo.",
+      rows: [
+        { id: "nodo", label: "Nodo", cells: [{"value": "1000"}, {"value": "1001"}, {"value": "1011"}, {"value": "1111"}] },
+        { id: "q", label: "q repl.", cells: [{"value": "0010"}, {"value": "0010"}, {"value": "0010"}, {"value": "0010"}] },
+        { id: "res", label: "Resta", cells: [{"value": "0110"}, {"value": "0111"}, {"value": "1001"}, {"value": "1101"}] },
+      ],
+      caption: "Cada bloque resta sin prestar de su vecino: la resta de cada bloque es positiva.",
+    },
+    {
+      note: "Los centinelas de la resta son 0, 0, 1, 1. Los que quedaron en 1 corresponden a x2 y x3, que cumplen sk(x) mayor o igual que sk(q) = 010. Dos llaves quedan por debajo de la consulta: x0 y x1.",
+      rows: [
+        { id: "nodo", label: "Nodo", cells: [{"value": "1000"}, {"value": "1001"}, {"value": "1011"}, {"value": "1111"}] },
+        { id: "q", label: "q repl.", cells: [{"value": "0010"}, {"value": "0010"}, {"value": "0010"}, {"value": "0010"}] },
+        { id: "res", label: "Resta", cells: [{"value": "0110", "state": "marked"}, {"value": "0111", "state": "marked"}, {"value": "1001", "state": "answer"}, {"value": "1101", "state": "answer"}] },
+      ],
+      caption: "Centinelas 0, 0, 1, 1: dos llaves quedan por debajo de q. El rango de q entre los sketches es 2.",
+    },
+  ],
+}} />
 
-La tabla superior usa las unidades de costo de la explicación.
+Esto es sólo la forma de la comparación. En la lámina el conteo de centinelas se hace también con una multiplicación. El detalle está en la sección de ejemplos.
 
-## Ejemplos
+## El bit más significativo en $O(1)$
 
-[Casos resueltos](/structures/fusion-tree/examples) y [preguntas con pistas](/structures/fusion-tree/exercises).
+La última pieza es $\mathrm{msb}(q \oplus y)$, el primer bit donde $q$ e $y$ difieren. La lámina lo resuelve con operaciones de palabra. Parte la palabra en $\sqrt{w}$ clusters de $\sqrt{w}$ bits. Luego:
 
-## Comparación con estructuras relacionadas
+1. Con unas pocas operaciones de palabra obtiene un bit por cada cluster no vacío. Ese bit vale 1 en la cabeza del cluster.
+2. Comprime esos $\sqrt{w}$ bits con otro sketch, usando una multiplicación.
+3. Compara en paralelo contra las potencias de 2, y eso da el primer cluster no vacío.
+4. Repite lo mismo dentro de ese cluster para obtener el bit.
 
-B-tree cuenta transferencias. Fusion tree cuenta operaciones de palabra y usa bits para hacer barata la decisión dentro de un nodo de alta ramificación.
+El diagrama muestra el primer paso sobre una palabra de 16 bits, con 4 clusters de 4 bits. El procedimiento completo se hace paso a paso en los ejemplos.
 
-## Prueba de dominio
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Palabra de 16 bits partida en 4 clusters de 4 bits. El cluster 1 es el de más peso.",
+      rows: [
+        { id: "x", label: "x", cells: [{"value": "0"}, {"value": "1"}, {"value": "0"}, {"value": "1"}, {"value": "0"}, {"value": "0"}, {"value": "0"}, {"value": "0"}, {"value": "1"}, {"value": "0"}, {"value": "0"}, {"value": "0"}, {"value": "1"}, {"value": "1"}, {"value": "0"}, {"value": "1"}] },
+      ],
+      spans: [
+        {"id": "c1", "row": "x", "from": 0, "to": 3, "label": "cluster 1"},
+        {"id": "c2", "row": "x", "from": 4, "to": 7, "label": "cluster 2"},
+        {"id": "c3", "row": "x", "from": 8, "to": 11, "label": "cluster 3"},
+        {"id": "c4", "row": "x", "from": 12, "to": 15, "label": "cluster 4"},
+      ],
+    },
+    {
+      note: "Las cabezas de cada cluster, en ámbar, son las posiciones 0, 4, 8 y 12. El procedimiento usa esas cabezas para marcar con un solo bit qué clusters no están vacíos.",
+      rows: [
+        { id: "x", label: "x", cells: [{"value": "0", "state": "marked"}, {"value": "1"}, {"value": "0"}, {"value": "1"}, {"value": "0", "state": "marked"}, {"value": "0"}, {"value": "0"}, {"value": "0"}, {"value": "1", "state": "marked"}, {"value": "0"}, {"value": "0"}, {"value": "0"}, {"value": "1", "state": "marked"}, {"value": "1"}, {"value": "0"}, {"value": "1"}] },
+      ],
+      spans: [
+        {"id": "c1", "row": "x", "from": 0, "to": 3, "label": "cluster 1"},
+        {"id": "c2", "row": "x", "from": 4, "to": 7, "label": "cluster 2"},
+        {"id": "c3", "row": "x", "from": 8, "to": 11, "label": "cluster 3"},
+        {"id": "c4", "row": "x", "from": 12, "to": 15, "label": "cluster 4"},
+      ],
+      caption: "Las cabezas se extraen con AND, XOR y resta sobre toda la palabra. El resultado se comprime en un número de 4 bits.",
+    },
+  ],
+}} />
 
-[Lista de comprobación](/structures/fusion-tree/mastery-check).
+## De dónde sale la cota
 
-*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf · pp. 7-67.*
+La cota es $O(\log_w n)$ por búsqueda, con $O(n)$ de espacio. Hay tres términos que mirar: la altura, el costo por nivel y el espacio.
+
+### Altura
+
+El árbol tiene grado $k = w^{1/5}$. Cada nivel multiplica por $k$ el número de nodos como máximo, así que $n \le k^h$ y de ahí $h \ge \log_k n$. Con la cota superior de una B-tree balanceada, la altura es $\Theta(\log_k n)$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nivel 0 tiene 1 nodo. Nivel 1 tiene k nodos. Nivel 2 tiene k al cuadrado. Cada nivel multiplica por k, así que n no supera k elevado a h.",
+      rows: [
+        { id: "niv", label: "Nodos", cells: [{"value": "1", "tag": "nivel 0"}, {"value": "k", "tag": "nivel 1"}, {"value": "k²", "tag": "nivel 2"}, {"value": "k³", "tag": "nivel 3"}, {"value": "k^h", "tag": "nivel h"}] },
+      ],
+      caption: "Con n llaves, n menor o igual que k a la h. Tomar logaritmo base k da h mayor o igual que log base k de n.",
+    },
+  ],
+}} />
+
+Ahora se sustituye $k = w^{1/5}$. Se puede ver cada término de la cadena de igualdades en el diagrama siguiente.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "La altura es lg n dividido entre lg k. Ese es el punto de partida: cuántas veces hay que dividir n entre k hasta llegar a 1.",
+      nodes: [
+        {"id": "h", "value": "h = lg n / lg k", "parent": null, "state": "active"},
+        {"id": "a", "value": "lg n: bits de n", "parent": "h"},
+        {"id": "b", "value": "lg k: bits por nivel", "parent": "h"},
+      ],
+    },
+    {
+      note: "Ahora lg k = lg w^{1/5} = (1/5) lg w. El denominador se vuelve un quinto de lg w. Al dividir, el quinto pasa al numerador como factor 5.",
+      nodes: [
+        {"id": "h", "value": "h = 5 lg n / lg w", "parent": null},
+        {"id": "a", "value": "lg n: bits de n", "parent": "h", "state": "muted"},
+        {"id": "b", "value": "lg k = (1/5) lg w", "parent": "h", "state": "active"},
+        {"id": "c", "value": "factor 5", "parent": "h", "state": "marked"},
+      ],
+    },
+    {
+      note: "Como lg n / lg w es log base w de n, la altura es 5 log_w n, es decir Theta de log_w n.",
+      nodes: [
+        {"id": "h", "value": "h = 5 log_w n = Theta(log_w n)", "parent": null, "state": "answer"},
+        {"id": "a", "value": "lg n / lg w", "parent": "h", "state": "active"},
+        {"id": "c", "value": "constante 5", "parent": "h", "state": "muted"},
+      ],
+    },
+  ],
+}} />
+
+$$h = \log_{w^{1/5}} n = \frac{\lg n}{\tfrac{1}{5}\lg w} = 5\,\frac{\lg n}{\lg w} = 5\log_w n$$
+
+### Costo por nivel
+
+Cada nivel hace un número constante de operaciones de palabra. Son las de la búsqueda en el nodo: calcular el sketch de $q$ (AND, multiplicación, AND, desplazamiento), la comparación en paralelo (resta, multiplicación, máscara), el msb (un número constante de pasos) y la corrección con $e$. Ninguna cuenta cosas que dependan de $k$. Si en cambio se recorrieran los separadores uno por uno, el factor por nivel sería $k$ y la cota se perdería.
+
+### Total
+
+El costo es altura por costo por nivel: $5\log_w n \cdot O(1) = O(\log_w n)$. Si $n$ es pequeño o la búsqueda llega a una sola raíz, hay al menos un nodo. Por eso la cota completa es $O(1 + \log_w n)$.
+
+### Espacio
+
+Un nodo guarda $k$ bloques de $r^4+1$ bits. Como $r \le k - 1 < w^{1/5}$, cada bloque mide a lo más $w^{4/5}+1$ bits. Entonces el nodo ocupa a lo más
+
+$$w^{1/5}\left(w^{4/5} + 1\right) = w + w^{1/5} = O(w)$$
+
+bits. Cabe en una palabra por nodo. La lámina concluye $O(n)$ de espacio para el conjunto completo.
+
+## Errores típicos y casos límite
+
+- **El sketch de la consulta puede engañar.** Un empate de sketches no certifica pertenencia. Con 0100 el sketch empata con 0000 y la palabra completa no coincide. La corrección es necesaria.
+- **Igualdad completa antes que corrección.** Si el candidato coincide con $q$ en toda la palabra, la búsqueda termina sin usar $e$.
+- **Sketch perfecto y sketch aproximado.** El perfecto tiene $r$ bits pero necesita un bucle. El aproximado tiene $r^4$ bits pero se calcula con una multiplicación. La comparación es la misma.
+- **Nodo con un solo bit de ramificación.** Con $r = 1$ el sketch tiene 1 bit y el rango se decide en un paso. No hace falta más.
+- **$w$ pequeño.** Si $w^{1/5} < 2$ el nodo no puede ramificar. La cota es asintótica y vale para $w$ suficientemente grande.
+- **El producto completo.** El cálculo del sketch aproximado supone que la multiplicación entrega $2w$ bits. Sin esa instrucción la lámina sugiere otra técnica AC0.
+
+## Conexión
+
+Esta estructura requiere la noción de predecesor entera de [integer-predecessor](/structures/integer-predecessor) y la idea de B-tree de [b-tree](/structures/b-tree). Lo que aporta es comprimir el nodo en una palabra.
+
+Combinada con van Emde Boas, el predecesor cuesta $O(\min\{\lg w, \log_w n\})$. Eso es $O(\sqrt{\lg n})$: si $\lg w \le \sqrt{\lg n}$ ya está, y si no, $\log_w n < \sqrt{\lg n}$. Ver [van-emde-boas-tree](/structures/van-emde-boas-tree) y [x-fast-trie](/structures/x-fast-trie).
+
+La lámina da además una cota inferior en el modelo cell probe, para espacio polinomial, con un mínimo entre $\log_w n$ y otro término que depende de $w$ y de $\lg\lg n$. La mejor estructura de arriba es óptima salvo un factor $\lg\lg$. Ordenar enteros en tiempo lineal para todo $w$ sigue abierto.
+
+Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf, láminas 7 a 37 (sesión Enteros III, semana 12).

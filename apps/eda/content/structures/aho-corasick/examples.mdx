@@ -1,0 +1,192 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Cada caso sigue el mismo orden: el trie, los fallos y dic necesarios, y la traza letra por letra. Los dos primeros usan el diccionario de clase, con patrones he, she, his y hers. El tercero es un ejemplo derivado (*derivado del pseudocódigo; no aparece en las diapositivas*).
+
+## Mínimo: un patrón y una letra repetida
+
+Diccionario $D$ = a. Texto aa. Trie: la raíz y un único nodo a, que es terminal. Su fallo es la raíz, porque no hay sufijo propio no vacío.
+
+Leer la primera a lleva el estado a a. Como a es terminal, se reporta. Leer la segunda a desde a no tiene hijo a, así que se sigue el fallo, que es la raíz; la raíz sí tiene hijo a, y se llega de nuevo a a. Se reporta otra vez. El total es $z = 2$, una por posición: el algoritmo no deduplica coincidencias en posiciones distintas.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Trie de D = a. Un solo nodo además de la raíz, y es terminal. Su fallo es la raíz, así que no se dibuja ningún enlace.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "e", state: "marked" },
+      ],
+      caption: "Trie de a. Ámbar = terminal.",
+    },
+    {
+      note: "Índice 0, letra a. La raíz tiene hijo a, así que δ(ε, a) = a. El estado es a, terminal. Se reporta a en la posición 0.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "e", state: "answer" },
+      ],
+      caption: "i = 0: reporta a.",
+    },
+    {
+      note: "Índice 1, letra a. Desde a no hay hijo a. El fallo de a es la raíz, y desde la raíz la letra a lleva de nuevo a a. Se reporta otra vez, ahora en la posición 1.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "e", state: "answer" },
+      ],
+      caption: "i = 1: reporta a por segunda vez. z = 2.",
+    },
+  ],
+}} />
+
+## Normal: hishers con cuatro coincidencias
+
+Diccionario he, she, his, hers. Texto hishers, de siete letras, con índices desde cero: h, i, s, h, e, r, s.
+
+Antes de leer, el trie y sus fallos ya están calculados (ver la [teoría](/structures/aho-corasick)): fail(sh) = h, fail(she) = he, fail(his) = s, fail(hers) = s. Los dic relevantes son dic(she) = he y ninguno más.
+
+Cuatro coincidencias aparecen en el texto:
+
+- his termina en la posición 2, y empieza en 0.
+- she termina en la posición 4 y empieza en 2.
+- he termina en la posición 4 y empieza en 3, por dic de she.
+- hers termina en la posición 6 y empieza en 3.
+
+Las dos últimas comparten el mismo sufijo de la posición 4 a la 6. La traza es la siguiente.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Índice 0, letra h. El estado pasa de la raíz a h. No es terminal y no tiene dic, así que no se reporta.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["active", "idle", "idle", "idle", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["active", "idle", "idle", "idle", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }] },
+      ],
+      caption: "Leyendo h.",
+    },
+    {
+      note: "Índice 1, letra i. h tiene hijo i, así que el estado pasa a hi. No es terminal, y no hay reporte.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "active", "idle", "idle", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "active", "idle", "idle", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }] },
+      ],
+      caption: "Leyendo i.",
+    },
+    {
+      note: "Índice 2, letra s. hi tiene hijo s, así que el estado es his. his es terminal y se reporta en la posición 2, con inicio en 0.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "active", "idle", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "active", "idle", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "his" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }], states: ["idle", "idle", "answer", "idle", "idle", "idle", "idle"] },
+      ],
+      caption: "Leyendo s: reporta his.",
+    },
+    {
+      note: "Índice 3, letra h. his no tiene hijo h. Su fallo es s, y desde s la letra h sí tiene hijo: sh. Entonces δ(his, h) = δ(s, h) = sh. El estado queda en sh, no terminal y sin dic.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "active", "idle", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "active", "idle", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "his" }, { value: "—" }, { value: "—" }, { value: "—" }, { value: "—" }], states: ["idle", "idle", "answer", "idle", "idle", "idle", "idle"] },
+      ],
+      caption: "Leyendo h: el fallo de his lleva a s, y de s la h lleva a sh.",
+    },
+    {
+      note: "Índice 4, letra e. sh tiene hijo e, así que el estado es she. she es terminal: se reporta she, que empieza en 2. Su dic es he, que también se reporta, y empieza en 3.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "idle", "active", "idle", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "idle", "active", "idle", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "his" }, { value: "—" }, { value: "she, he" }, { value: "—" }, { value: "—" }], states: ["idle", "idle", "answer", "idle", "answer", "idle", "idle"] },
+      ],
+      caption: "Leyendo e: reporta she y he.",
+    },
+    {
+      note: "Índice 5, letra r. she no tiene hijo r. Su fallo es he, que sí tiene hijo r, y se llega a her. Es el único salto por fallo de la búsqueda. her no es terminal y no tiene dic.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "idle", "idle", "active", "idle"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "idle", "idle", "active", "idle"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "his" }, { value: "—" }, { value: "she, he" }, { value: "—" }, { value: "—" }], states: ["idle", "idle", "answer", "idle", "answer", "idle", "idle"] },
+      ],
+      caption: "Leyendo r: sin nueva coincidencia.",
+    },
+    {
+      note: "Índice 6, letra s. her tiene hijo s, así que el estado es hers. Es terminal y se reporta, con inicio en 3. Total: his, she, he y hers, z = 4.",
+      rows: [
+        { id: "txt", label: "texto", cells: [{ value: "h" }, { value: "i" }, { value: "s" }, { value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }], states: ["idle", "idle", "idle", "idle", "idle", "idle", "active"] },
+        { id: "est", label: "estado", cells: [{ value: "h" }, { value: "hi" }, { value: "his" }, { value: "sh" }, { value: "she" }, { value: "her" }, { value: "hers" }], states: ["idle", "idle", "idle", "idle", "idle", "idle", "active"] },
+        { id: "rep", label: "reporta", cells: [{ value: "—" }, { value: "—" }, { value: "his" }, { value: "—" }, { value: "she, he" }, { value: "—" }, { value: "hers" }], states: ["idle", "idle", "answer", "idle", "answer", "idle", "answer"] },
+      ],
+      caption: "Leyendo s: reporta hers. z = 4.",
+    },
+  ],
+}} />
+
+## Límite: el estado final no es terminal y aun así hay coincidencias
+
+Este caso es derivado. Diccionario a, ba, xbaq. Texto xba. Ninguna aparición de xbaq, porque falta la q. Pero las coincidencias a y ba sí están en el texto.
+
+El trie tiene los nodos a, b, ba, x, xb, xba y xbaq. Los fallos relevantes son fail(xba) = ba y fail(ba) = a. Como ba es terminal, dic(xba) = ba. Como a también es terminal, dic(ba) = a.
+
+El estado final xba **no es terminal**. Si sólo se comprobara el estado actual, se perderían ba y a. Por eso la búsqueda sigue dic, no sólo el nodo activo.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Trie de D = a, ba, xbaq. Los nodos ba y a son terminales. xba es prefijo de xbaq, pero no es patrón.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "e", state: "marked" },
+        { id: "b", value: "b", parent: "e" },
+        { id: "ba", value: "ba", parent: "b", state: "marked" },
+        { id: "x", value: "x", parent: "e" },
+        { id: "xb", value: "xb", parent: "x" },
+        { id: "xba", value: "xba", parent: "xb" },
+        { id: "xbaq", value: "xbaq", parent: "xba", state: "marked" },
+      ],
+      caption: "Trie de D. Ámbar = terminal.",
+    },
+    {
+      note: "Índice 2 del texto xba. Tras leer x, b y a, el estado es xba. No es terminal, así que se miran los fallos: fail(xba) = ba es terminal, y dic(xba) = ba.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "e", state: "marked" },
+        { id: "b", value: "b", parent: "e" },
+        { id: "ba", value: "ba", parent: "b", state: "answer" },
+        { id: "x", value: "x", parent: "e" },
+        { id: "xb", value: "xb", parent: "x" },
+        { id: "xba", value: "xba", parent: "xb", state: "active" },
+        { id: "xbaq", value: "xbaq", parent: "xba", state: "marked" },
+      ],
+      links: [
+        { from: "xba", to: "ba", kind: "pointer", label: "dic" },
+        { from: "ba", to: "a", kind: "pointer", label: "dic" },
+      ],
+      caption: "Estado xba: no reporta por sí mismo. Su dic es ba.",
+    },
+    {
+      note: "Se reporta ba en la posición 2, con inicio en 1. Después se avanza por dic: dic(ba) = a, que también es terminal, así que se reporta a en la misma posición 2. Total: ba y a, z = 2, y xbaq no aparece.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "e", state: "answer" },
+        { id: "b", value: "b", parent: "e" },
+        { id: "ba", value: "ba", parent: "b", state: "answer" },
+        { id: "x", value: "x", parent: "e" },
+        { id: "xb", value: "xb", parent: "x" },
+        { id: "xba", value: "xba", parent: "xb", state: "active" },
+        { id: "xbaq", value: "xbaq", parent: "xba", state: "marked" },
+      ],
+      links: [
+        { from: "xba", to: "ba", kind: "pointer", label: "dic" },
+        { from: "ba", to: "a", kind: "pointer", label: "dic" },
+      ],
+      caption: "Reporta ba y a en la posición 2. z = 2.",
+    },
+  ],
+}} />

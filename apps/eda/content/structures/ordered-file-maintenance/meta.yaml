@@ -3,7 +3,7 @@ title: Ordered File Maintenance
 type: structure
 week: week-10
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites:
 - cache-oblivious-veb-layout
 complexity:

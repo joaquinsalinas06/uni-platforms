@@ -7,134 +7,338 @@ import Visualization from '../../../src/components/Visualization.astro';
 
 ## ¿Qué problema resuelve?
 
-Buscar muchas veces en el mismo texto permite gastar trabajo inicial ordenando sus sufijos.
+Aquí el texto se conoce primero. KMP y Aho–Corasick preprocesan los **patrones**; si el texto $T$ es fijo y llegan muchos patrones distintos, buscar cada uno en $O(\lvert T\rvert)$ es demasiado. El suffix array invierte la idea: preprocesa el **texto** una vez y responde cada patrón con búsqueda binaria.
 
-## Intuición
+Ejemplo de cifras (derivado para dimensionar el problema; no aparece en las láminas): con $\lvert T\rvert = 10^6$ y $10^4$ patrones, un recorrido lineal por patrón cuesta $10^{10}$ pasos.
 
-El suffix array guarda índices de comienzo en orden lexicográfico. Los sufijos que empiezan con un patrón forman una región contigua. Para construir el orden, distingue primero por una letra y duplica la longitud de prefijo conocida.
+## Intuición dibujada
 
-## Estructura interna
+Todo patrón que aparece en $T$ es prefijo de algún sufijo de $T$. Si ordenamos los sufijos, los que empiezan con $P$ quedan **contiguos**. Por eso basta guardar el orden.
 
-En la ronda de longitud $k$, dos sufijos tienen el mismo rango si coinciden en su prefijo de longitud $k$. El rango de longitud $2k$ se obtiene ordenando pares de rangos de las dos mitades. En los ejemplos, `$` es un centinela menor que cualquier letra.
-
-### Leer los índices sin copiar sufijos enteros
-
-La entrada del arreglo de sufijos dice en qué posición comienza el sufijo de ese rango. Comparar sus contenidos implica volver al texto. Con banana y un centinela, los sufijos que empiezan por a aparecen juntos, y dentro de ellos a seguido por el centinela es anterior a ana. El centinela resuelve qué pasa cuando una cadena termina mientras la otra todavía tiene letras. Debe ser menor que cualquier carácter del alfabeto y no confundirse con un carácter normal del texto.
-
-### De un par de clases a una clase más informativa
-
-Si ya sabes ordenar prefijos de longitud $k$, el prefijo de longitud $2k$ son dos piezas consecutivas de longitud $k$. La primera clase representa lo que se ve desde $i$ y la segunda lo que se ve desde $i+k$, con el tratamiento de fin de texto que use la variante. La primera distingue la mitad inicial; la segunda sólo importa si esa mitad empata. Tras ordenar los pares, asigna el mismo rango nuevo a pares iguales y rangos crecientes a pares distintos. Esos rangos son pequeños enteros que vuelven a servir en la siguiente ronda.
-
-La búsqueda de patrón tiene dos fronteras porque un acierto individual no dice cuántos vecinos comparten el prefijo. En el diagrama, delimita el primer sufijo compatible y el primer sufijo posterior al grupo.
-
-## Operaciones
-
-Clasifica caracteres, después ordena pares de rangos y renumera clases. Duplica la longitud hasta que las clases distingan todos los sufijos. Para buscar un patrón, usa dos búsquedas binarias sobre el orden para delimitar su intervalo.
-
-### banana$ · las clases se separan al duplicar
+El **centinela** `$` cierra el texto: es menor que cualquier letra y aparece una sola vez. Así ningún sufijo es prefijo de otro y el orden siempre se decide.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Ordena por la primera letra. Las posiciones 1, 3 y 5 todavía empatan.",
-      arrays: [
-        {"id": "row-0", "label": "Posiciones", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Rango k=1", "row": 1, "cells": ["2", "1", "3", "1", "3", "1", "0"], "states": ["idle", "marked", "idle", "marked", "idle", "marked", "idle"]},
+      note: "El texto banana con centinela tiene n = 7 celdas numeradas desde 0. El $ final es menor que cualquier letra y no aparece en otra posición.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"b",tag:"0"},{value:"a",tag:"1"},{value:"n",tag:"2"},{value:"a",tag:"3"},{value:"n",tag:"4"},{value:"a",tag:"5"},{value:"$",tag:"6"}] },
       ],
-      bridges: [],
+      caption: "Cada sufijo se identifica por su índice de inicio.",
     },
     {
-      note: "Para longitud 2, 1 y 3 empiezan por an, mientras que 5 empieza por a$.",
-      arrays: [
-        {"id": "row-0", "label": "Prefijos", "row": 0, "cells": ["ba", "an", "na", "an", "na", "a$", "$"], "states": ["idle", "marked", "idle", "marked", "idle", "answer", "idle"]},
-        {"id": "row-1", "label": "Rango k=2", "row": 1, "cells": ["3", "2", "4", "2", "4", "1", "0"], "states": ["idle", "marked", "idle", "marked", "idle", "answer", "idle"]},
+      note: "Los sufijos ordenados. La fila SA guarda sólo el índice de inicio de cada uno, en orden lexicográfico. Los dos sufijos que empiezan por ana quedan en posiciones consecutivas.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:"6",tag:"0"},{value:"5",tag:"1"},{value:"3",tag:"2",state:"marked"},{value:"1",tag:"3",state:"marked"},{value:"0",tag:"4"},{value:"4",tag:"5"},{value:"2",tag:"6"}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Para longitud 4, 1 empieza por anan y 3 por ana$. El centinela rompe el empate.",
-      arrays: [
-        {"id": "row-0", "label": "Prefijos", "row": 0, "cells": ["bana", "anan", "nana", "ana$", "na$", "a$", "$"], "states": ["idle", "active", "idle", "answer", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Rango k=4", "row": 1, "cells": ["4", "3", "6", "2", "5", "1", "0"], "states": ["idle", "active", "idle", "answer", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Lista índices por rango creciente.",
-      arrays: [
-        {"id": "row-0", "label": "SA", "row": 0, "cells": ["6", "5", "3", "1", "0", "4", "2"], "states": ["answer", "answer", "answer", "answer", "answer", "answer", "answer"]},
-      ],
-      bridges: [],
+      spans: [ { id: "ana", row: "sa", from: 2, to: 3, label: "empiezan por ana" } ],
+      caption: "SA = [6,5,3,1,0,4,2]. Guardamos siete enteros en vez de siete copias del texto.",
     },
   ],
 }} />
 
-### Delimitar ana dentro del orden
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | longitud de $S$, incluido el centinela | aumenta el número de rondas $\lceil \lg n \rceil$ |
+| $S[i..]$ | sufijo que empieza en $i$ | se compara sólo a través de rangos |
+| $SA[k]$ | índice de inicio del sufijo de rango $k$ | es una permutación de $0,\dots,n-1$ |
+| $\operatorname{rank}_j(i)$ | clase de $S[i..i+2^j-1]$ entre todas las subcadenas de longitud $2^j$ | valores pequeños, enteros en $[0,n)$ |
+| $m = \lvert P\rvert$ | longitud del patrón | cada comparación directa puede costar hasta $m$ |
+
+Los rangos son **clases ordenadas**: si dos subcadenas empatan, reciben el mismo rango, y el siguiente rango es el siguiente entero. Por eso $\operatorname{rank}_j$ toma valores en $[0,n)$. Con todos los rangos distintos, $\operatorname{rank}$ es la permutación inversa de $SA$.
+
+## Operaciones paso a paso
+
+### Ordenar los sufijos tal cual
+
+1. Tomar los $n$ sufijos como cadenas.
+2. Ordenarlos con un comparador normal.
+3. Cada comparación lee caracteres de ambos sufijos hasta encontrar la primera diferencia: cuesta hasta $O(n)$.
+
+El total es $O(n^2\lg n)$, inviable para $n = 10^6$. El problema no es el número de comparaciones sino el costo de cada una. La idea de Manber y Myers es **hacer que cada comparación cueste $O(1)$**.
+
+### La idea de Manber y Myers: rangos por potencias de dos
+
+Sea $\operatorname{rank}_j(i)$ la clase de la subcadena de longitud $2^j$ que empieza en $i$. La subcadena de longitud $2^{j+1}$ son **dos bloques consecutivos** de longitud $2^j$:
+
+$$S[i..i+2^{j+1}-1] \;\text{vs}\; S[k..k+2^{j+1}-1] \iff \bigl(\operatorname{rank}_j(i),\ \operatorname{rank}_j(i+2^j)\bigr) \text{ vs } \bigl(\operatorname{rank}_j(k),\ \operatorname{rank}_j(k+2^j)\bigr)$$
+
+Basta comparar dos enteros por nivel. Tras $\lceil \lg n \rceil$ niveles, las subcadenas de longitud $\ge n$ son sufijos completos y los rangos ya son únicos.
+
+El texto de la clase, en el orden original del texto (las filas son las clases por nivel):
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Los sufijos con prefijo ana quedan juntos.",
-      arrays: [
-        {"id": "row-0", "label": "SA", "row": 0, "cells": ["6", "5", "3", "1", "0", "4", "2"], "states": ["idle", "idle", "marked", "marked", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Sufijos", "row": 1, "cells": ["$", "a$", "ana$", "anana$", "banana$", "na$", "nana$"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Ronda de longitud 1. Todas las posiciones con a empatan en rango 1: 1, 3 y 5. La letra sola no distingue entre ellas, así que la tabla ya no basta para ordenar.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"b",tag:"0"},{value:"a",tag:"1"},{value:"n",tag:"2"},{value:"a",tag:"3"},{value:"n",tag:"4"},{value:"a",tag:"5"},{value:"$",tag:"6"}] },
+        { id: "r1", label: "rango 1 car.", cells: [{value:2},{value:1,state:"active"},{value:3},{value:1,state:"active"},{value:3},{value:1,state:"active"},{value:0}] },
+        { id: "r2", label: "rango 2 car.", cells: [{value:3},{value:2},{value:4},{value:2},{value:4},{value:1},{value:0}] },
+        { id: "r4", label: "rango 4 car.", cells: [{value:4},{value:3},{value:6},{value:2},{value:5},{value:1},{value:0}] },
       ],
-      bridges: [],
+      caption: "Las clases por una letra: $ = 0, a = 1, b = 2, n = 3.",
     },
     {
-      note: "La primera frontera separa a$ de ana$.",
-      arrays: [
-        {"id": "row-0", "label": "SA", "row": 0, "cells": ["6", "5", "3", "1", "0", "4", "2"], "states": ["idle", "muted", "answer", "idle", "idle", "idle", "idle"]},
+      note: "Ronda de longitud 2. Los índices 1 y 3 siguen iguales en an. El índice 5 ya se separó: a$ es menor que an porque $ es menor que n.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"b",tag:"0"},{value:"a",tag:"1"},{value:"n",tag:"2"},{value:"a",tag:"3"},{value:"n",tag:"4"},{value:"a",tag:"5"},{value:"$",tag:"6"}] },
+        { id: "r1", label: "rango 1 car.", cells: [{value:2},{value:1},{value:3},{value:1},{value:3},{value:1},{value:0}] },
+        { id: "r2", label: "rango 2 car.", cells: [{value:3},{value:2,state:"active"},{value:4},{value:2,state:"active"},{value:4},{value:1},{value:0}] },
+        { id: "r4", label: "rango 4 car.", cells: [{value:4},{value:3},{value:6},{value:2},{value:5},{value:1},{value:0}] },
       ],
-      bridges: [],
+      caption: "Dos caracteres: 1 y 3 empatan en an; el rango 2 de ambos es el mismo.",
     },
     {
-      note: "La segunda frontera está antes de banana$.",
-      arrays: [
-        {"id": "row-0", "label": "SA", "row": 0, "cells": ["6", "5", "3", "1", "0", "4", "2"], "states": ["idle", "idle", "answer", "answer", "marked", "idle", "idle"]},
+      note: "Ronda de longitud 4. Los índices 1 y 3 se separan: anan es mayor que ana$, porque el cuarto carácter de ana$ es el centinela, que es menor que cualquier letra. Con este nivel todos los rangos son distintos.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"b",tag:"0"},{value:"a",tag:"1"},{value:"n",tag:"2"},{value:"a",tag:"3"},{value:"n",tag:"4"},{value:"a",tag:"5"},{value:"$",tag:"6"}] },
+        { id: "r1", label: "rango 1 car.", cells: [{value:2},{value:1},{value:3},{value:1},{value:3},{value:1},{value:0}] },
+        { id: "r2", label: "rango 2 car.", cells: [{value:3},{value:2},{value:4},{value:2},{value:4},{value:1},{value:0}] },
+        { id: "r4", label: "rango 4 car.", cells: [{value:4},{value:3,state:"active"},{value:6},{value:2,state:"active"},{value:5},{value:1},{value:0}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "El patrón aparece en las posiciones 3 y 1 del texto.",
-      arrays: [
-        {"id": "row-0", "label": "Posiciones de texto", "row": 0, "cells": ["3", "1"], "states": ["answer", "answer"]},
-      ],
-      bridges: [],
+      caption: "Rangos finales: todos distintos. Leídos al revés dan la permutación inversa de SA.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+### Clave de dos componentes: radix sort
 
-En cada ronda, dos sufijos están empatados sólo respecto a la longitud observada. Un rango no es una posición absoluta del resultado final mientras sigan existiendo empates. El par de rangos de la ronda siguiente representa una concatenación de dos bloques contiguos del texto. Ordenar el par equivale a comparar primero la mitad izquierda y sólo en caso de empate la derecha.
+Cada ronda ordena pares $(\operatorname{rank}_j(i),\ \operatorname{rank}_j(i+2^j))$. Un radix sort lo hace en dos pasadas:
 
-## Análisis de complejidad
+1. Ordenar por la **segunda** componente.
+2. Ordenar de forma **estable** por la **primera** componente.
 
-Hay $O(\lg n)$ rondas. Ordenar pares por comparaciones gasta $O(n\lg n)$ por ronda y $O(n\lg^2 n)$ total. Con dos pasadas estables de counting sort sobre rangos enteros en $[0,n)$, cada ronda cuesta $O(n)$ y el total $O(n\lg n)$. Buscar con comparaciones directas cuesta $O(m\lg n)$ porque una comparación contra un sufijo puede inspeccionar hasta $m$ caracteres.
+Al terminar la segunda pasada, el orden lexicográfico de pares queda correcto porque los empates de la primera componente conservan el orden de la segunda.
 
-### Cómo justificar la cota en el examen
+Para que la segunda pasada sea $O(n)$ con un counting sort, la primera componente debe ser un entero en $[0,n)$. Por eso los rangos se **renumeran** tras cada ronda.
 
-Hay dos logaritmos distintos cuando se usa ordenamiento por comparaciones: $lg n$ rondas y $lg n$ de costo promedio por elemento al ordenar una ronda. Ordenar por rangos enteros con dos pasadas estables elimina el segundo factor. La búsqueda de patrón tiene otro cálculo: dos fronteras y $O(lg n)$ comparaciones por frontera, con hasta $m$ caracteres inspeccionados en cada comparación directa.
+### La segunda componente sale gratis
 
-## Tabla de complejidad
+No hace falta ordenar por la segunda componente. Si la lista $a$ de índices ya está ordenada por $\operatorname{rank}_j$, la segunda componente de $i$ es $\operatorname{rank}_j(i+2^j)$, y basta recorrer $a$ y tomar $i = a[t]-2^j$ (módulo $n$): ese $i$ aparece en el orden correcto de su segunda componente. Esto evita un segundo ordenamiento.
 
-La tabla superior usa las unidades de costo de la explicación.
+La ronda de longitud 2 del texto `banana$` (con $j = 0$), paso a paso:
 
-## Ejemplos
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Recorremos la lista ordenada por rango 1 y restamos 1 a cada índice (módulo 7). Así la segunda componente de cada i ya aparece en orden creciente, sin ordenar nada. Los empates de la segunda componente quedan en el orden en que aparecen.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:5},{value:4},{value:2},{value:0},{value:6},{value:3},{value:1}] },
+        { id: "seg", label: "2.ª comp.", cells: [{value:0},{value:1},{value:1},{value:1},{value:2},{value:3},{value:3}] },
+        { id: "pri", label: "1.ª comp.", cells: [{value:1},{value:3},{value:3},{value:2},{value:0},{value:1},{value:1}] },
+      ],
+      caption: "Fila 2.ª comp.: rango 1 del índice siguiente. Fila 1.ª comp.: rango 1 del índice actual.",
+    },
+    {
+      note: "Counting sort estable por la primera componente. Dentro de cada grupo de igual primera componente se conserva el orden de la pasada anterior. El resultado ordena los pares de dos caracteres.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "seg", label: "2.ª comp.", cells: [{value:2},{value:0},{value:3},{value:3},{value:1},{value:1},{value:1}] },
+        { id: "pri", label: "1.ª comp.", cells: [{value:0},{value:1},{value:1},{value:1},{value:2},{value:3},{value:3}] },
+      ],
+      spans: [
+        { id: "g1", row: "pri", from: 1, to: 3, label: "a" },
+        { id: "g3", row: "pri", from: 5, to: 6, label: "n" },
+      ],
+      caption: "Pares ordenados: $, a$, an, an, ba, na, na. Los rangos nuevos son los del nivel de longitud 2.",
+    },
+  ],
+}} />
 
-[Casos resueltos](/structures/suffix-array/examples) y [preguntas con pistas](/structures/suffix-array/exercises).
+Los grupos de rango igual son **contiguos** en la lista ordenada: por eso la pasada de conteo los puede partir en la ronda siguiente. Aquí el grupo de `a` se parte en `a$` y `an`; el grupo de `n` sigue junto porque `na$` y `nana$` empatan en dos caracteres.
 
-## Comparación con estructuras relacionadas
+### Cómo se parten los grupos en cada ronda
 
-KMP recorre el texto para cada patrón. Un suffix array paga el orden inicial y permite buscar intervalos de patrones repetidamente.
+Cada ronda parte los grupos de la anterior y nunca los une. En `banana$`:
+
+- Ronda 1 (longitud 1): grupos `$`, `a` (posiciones 5,3,1), `b`, `n` (4,2).
+- Ronda 2 (longitud 2): el grupo `a` se parte en `a$` y `an`; el grupo `n` sigue junto.
+- Ronda 3 (longitud 4): el grupo `an` se parte en `anan` y `ana$`. Todos distintos.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Ronda de longitud 1, en orden SA. Los grupos de rango igual son bloques contiguos: el de a (rango 1) ocupa las posiciones 1 a 3 de la lista y el de n (rango 3) las posiciones 5 y 6.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "pre", label: "prefijo", cells: [{value:"$"},{value:"a"},{value:"a"},{value:"a"},{value:"b"},{value:"n"},{value:"n"}] },
+        { id: "rk", label: "rango", cells: [{value:0},{value:1},{value:1},{value:1},{value:2},{value:3},{value:3}] },
+      ],
+      spans: [
+        { id: "ga", row: "rk", from: 1, to: 3, label: "a" },
+        { id: "gn", row: "rk", from: 5, to: 6, label: "n" },
+      ],
+    },
+    {
+      note: "Ronda de longitud 2, en el mismo orden SA. El grupo a se parte: a$ queda sola en la posición 1 y an en las posiciones 2 y 3. El grupo n sigue junto porque na y na tienen el mismo prefijo de dos caracteres.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "pre", label: "prefijo", cells: [{value:"$"},{value:"a$"},{value:"an"},{value:"an"},{value:"ba"},{value:"na"},{value:"na"}] },
+        { id: "rk", label: "rango", cells: [{value:0},{value:1},{value:2},{value:2},{value:3},{value:4},{value:4}] },
+      ],
+      spans: [
+        { id: "gan", row: "rk", from: 2, to: 3, label: "an" },
+        { id: "gna", row: "rk", from: 5, to: 6, label: "na" },
+      ],
+    },
+    {
+      note: "Ronda de longitud 4. Todos los rangos son distintos, así que no hay grupos que partir. El grupo an de la ronda anterior se partió en anan y ana$; el de na en na$ y nana. Ya no es necesario seguir.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "pre", label: "prefijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anan"},{value:"bana"},{value:"na$"},{value:"nana"}] },
+        { id: "rk", label: "rango", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+      ],
+      caption: "Ninguna frontera nueva. El rango final es la posición en SA.",
+    },
+  ],
+}} />
+
+### Pseudocódigo en prosa
+
+1. Clasificar cada carácter: $\operatorname{rank}_0$. Ordenar los índices por rango; $\text{len} = 1$.
+2. Mientras $\text{len} < n$ y haya rangos repetidos:
+   1. Para cada $t$, calcular el índice $i = a[t] - \text{len}$ (módulo $n$): así la lista queda ordenada por la segunda componente.
+   2. Counting sort estable de esa lista por $\operatorname{rank}$ (primera componente).
+   3. Renumerar: nuevo rango $=$ anterior $+ 1$ si el par cambia, o el mismo si no cambia.
+   4. $\text{len} \leftarrow 2\cdot\text{len}$.
+3. Devolver $a$.
+
+## De dónde sale la cota
+
+La construcción tiene $\lceil \lg n \rceil$ rondas porque la longitud se duplica. Cada ronda hace un counting sort de $n$ elementos con llaves en $[0,n)$, que cuesta $O(n)$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cada ronda duplica la longitud de prefijo conocida. Con n = 7 la última ronda es la de longitud 4, y 8 ≥ n: no hace falta otra.",
+      rows: [
+        { id: "len", label: "longitud", cells: [{value:1,tag:"ronda 0"},{value:2,tag:"ronda 1"},{value:4,tag:"ronda 2"},{value:8,tag:"fin"}], },
+      ],
+      caption: "Tres rondas para n = 7: $\\lceil \\lg 7 \\rceil = 3$. Cada una cuesta $O(n)$.",
+    },
+  ],
+}} />
+
+$$T(n) = \lceil \lg n \rceil \cdot O(n) = O(n\lg n)$$
+
+Si cada ronda usara ordenación por comparaciones, costaría $O(n\lg n)$ y el total sería $O(n\lg^2 n)$. El counting sort elimina ese segundo logaritmo.
+
+## Búsqueda de un patrón
+
+Como los sufijos que empiezan con $P$ son contiguos, la respuesta es un intervalo $[\,l, r\,)$ en $SA$. Se encuentran con **dos búsquedas binarias**:
+
+1. Primera frontera: el menor $k$ tal que el sufijo $S[SA[k]..]$ es $\succeq P$.
+2. Segunda frontera: el menor $k$ tal que el sufijo **no empieza por $P$** y es $\succ P$.
+
+Cada comparación compara $P$ con un prefijo del sufijo de longitud $m$, así que cuesta $O(m)$. Hay $O(\lg n)$ comparaciones por frontera:
+
+$$O(m\lg n)$$
+
+Contar ocurrencias es $r - l$. Listarlas cuesta además $O(\text{ocurrencias})$. La lámina menciona que con información LCP se baja a $O(m + \lg n)$; esa mejora queda para otra estructura.
+
+Ejemplo con $P = $ `ana`. Búsqueda de la primera frontera, sobre el intervalo $[0,7)$:
+
+1. $\text{lo}=0$, $\text{hi}=7$, $\text{mid}=3$: `anana$` empieza por `ana`, así que es $\succeq P$. Se queda a la izquierda: $\text{hi}=3$.
+2. $\text{mid}=1$: `a$` es menor que `ana`, porque en el segundo carácter `$` es menor que `n`. Se va a la derecha: $\text{lo}=2$.
+3. $\text{mid}=2$: `ana$` empieza por `ana`. $\text{hi}=2$. La primera frontera es $l=2$.
+
+Segunda frontera, sobre $[2,7)$:
+
+1. $\text{mid}=4$: `banana$` no empieza por `ana` y es $\succ P$. $\text{hi}=4$.
+2. $\text{mid}=3$: `anana$` sí empieza por `ana`. $\text{lo}=4$. La segunda frontera es $r=4$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Punto de partida. Los sufijos están ordenados. Buscamos ana: buscamos el primer índice que no es menor que ana.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+      ],
+    },
+    {
+      note: "Primera frontera: $ y a$ son menores que ana, así que quedan a la izquierda. ana$ es el primer sufijo que es mayor o igual que el patrón.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6,state:"muted"},{value:5,state:"muted"},{value:3,state:"marked"},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$",state:"muted"},{value:"a$",state:"muted"},{value:"ana$",state:"marked"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+      ],
+      caption: "Primera frontera: rango 2.",
+    },
+    {
+      note: "Segunda frontera: anana$ y ana$ empiezan por ana. banana$ no empieza por ana y es mayor que el patrón, así que es el primer sufijo fuera del intervalo.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3,state:"answer"},{value:1,state:"answer"},{value:0,state:"marked"},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$",state:"answer"},{value:"anana$",state:"answer"},{value:"banana$",state:"marked"},{value:"na$"},{value:"nana$"}] },
+      ],
+      caption: "Segunda frontera: rango 4 (exclusivo).",
+    },
+    {
+      note: "El intervalo es [2,4). Sus índices de texto son 3 y 1: las ocurrencias de ana en banana. Los rangos del intervalo y las posiciones del texto son coordenadas distintas.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3,state:"answer"},{value:1,state:"answer"},{value:0},{value:4},{value:2}] },
+      ],
+      spans: [ { id: "ocu", row: "sa", from: 2, to: 3, label: "ocurrencias" } ],
+      caption: "Posiciones en el texto: 3 y 1.",
+    },
+  ],
+}} />
+
+## Errores típicos y casos límite
+
+- **Confundir rango con posición.** $SA[k]$ es la posición en el texto y $k$ es el rango en el orden. Con $SA = [6,5,3,1,0,4,2]$, el rango $2$ corresponde a la posición $3$.
+- **Olvidar el centinela.** Sin `$`, `a` sería prefijo de `ana` y el orden entre ambos quedaría mal definido. El centinela debe ser único y menor que cualquier letra.
+- **Patrón ausente.** Si las dos fronteras coinciden, el intervalo está vacío. Ejemplo derivado: buscar `anab` en `banana$` deja las dos fronteras en el rango 3 (`anana$` es mayor que `anab`, y `ana$` es menor).
+- **Texto con todas las letras iguales.** Como en `aaaa$`, las rondas no separan nada hasta longitud grande: el número de rondas sigue siendo $\lceil \lg n \rceil$ como máximo, no $n$.
+
+## Más allá de $O(n\lg n)$
+
+La lámina cierra con dos algoritmos lineales: DC3 (que se verá al final de la sesión) y SA-IS, que sólo se menciona. Para casi todo problema de competencia, $O(n\lg n)$ basta.
+
+> **Nota de apoyo** (no está en las láminas; sólo en la implementación de referencia `sais.cpp`): SA-IS clasifica cada posición como tipo **S** si su sufijo es menor que el siguiente, y tipo **L** si no. Un sufijo **LMS** es un S precedido de L. Los LMS se ordenan primero (recursivamente), y de ellos se inducen el resto de sufijos. En `banana$` los tipos son los de la siguiente figura.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tipo de cada posición: L si el sufijo es mayor que el siguiente (b > a, n > a), S si es menor (a < n). El último $ es S por convención.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"b",tag:"0"},{value:"a",tag:"1"},{value:"n",tag:"2"},{value:"a",tag:"3"},{value:"n",tag:"4"},{value:"a",tag:"5"},{value:"$",tag:"6"}] },
+        { id: "tipo", label: "tipo", cells: [{value:"L"},{value:"S"},{value:"L"},{value:"S"},{value:"L"},{value:"L"},{value:"S"}] },
+      ],
+    },
+    {
+      note: "Los LMS son las S precedidas por L: posiciones 1, 3 y 6. Se ordenan primero; los demás sufijos se obtienen por inducción a partir de ellos.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"b",tag:"0"},{value:"a",tag:"1"},{value:"n",tag:"2"},{value:"a",tag:"3"},{value:"n",tag:"4"},{value:"a",tag:"5"},{value:"$",tag:"6"}] },
+        { id: "tipo", label: "tipo", cells: [{value:"L"},{value:"S",state:"marked"},{value:"L"},{value:"S",state:"marked"},{value:"L"},{value:"L"},{value:"S",state:"marked"}] },
+      ],
+      caption: "LMS = posiciones 1, 3 y 6. Su orden relativo define el orden de todo el arreglo.",
+    },
+  ],
+}} />
+
+## Ejemplos y ejercicios
+
+[Casos resueltos](/structures/suffix-array/examples) con diagramas paso a paso, y [preguntas con pistas](/structures/suffix-array/exercises).
+
+## Conexión
+
+- Antes: el orden lexicográfico y la búsqueda binaria sobre arreglos ordenados.
+- Después: el arreglo LCP (Kasai) y DC3 viven en sus propias estructuras: [Kasai](/structures/kasai-lcp) y [DC3](/structures/dc3).
+- Comparación: KMP recorre el texto en cada búsqueda; el suffix array paga el orden una vez y busca cualquier patrón con intervalos.
 
 ## Prueba de dominio
 
 [Lista de comprobación](/structures/suffix-array/mastery-check).
 
-*Fuente de clase: Sem13_Strings_II.pdf · pp. 8-19.*
+*Fuente de clase: Sem13_Strings_II.pdf · pp. 1–19. El tipo S/L y LMS de la nota de apoyo viene de sais.cpp.*

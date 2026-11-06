@@ -1,0 +1,156 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Todos los casos parten del estado de clase, $u = 16$ y $S = \{2,3,4,5,7,14,15\}$, salvo el primero, que usa un universo más pequeño. Cada figura sigue el mismo orden: primero el prefijo y el sufijo, después la rama que se recorre, al final la reconstrucción.
+
+## Mínimo: universo 4
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*
+
+Con $u = 4$ los clústeres tienen tamaño 2 y el resumen también tiene tamaño 2. El conjunto es $S = \{1, 3\}$, con $\min = 1$ y $\max = 3$. El 1 vive en los extremos, así que el único elemento de un clúster es el 3, en el clúster 1.
+
+Para Sucesor(1): $x = 1 = \langle 0, 1\rangle$. No es menor que el mínimo ni mayor o igual que el máximo, así que hay que buscar. El clúster 0 está vacío, de modo que se consulta el resumen: el siguiente clúster ocupado tras 0 es el 1. Su mínimo local es 1, y la llave global es $2\cdot 1 + 1 = 3$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Universo u=4 con S = 1, 3. Los extremos guardan min 1 y max 3; el clúster 0 está vacío y el clúster 1 contiene el 3.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 1"},{value:"max 3"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:1},{value:"·"},{value:3}] },
+        { id: "s", label: "Resumen", cells: [{value:"·",tag:"0"},{value:1,tag:"1"}] },
+      ],
+      spans: [
+        { id: "k0", row: "u", from: 0, to: 1, label: "cluster 0" },
+        { id: "k1", row: "u", from: 2, to: 3, label: "cluster 1" },
+      ],
+      caption: "Entrada: Sucesor(1).",
+    },
+    {
+      note: "x = 1 = ⟨0,1⟩. Mirar el clúster 0: su máximo es nulo, así que no hay candidato dentro. Se recurre sobre el resumen para hallar el siguiente clúster ocupado tras c = 0.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 1"},{value:"max 3"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:1,state:"active"},{value:"·"},{value:3}] },
+        { id: "s", label: "Resumen", cells: [{value:"·",tag:"0",state:"active"},{value:1,tag:"1",state:"answer"}] },
+      ],
+      spans: [
+        { id: "k0", row: "u", from: 0, to: 1, label: "cluster 0", state: "marked" },
+        { id: "k1", row: "u", from: 2, to: 3, label: "cluster 1" },
+      ],
+      caption: "Resumen: el siguiente grupo ocupado tras 0 es 1.",
+    },
+    {
+      note: "El mínimo del clúster 1 es 1 en local, así que la llave es 2·1+1 = 3. El sucesor de 1 es 3.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 1"},{value:"max 3"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:1},{value:"·"},{value:3,state:"answer"}] },
+      ],
+      spans: [
+        { id: "k1", row: "u", from: 2, to: 3, label: "cluster 1", state: "marked" },
+      ],
+      caption: "Resultado: 3.",
+    },
+  ],
+}} />
+
+## Normal: predecesor que cruza un límite de clúster
+
+Para Predecesor(14), $14 = \langle 3, 2\rangle$. El clúster 3 tiene mínimo local 2, y $2 \le 2$, luego no hay anterior dentro. El resumen $\{0,1,3\}$ indica que el clúster ocupado anterior es el 1, y su máximo local es 3. El resultado es $4\cdot 1 + 3 = 7$.
+
+Aquí la recursión sobre el resumen es la que cruza el límite, y se toma el **máximo** del clúster encontrado.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado de clase. Predecesor(14) cae en el clúster 3, cuyo mínimo local es 2.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+      ],
+      caption: "x = 14 = ⟨3,2⟩.",
+    },
+    {
+      note: "Dentro del clúster 3, el mínimo local es 2 y la posición buscada es 2. No hay un sufijo estrictamente menor, así que la rama del clúster no sirve.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14,state:"active"},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2",state:"muted"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+      ],
+      spans: [
+        { id: "k3", row: "u", from: 12, to: 15, label: "cluster 3", state: "marked" },
+      ],
+      caption: "Mínimo local 2: nada menor dentro del clúster.",
+    },
+    {
+      note: "Recurre sobre el resumen: el predecesor de c = 3 entre los clústeres ocupados es c′ = 1.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14,state:"active"},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"answer"},{value:"·",tag:"2"},{value:3,tag:"3",state:"active"}] },
+        { id: "c3", label: "Cluster 3", cells: [{value:"·",tag:"0"},{value:"·",tag:"1"},{value:2,tag:"2",state:"muted"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+      ],
+      spans: [
+        { id: "k3", row: "u", from: 12, to: 15, label: "cluster 3", state: "marked" },
+      ],
+      caption: "Predecesor de 3 en el resumen: 1.",
+    },
+    {
+      note: "Ahora se toma el máximo del clúster 1, que es 3. Eso es la respuesta local; la llave global es 4·1+3 = 7.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7,state:"answer"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+        { id: "s", label: "Resumen", cells: [{value:0,tag:"0"},{value:1,tag:"1",state:"active"},{value:"·",tag:"2"},{value:3,tag:"3"}] },
+        { id: "c1", label: "Cluster 1", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:"·",tag:"2"},{value:3,tag:"3",state:"answer"}] },
+      ],
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1", state: "marked" },
+      ],
+      caption: "Máximo local de cluster 1 = 3.",
+    },
+    {
+      note: "Resultado: Predecesor(14) = 7, que es el mayor elemento de S menor que 14.",
+      rows: [
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7,state:"answer"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+      ],
+      spans: [
+        { id: "k1", row: "u", from: 4, to: 7, label: "cluster 1", state: "marked" },
+      ],
+      caption: "Resultado: 7.",
+    },
+  ],
+}} />
+
+## Límite: sucesor del máximo
+
+Para Sucesor(15), $x = 15 = V.\max$. La primera comparación de la operación ya responde: como $x \ge V.\max$, el resultado es nulo. No hay que mirar clústeres ni resumen, y eso ocurre en $O(1)$ en cualquier nivel de la recursión.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado de clase. max = 15 y la consulta es Sucesor(15).",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15}] },
+      ],
+      caption: "Entrada: Sucesor(15).",
+    },
+    {
+      note: "x = 15 es mayor o igual que V.max. La primera comparación decide: no hay sucesor y la operación devuelve nulo sin recursión.",
+      rows: [
+        { id: "e", label: "Extremos", cells: [{value:"min 2"},{value:"max 15",state:"answer"}] },
+        { id: "u", label: "S", cells: [{value:"·"},{value:"·"},{value:2},{value:3},{value:4},{value:5},{value:"·"},{value:7},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:"·"},{value:14},{value:15,state:"active"}] },
+      ],
+      caption: "x ≥ max: resultado nulo.",
+    },
+  ],
+}} />
+

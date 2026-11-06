@@ -3,7 +3,7 @@ title: Etiquetado de listas y mantenimiento del orden
 type: structure
 week: week-11
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites:
 - packed-memory-array
 complexity:

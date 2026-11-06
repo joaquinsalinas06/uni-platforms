@@ -5,151 +5,367 @@ title: "Y-fast trie"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-X-fast acelera la búsqueda, pero materializar los prefijos de todas las llaves ocupa demasiado espacio.
+El [X-fast trie](/structures/x-fast-trie) responde predecesor y sucesor en $O(\lg w)$, pero paga caro en espacio. Cada llave guarda sus $w$ prefijos en tablas hash, así que con $n$ llaves hay $O(nw)$ entradas. Con $n=10^9$ y $w=64$ eso son unas $6\cdot10^{10}$ entradas para sólo $10^9$ llaves. Además, insertar o borrar cuesta $\Theta(w)$, porque hay que tocar todos los prefijos de la llave.
 
-## Intuición
+La pregunta de la clase es si se puede conservar la consulta rápida del X-fast y bajar el espacio a lineal. La respuesta es una **indirección**: no indexar todas las llaves, sino un representante por grupo de llaves vecinas.
 
-Divide las llaves ordenadas en grupos de tamaño del orden de $w$. Indexa sólo un representante por grupo con X-fast. Un árbol balanceado resuelve la consulta local.
+## Intuición dibujada
+
+Parte las llaves ordenadas en **grupos contiguos** de tamaño del orden de $w$. Cada grupo vive en su propio árbol de búsqueda balanceado (BST). Sólo un **representante** por grupo entra al X-fast. Así el índice crece con el número de grupos, no con el número de llaves.
+
+El primer diagrama muestra un conjunto pequeño con $w=4$: las llaves van en una fila ordenada, los tramos marcan los grupos y cada representante apunta al primer elemento de su grupo. Los grupos tienen entre 2 y 8 llaves, es decir, entre $w/2$ y $2w$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "S = {1, 3, 4, 6, 9, 10, 12, 14, 15} con w = 4. Se parte en contiguos de tamaño permitido: G0 tiene 4 llaves y G1 tiene 5. Ambos están entre w/2 = 2 y 2w = 8.",
+      rows: [
+        { id: "rep", label: "Representantes (X-fast)", cells: [{id: "r0", value: 1}, {id: "r1", value: 9}] },
+        { id: "keys", label: "Llaves ordenadas", cells: [
+          {id: "k0", value: 1}, {id: "k1", value: 3}, {id: "k2", value: 4}, {id: "k3", value: 6},
+          {id: "k4", value: 9}, {id: "k5", value: 10}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [
+        { id: "G0", row: "keys", from: 0, to: 3, label: "G0 · rep 1" },
+        { id: "G1", row: "keys", from: 4, to: 8, label: "G1 · rep 9" },
+      ],
+      links: [
+        { from: "r0", to: "k0", kind: "pointer", label: "rep" },
+        { from: "r1", to: "k4", kind: "pointer", label: "rep" },
+      ],
+      caption: "Grupos disjuntos y ordenados: cada uno es el intervalo [rj, rj+1).",
+    },
+    {
+      note: "Sucesor de x = 7. El X-fast busca el mayor representante menor o igual que 7: es 1. Ese índice elige G0 sin tocar las llaves de G1.",
+      rows: [
+        { id: "rep", label: "Representantes (X-fast)", cells: [{id: "r0", value: 1, state: "active"}, {id: "r1", value: 9, state: "idle"}] },
+        { id: "keys", label: "Llaves ordenadas", cells: [
+          {id: "k0", value: 1}, {id: "k1", value: 3}, {id: "k2", value: 4}, {id: "k3", value: 6},
+          {id: "k4", value: 9}, {id: "k5", value: 10}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [
+        { id: "G0", row: "keys", from: 0, to: 3, label: "G0 · rep 1", state: "active" },
+        { id: "G1", row: "keys", from: 4, to: 8, label: "G1 · rep 9" },
+      ],
+      links: [
+        { from: "r0", to: "k0", kind: "pointer", label: "rep" },
+        { from: "r1", to: "k4", kind: "pointer", label: "rep" },
+      ],
+      caption: "El índice respondió 1: el grupo elegido es G0.",
+    },
+    {
+      note: "Dentro de G0 se busca una llave mayor que 7. La mayor del grupo es 6, así que no hay candidato local: 1, 3, 4 y 6 quedan descartados. El sucesor está en el grupo siguiente.",
+      rows: [
+        { id: "rep", label: "Representantes (X-fast)", cells: [{id: "r0", value: 1, state: "idle"}, {id: "r1", value: 9, state: "idle"}] },
+        { id: "keys", label: "Llaves ordenadas", cells: [
+          {id: "k0", value: 1, state: "muted"}, {id: "k1", value: 3, state: "muted"}, {id: "k2", value: 4, state: "muted"}, {id: "k3", value: 6, state: "muted"},
+          {id: "k4", value: 9, state: "answer"}, {id: "k5", value: 10}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [
+        { id: "G0", row: "keys", from: 0, to: 3, label: "G0 sin candidato" },
+        { id: "G1", row: "keys", from: 4, to: 8, label: "G1 · mínimo 9" },
+      ],
+      caption: "Sucesor de 7: el mínimo de G1, que es 9.",
+    },
+    {
+      note: "Predecesor de 7, el caso simétrico. El mismo índice elige G0, y allí la mayor llave menor que 7 es 6. No hace falta cruzar de grupo.",
+      rows: [
+        { id: "rep", label: "Representantes (X-fast)", cells: [{id: "r0", value: 1, state: "active"}, {id: "r1", value: 9, state: "idle"}] },
+        { id: "keys", label: "Llaves ordenadas", cells: [
+          {id: "k0", value: 1}, {id: "k1", value: 3}, {id: "k2", value: 4}, {id: "k3", value: 6, state: "answer"},
+          {id: "k4", value: 9}, {id: "k5", value: 10}, {id: "k6", value: 12}, {id: "k7", value: 14}, {id: "k8", value: 15} ] },
+      ],
+      spans: [
+        { id: "G0", row: "keys", from: 0, to: 3, label: "G0 · rep 1", state: "active" },
+        { id: "G1", row: "keys", from: 4, to: 8, label: "G1 · rep 9" },
+      ],
+      links: [
+        { from: "r0", to: "k0", kind: "pointer", label: "rep" },
+        { from: "r1", to: "k4", kind: "pointer", label: "rep" },
+      ],
+      caption: "Predecesor de 7: la mayor llave menor que 7 dentro de G0, que es 6.",
+    },
+  ],
+}} />
 
 ## Estructura interna
 
-Los grupos cubren intervalos consecutivos. En la escena cada máximo representa su grupo. Para responder un predecesor, si el grupo elegido no tiene candidato, se considera el máximo del grupo anterior. La representación puede usar representantes estables o muestreados según la variante.
-
-### Por qué el representante es una frontera
-
-Si representas cada grupo por su máximo, el primero que alcanza $q$ ubica el único grupo que puede contener una llave igual a $q$. También es el primer lugar donde vale la pena buscar un vecino cercano. El grupo puede no contener predecesor, aunque su máximo sí alcance a la consulta: su mínimo podría estar por encima de $q$. En ese caso cualquier grupo posterior queda aún más lejos. El candidato correcto es el extremo del grupo previo. Para un sucesor estricto, una coincidencia en el máximo del grupo obliga a considerar el siguiente grupo.
-
-### Por qué el umbral importa para el costo
-
-Dividir cada vez que entra una llave sería caro. La construcción deja a los grupos fluctuar entre tamaños permitidos y se reorganiza sólo al cruzar un umbral. Al dividir un grupo grande, ambas mitades quedan lejos del umbral de desborde. Al combinar grupos pequeños, se busca recuperar una holgura comparable. Eso hace que cambios locales ordinarios financien la próxima operación que sí modifica representantes.
-
-El índice superior crece con el número de grupos, no con el número de llaves de cada uno. El trabajo local conserva todas las llaves en árboles pequeños. Es la misma separación que debes señalar al explicar por qué el espacio deja de ser proporcional a $nw$.
-
-## Operaciones
-
-Busca el grupo candidato mediante el índice. Resuelve el vecino local. Una actualización ordinaria toca el grupo. Si un grupo se vuelve demasiado grande, lo divide y actualiza el índice de representantes. Si queda demasiado pequeño, combina o redistribuye con un vecino.
-
-### Buscar en el grupo y cruzar al vecino
-
-*(Traza derivada de la explicación de clase.)*
+El índice superior es un X-fast trie de representantes. Con $w=4$, los representantes 1 y 9 se escriben en binario como 0001 y 1001. El X-fast guarda cada prefijo de esas llaves en una tabla hash por nivel, y en la figura se dibuja como un trie para que se vea qué prefijos existen. Este diagrama sólo muestra la forma; los detalles de la consulta por longitud de prefijo están en [X-fast trie](/structures/x-fast-trie).
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Cada máximo resume un grupo contiguo.",
-      arrays: [
-        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-1", "label": "G0", "row": 1, "cells": ["1", "4", "7"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-2", "label": "G1", "row": 2, "cells": ["10", "13", "15"], "states": ["idle", "idle", "idle"]},
-        {"id": "row-3", "label": "G2", "row": 3, "cells": ["18", "20", "23"], "states": ["idle", "idle", "idle"]},
+      note: "Sólo está el representante 1, cuyo bit a bit es 0001. Su camino de prefijos es 0, 00, 000 y la hoja 0001. Cada prefijo es una entrada de la tabla de ese nivel.",
+      nodes: [
+        {"id": "e", "value": "ε", "parent": null},
+        {"id": "p0", "value": "0", "parent": "e"},
+        {"id": "p00", "value": "00", "parent": "p0"},
+        {"id": "p000", "value": "000", "parent": "p00"},
+        {"id": "L1", "value": "0001", "parent": "p000", "state": "answer"},
       ],
-      bridges: [],
     },
     {
-      note: "Consulta 14. El primer máximo que alcanza 14 es 15.",
-      arrays: [
-        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["muted", "answer", "idle"]},
-        {"id": "row-1", "label": "G1", "row": 1, "cells": ["10", "13", "14", "15"], "states": ["idle", "idle", "marked", "idle"]},
+      note: "Se agrega el representante 9, con bits 1001. Comparte sólo la raíz ε, porque su primer bit es 1. Ahora el X-fast tiene dos ramas y cada una aporta prefijos distintos.",
+      nodes: [
+        {"id": "e", "value": "ε", "parent": null},
+        {"id": "p0", "value": "0", "parent": "e"},
+        {"id": "p00", "value": "00", "parent": "p0"},
+        {"id": "p000", "value": "000", "parent": "p00"},
+        {"id": "L1", "value": "0001", "parent": "p000"},
+        {"id": "p1", "value": "1", "parent": "e"},
+        {"id": "p10", "value": "10", "parent": "p1"},
+        {"id": "p100", "value": "100", "parent": "p10"},
+        {"id": "L9", "value": "1001", "parent": "p100", "state": "answer"},
       ],
-      bridges: [],
-    },
-    {
-      note: "El candidato local es 13.",
-      arrays: [
-        {"id": "row-0", "label": "G1", "row": 0, "cells": ["10", "13", "14", "15"], "states": ["idle", "answer", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Consulta 9. El índice selecciona el mismo grupo, pero el mínimo 10 es demasiado grande.",
-      arrays: [
-        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["idle", "answer", "idle"]},
-        {"id": "row-1", "label": "G1", "row": 1, "cells": ["9", "10", "13", "15"], "states": ["marked", "muted", "muted", "muted"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Cruza al grupo anterior y usa su máximo, 7.",
-      arrays: [
-        {"id": "row-0", "label": "G0", "row": 0, "cells": ["1", "4", "7"], "states": ["idle", "idle", "answer"]},
-        {"id": "row-1", "label": "G1", "row": 1, "cells": ["9", "10", "13", "15"], "states": ["marked", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
     },
   ],
 }} />
 
-### Una división cambia el índice
+## Definición y notación
 
-*(Traza derivada de la explicación de clase.)*
+| Símbolo | Significado | Qué pasa si crece |
+| --- | --- | --- |
+| $w$ | bits de la llave, con $u = 2^w$ | el X-fast gana niveles y cada grupo tiene más llaves permitidas |
+| $n$ | número de llaves guardadas | el número de grupos crece, pero no el tamaño de cada grupo |
+| $r_j$ | representante del grupo $j$, fijado al crearlo (su mínimo en ese momento) | cambia sólo cuando el grupo se parte o se fusiona |
+| $G_j$ | grupo $\{x \in S \mid r_j \le x < r_{j+1}\}$ | su tamaño se mantiene entre $w/2$ y $2w$ |
+
+Dos detalles que el estudiante debe fijar:
+
+- El representante es un **valor fijo**. Si la llave $r_j$ se elimina, sigue en el índice hasta la próxima partición o fusión, y el intervalo $[r_j, r_{j+1})$ sigue definiendo al grupo.
+- Por eso el grupo puede no contener a $r_j$ como llave viva. Lo que importa es que sus llaves caigan en el intervalo.
+
+### Invariante de tamaño
+
+Cada grupo mantiene entre $w/2$ y $2w$ llaves. Cuando se viola, se reorganiza:
+
+1. Si un grupo llega a $2w+1$ llaves, se parte en dos grupos de tamaño $w$ y $w+1$. El índice gana el representante del grupo nuevo.
+2. Si un grupo baja a menos de $w/2$, se fusiona con un vecino. Si el resultado supera $1{,}5w$, se parte por la mitad.
+
+Las dos reglas empujan a los grupos hacia el centro del rango permitido. Esa holgura es lo que luego evita reparaciones frecuentes.
+
+## Operaciones paso a paso
+
+### Sucesor y predecesor
+
+Un grupo de tamaño $\Theta(w)$ cabe en un BST, y el X-fast sólo guarda los representantes. La consulta se divide en dos búsquedas:
+
+1. Usa el X-fast para encontrar $r_j$, el mayor representante menor o igual que $x$. Cuesta $O(\lg w)$.
+2. Busca en el BST de $G_j$ la menor llave mayor que $x$. Si existe, ésa es el sucesor.
+3. Si no existe, y si hay grupo siguiente $G_{j+1}$, el sucesor es su mínimo.
+4. Si no hay grupo siguiente, no hay sucesor.
+
+El predecesor es simétrico: busca en $G_j$ la mayor llave menor que $x$, y si no hay, toma el máximo de $G_{j-1}$.
+
+La búsqueda en el BST cuesta $O(\lg w)$, porque el grupo tiene $\Theta(w)$ llaves. En total $O(\lg w) + O(\lg w) = O(\lg w)$.
+
+#### ¿Por qué sólo $G_j$ y $G_{j+1}$?
+
+Si $r_j \le x < r_{j+1}$, el sucesor no puede estar en $G_{j+2}$ ni más lejos. Todas las llaves de $G_{j+1}$ son al menos $r_{j+1} > x$, así que el mínimo de $G_{j+1}$ ya es un candidato válido y cualquier llave posterior es mayor que él. Si $G_j$ no tiene nada mayor que $x$, el sucesor es ese mínimo, y si $G_{j+1}$ no existe, no hay sucesor.
+
+#### Búsqueda dentro del grupo
+
+El BST de un grupo es un árbol balanceado normal. El segundo diagrama muestra la búsqueda del sucesor de 13 en $G_1 = \{9, 10, 12, 14, 15\}$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Modelo pequeño con capacidad pedagógica cuatro. El grupo de máximo 15 está lleno.",
-      arrays: [
-        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["idle", "marked", "idle"]},
-        {"id": "row-1", "label": "Grupo", "row": 1, "cells": ["10", "11", "13", "15"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "BST de G1 con 5 llaves. Buscamos el sucesor de 13. En la raíz 12, la llave es menor que 13, así que la respuesta no está a la izquierda: se baja por la derecha.",
+      nodes: [
+        {"id": "r", "value": "12", "parent": null, "state": "active"},
+        {"id": "a", "value": "10", "parent": "r"},
+        {"id": "b", "value": "9", "parent": "a"},
+        {"id": "c", "value": "14", "parent": "r"},
+        {"id": "d", "value": "15", "parent": "c"},
       ],
-      bridges: [],
     },
     {
-      note: "Inserta 12. El grupo pasa a cinco entradas.",
-      arrays: [
-        {"id": "row-0", "label": "Grupo", "row": 0, "cells": ["10", "11", "12", "13", "15"], "states": ["idle", "idle", "active", "idle", "idle"]},
+      note: "En 14 la llave es mayor que 13: se guarda como candidato y se intenta bajar a la izquierda. No hay hijo izquierdo, así que 14 es la menor llave mayor que 13 dentro del grupo.",
+      nodes: [
+        {"id": "r", "value": "12", "parent": null},
+        {"id": "a", "value": "10", "parent": "r", "state": "muted"},
+        {"id": "b", "value": "9", "parent": "a", "state": "muted"},
+        {"id": "c", "value": "14", "parent": "r", "state": "answer"},
+        {"id": "d", "value": "15", "parent": "c", "state": "muted"},
       ],
-      bridges: [],
-    },
-    {
-      note: "Divide los cinco elementos en dos intervalos consecutivos.",
-      arrays: [
-        {"id": "row-0", "label": "Grupo izquierdo", "row": 0, "cells": ["10", "11"], "states": ["idle", "answer"]},
-        {"id": "row-1", "label": "Grupo derecho", "row": 1, "cells": ["12", "13", "15"], "states": ["idle", "idle", "answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El índice incorpora el representante 11. El 15 conserva el grupo de la derecha.",
-      arrays: [
-        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "11", "15", "23"], "states": ["idle", "answer", "idle", "idle"]},
-      ],
-      bridges: [],
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+### Cuando el grupo elegido no tiene candidato
 
-Para seguir la traza, mantén dos filas separadas. Arriba viven los representantes ordenados. Abajo viven todas las llaves, agrupadas en intervalos consecutivos. Una búsqueda puede leer un representante sin que sea el resultado. Una actualización que altera la partición puede tocar ambos niveles aunque las llaves sigan en su orden original.
+El X-fast elige $G_j$, pero puede que ninguna llave de $G_j$ esté del lado correcto de $x$. En el primer diagrama, el sucesor de 7 cae en $G_0$ porque $r_0 = 1 \le 7$, y sin embargo $G_0$ no tiene llaves mayores que 7. Hay que cruzar al vecino: para el sucesor, $G_{j+1}$ y su **mínimo**; para el predecesor, $G_{j-1}$ y su **máximo**. Esa es la trampa típica de la consulta, y el primer diagrama la muestra en el sucesor de 7 y en el predecesor.
 
-## Análisis de complejidad
+### Partir un grupo
 
-Con $O(n/w)$ representantes y $O(w)$ prefijos por representante, el índice ocupa $O(n)$ espacio, usando un caso base directo para un conjunto pequeño. La consulta combina $O(\lg w)$ tiempo esperado en el índice con $O(\lg w)$ en el árbol local. Una reparación estructural puede cambiar prefijos en $O(w)$ tiempo esperado. La agrupación paga esa reparación con las $\Omega(w)$ actualizaciones entre eventos, o con la baja probabilidad de modificar una llave representativa en la variante muestreada. En la variante agrupada de clase, el costo total de actualizar es $O(\lg w)$ amortizado, con el costo esperado del diccionario cuando se usa hashing.
+Un grupo de $2w$ llaves recibe una llave más. Ahora tiene $2w+1$ y se parte en dos grupos de tamaños $w$ y $w+1$. El diagrama usa $w=4$.
 
-### Cómo justificar la cota en el examen
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Antes de insertar, el grupo tiene 8 = 2w llaves: está en el límite permitido. Su representante es 0, el mínimo cuando se creó.",
+      rows: [
+        { id: "grupo", label: "Grupo G", cells: [{value: 0}, {value: 2}, {value: 3}, {value: 5}, {value: 6}, {value: 8}, {value: 11}, {value: 13}] },
+        { id: "indice", label: "Índice", cells: [{id: "i0", value: 0, state: "idle"}] },
+      ],
+      spans: [ { id: "g", row: "grupo", from: 0, to: 7, label: "2w = 8" } ],
+      caption: "El grupo está lleno, pero todavía es válido.",
+    },
+    {
+      note: "Insertar 14 en el grupo. Ahora tiene 9 = 2w+1 llaves, y eso viola el invariante. Se busca la posición por el BST y la llave queda al final del grupo.",
+      rows: [
+        { id: "grupo", label: "Grupo G", cells: [{value: 0}, {value: 2}, {value: 3}, {value: 5}, {value: 6}, {value: 8}, {value: 11}, {value: 13}, {id: "new", value: 14, state: "active"}] },
+        { id: "indice", label: "Índice", cells: [{id: "i0", value: 0, state: "idle"}] },
+      ],
+      spans: [ { id: "g", row: "grupo", from: 0, to: 8, label: "2w+1 = 9" } ],
+      caption: "La partición se dispara en cuanto el grupo supera 2w.",
+    },
+    {
+      note: "Se parte en dos intervalos consecutivos: [0, 2, 3, 5] con w = 4 llaves y [6, 8, 11, 13, 14] con w+1 = 5. Ninguna llave cambia de orden; sólo cambia a qué BST pertenece.",
+      rows: [
+        { id: "izq", label: "G izquierdo", cells: [{value: 0}, {value: 2}, {value: 3}, {value: 5}] },
+        { id: "der", label: "G derecho", cells: [{value: 6, state: "answer"}, {value: 8}, {value: 11}, {value: 13}, {value: 14}] },
+        { id: "indice", label: "Índice", cells: [{id: "i0", value: 0, state: "idle"}, {id: "i1", value: 6, state: "answer"}] },
+      ],
+      spans: [ { id: "a", row: "izq", from: 0, to: 3, label: "w" }, { id: "b", row: "der", from: 0, to: 4, label: "w+1" } ],
+      links: [ { from: "i1", to: "der-0", kind: "pointer", label: "rep" } ],
+      caption: "El índice gana el representante 6 para el grupo derecho.",
+    },
+  ],
+}} />
 
-La consulta paga un X-fast y luego una búsqueda balanceada sobre $O(w)$ llaves. Los dos términos son del orden de $lg w$, con esperanza para los diccionarios. Dividir o fusionar cuesta $O(w)$ cuando hay que reconstruir un grupo y cambiar prefijos del índice. Tras la reparación, hacen falta $Omega(w)$ cambios para volver al umbral. Eso justifica sumar un cargo amortizado constante por reparación al costo ordinario de buscar y actualizar.
+Dos lecturas del diagrama. El representante de la mitad izquierda sigue siendo 0, porque ese valor ya estaba en el índice. El representante de la mitad derecha es nuevo y se inserta en el X-fast. Cada inserción o borrado en el índice cuesta $\Theta(w)$ por los prefijos de la llave nueva, por eso la partición es cara.
 
-## Tabla de complejidad
+### Fusionar un grupo
 
-La tabla superior usa las unidades de costo de la explicación.
+Un grupo que baja de $w/2$ se fusiona con un vecino. El diagrama usa $w=4$, así que $w/2 = 2$.
 
-## Ejemplos
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Antes del borrado, G0 tiene 4 llaves y G1 tiene exactamente w/2 = 2. Sus representantes son 1 y 9.",
+      rows: [
+        { id: "G0", label: "G0", cells: [{value: 1}, {value: 3}, {value: 4}, {value: 6}] },
+        { id: "G1", label: "G1", cells: [{value: 9}, {value: 10}] },
+        { id: "indice", label: "Índice", cells: [{id: "i1", value: 1}, {id: "i9", value: 9}] },
+      ],
+      spans: [ { id: "a", row: "G0", from: 0, to: 3, label: "4" }, { id: "b", row: "G1", from: 0, to: 1, label: "2 = w/2" } ],
+      caption: "G1 está justo en el límite inferior.",
+    },
+    {
+      note: "Se borra 10. G1 queda con una sola llave, por debajo de w/2. El representante 9 sigue en el índice, porque el grupo todavía no se ha reorganizado.",
+      rows: [
+        { id: "G0", label: "G0", cells: [{value: 1}, {value: 3}, {value: 4}, {value: 6}] },
+        { id: "G1", label: "G1", cells: [{id: "g9", value: 9, state: "active"}, {value: 10, state: "muted"}] },
+        { id: "indice", label: "Índice", cells: [{id: "i1", value: 1}, {id: "i9", value: 9}] },
+      ],
+      spans: [ { id: "a", row: "G0", from: 0, to: 3, label: "4" }, { id: "b", row: "G1", from: 0, to: 0, label: "1 < w/2" } ],
+      caption: "Hay que fusionar G1 con un vecino.",
+    },
+    {
+      note: "Se fusiona G1 con G0: el resultado tiene 5 llaves. Como 5 no supera 1,5w = 6, no se parte. El representante 9 sale del índice, porque ya no define ningún grupo.",
+      rows: [
+        { id: "G0", label: "G0 fusionado", cells: [{value: 1}, {value: 3}, {value: 4}, {value: 6}, {value: 9, state: "answer"}] },
+        { id: "G1", label: "G1", cells: [{value: "·", state: "muted"}] },
+        { id: "indice", label: "Índice", cells: [{id: "i1", value: 1}] },
+      ],
+      spans: [ { id: "a", row: "G0", from: 0, to: 4, label: "5 llaves" } ],
+      caption: "Tras la fusión, el índice sólo guarda el representante 1.",
+    },
+  ],
+}} />
 
-[Casos resueltos](/structures/y-fast-trie/examples) y [preguntas con pistas](/structures/y-fast-trie/exercises).
+Si el resultado de la fusión superara $1{,}5w$, se partiría por la mitad y el índice ganaría un representante. Esa segunda reorganización también es cara, y la sección de cota explica por qué casi nunca ocurre dos veces seguidas.
 
-## Comparación con estructuras relacionadas
+### Insertar y eliminar
 
-X-fast indexa todas las llaves. Y-fast reduce el índice a representantes y paga una búsqueda local.
+Insertar $x$ hace tres cosas: encuentra $G_j$ con el X-fast ($O(\lg w)$), inserta en su BST ($O(\lg w)$) y, si el grupo supera $2w$, lo parte. Eliminar $x$ borra del BST y, si el grupo baja de $w/2$, lo fusiona con un vecino.
+
+Partir o fusionar cuesta $\Theta(w)$. Ésa es la pregunta natural: ¿no arruina eso el tiempo de la operación? La respuesta depende de cuántas veces ocurre.
+
+## De dónde sale la cota
+
+La cota amortizada es $O(\lg w)$ por inserción o borrado, y tiene tres partes. Antes de la fórmula, el diagrama muestra de dónde sale cada término.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cada operación ordinaria paga dos búsquedas: una en el X-fast para encontrar el grupo, otra en el BST del grupo. Ambas son lg w.",
+      rows: [
+        { id: "costo", label: "Costo ordinario", cells: [
+          {id: "c1", value: "lg w", tag: "X-fast", state: "active"},
+          {id: "c2", value: "lg w", tag: "BST", state: "active"} ] },
+      ],
+      caption: "Cada una cuesta O(lg w): el X-fast tiene O(lg w) niveles y el BST tiene Θ(w) llaves.",
+    },
+    {
+      note: "Una reorganización cuesta O(w): reconstruir los BST del grupo y cambiar un representante en el X-fast. Pero ocurre con poca frecuencia, y el costo se reparte entre las operaciones previas.",
+      rows: [
+        { id: "costo", label: "Costo ordinario", cells: [
+          {id: "c1", value: "lg w", tag: "X-fast"},
+          {id: "c2", value: "lg w", tag: "BST"} ] },
+        { id: "repara", label: "Reorganización", cells: [
+          {id: "r1", value: "O(w)", tag: "una vez", state: "marked"} ] },
+        { id: "cobro", label: "Cobro por operación", cells: [
+          {id: "b1", value: "O(1)", tag: "w/4 ops", state: "answer"} ] },
+      ],
+      caption: "Si la reorganización ocurre sólo una vez por cada w/4 operaciones del grupo, cada operación paga O(w)/(w/4) = O(1).",
+    },
+  ],
+}} />
+
+### Cada cuánto ocurre una reorganización
+
+Después de una partición, ¿cuántas operaciones hacen falta en ese grupo para que haya otra? La respuesta es al menos $w/4$.
+
+- Partición de $2w+1$ en grupos de tamaños $w$ y $w+1$. Para volver a $2w+1$ hacen falta al menos $w$ inserciones, y para bajar de $w/2$ hacen falta al menos $w/2$ eliminaciones. Tras una partición, entonces, hacen falta al menos $w/2$ operaciones sobre ese grupo.
+- Fusión. El resultado mide al menos $w-1$. Si supera $1{,}5w$, se parte en grupos de tamaños entre $0{,}75w$ y $1{,}25w$. Para llegar a $2w$ o a $w/2$ hacen falta al menos $w/4$ operaciones.
+
+En todos los casos, la siguiente reorganización del grupo requiere al menos $w/4$ operaciones sobre él.
+
+Esa es la holgura que el invariante compra. Los grupos no quedan al borde del límite después de reorganizarse, sino en el centro del rango.
+
+### La cota amortizada
+
+$$\text{costo amortizado de insertar o eliminar} = O(\lg w) + O(1) = O(\lg w)$$
+
+El término $O(\lg w)$ es la búsqueda ordinaria en el índice y en el BST. El término $O(1)$ es el cobro de la reorganización: $O(w)$ dividido entre al menos $w/4$ operaciones. Con tablas hash, las búsquedas en el X-fast son de tiempo esperado, así que la cota también es esperada.
+
+La analogía con el potencial es útil. Cada grupo acumula crédito con cada operación, y la reorganización lo gasta de una vez. Como la reorganización sólo ocurre tras $\Omega(w)$ cambios en el mismo grupo, el crédito alcanza.
+
+## Errores típicos y casos límite
+
+- **Grupo sin candidato local.** El índice eligió bien, pero todas las llaves del grupo son mayores (sucesor) o menores (predecesor). Hay que cruzar a $G_{j+1}$ o $G_{j-1}$. Olvidar este caso devuelve nulo cuando sí hay vecino.
+- **Cruzar al lado equivocado.** El sucesor cruza hacia $G_{j+1}$ y toma su mínimo; el predecesor cruza hacia $G_{j-1}$ y toma su máximo. Los dos lados son simétricos y conviene escribirlos juntos.
+- **Confundir representante con llave viva.** $r_j$ puede no estar en el grupo. El grupo se define por el intervalo, no por el valor exacto.
+- **Grupo de una sola llave.** Ocurre justo antes de una fusión. La búsqueda local sigue siendo válida, pero el grupo ya viola el invariante.
+- **Consulta fuera del rango de representantes.** Si $x$ es menor que todos los representantes, no hay $r_j$ y el predecesor no existe. El sucesor es el mínimo del primer grupo.
+
+## Tabla comparativa de las cuatro estructuras
+
+| Estructura | Consulta | Actualización | Espacio | Observación |
+| --- | --- | --- | --- | --- |
+| vEB ([van-emde-boas-tree](/structures/van-emde-boas-tree)) | $O(\lg w)$ | $O(\lg w)$ | $\Theta(u)$ | direccionamiento directo; el espacio depende del universo |
+| vEB con hash | $O(\lg w)$ | $O(\lg w)$ | $O(n \lg w)$ | sólo guarda los nodos que contienen llaves |
+| [X-fast trie](/structures/x-fast-trie) | $O(\lg w)$ | $\Theta(w)$ | $O(nw)$ | consulta rápida, pero cada llave paga sus $w$ prefijos |
+| Y-fast trie (esta página) | $O(\lg w)$ | $O(\lg w)$ amortizado | $\Theta(n)$ | indirección: el índice sólo guarda $O(n/w)$ representantes |
+
+Con tablas hash, los tiempos de X-fast y Y-fast son esperados o con alta probabilidad. Para $n = 10^9$ y $w = 64$, $\lg w = 6$ contra $\lg n \approx 30$. La constante de $\lg w$ es pequeña, y eso explica por qué estas estructuras son útiles en la práctica.
+
+## Conexión
+
+- Prerrequisito: [X-fast trie](/structures/x-fast-trie). El Y-fast usa su consulta sobre los representantes sin volver a explicarla.
+- Prerrequisito de apoyo: [árbol balanceado](/structures/balanced-bst), que sirve como BST dentro de cada grupo.
+- Relacionado: [predecesor en enteros](/structures/integer-predecessor), que define el problema que estas estructuras resuelven.
 
 ## Prueba de dominio
 
-[Lista de comprobación](/structures/y-fast-trie/mastery-check).
-
-*Fuente de clase: Sem11_Integers_II.pdf · pp. 40-64.*
+Ver la [lista de comprobación](/structures/y-fast-trie/mastery-check) y las [preguntas con pistas](/structures/y-fast-trie/exercises).

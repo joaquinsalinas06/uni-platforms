@@ -7,6 +7,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { unified } from '@astrojs/markdown-remark';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
+import remarkDisplayMath from './src/lib/remark-display-math.mjs';
 
 import vercel from '@astrojs/vercel';
 
@@ -21,7 +22,7 @@ export default defineConfig({
   // @astrojs/markdown-remark sólo para eso.
   markdown: {
     processor: unified({
-      remarkPlugins: [remarkMath],
+      remarkPlugins: [remarkMath, remarkDisplayMath],
       rehypePlugins: [rehypeKatex],
     }),
   },

@@ -1,0 +1,103 @@
+---
+kind: "examples"
+title: "Casos resueltos"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los casos usan el arreglo de clase $A = [7, 8, 2, 6, 9, 4]$ y dos arreglos pequeños para los casos límite. Los números de posición son índices desde 0. Cada caso dibuja la construcción o la consulta paso a paso.
+
+## Mínimo · arreglo de dos elementos
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*
+
+Sea $A = [5, 3]$. Es el caso más corto donde el algoritmo desapila algo.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Llega 5 en la posición 0. Es la primera posición y se vuelve raíz provisional.",
+      nodes: [
+        {"id": "p0", "value": "5 (pos 0)", "parent": null, "state": "active"},
+      ],
+    },
+    {
+      note: "Llega 3 en la posición 1. El tope 5 es mayor que 3, así que se desapila. El 5 pasa a ser hijo izquierdo de 3, y 3 queda como raíz porque la pila queda vacía.",
+      nodes: [
+        {"id": "p1", "value": "3 (pos 1)", "parent": null, "state": "active"},
+        {"id": "p0", "value": "5 (pos 0)", "parent": "p1", "side": "left", "state": "marked"},
+      ],
+      caption: "RMQ(0,1) = 1, porque el mínimo 3 es la raíz y es ancestro de la posición 0.",
+    },
+  ],
+}} />
+
+**Lectura.** La raíz es la posición del mínimo, no la primera. El inorden devuelve 0, 1: 5 (hijo izquierdo) y luego 3 (raíz).
+
+## Normal · RMQ(0,1) sobre el arreglo de clase
+
+Sobre el árbol de $A = [7, 8, 2, 6, 9, 4]$, el intervalo $[7, 8]$ tiene los nodos de posición 0 y 1 como extremos. El nodo 7 es ancestro de 8, porque 8 cuelga de 7 como hijo derecho. El LCA es 7, así que RMQ(0,1) devuelve la posición 0, con valor 7.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Ubicamos los extremos del intervalo: 7 en la posición 0 y 8 en la posición 1. Están en el mismo subárbol izquierdo de la raíz 2.",
+      nodes: [
+        {"id": "n2", "value": "2 (pos 2)", "parent": null},
+        {"id": "n0", "value": "7 (pos 0)", "parent": "n2", "side": "left", "state": "active"},
+        {"id": "n1", "value": "8 (pos 1)", "parent": "n0", "side": "right", "state": "active"},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right"},
+      ],
+    },
+    {
+      note: "7 es ancestro de 8, así que el LCA es 7. El valor 7 es el mínimo de [7, 8], y RMQ(0,1) devuelve la posición 0.",
+      nodes: [
+        {"id": "n2", "value": "2 (pos 2)", "parent": null},
+        {"id": "n0", "value": "7 (pos 0)", "parent": "n2", "side": "left", "state": "answer"},
+        {"id": "n1", "value": "8 (pos 1)", "parent": "n0", "side": "right"},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right"},
+      ],
+    },
+  ],
+}} />
+
+**Comprobación.** El inorden del subárbol de 7 es 0, 1, es decir 7 y luego 8. El LCA es el primer nodo de ese intervalo en el árbol, y su valor es el mínimo.
+
+## Límite · empates en $[2, 2, 1]$
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*
+
+Con empates, la regla de desapilado estricto decide qué aparición queda arriba. Sea $A = [2, 2, 1]$, con dos doses en las posiciones 0 y 1.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Llega 2 en la posición 0. Es la raíz provisional.",
+      nodes: [
+        {"id": "p0", "value": "2 (pos 0)", "parent": null, "state": "active"},
+      ],
+    },
+    {
+      note: "Llega 2 en la posición 1. El tope 2 no es estrictamente mayor que 2, así que no se desapila. La posición 1 se vuelve hijo derecho de la posición 0.",
+      nodes: [
+        {"id": "p0", "value": "2 (pos 0)", "parent": null},
+        {"id": "p1", "value": "2 (pos 1)", "parent": "p0", "side": "right", "state": "active"},
+      ],
+      caption: "Pila: posiciones 0, 1. Ambos valores son iguales, pero la primera aparición queda arriba.",
+    },
+    {
+      note: "Llega 1 en la posición 2. Desapila la posición 1 (2 mayor que 1), luego la posición 0 (2 mayor que 1). El último desapilado es la posición 0, así que pasa a ser hijo izquierdo de la raíz 1.",
+      nodes: [
+        {"id": "p2", "value": "1 (pos 2)", "parent": null, "state": "active"},
+        {"id": "p0", "value": "2 (pos 0)", "parent": "p2", "side": "left", "state": "marked"},
+        {"id": "p1", "value": "2 (pos 1)", "parent": "p0", "side": "right", "state": "marked"},
+      ],
+      caption: "RMQ(0,1): el LCA de las posiciones 0 y 1 es la posición 0, porque 1 cuelga de 0.",
+    },
+  ],
+}} />
+
+**Consecuencia.** RMQ(0,1) devuelve la posición 0, la primera aparición del mínimo del intervalo. Si el desapilado fuera no estricto, la posición 1 desapilaría a la posición 0 al llegar, y la raíz del intervalo sería la posición 1: RMQ(0,1) devolvería la última aparición. Por eso la convención de desempate se fija en la construcción, no en la consulta.

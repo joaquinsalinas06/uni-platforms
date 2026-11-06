@@ -1,339 +1,118 @@
 ---
-kind: examples
-title: Casos resueltos
+kind: "examples"
+title: "Casos resueltos"
 ---
 
-import Visualization from "../../../src/components/Visualization.astro";
+import Visualization from '../../../src/components/Visualization.astro';
 
+Los tres casos usan el árbol de la lámina con $B = 3$: raíz 40; hijos 20 y 60·80; hojas 10, 30·35, 50, 70·75 y 90·95·99. Cada caso dibuja los pasos y cuenta bloques leídos o niveles creados.
 
-Usaremos nodos de capacidad tres llaves. Una llave promovida se convierte en separador del padre. Los ejemplos cuentan niveles y muestran estados de desborde temporales.
+## Mínimo · buscar 10
 
-## Caso de clase · insertar 55 y partir una hoja
-
-La raíz contiene 30. Su hijo izquierdo contiene 10 y 20. El derecho contiene 40, 50 y 60.
-
-1. **Identifica el estado válido inicial.** La raíz tiene una llave y dos hijos. Cada hijo ocupa un bloque y todas las hojas tienen la misma profundidad.
-2. **Compara 55 con 30.** Como 55 es mayor, descarta la hoja izquierda completa. Ninguna de sus llaves puede ser 55 ni recibir esa inserción sin romper el rango.
-3. **Lee el bloque derecho.** Dentro del bloque, 55 queda entre 50 y 60. Estas comparaciones usan el bloque que ya llegó a memoria.
-4. **Forma la hoja temporal.** El orden resultante es 40, 50, 55, 60. Que esté ordenada no basta: la capacidad es tres y ahora hay cuatro llaves.
-5. **Elige el separador que asciende.** Usa la mediana inferior 50. El ejemplo fija esta elección; una variante podría usar la otra mediana si preserva la ocupación exigida.
-6. **Separa las llaves.** 40 queda en la hoja anterior y 55 y 60 pasan a una hoja nueva. El 50 se traslada al padre y deja de aparecer en las hojas de este B-tree.
-7. **Inserta el separador en la raíz.** Como 50 es mayor que 30, la raíz pasa a [30,50]. El intervalo derecho original se convirtió en dos intervalos.
-8. **Reconecta los punteros.** El hijo original [10,20] sigue antes de 30. [40] queda entre 30 y 50. [55,60] queda después de 50.
-9. **Verifica si la reparación sube.** La raíz sólo tiene dos llaves; hay capacidad para tres. Se detiene la cascada. Ninguna hoja cambió de profundidad.
-10. **Comprueba con una consulta.** Buscar 55 lee la raíz y la hoja derecha. Buscar 50 se detiene en la raíz. Una llave promovida puede convertirse en respuesta antes de llegar a la hoja.
+La llave más chica del árbol cuesta lo mismo que cualquier otra: un bloque por nivel. Tres bloques.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "Empieza con la raíz 30 y dos hojas. Cada hoja ocupa un bloque y está a profundidad uno.",
+      note: "Se trae la raíz 40. 10 es menor que 40, así que baja por la izquierda.",
       nodes: [
-        {"id": "r", "value": "30", "parent": null, "state": "active"},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "h", "value": "40·50·60", "parent": "r"},
+        {"id": "r", "value": "40", "parent": null, "state": "active"},
+        {"id": "a", "value": "20", "parent": "r"},
+        {"id": "b", "value": "60·80", "parent": "r", "state": "muted"},
+        {"id": "a1", "value": "10", "parent": "a"},
+        {"id": "a2", "value": "30·35", "parent": "a", "state": "muted"},
       ],
     },
     {
-      note: "55 es mayor que 30. Descarta el intervalo izquierdo y selecciona el puntero derecho.",
+      note: "Se trae [20]. 10 es menor que 20, así que sigue por el hijo izquierdo.",
       nodes: [
-        {"id": "r", "value": "30", "parent": null, "state": "marked"},
-        {"id": "l", "value": "10·20", "parent": "r", "state": "muted"},
-        {"id": "h", "value": "40·50·60", "parent": "r", "state": "active"},
+        {"id": "r", "value": "40", "parent": null},
+        {"id": "a", "value": "20", "parent": "r", "state": "active"},
+        {"id": "a1", "value": "10", "parent": "a"},
+        {"id": "a2", "value": "30·35", "parent": "a", "state": "muted"},
       ],
     },
     {
-      note: "Lee la hoja. 55 supera 40 y 50, pero queda antes de 60.",
+      note: "Se trae la hoja [10]. Contiene 10: la búsqueda termina con tres bloques leídos.",
       nodes: [
-        {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r", "state": "muted"},
-        {"id": "h", "value": "40·50·60", "parent": "r", "state": "active"},
-      ],
-    },
-    {
-      note: "Forma el estado temporal [40,50,55,60]. Está ordenado, pero cuatro llaves superan la capacidad tres.",
-      nodes: [
-        {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "h", "value": "40·50·55·60", "parent": "r", "state": "marked"},
-      ],
-    },
-    {
-      note: "Elige 50 como mediana inferior. Todo lo menor queda de un lado y todo lo mayor del otro.",
-      nodes: [
-        {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "h", "value": "40·50·55·60", "parent": "r", "state": "active"},
-      ],
-    },
-    {
-      note: "Reserva una hoja para 55 y 60. La hoja anterior conserva 40. 50 está pendiente de promoción.",
-      nodes: [
-        {"id": "r", "value": "30", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "h", "value": "40", "parent": "r", "state": "marked"},
-        {"id": "n", "value": "55·60", "parent": null, "state": "marked"},
-        {"id": "p", "value": "50", "parent": null, "state": "active"},
-      ],
-    },
-    {
-      note: "Coloca 50 después de 30 en la raíz. Dos separadores necesitan tres hijos.",
-      nodes: [
-        {"id": "r", "value": "30·50", "parent": null, "state": "active"},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "h", "value": "40", "parent": "r"},
-        {"id": "n", "value": "55·60", "parent": null, "state": "marked"},
-      ],
-    },
-    {
-      note: "Conecta la hoja nueva como tercer hijo. La anterior queda entre 30 y 50.",
-      nodes: [
-        {"id": "r", "value": "30·50", "parent": null},
-        {"id": "l", "value": "10·20", "parent": "r"},
-        {"id": "h", "value": "40", "parent": "r", "state": "active"},
-        {"id": "n", "value": "55·60", "parent": "r", "state": "active"},
-      ],
-    },
-    {
-      note: "Comprueba que las tres hojas están a profundidad uno y que la raíz todavía cabe.",
-      nodes: [
-        {"id": "r", "value": "30·50", "parent": null, "state": "answer"},
-        {"id": "l", "value": "10·20", "parent": "r", "state": "answer"},
-        {"id": "h", "value": "40", "parent": "r", "state": "answer"},
-        {"id": "n", "value": "55·60", "parent": "r", "state": "answer"},
-      ],
-    },
-    {
-      note: "Repite la consulta 55. El último puntero de la raíz lleva a la hoja que contiene la respuesta.",
-      nodes: [
-        {"id": "r", "value": "30·50", "parent": null, "state": "active"},
-        {"id": "l", "value": "10·20", "parent": "r", "state": "muted"},
-        {"id": "h", "value": "40", "parent": "r", "state": "muted"},
-        {"id": "n", "value": "55·60", "parent": "r", "state": "answer"},
+        {"id": "r", "value": "40", "parent": null},
+        {"id": "a", "value": "20", "parent": "r"},
+        {"id": "a1", "value": "10", "parent": "a", "state": "answer"},
+        {"id": "a2", "value": "30·35", "parent": "a", "state": "muted"},
       ],
     },
   ],
 }} />
 
-**Comprueba el resultado.** Buscar 55 toma el tercer hijo. Buscar 50 termina en el padre. Buscar 45 toma el hijo del medio y concluye que 45 está ausente. La raíz ganó un separador y la altura siguió igual. La [traza interactiva](/structures/b-tree#operaciones) permite revisar el instante en que se promueve 50.
+## Normal · insertar 100 y partir una hoja cuyo padre absorbe la mediana
 
-## Caso derivado · la raíz también está llena
-
-Parte de raíz $[20,40,60]$ con cuatro hojas $[5,10]$, $[25,30]$, $[45,50]$ y $[65,70,80]$. Inserta 85.
+La hoja $[90, 95, 99]$ está llena. Insertar 100 la desborda, la mediana 95 sube y el padre $[60, 80]$ la recibe sin desbordarse. La altura no cambia.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "La raíz contiene tres separadores y cuatro hijos. La hoja derecha también tiene tres llaves.",
+      note: "Insertar 100. 40 manda a la derecha, 100 es mayor que 80, así que baja a la última hoja. La hoja 90·95·99 ya tiene tres llaves.",
       nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null, "state": "active"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65·70·80", "parent": "r"},
+        {"id": "r", "value": "40", "parent": null, "state": "active"},
+        {"id": "a", "value": "20", "parent": "r", "state": "muted"},
+        {"id": "b", "value": "60·80", "parent": "r"},
+        {"id": "b1", "value": "50", "parent": "b", "state": "muted"},
+        {"id": "b2", "value": "70·75", "parent": "b", "state": "muted"},
+        {"id": "b3", "value": "90·95·99", "parent": "b", "state": "marked"},
       ],
     },
     {
-      note: "85 supera 20, 40 y 60. Elige el cuarto hijo y conserva los otros tres intactos.",
+      note: "Se inserta 100 en orden. La hoja queda con cuatro llaves: 90, 95, 99, 100. No cabe en un bloque de capacidad 3.",
       nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null, "state": "marked"},
-        {"id": "a", "value": "5·10", "parent": "r", "state": "muted"},
-        {"id": "b", "value": "25·30", "parent": "r", "state": "muted"},
-        {"id": "c", "value": "45·50", "parent": "r", "state": "muted"},
-        {"id": "d", "value": "65·70·80", "parent": "r", "state": "active"},
+        {"id": "r", "value": "40", "parent": null},
+        {"id": "a", "value": "20", "parent": "r", "state": "muted"},
+        {"id": "b", "value": "60·80", "parent": "r"},
+        {"id": "b1", "value": "50", "parent": "b", "state": "muted"},
+        {"id": "b2", "value": "70·75", "parent": "b", "state": "muted"},
+        {"id": "b3", "value": "90·95·99·100", "parent": "b", "state": "active"},
       ],
     },
     {
-      note: "En la hoja, 85 queda después de 80.",
+      note: "Se parte en 90 a la izquierda y 99·100 a la derecha. La mediana 95 sube a [60, 80], que pasa a tener tres llaves 60, 80, 95 y cuatro hijos. Cuatro hijos y tres llaves es el límite exacto: el padre queda lleno, pero no se desborda, así que la partición termina.",
       nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65·70·80", "parent": "r", "state": "active"},
-      ],
-    },
-    {
-      note: "Inserta provisionalmente 85. El cuarto elemento dispara el desborde.",
-      nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65·70·80·85", "parent": "r", "state": "marked"},
-      ],
-    },
-    {
-      note: "Selecciona 70 como mediana inferior. A la izquierda queda 65, a la derecha 80 y 85.",
-      nodes: [
-        {"id": "r", "value": "20·40·60", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65", "parent": "r", "state": "marked"},
-        {"id": "p", "value": "70", "parent": null, "state": "active"},
-        {"id": "e", "value": "80·85", "parent": null, "state": "marked"},
-      ],
-    },
-    {
-      note: "Entrega 70 al padre y conecta el quinto hijo. El padre desborda ahora.",
-      nodes: [
-        {"id": "r", "value": "20·40·60·70", "parent": null, "state": "marked"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "c", "value": "45·50", "parent": "r"},
-        {"id": "d", "value": "65", "parent": "r"},
-        {"id": "e", "value": "80·85", "parent": "r", "state": "active"},
-      ],
-    },
-    {
-      note: "La mediana inferior de la raíz es 40. Los dos primeros hijos quedan del lado de 20.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null, "state": "active"},
-        {"id": "r", "value": "20", "parent": null, "state": "marked"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "t", "value": "60·70", "parent": null},
-        {"id": "c", "value": "45·50", "parent": "t"},
-        {"id": "d", "value": "65", "parent": "t"},
-        {"id": "e", "value": "80·85", "parent": "t"},
-      ],
-    },
-    {
-      note: "Del lado derecho, 60 y 70 separan tres intervalos. La hoja 65 queda en medio.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null},
-        {"id": "r", "value": "20", "parent": null},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "t", "value": "60·70", "parent": null, "state": "active"},
-        {"id": "c", "value": "45·50", "parent": "t"},
-        {"id": "d", "value": "65", "parent": "t", "state": "marked"},
-        {"id": "e", "value": "80·85", "parent": "t"},
-      ],
-    },
-    {
-      note: "Crea la raíz [40] y enlaza ambas mitades. Ya tiene los dos hijos que requiere un separador.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null, "state": "active"},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "t", "value": "60·70", "parent": "x"},
-        {"id": "c", "value": "45·50", "parent": "t"},
-        {"id": "d", "value": "65", "parent": "t"},
-        {"id": "e", "value": "80·85", "parent": "t"},
-      ],
-    },
-    {
-      note: "Todas las hojas quedaron dos aristas debajo de la raíz. La reparación aumentó la altura de todo el árbol a la vez.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r", "state": "marked"},
-        {"id": "b", "value": "25·30", "parent": "r", "state": "marked"},
-        {"id": "t", "value": "60·70", "parent": "x"},
-        {"id": "c", "value": "45·50", "parent": "t", "state": "marked"},
-        {"id": "d", "value": "65", "parent": "t", "state": "marked"},
-        {"id": "e", "value": "80·85", "parent": "t", "state": "marked"},
-      ],
-    },
-    {
-      note: "Consulta 85 en frío. La primera lectura es [40] y dirige a la derecha.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null, "state": "active"},
-        {"id": "r", "value": "20", "parent": "x", "state": "muted"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "t", "value": "60·70", "parent": "x"},
-        {"id": "c", "value": "45·50", "parent": "t"},
-        {"id": "d", "value": "65", "parent": "t"},
-        {"id": "e", "value": "80·85", "parent": "t"},
-      ],
-    },
-    {
-      note: "La segunda lectura es [60,70]. 85 supera a ambos separadores.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "t", "value": "60·70", "parent": "x", "state": "active"},
-        {"id": "c", "value": "45·50", "parent": "t", "state": "muted"},
-        {"id": "d", "value": "65", "parent": "t", "state": "muted"},
-        {"id": "e", "value": "80·85", "parent": "t"},
-      ],
-    },
-    {
-      note: "La tercera lectura encuentra 85 en [80,85]. Hubo un bloque por nivel.",
-      nodes: [
-        {"id": "x", "value": "40", "parent": null},
-        {"id": "r", "value": "20", "parent": "x"},
-        {"id": "a", "value": "5·10", "parent": "r"},
-        {"id": "b", "value": "25·30", "parent": "r"},
-        {"id": "t", "value": "60·70", "parent": "x"},
-        {"id": "c", "value": "45·50", "parent": "t"},
-        {"id": "d", "value": "65", "parent": "t"},
-        {"id": "e", "value": "80·85", "parent": "t", "state": "answer"},
+        {"id": "r", "value": "40", "parent": null},
+        {"id": "a", "value": "20", "parent": "r", "state": "muted"},
+        {"id": "b", "value": "60·80·95", "parent": "r", "state": "active"},
+        {"id": "b1", "value": "50", "parent": "b", "state": "muted"},
+        {"id": "b2", "value": "70·75", "parent": "b", "state": "muted"},
+        {"id": "b3a", "value": "90", "parent": "b", "state": "marked"},
+        {"id": "b3b", "value": "99·100", "parent": "b", "state": "marked"},
       ],
     },
   ],
 }} />
 
-### Traza escrita de la cascada
+## Límite · la hoja llena con B − 1 llaves no parte
 
-1. **Cuenta los punteros antes de insertar.** [20,40,60] delimita cuatro intervalos. Una llave sólo puede pertenecer a uno de ellos.
-2. **Recorre los separadores.** 85 supera 20, 40 y 60; ninguna de las tres primeras ramas puede alojarla.
-3. **Desciende y ubica la posición.** En [65,70,80], 85 se coloca después de 80. Sólo se leyó un bloque por nivel.
-4. **Detecta el desborde local.** [65,70,80,85] ya no cabe. La hoja no tiene hijos que reubicar, sólo llaves.
-5. **Divide la hoja.** Promueve 70. Los dos trozos contienen [65] y [80,85]. Cada uno vuelve a estar dentro del límite.
-6. **Entrega 70 a su padre.** El nuevo separador va después de 60. Reemplaza el cuarto intervalo por dos, (60,70) y (70,+∞).
-7. **Detecta otro desborde.** El padre tiene ahora cuatro llaves y cinco hijos. La reparación debe subir, aunque la hoja ya quedó válida.
-8. **Promueve 40.** El interno izquierdo retiene 20; el derecho retiene 60 y 70. El padre que desbordó era la raíz, por lo que hace falta crear una raíz encima.
-9. **Reparte los cinco hijos.** Los dos primeros van bajo [20]. Los otros tres van bajo [60,70], respetando el orden de los intervalos.
-10. **Enlaza la raíz nueva.** El separador 40 divide las llaves de ambas mitades. Ninguna hoja se mueve a otra profundidad relativa dentro de su mitad.
-11. **Revisa las tres condiciones.** Todos los nodos caben; cada interno con k separadores tiene k+1 hijos; todas las hojas están a la misma profundidad.
-12. **Vuelve a buscar 85.** La raíz envía a [60,70], ese nodo envía a [80,85] y la hoja encuentra 85. Con caché fría son tres lecturas. La altura previa era una arista y la nueva es dos, pero en ambos casos se lee también la raíz.
+Con $B = 3$, una hoja con dos llaves tiene sitio para una más. Insertar 55 en $[40, 50]$ deja tres llaves, que es exactamente $B$, y no hay partición. Esto es lo que separa "llena" de "desbordada": sólo la llave $B+1$ dispara la partición.
 
-| Estado | Separadores del nodo que cambia | Decisión |
-| --- | --- | --- |
-| Desborde de hoja | 65, 70, 80, 85 | Promover 70 |
-| Desborde del padre | 20, 40, 60, 70 | Promover 40 |
-| Raíz nueva | 40 | Enlazar nodos internos $[20]$ y $[60,70]$ |
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "La hoja tiene dos llaves, 40 y 50. Hay espacio para una más antes de llegar a B = 3.",
+      nodes: [
+        {"id": "r", "value": "30", "parent": null},
+        {"id": "a", "value": "10·20", "parent": "r"},
+        {"id": "d", "value": "40·50", "parent": "r", "state": "active"},
+      ],
+    },
+    {
+      note: "Se inserta 55 en orden. La hoja queda con 40, 50, 55: tres llaves, exactamente B. Cabe en el bloque y no hay mediana que subir.",
+      nodes: [
+        {"id": "r", "value": "30", "parent": null},
+        {"id": "a", "value": "10·20", "parent": "r"},
+        {"id": "d", "value": "40·50·55", "parent": "r", "state": "answer"},
+      ],
+    },
+  ],
+}} />
 
-Lo delicado es reconectar los hijos. El nodo interno $[20]$ conserva las dos hojas menores que 40. El nodo $[60,70]$ conserva tres hojas. $[45,50]$ queda a la izquierda de 60, $[65]$ entre 60 y 70, y $[80,85]$ a la derecha de 70. Cada nodo con $k$ separadores vuelve a tener $k+1$ hijos. Todas las hojas pasaron de profundidad uno a profundidad dos porque la raíz nueva se colocó encima de todo el árbol.
-
-**Cuenta E/S.** Buscar 85 después del cambio visita $[40]$, $[60,70]$ y $[80,85]$. Son tres nodos y, con caché fría y un nodo por bloque, tres lecturas. La inserción que creó el árbol necesitó escrituras para reparar las particiones. El número exacto de escrituras depende del búfer. La cota proviene de que cada nivel añade un número constante de bloques afectados.
-
-## Caso mínimo · una inserción absorbe la última plaza
-
-Con raíz $[30]$ y hoja izquierda $[10,20]$, insertar 15 deja $[10,15,20]$. La hoja está llena y todavía es válida. Insertar 17 a continuación crea una cuarta llave y desencadena la partición. Distingue **lleno**, que describe un estado válido, de **desbordado**, que exige reparación.
-
-## Qué escribir si preguntan por la altura
-
-Primero cuenta hijos mínimos de un nodo interno, no llaves máximas. La raíz se trata aparte. Si después de la raíz hay al menos $f$ hijos por nodo interno, alcanzar $h$ niveles obliga a tener del orden de $f^{h-1}$ hojas. Tomar logaritmos acota los niveles. Sólo entonces convierte niveles a transferencias usando el supuesto de un nodo por bloque. La prueba de información responde otra pregunta: cuántas decisiones necesita cualquier búsqueda por comparaciones en el modelo.
-
-## Caso derivado · se parten dos nodos y la raíz se queda donde está
-
-Supón una raíz [40], cuyo hijo izquierdo tiene separadores [10,20,30]
-y hojas [3,7], [12,15], [22,25] y [32,35,37]. Su hijo derecho
-tiene separadores [60] y hojas [45,50] y [65,70]. Inserta 38.
-
-1. Lee [40]. Como 38 es menor, sigue el puntero izquierdo.
-2. Lee [10,20,30]. Los tres separadores son menores que 38, así que baja al último hijo.
-3. Lee [32,35,37]. Coloca provisionalmente 38 al final. La capacidad era tres.
-4. Promueve 35 y separa la hoja en [32] y [37,38].
-5. Inserta 35 al final de [10,20,30]. El nodo interno ahora tiene cuatro separadores y cinco hijos.
-6. Toma 20 como mediana inferior del nodo interno. Antes de moverlo, conserva el orden de los cinco hijos.
-7. Bajo [10], conserva [3,7] y [12,15]. Ambos intervalos están por debajo de 20.
-8. Bajo [30,35], conecta [22,25], [32] y [37,38]. Sus tres rangos quedan por encima de 20 y por debajo de 40.
-9. Inserta 20 antes de 40 en la raíz. El interno [10] va a su izquierda y [30,35] queda en el centro. [60] permanece a la derecha.
-10. Revisa ocupación. [20,40] tiene dos llaves, así que puede absorber la promoción sin volver a partirse.
-11. Revisa profundidad. Tanto las hojas recién repartidas como las del subárbol [60] siguen a dos aristas de la raíz.
-12. Busca 38 tras la reparación. La ruta fría lee [20,40], después [30,35], después [37,38]. Son tres lecturas, las mismas que habría requerido una búsqueda hasta la hoja antes de insertar.
-
-**Diferencia con la cascada anterior.** Aquí también hubo dos particiones.
-La raíz ya existía y tenía espacio para absorber el último separador. La
-altura crece únicamente si la raíz misma se parte. Contar particiones y
-contar niveles mide dos cosas distintas.
+Para ver el caso en que sí hay partición y la altura sube, mira el crecimiento de la raíz en la teoría: la raíz 20·40·60·80 se parte y nace un nivel nuevo.

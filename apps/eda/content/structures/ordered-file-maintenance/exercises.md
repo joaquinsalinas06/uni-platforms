@@ -3,43 +3,59 @@ kind: exercises
 title: Preguntas de examen
 items:
 - level: 1
-  statement: ¿Por qué guardar máximos?
+  statement: >-
+    ¿Por qué el archivo deja huecos entre las llaves en lugar de compactarlas al final?
   hints:
-  - Usa la primera región cuyo extremo superior alcanza q.
-  solution: Permiten descartar todos los tramos anteriores de una vez.
+  - >-
+    Piensa en cuántas celdas hay que correr para insertar una llave pequeña delante de todas las demás.
+  solution: >-
+    Un hueco cercano permite insertar corriendo una o pocas celdas, en vez de mover todo el archivo.
   label: reconocer
 - level: 2
-  statement: ¿Cambia el máximo al insertar 18 entre 16 y 20?
+  statement: >-
+    En el archivo $3,\cdot,7,9,\cdot,16,21,42$ se inserta $8$ entre $7$ y $9$ corriendo el $9$ al hueco. ¿Cuál es el máximo de la ventana de celdas 2 a 3 después de la inserción?
   hints:
-  - Inspecciona el último registro.
-  solution: Permanece en 20.
+  - >-
+    Mira qué queda en las celdas 2 y 3 después de correr el $9$.
+  solution: >-
+    $8$. Las celdas quedan $7$ y $8$.
   label: trazar
 - level: 3
-  statement: Después de mover 20 al tramo de [25,35], ¿a qué tramo debe ir buscar 20?
+  statement: >-
+    En el mismo archivo se quiere insertar $50$ después de $42$. ¿Por qué no basta con correr $16$, $21$ y $42$ una celda a la izquierda?
   hints:
-  - Recalcula el máximo del tramo que perdió 20.
-  solution: El tramo anterior termina en 19 y se descarta. Buscar 20 pasa al siguiente tramo.
+  - >-
+    Cuenta cuántas llaves tendría la ventana de celdas 4 a 7 después de la inserción, y compara con su umbral de tres.
+  solution: >-
+    La ventana 4 a 7 quedaría con cuatro llaves en cuatro celdas, por encima de su umbral de tres. Hay que subir a la ventana completa y repartir.
   label: resolver
 - level: 4
-  statement: Un tramo de 16 celdas empieza en la posición 1 con B=4. ¿Cuántos bloques cubre?
+  statement: >-
+    Una región de $8$ celdas contiene $7$ llaves y está alineada con bloques de $B=4$ celdas. ¿Cuántos bloques se reescriben para repartirla?
   hints:
-  - La última posición es 16.
-  - Cuenta bloques 0 a 4.
-  solution: Cinco bloques, porque el comienzo está desalineado.
+  - >-
+    Las ocho celdas se dividen en bloques de cuatro.
+  solution: >-
+    Dos bloques.
   label: comparar
 - level: 5
-  statement: ¿Qué condición permite amortizar una reparación superior?
+  statement: >-
+    ¿Por qué, por inserción, cada nivel de ventanas aporta $\lg N$ celdas movidas en promedio?
   hints:
-  - Cuenta cambios locales entre dos reparaciones.
-  solution: Los grupos recuperan holgura al dividir o fusionar. El costo superior se reparte entre
-    los cambios locales que agotaron esa holgura.
+  - >-
+    Una ventana de $2^k$ celdas se reescribe, en promedio, una vez cada $2^k/\lg N$ inserciones que caen dentro de ella.
+  solution: >-
+    Se reescriben $2^k$ celdas cada $2^k/\lg N$ inserciones; dividiendo, cada inserción recibe $\lg N$ celdas. Esto usa el espaciado de densidades, que es un hecho de la estructura PMA.
   label: justificar
 - level: 6
-  statement: Si se reescriben 16 celdas alineadas con B=4, ¿cuántos bloques se escriben?
+  statement: >-
+    Con $N=1024$ llaves y grupos de tamaño $\lg N = 10$, ¿cuántos representantes tiene el índice superior de la indirección?
   hints:
-  - Cuenta celdas por bloque.
-  solution: Cuatro bloques.
+  - >-
+    Divide $N$ entre el tamaño de un grupo.
+  solution: >-
+    Alrededor de $N/\lg N = 1024/10 \approx 102$ representantes.
   label: demostrar
 ---
 
-Antes de abrir una pista, dibuja el estado inicial y escribe qué unidad de trabajo vas a contar.
+Antes de abrir una pista, dibuja el estado inicial del archivo y escribe qué celdas cambian. Cuenta celdas y bloques antes de contar llaves.

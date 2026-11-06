@@ -1,0 +1,107 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos usan la misma regla: el nivel es $k = \lfloor \lg L\rfloor$, se leen dos celdas y se compara por valor, con empate al índice menor. El primero es el mínimo posible; el segundo es el caso normal del arreglo de clase; el tercero contiene un empate.
+
+## Mínimo: consulta de longitud 1
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*
+
+Consulta RMQ(6,6) sobre $A = [5,3,8,1,9,4,7,2]$. Longitud $L = 1$, así que $k = 0$. Las dos lecturas son la misma celda $M[0][6] = 6$. No hay comparación real: el resultado es 6, con valor 7.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Consulta [6,6]. La longitud es 1, así que k = 0. La única celda que se lee es la de la posición 6 en la fila de nivel 0.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6",state:"marked"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6",state:"marked"},{value:7,tag:"7"}] },
+      ],
+      caption: "k = floor(lg 1) = 0.",
+    },
+    {
+      note: "M[0][6] = 6 y ambas lecturas coinciden. El resultado es el índice 6, que en el arreglo tiene el valor 7; no es el mínimo de ningún intervalo grande, pero aquí no importa.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6",state:"answer"},{value:2,tag:"7"}] },
+        { id: "M0", label: "M[0]", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:3,tag:"3"},{value:4,tag:"4"},{value:5,tag:"5"},{value:6,tag:"6",state:"answer"},{value:7,tag:"7"}] },
+      ],
+      caption: "RMQ(6,6) = 6.",
+    },
+  ],
+}} />
+
+## Normal: el arreglo de clase con RMQ(0,4)
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*
+
+La consulta $[0,4]$ tiene longitud 5, así que $k = 2$ y las ventanas son $[0,3]$ y $[1,4]$. Ambas tienen mínimo en el índice 3 (valor 1). Como coinciden, la comparación no cambia nada y el resultado es 3.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Consulta [0,4] sobre A. Longitud 5, k = 2. Las dos ventanas de longitud 4 deben quedar dentro de [0,4]: son [0,3] y [1,4].",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0",state:"marked"},{value:3,tag:"1",state:"marked"},{value:8,tag:"2",state:"marked"},{value:1,tag:"3",state:"marked"},{value:9,tag:"4",state:"marked"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:7,tag:"4"}] },
+      ],
+      spans: [
+        { id: "x", row: "A", from: 0, to: 3, label: "M[2][0]", state: "marked" },
+        { id: "y", row: "A", from: 1, to: 4, label: "M[2][1]", state: "marked" },
+      ],
+      caption: "k = floor(lg 5) = 2.",
+    },
+    {
+      note: "M[2][0] = 3 y M[2][1] = 3. Ambas celdas guardan el mismo índice, así que la comparación A[3] contra A[3] es trivial. El resultado es 3.",
+      rows: [
+        { id: "A", label: "A", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3",state:"answer"},{value:9,tag:"4"},{value:4,tag:"5"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0",state:"answer"},{value:3,tag:"1",state:"answer"},{value:3,tag:"2"},{value:3,tag:"3"},{value:7,tag:"4"}] },
+      ],
+      spans: [
+        { id: "x", row: "A", from: 0, to: 3, label: "[0,3]", state: "marked" },
+        { id: "y", row: "A", from: 1, to: 4, label: "[1,4]", state: "marked" },
+      ],
+      caption: "RMQ(0,4) = 3.",
+    },
+  ],
+}} />
+
+## Límite: empate entre dos índices
+
+*(derivado del pseudocódigo; no aparece en las diapositivas)*
+
+Sea $B = [5,3,8,1,9,1,7,2]$. Hay dos unos, en los índices 3 y 5. Consulta RMQ(1,6): $k = 2$, con las ventanas $M[2][1]$ y $M[2][3]$. La primera cubre $[1,4]$ y tiene mínimo 3; la segunda cubre $[3,6]$ y tiene dos candidatos con valor 1, en los índices 3 y 5. La regla de empate devuelve el índice menor, es decir, 3. Ese mismo desempate es el que hay que usar al construir la tabla; si una celda eligiera el 5 y otra el 3, la comparación final podría ver un valor igual y devolver un índice distinto.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Arreglo B con dos unos. Los índices 3 y 5 tienen el mismo valor mínimo en la ventana [3,6]. Antes de comparar, hay que fijar la regla: ante empate, gana el índice menor.",
+      rows: [
+        { id: "B", label: "B", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3",state:"marked"},{value:9,tag:"4"},{value:1,tag:"5",state:"marked"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1"},{value:3,tag:"2"},{value:3,tag:"3"},{value:5,tag:"4"}] },
+      ],
+      spans: [ { id: "w", row: "B", from: 3, to: 6, label: "M[2][3]", state: "marked" } ],
+      caption: "Dentro de [3,6], el mínimo 1 aparece en 3 y en 5.",
+    },
+    {
+      note: "M[2][3] se construyó comparando B[3]=1 con B[5]=1: empate de valor, gana 3 porque es el índice menor. M[2][3] = 3. La otra mitad de la consulta, M[2][1], también da 3.",
+      rows: [
+        { id: "B", label: "B", cells: [{value:5,tag:"0"},{value:3,tag:"1"},{value:8,tag:"2"},{value:1,tag:"3",state:"answer"},{value:9,tag:"4"},{value:1,tag:"5",state:"marked"},{value:7,tag:"6"},{value:2,tag:"7"}] },
+        { id: "M2", label: "M[2]", cells: [{value:3,tag:"0"},{value:3,tag:"1",state:"answer"},{value:3,tag:"2"},{value:3,tag:"3",state:"answer"},{value:5,tag:"4"}] },
+      ],
+      spans: [
+        { id: "w1", row: "B", from: 1, to: 4, label: "M[2][1]", state: "marked" },
+        { id: "w2", row: "B", from: 3, to: 6, label: "M[2][3]", state: "marked" },
+      ],
+      caption: "RMQ(1,6) = 3, por el desempate al índice menor.",
+    },
+  ],
+}} />
+
+Si el desempate no fuera consistente en la construcción, $M[2][3]$ podría valer 5 y la consulta devolvería 5 o 3 según la fila. La regla se fija una vez y se aplica en toda la tabla.

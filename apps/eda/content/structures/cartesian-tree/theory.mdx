@@ -5,179 +5,293 @@ title: "Árbol cartesiano"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-RMQ habla de posiciones de arreglo. Si esas posiciones se convierten en nodos con la relación de ancestros correcta, la consulta se vuelve un LCA.
+Sea $A = [7, 8, 2, 6, 9, 4]$. Una consulta RMQ$(i, j)$ pide la posición del mínimo entre $A[i]$ y $A[j]$. Con un arreglo sin preprocesar, cada consulta recorre el intervalo y cuesta $O(j - i)$. Si hay muchas consultas sobre el mismo arreglo, eso es demasiado. La pregunta de la clase es si podemos transformar el arreglo en una estructura donde la respuesta sea una operación de árbol conocida.
 
-## Intuición
+## Intuición dibujada
 
-El menor valor es la raíz. Los elementos a su izquierda forman el subárbol izquierdo. Los de su derecha forman el derecho. Se repite el criterio en cada subintervalo.
+La idea es volver cada posición un nodo, y dar a cada nodo dos coordenadas: su **posición** (dónde está en el arreglo) y su **valor** (qué tan pequeño es). El mínimo global queda arriba, porque es el más pequeño de todos. A su izquierda caen las posiciones anteriores, a su derecha las posteriores. Se repite el mismo criterio dentro de cada mitad.
 
-## Estructura interna
-
-El recorrido inorden recupera los índices originales. Cada padre tiene valor menor o igual que sus hijos, con desempate por índice. El stack conserva la espina derecha del árbol parcial en orden creciente de la prioridad valor–índice.
-
-### Un nodo tiene posición y prioridad
-
-Cada nodo representa un índice del arreglo. Colocarlo a la izquierda o a la derecha es una decisión sobre **posición**. Ponerlo encima o debajo de otro nodo es una decisión sobre **valor**. En [7,8,2,6,9,4], el 4 está a la derecha de 2 porque se leyó después. Dentro de esa región queda encima de 6 y 9 porque es el menor valor de su intervalo. Por eso un árbol cartesiano puede tener un hijo izquierdo con valor mayor que el padre, algo que no sucedería en un BST ordenado por esos mismos valores.
-
-### Cómo actualizar la espina sin perder nodos
-
-Antes de insertar la siguiente posición, todos los nodos capaces de recibir un hijo nuevo están en el camino derecho. Si el elemento nuevo es mayor que el tope, se conecta directamente al final de la espina. Si es menor, quita de la pila los nodos que ya no pueden quedar encima de él. El último retirado encabeza el fragmento que termina antes del nuevo índice. Se conecta como hijo izquierdo del nodo entrante. Su descendencia queda intacta. Si queda un tope previo, apunta a la raíz nueva de ese fragmento ampliado.
-
-En caso de empate, desempatar por índice fija qué aparición queda arriba. Así el árbol y el RMQ devuelven consistentemente el primer mínimo cuando hay repetidos.
-
-## Operaciones
-
-Lee el arreglo de izquierda a derecha. Retira los valores mayores del stack. El último subárbol retirado pasa a la izquierda del nuevo nodo. Si queda un tope, el nuevo nodo pasa a su derecha. Si el stack se vacía, el nuevo nodo se vuelve raíz.
-
-### Construcción de clase · [7,8,2,6,9,4]
+El árbol resultante para $A = [7, 8, 2, 6, 9, 4]$ es:
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "7 entra primero y es raíz provisional.",
+      note: "La raíz es el mínimo global, 2, en la posición 2. Es el único nodo que no tiene padre: todo lo demás cuelga de él.",
       nodes: [
-        {"id": "a", "value": "7", "parent": null, "state": "active"},
+        {"id": "n2", "value": "2 (pos 2)", "parent": null, "state": "active"},
+        {"id": "n0", "value": "7 (pos 0)", "parent": "n2", "side": "left", "collapsed": true},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right", "collapsed": true},
       ],
     },
     {
-      note: "8 es mayor que 7. Se enlaza como hijo derecho.",
+      note: "Los hijos de la raíz son los mínimos de cada mitad. A la izquierda quedan las posiciones 0 y 1, cuyo mínimo es 7. A la derecha quedan las posiciones 3, 4 y 5, cuyo mínimo es 4.",
       nodes: [
-        {"id": "a", "value": "7", "parent": null},
-        {"id": "b", "value": "8", "parent": "a", "state": "active", "side": "right"},
-      ],
-    },
-    {
-      note: "2 es menor que 8. Retira 8 de la espina, pero conserva el nodo en el árbol.",
-      nodes: [
-        {"id": "a", "value": "7", "parent": null},
-        {"id": "b", "value": "8", "parent": "a", "state": "marked", "side": "right"},
-      ],
-    },
-    {
-      note: "2 también retira 7. El subárbol de 7 pasa entero a su izquierda.",
-      nodes: [
-        {"id": "c", "value": "2", "parent": null, "state": "active"},
-        {"id": "a", "value": "7", "parent": "c", "state": "marked"},
-        {"id": "b", "value": "8", "parent": "a", "side": "right"},
-      ],
-    },
-    {
-      note: "6 se enlaza a la derecha de 2.",
-      nodes: [
-        {"id": "c", "value": "2", "parent": null},
-        {"id": "a", "value": "7", "parent": "c"},
-        {"id": "b", "value": "8", "parent": "a", "side": "right"},
-        {"id": "d", "value": "6", "parent": "c", "state": "active"},
-      ],
-    },
-    {
-      note: "9 se enlaza a la derecha de 6.",
-      nodes: [
-        {"id": "c", "value": "2", "parent": null},
-        {"id": "a", "value": "7", "parent": "c"},
-        {"id": "b", "value": "8", "parent": "a", "side": "right"},
-        {"id": "d", "value": "6", "parent": "c"},
-        {"id": "e", "value": "9", "parent": "d", "state": "active", "side": "right"},
-      ],
-    },
-    {
-      note: "4 retira 9 y 6, pero se detiene en 2.",
-      nodes: [
-        {"id": "c", "value": "2", "parent": null},
-        {"id": "a", "value": "7", "parent": "c"},
-        {"id": "b", "value": "8", "parent": "a", "side": "right"},
-        {"id": "d", "value": "6", "parent": "c", "state": "marked"},
-        {"id": "e", "value": "9", "parent": "d", "state": "marked", "side": "right"},
-      ],
-    },
-    {
-      note: "4 se enlaza a la derecha de 2. 6 pasa a su izquierda, con 9 intacto.",
-      nodes: [
-        {"id": "c", "value": "2", "parent": null},
-        {"id": "a", "value": "7", "parent": "c"},
-        {"id": "b", "value": "8", "parent": "a", "side": "right"},
-        {"id": "f", "value": "4", "parent": "c", "state": "active"},
-        {"id": "d", "value": "6", "parent": "f", "side": "left"},
-        {"id": "e", "value": "9", "parent": "d", "side": "right"},
-      ],
-    },
-    {
-      note: "Para RMQ(3,5), los extremos son 6 y 4. El LCA es 4, índice 5.",
-      nodes: [
-        {"id": "c", "value": "2", "parent": null},
-        {"id": "a", "value": "7", "parent": "c"},
-        {"id": "b", "value": "8", "parent": "a", "side": "right"},
-        {"id": "f", "value": "4", "parent": "c", "state": "answer"},
-        {"id": "d", "value": "6", "parent": "f", "state": "active", "side": "left"},
-        {"id": "e", "value": "9", "parent": "d", "side": "right"},
+        {"id": "n2", "value": "2 (pos 2)", "parent": null},
+        {"id": "n0", "value": "7 (pos 0)", "parent": "n2", "side": "left", "state": "active"},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right", "state": "active"},
+        {"id": "n1", "value": "8 (pos 1)", "parent": "n0", "side": "right"},
+        {"id": "n3", "value": "6 (pos 3)", "parent": "n5", "side": "left"},
+        {"id": "n4", "value": "9 (pos 4)", "parent": "n3", "side": "right"},
       ],
     },
   ],
 }} />
 
-### Contabilidad de la espina derecha
+El mismo árbol cubre el arreglo completo. Cada nodo ocupa una posición, y el inorden devuelve esas posiciones en orden creciente. Esto es lo que vamos a usar después para RMQ.
 
-*(Traza derivada de la explicación de clase.)*
+## Definición y notación
+
+El árbol cartesiano $T_A$ de un arreglo $A[0..n-1]$ es un árbol binario con $n$ nodos, uno por posición, tal que:
+
+- la raíz es la posición $m$ del mínimo de $A$;
+- su subárbol izquierdo es el árbol cartesiano de $A[0..m-1]$, y su subárbol derecho el de $A[m+1..n-1]$.
+
+La definición es recursiva. Las dos propiedades que se derivan de ella son:
+
+| Propiedad | Qué afirma | Por qué |
+| --- | --- | --- |
+| **Heap** | cada padre es menor o igual que sus hijos | la raíz de cada subárbol es el mínimo de su intervalo |
+| **Inorden** | el recorrido inorden devuelve $0, 1, \dots, n-1$ | la raíz separa las posiciones menores (izquierda) de las mayores (derecha) |
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | número de posiciones (y de nodos) | el árbol tiene exactamente $n$ nodos, sin repetir ni omitir posiciones |
+| $A[v]$ | valor del nodo de posición $v$ | sólo determina la prioridad: quién queda arriba |
+| $v$ | posición del nodo, $0 \le v \le n-1$ | determina el orden inorden: quién queda a la izquierda |
+| $\mathrm{LCA}(u,v)$ | ancestro común más profundo de los nodos $u$ y $v$ | es el nodo de menor profundidad en el camino entre ambos |
+
+Un nodo tiene **dos coordenadas independientes**. La posición decide si va a la izquierda o a la derecha de otro nodo. El valor decide si va encima o debajo. Por eso un hijo izquierdo puede tener un valor mayor que su padre cuando hay un nodo de posición menor con un valor más alto... pero nunca menor. El heap sólo ordena por valor: un hijo izquierdo tiene valor mayor que su padre, aunque su posición sea menor. Lo que no se cumple en general es que el orden de valores coincida con el orden de posiciones.
+
+> **Nota de apoyo** (no está en las diapositivas): en un BST la llave decide tanto el orden inorden como el padre. Aquí la posición decide el inorden y el valor decide el padre. Son dos órdenes distintos sobre los mismos nodos.
+
+## Operaciones paso a paso
+
+El árbol se construye de izquierda a derecha en una sola pasada. Durante la pasada, guardamos la **columna derecha** del árbol parcial: la cadena de la raíz hacia abajo siguiendo siempre hijos derechos. La llamamos la espina, y está guardada en una pila. Las posiciones nuevas siempre caen a la derecha de todo lo anterior, así que sólo pueden colgar de un nodo de la espina.
+
+El algoritmo, al llegar a la posición $i$, hace tres cosas en este orden:
+
+1. Desapila mientras el tope tenga valor mayor que $A[i]$. Cada nodo desapilado sigue en el árbol, pero deja de ser candidato a recibir hijos.
+2. El último nodo desapilado se vuelve hijo izquierdo de $i$. Si no desapiló nada, $i$ no tiene hijo izquierdo.
+3. Si queda un tope en la pila, $i$ se vuelve su hijo derecho. Luego $i$ se apila.
+
+Si la pila queda vacía al final, $i$ es la raíz. Al terminar, el fondo de la pila es la raíz del árbol completo.
+
+El ejemplo de clase es $A = [7, 8, 2, 6, 9, 4]$.
+
+### Construcción paso a paso
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Después de 7,8, la espina es creciente.",
-      arrays: [
-        {"id": "row-0", "label": "Stack", "row": 0, "cells": ["7", "8"], "states": ["idle", "idle"]},
+      note: "Llega la posición 0 con valor 7. Es el primer elemento, así que la pila queda con él. No hay nada con qué compararlo.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0", state: "active"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "P", label: "Pila", cells: [{value: 7, tag: "0"}] },
       ],
-      bridges: [],
+      caption: "Pila: la espina derecha, de la raíz hacia abajo.",
     },
     {
-      note: "Al llegar 2 se hacen dos retiros y una inserción.",
-      arrays: [
-        {"id": "row-0", "label": "Retiros", "row": 0, "cells": ["8", "7"], "states": ["active", "active"]},
-        {"id": "row-1", "label": "Stack", "row": 1, "cells": ["2"], "states": ["answer"]},
+      note: "Llega 8. El tope 7 es menor que 8, así que no se desapila nada. El 8 se vuelve hijo derecho de 7 y se apila encima.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1", state: "active"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "P", label: "Pila", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}] },
       ],
-      bridges: [],
+      caption: "La espina crece hacia abajo: 7, luego 8.",
     },
     {
-      note: "Al llegar 4 se retiran 9 y 6. El 2 permanece.",
-      arrays: [
-        {"id": "row-0", "label": "Retiros", "row": 0, "cells": ["9", "6"], "states": ["active", "active"]},
-        {"id": "row-1", "label": "Stack", "row": 1, "cells": ["2", "4"], "states": ["idle", "answer"]},
+      note: "Llega 2. Desapila 8 (valor 8 mayor que 2), luego 7 (valor 7 mayor que 2). El último desapilado es 7, así que 7 se vuelve hijo izquierdo de 2. La pila queda vacía, por eso 2 es la raíz.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2", state: "active"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "P", label: "Pila", cells: [{value: 2, tag: "2"}] },
       ],
-      bridges: [],
+      caption: "Desapilar no borra el subárbol: 7 conserva a 8 como hijo derecho.",
+    },
+    {
+      note: "Llega 6. El tope 2 es menor que 6, así que 6 se vuelve hijo derecho de 2 y se apila. La espina es ahora 2, 6.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3", state: "active"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "P", label: "Pila", cells: [{value: 2, tag: "2"}, {value: 6, tag: "3"}] },
+      ],
+      caption: "Pila: 2, 6.",
+    },
+    {
+      note: "Llega 9. Es mayor que el tope 6, así que se vuelve hijo derecho de 6 y se apila. La espina es 2, 6, 9.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4", state: "active"}, {value: 4, tag: "5"}] },
+        { id: "P", label: "Pila", cells: [{value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}] },
+      ],
+      caption: "Pila: 2, 6, 9.",
+    },
+    {
+      note: "Llega 4. Desapila 9 (mayor que 4), luego 6 (mayor que 4). Se detiene en 2, porque 2 es menor que 4. El último desapilado es 6, así que 6 pasa a ser hijo izquierdo de 4.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5", state: "active"}] },
+        { id: "P", label: "Pila", cells: [{value: 2, tag: "2"}, {value: 4, tag: "5"}] },
+      ],
+      caption: "Pila final: 2, 4. Las posiciones 3 y 4 quedan debajo de 4.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+En la última fila se ve el resultado: la pila final es $[2, 4]$, y es la espina derecha del árbol completo. El árbol final se muestra abajo, con el subárbol izquierdo de 2 colapsado en un triángulo porque no cambia en los pasos siguientes.
 
-La pila muestra sólo la frontera por donde pueden entrar posiciones nuevas. Los nodos retirados dejan de ser candidatos para recibir el siguiente hijo derecho, pero conservan todos sus descendientes. Al dibujar, verifica dos propiedades por separado: el nuevo nodo queda después de todos los índices anteriores en inorden y las conexiones nuevas respetan prioridad por valor.
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Árbol final. El subárbol de 7 es [7, 8] y se dibuja colapsado. La espina derecha es 2, 4: el 4 es el hijo derecho de la raíz. Por la izquierda de 4 está el subárbol de 6, con 9 como hijo derecho de 6.",
+      nodes: [
+        {"id": "n2", "value": "2 (pos 2)", "parent": null},
+        {"id": "n0", "value": "[7, 8]", "parent": "n2", "side": "left", "collapsed": true},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right", "state": "active"},
+        {"id": "n3", "value": "6 (pos 3)", "parent": "n5", "side": "left"},
+        {"id": "n4", "value": "9 (pos 4)", "parent": "n3", "side": "right"},
+      ],
+    },
+  ],
+}} />
 
-## Análisis de complejidad
+### Desglose de la construcción
 
-Cada índice entra al stack una vez y sale a lo sumo una vez. Aunque leer un nuevo mínimo pueda retirar muchos nodos en un solo paso, la suma de retiros de toda la construcción es $O(n)$. En un RMQ, el LCA de los extremos pertenece al intervalo por el orden inorden. Todos los índices del intervalo están bajo ese ancestro, así que su valor es el menor por el invariante de heap.
+Los pasos 3 y 6 son los únicos donde se desapila más de un nodo. Cada uno lleva a un resultado distinto:
 
-### Cómo justificar la cota en el examen
+- En el paso 3, desapilar 8 y 7 sólo cambia qué nodos son candidatos. El subárbol de 7, que incluye a 8, sigue colgando del árbol.
+- En el paso 6, desapilar 9 y 6 deja a 2 como tope, porque 2 es menor que 4 y no se desapila. El 4 queda como hijo derecho de 2.
 
-En un arreglo decreciente puede cambiar la raíz en cada paso. En otros arreglos, un único nuevo mínimo puede retirar muchos índices. En ambos casos, carga cada retiro a ese índice: se insertó una vez y ya no regresará a la espina. Así hay $n$ inserciones de pila y a lo sumo $n$ retiros. El costo total $O(n)$ se refiere a construir todo el árbol.
+Siempre que se desapila, el último nodo quitado se convierte en hijo izquierdo del nuevo. Eso garantiza que el inorden no cambie: la nueva posición queda después de todas las anteriores, y su hijo izquierdo contiene exactamente las posiciones que quedaron entre el tope y el nuevo nodo.
 
-## Tabla de complejidad
+### Por qué el desempate importa
 
-La tabla superior usa las unidades de costo de la explicación.
+Cuando dos valores son iguales, el algoritmo desapila sólo si el tope es **estrictamente mayor**. Así el primer mínimo queda encima del segundo. Esto fija qué aparición de un valor repetido es la respuesta de RMQ, y lo veremos en los casos límite.
 
-## Ejemplos
+## RMQ es un problema de LCA
 
-[Casos resueltos](/structures/cartesian-tree/examples) y [preguntas con pistas](/structures/cartesian-tree/exercises).
+La construcción no es sólo una forma de guardar el arreglo. Responde RMQ con la estructura del árbol.
 
-## Comparación con estructuras relacionadas
+> **Teorema** (de la diapositiva). Sea $T_A$ el árbol cartesiano de $A$, con empates resueltos por la posición. Entonces $\mathrm{RMQ}_A(i, j) = \mathrm{LCA}_{T_A}(i, j)$.
 
-El árbol cartesiano combina orden inorden por índice con prioridad por valor. En un BST ordinario, la comparación por llave determina el orden inorden.
+La razón es esta. Sea $r$ el LCA de los nodos $i$ y $j$. Como $i$ y $j$ son descendientes de $r$, el inorden de su subárbol contiene todas las posiciones entre ellos, así que $r$ tiene una posición entre $i$ y $j$. Por el heap, $r$ es menor o igual que todos sus descendientes. Además, todas las posiciones entre $i$ y $j$ son descendientes de $r$, así que su valor es el mínimo del intervalo.
 
-## Prueba de dominio
+### Ejemplo: RMQ(3,5) sobre el árbol de clase
 
-[Lista de comprobación](/structures/cartesian-tree/mastery-check).
+El intervalo es $[6, 9, 4]$, con posiciones 3, 4 y 5. Los extremos son los nodos de posición 3 (valor 6) y 5 (valor 4).
 
-*Fuente de clase: Sem12_Static_Trees.pdf · pp. 19-23.*
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Ubicamos los extremos: el nodo de posición 3 (valor 6) y el de posición 5 (valor 4). Subimos desde 6 por sus ancestros.",
+      nodes: [
+        {"id": "n2", "value": "2 (pos 2)", "parent": null},
+        {"id": "n0", "value": "[7, 8]", "parent": "n2", "side": "left", "collapsed": true},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right", "state": "active"},
+        {"id": "n3", "value": "6 (pos 3)", "parent": "n5", "side": "left", "state": "active"},
+        {"id": "n4", "value": "9 (pos 4)", "parent": "n3", "side": "right"},
+      ],
+    },
+    {
+      note: "El padre de 6 es 4, que es el nodo de posición 5. Ya es ancestro de 6, y también es uno de los extremos. El LCA es 4, así que RMQ(3,5) devuelve la posición 5, con valor 4.",
+      nodes: [
+        {"id": "n2", "value": "2 (pos 2)", "parent": null},
+        {"id": "n0", "value": "[7, 8]", "parent": "n2", "side": "left", "collapsed": true},
+        {"id": "n5", "value": "4 (pos 5)", "parent": "n2", "side": "right", "state": "answer"},
+        {"id": "n3", "value": "6 (pos 3)", "parent": "n5", "side": "left"},
+        {"id": "n4", "value": "9 (pos 4)", "parent": "n3", "side": "right"},
+      ],
+    },
+  ],
+}} />
+
+### Ejemplo: RMQ(1,4)
+
+El intervalo es $[8, 2, 6, 9]$, y el mínimo es 2. Los extremos son 8 (posición 1) y 9 (posición 4). Están a lados distintos de la raíz 2: 8 cuelga de 7, a la izquierda, y 9 cuelga de 4, a la derecha. Su LCA es la raíz, así que RMQ(1,4) = posición 2.
+
+## De dónde sale la cota
+
+La construcción recorre el arreglo una vez, pero el `while` puede desapilar muchos nodos en un solo paso. Una cota ingenua diría $O(n^2)$, porque un paso podría costar $O(n)$. La cuenta correcta es otra: se cuenta cuántas veces puede entrar y salir un nodo de la pila.
+
+Cada posición entra a la pila **exactamente una vez**: al llegar. Sale **a lo sumo una vez**: cuando un nodo posterior la desapila. Nunca vuelve a entrar. Así el número total de operaciones de la pila es a lo más $2n$, y el trabajo de la construcción es $O(n)$.
+
+En el ejemplo, las dos columnas siguientes cuentan apilados y desapilados acumulados a medida que llega cada posición.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Posición 0 llega: 1 apilado, 0 desapilados. Hasta ahora el costo es 1.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0", state: "active"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "push", label: "Apilados", cells: [{value: 1}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "pop", label: "Desapilados", cells: [{value: 0}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+      ],
+    },
+    {
+      note: "Posición 1: apila 8, no desapila nada. Acumulado: 2 apilados, 0 desapilados.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1", state: "active"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "push", label: "Apilados", cells: [{value: 1}, {value: 2}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "pop", label: "Desapilados", cells: [{value: 0}, {value: 0}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+      ],
+    },
+    {
+      note: "Posición 2 desapila dos nodos. Acumulado: 3 apilados, 2 desapilados. Un solo paso pagó dos desapilados, pero esos dos nodos ya no volverán a la pila.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2", state: "active"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "push", label: "Apilados", cells: [{value: 1}, {value: 2}, {value: 3}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "pop", label: "Desapilados", cells: [{value: 0}, {value: 0}, {value: 2}, {value: "·"}, {value: "·"}, {value: "·"}] },
+      ],
+    },
+    {
+      note: "Posición 3 apila 6. Acumulado: 4 apilados, 2 desapilados.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3", state: "active"}, {value: 9, tag: "4"}, {value: 4, tag: "5"}] },
+        { id: "push", label: "Apilados", cells: [{value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: "·"}, {value: "·"}] },
+        { id: "pop", label: "Desapilados", cells: [{value: 0}, {value: 0}, {value: 2}, {value: 2}, {value: "·"}, {value: "·"}] },
+      ],
+    },
+    {
+      note: "Posición 4 apila 9. Acumulado: 5 apilados, 2 desapilados.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4", state: "active"}, {value: 4, tag: "5"}] },
+        { id: "push", label: "Apilados", cells: [{value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: "·"}] },
+        { id: "pop", label: "Desapilados", cells: [{value: 0}, {value: 0}, {value: 2}, {value: 2}, {value: 2}, {value: "·"}] },
+      ],
+    },
+    {
+      note: "Posición 5 desapila dos nodos y apila uno. Final: 6 apilados, 4 desapilados. Los desapilados son 2 en la posición 2 y 2 en la posición 5, así que el total de desapilados es menor o igual que el de apilados.",
+      rows: [
+        { id: "A", label: "Entrada", cells: [{value: 7, tag: "0"}, {value: 8, tag: "1"}, {value: 2, tag: "2"}, {value: 6, tag: "3"}, {value: 9, tag: "4"}, {value: 4, tag: "5", state: "active"}] },
+        { id: "push", label: "Apilados", cells: [{value: 1}, {value: 2}, {value: 3}, {value: 4}, {value: 5}, {value: 6}] },
+        { id: "pop", label: "Desapilados", cells: [{value: 0}, {value: 0}, {value: 2}, {value: 2}, {value: 2}, {value: 4}] },
+      ],
+      caption: "Total: 6 apilados y 4 desapilados. Cada posición entra una vez y sale a lo sumo una vez.",
+    },
+  ],
+}} />
+
+### Cómo justificarlo en el examen
+
+Con $n$ posiciones hay exactamente $n$ operaciones de apilar. Cada desapilar saca un nodo que estaba en la pila, y cada nodo se apiló una sola vez, así que hay a lo sumo $n$ desapilares. El trabajo total es $n$ apilares, más a lo sumo $n$ desapilares, más $O(1)$ por posición: $O(n)$ en total.
+
+El argumento sirve aunque una sola posición desapile todo lo anterior. Ese paso es caro, pero se cobra a los nodos que salen, no a la posición que llega. Así el costo amortizado por posición es $O(1)$.
+
+## Errores típicos y casos límite
+
+- **Arreglo vacío.** La pila queda vacía y no hay raíz. Por convención la estructura es nula, y RMQ no está definido.
+- **Un solo elemento.** La pila tiene un nodo, que es la raíz. No hay hijos.
+- **Arreglo decreciente.** Cada posición desapila a la anterior, y la raíz cambia en cada paso. El árbol queda como una cadena de hijos izquierdos. Por ejemplo, $[3, 2, 1]$ produce raíz 1 con hijo izquierdo 2, que a su vez tiene hijo izquierdo 3.
+- **Arreglo creciente.** No se desapila nada: cada posición es hijo derecho de la anterior, y el árbol es una cadena de hijos derechos.
+- **Duplicados.** Con desapilado estricto, el primer mínimo queda encima del segundo. Para $[2, 2, 1]$, la posición 1 es hijo derecho de la posición 0. Luego 1 desapila ambos, y la posición 0 queda como hijo izquierdo de la raíz. RMQ(0,1) devuelve la posición 0, que es la primera aparición del mínimo.
+
+## Conexión
+
+- Prerrequisito: [RMQ estático](/structures/static-rmq). El árbol cartesiano es la forma de responder RMQ sin tabla de consultas.
+- Ejemplos resueltos: [casos resueltos](/structures/cartesian-tree/examples).
+- Preguntas con pistas: [preguntas de examen](/structures/cartesian-tree/exercises).
+- Prueba de dominio: [lista de comprobación](/structures/cartesian-tree/mastery-check).
+
+*Fuente de clase: Sem12_Static_Trees.pdf, láminas 16 a 20 de 42 (pp. 19 a 23 del PDF).*

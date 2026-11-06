@@ -3,48 +3,47 @@ kind: exercises
 title: Preguntas de examen
 items:
 - level: 1
-  statement: ¿Qué cuesta leer un registro que ya está en RAM?
-  hints:
-  - Cuenta transferencias, no accesos de CPU.
-  solution: Cero E/S adicionales.
   label: reconocer
+  statement: '¿Cuántas transferencias cuesta leer un registro que ya está en RAM?'
+  hints:
+  - 'El modelo sólo cuenta transferencias entre RAM y almacenamiento externo.'
+  - 'Pregunta si esa lectura necesita traer un bloque nuevo.'
+  solution: 'Cero. El registro ya está en RAM, así que no cruza ninguna frontera de bloque.'
 - level: 2
-  statement: Traza un escaneo de 19 registros con B=4.
-  hints:
-  - Separa grupos de cuatro.
-  - Incluye el grupo final.
-  solution: Cinco transferencias.
   label: trazar
+  statement: 'Traza un escaneo de N = 19 registros con B = 4. ¿Cuántas transferencias hace? Usa $\lceil N/B\rceil$.'
+  hints:
+  - 'Corta el archivo en grupos de cuatro posiciones consecutivas.'
+  - 'El último grupo tiene tres registros, pero cuesta lo mismo que uno lleno.'
+  solution: '$\lceil 19/4\rceil = 5$ transferencias: cuatro bloques llenos y uno con tres registros.'
 - level: 3
-  statement: 'Dos intervalos tienen seis registros: [0,5] y [3,8]. Con B=4, ¿cuántos bloques toca
-    cada uno?'
-  hints:
-  - Divide cada extremo entre cuatro y redondea hacia abajo.
-  - Cuenta ambos bloques extremos.
-  solution: '[0,5] toca 0 y 1. [3,8] toca 0, 1 y 2. La diferencia es alineación.'
   label: resolver
+  statement: 'Dos intervalos tienen seis registros: [0, 5] y [3, 8]. Con B = 4, ¿cuántos bloques toca cada uno?'
+  hints:
+  - 'Calcula el bloque del extremo izquierdo y el del extremo derecho dividiendo entre 4 y redondeando hacia abajo.'
+  - 'El número de bloques es la diferencia de esos dos índices más uno.'
+  solution: '[0, 5] toca los bloques 0 y 1, es decir 2. [3, 8] toca los bloques 0, 1 y 2, es decir 3. La misma longitud puede costar una transferencia más según la alineación.'
 - level: 4
-  statement: Con B=4 y un búfer, alternas índices 0,4,1,5. ¿Qué cambia si tienes dos ranuras?
-  hints:
-  - Los índices 0 y 1 comparten bloque.
-  - Simula las ranuras después de cada visita.
-  solution: Con una ranura las cuatro visitas cargan un bloque. Con dos, las dos últimas reutilizan
-    los bloques ya residentes.
   label: comparar
+  statement: 'Con B = 4 y RAM de una sola ranura, se piden las posiciones 0, 4, 1, 5 en ese orden. ¿Cuántas transferencias hay? ¿Y con dos ranuras?'
+  hints:
+  - 'Las posiciones 0 y 1 pertenecen al bloque 0, y las posiciones 4 y 5 al bloque 1.'
+  - 'Simula la ranura después de cada petición. Con una ranura, cada cambio de bloque expulsa al anterior.'
+  solution: 'Con una ranura son 4 transferencias, porque cada petición cambia de bloque. Con dos ranuras son 2: ambos bloques quedan retenidos y las peticiones 1 y 5 son aciertos.'
 - level: 5
-  statement: Una copia de 10 registros usa B=4. ¿En qué cambia frente a contar los registros?
-  hints:
-  - Separa lecturas de escrituras.
-  - Hay un bloque de salida parcial.
-  solution: Ambas leen tres bloques. La copia también escribe tres, incluido el parcial. El conteo
-    puede conservar un acumulador en RAM.
   label: justificar
-- level: 6
-  statement: Justifica el factor B+1 en la cota inferior.
+  statement: 'Una copia de 10 registros con B = 4 lee el archivo original y escribe otro archivo. ¿En qué cambia el costo frente a contar los registros?'
   hints:
-  - Dibuja los huecos que dejan B separadores ordenados.
-  solution: Hay un hueco entre cada par y dos extremos, así que una lectura distingue hasta B+1 intervalos.
+  - 'Separa las lecturas de las escrituras y cuenta cada una por separado.'
+  - 'El último bloque de salida puede estar incompleto, pero se escribe igual.'
+  solution: 'La copia lee 3 bloques y escribe 3, incluido el parcial. Contar sólo lee 3 bloques y mantiene el acumulador en RAM, sin escribir nada.'
+- level: 6
   label: demostrar
+  statement: 'Justifica por qué la cota inferior de búsqueda tiene base $B+1$ y no $B$ ni $2$. Escribe la desigualdad de la que sale $t \ge \log_{B+1}(N+1)$.'
+  hints:
+  - 'Dibuja B llaves ordenadas. ¿Cuántas zonas dejan esos separadores?'
+  - 'Si t transferencias pueden distinguir como mucho (B+1)^t respuestas, ¿qué desigualdad debe cumplirse para cubrir los N+1 huecos?'
+  solution: 'B llaves dejan B+1 zonas, una por cada hueco entre separadores más los dos extremos. Una transferencia distingue hasta B+1 zonas, así que t transferencias distinguen hasta (B+1)^t respuestas. Para cubrir N+1 huecos, (B+1)^t >= N+1, y por tanto t >= log_{B+1}(N+1).'
 ---
 
-Antes de abrir una pista, dibuja el estado inicial y escribe qué unidad de trabajo vas a contar.
+Antes de abrir una pista, dibuja el estado inicial de la RAM y escribe qué unidad de trabajo vas a contar: registros examinados o transferencias.

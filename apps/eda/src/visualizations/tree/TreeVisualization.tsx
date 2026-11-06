@@ -8,6 +8,7 @@ export type TreeLink = {
   kind?: 'tree' | 'shared' | 'pointer';
   label?: string;
   curve?: number;
+  dash?: boolean;
   /** Un par real de punteros opuestos entre los MISMOS dos nodos (`left`/
    * `right` de una lista circular de hermanos) es UNA arista con flecha en
    * ambos extremos — declarar las dos direcciones por separado las dibuja
@@ -56,6 +57,7 @@ export default function TreeVisualization({ steps }: { steps: TreeStep[] }) {
         arrow: l.kind === 'pointer',
         arrowStart: l.kind === 'pointer' && l.bidirectional === true,
         curve: l.curve ?? 0,
+        dash: l.dash,
       })),
     ];
 

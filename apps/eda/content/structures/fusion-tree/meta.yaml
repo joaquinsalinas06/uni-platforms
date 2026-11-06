@@ -3,7 +3,7 @@ title: Fusion tree y operaciones de palabra
 type: structure
 week: week-12
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites:
 - integer-predecessor
 - b-tree

@@ -5,111 +5,427 @@ title: "X-fast trie"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Un trie binario de altura $w$ tarda hasta $w$ pasos si se recorre bit por bit. La estructura conserva el trie, pero permite saltar a un nivel arbitrario.
+Sea $S$ un conjunto de $n$ llaves de $w$ bits, con universo $u = 2^w$. Un trie binario guarda cada llave como un camino desde la raíz de altura $w$. Para responder «¿cuál es el sucesor de $x$?» con ese trie hay que bajar bit a bit: en el peor caso son $w$ aristas, y la respuesta puede estar al otro lado del árbol. Con $S = \{2, 3, 4, 5, 7, 14, 15\}$ y $w = 4$, la consulta $x = 6 = 0110$ baja tres niveles antes de notar que el camino se corta.
 
-## Intuición
+La pregunta de esta estructura es: ¿se puede encontrar el punto donde se corta el camino sin recorrerlo entero?
 
-Guarda un diccionario por longitud de prefijo. Si un prefijo no existe, ninguno de sus prefijos más largos puede existir. Haz búsqueda binaria sobre longitudes.
+## Intuición dibujada
 
-## Estructura interna
+El trie de $S$ tiene un nodo por cada prefijo de cada llave. Un nodo existe si y sólo si algún elemento de $S$ empieza con ese prefijo. Los nodos de valor 1 son los únicos que cuentan; los que faltan no se dibujan.
 
-Las hojas están enlazadas en orden. Un puntero de salto en una rama ausente conduce a un extremo de las hojas bajo el prefijo más largo encontrado. El extremo depende de qué lado falta.
-
-### Construir el índice que permite saltar niveles
-
-Para las hojas 0010, 1001, 1010 y 1100, el diccionario de longitud uno contiene 0 y 1. El de longitud dos contiene 00, 10 y 11. El de longitud tres contiene 001, 100, 101 y 110. En longitud cuatro aparecen las hojas completas. El mismo prefijo puede ser compartido por varias llaves y por eso se registra una vez en su nivel. Mantener los diccionarios equivale a poder preguntar por un nodo sin recorrer todas las aristas hasta él.
-
-### Separar dos búsquedas en una consulta
-
-Primero pregunta qué tan largo es el prefijo existente. Si falta un prefijo, cualquier extensión suya también falta. Esa propiedad permite descartar la mitad de longitudes. Después convierte el punto donde falla el camino en vecinos ordenados. Si falta la rama derecha, toda la rama izquierda queda por debajo de la consulta. Su máximo da la frontera inferior y el vecino siguiente da la superior. Si falta la rama izquierda, toda la rama derecha queda por encima y se usa su mínimo.
-
-La lista enlazada de hojas permite cruzar entre prefijos. Sin esa lista, encontrar el extremo de un solo subárbol puede dar sólo uno de los dos vecinos y la consulta tendría que hacer trabajo adicional para encontrar el otro.
-
-## Operaciones
-
-Busca el mayor $k$ con el prefijo de longitud $k$ presente. Si $k=w$, la llave existe y la lista de hojas da los vecinos estrictos. Si falta una rama, usa su salto y el vecino en la lista si hace falta.
-
-### Encontrar el prefijo más largo de 1011
-
-*(Traza derivada de la explicación de clase.)*
+Las siete hojas están marcadas en ámbar porque son las llaves. Las unió una lista doblemente enlazada en orden, que aquí se dibuja con flechas `sig`. Cada arista lleva su bit: $0$ hacia el hijo izquierdo, $1$ hacia el derecho.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "tree",
   steps: [
     {
-      note: "Las hojas del ejemplo son 0010, 1001, 1010 y 1100.",
-      arrays: [
-        {"id": "row-0", "label": "Hojas", "row": 0, "cells": ["0010", "1001", "1010", "1100"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Trie de las 7 llaves de S con w = 4. Sólo se dibujan los prefijos que existen: 1 + 2 + 3 + 4 + 7 = 17 nodos. Las etiquetas de los nodos son prefijos, no las llaves en decimal, porque el camino desde la raíz da el valor de la llave bit a bit.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "0", value: "0", parent: "e", edge: false },
+        { id: "1", value: "1", parent: "e", edge: false },
+        { id: "00", value: "00", parent: "0", edge: false },
+        { id: "01", value: "01", parent: "0", edge: false },
+        { id: "11", value: "11", parent: "1", edge: false },
+        { id: "001", value: "001", parent: "00", edge: false },
+        { id: "010", value: "010", parent: "01", edge: false },
+        { id: "011", value: "011", parent: "01", edge: false },
+        { id: "111", value: "111", parent: "11", edge: false },
+        { id: "0010", value: "0010", parent: "001", state: "marked", edge: false },
+        { id: "0011", value: "0011", parent: "001", state: "marked", edge: false },
+        { id: "0100", value: "0100", parent: "010", state: "marked", edge: false },
+        { id: "0101", value: "0101", parent: "010", state: "marked", edge: false },
+        { id: "0111", value: "0111", parent: "011", state: "marked", edge: false },
+        { id: "1110", value: "1110", parent: "111", state: "marked", edge: false },
+        { id: "1111", value: "1111", parent: "111", state: "marked", edge: false },
       ],
-      bridges: [],
-    },
-    {
-      note: "Pregunta por longitud 2. El prefijo 10 existe.",
-      arrays: [
-        {"id": "row-0", "label": "Longitudes candidatas", "row": 0, "cells": ["0", "1", "2", "3", "4"], "states": ["muted", "muted", "answer", "idle", "idle"]},
+      links: [
+        { from: "e", to: "0", kind: "tree", label: "0" },
+        { from: "e", to: "1", kind: "tree", label: "1" },
+        { from: "0", to: "00", kind: "tree", label: "0" },
+        { from: "0", to: "01", kind: "tree", label: "1" },
+        { from: "1", to: "11", kind: "tree", label: "1" },
+        { from: "00", to: "001", kind: "tree", label: "1" },
+        { from: "01", to: "010", kind: "tree", label: "0" },
+        { from: "01", to: "011", kind: "tree", label: "1" },
+        { from: "11", to: "111", kind: "tree", label: "1" },
+        { from: "001", to: "0010", kind: "tree", label: "0" },
+        { from: "001", to: "0011", kind: "tree", label: "1" },
+        { from: "010", to: "0100", kind: "tree", label: "0" },
+        { from: "010", to: "0101", kind: "tree", label: "1" },
+        { from: "011", to: "0111", kind: "tree", label: "1" },
+        { from: "111", to: "1110", kind: "tree", label: "0" },
+        { from: "111", to: "1111", kind: "tree", label: "1" },
+        { from: "0010", to: "0011", kind: "pointer" },
+        { from: "0011", to: "0100", kind: "pointer" },
+        { from: "0100", to: "0101", kind: "pointer" },
+        { from: "0101", to: "0111", kind: "pointer" },
+        { from: "0111", to: "1110", kind: "pointer" },
+        { from: "1110", to: "1111", kind: "pointer" },
       ],
-      bridges: [],
-    },
-    {
-      note: "Pregunta por longitud 3. 101 también existe.",
-      arrays: [
-        {"id": "row-0", "label": "Longitudes candidatas", "row": 0, "cells": ["0", "1", "2", "3", "4"], "states": ["muted", "muted", "muted", "answer", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "La llave completa 1011 no existe.",
-      arrays: [
-        {"id": "row-0", "label": "Longitudes candidatas", "row": 0, "cells": ["0", "1", "2", "3", "4"], "states": ["muted", "muted", "muted", "answer", "muted"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Falta la rama derecha de 101. Su extremo existente por la izquierda es 1010.",
-      arrays: [
-        {"id": "row-0", "label": "Hojas", "row": 0, "cells": ["0010", "1001", "1010", "1011", "1100"], "states": ["idle", "idle", "answer", "marked", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El sucesor de 1011 es el vecino siguiente de 1010: 1100.",
-      arrays: [
-        {"id": "row-0", "label": "Hojas", "row": 0, "cells": ["0010", "1001", "1010", "1011", "1100"], "states": ["idle", "idle", "answer", "marked", "answer"]},
-      ],
-      bridges: [],
+      caption: "Hojas (ámbar) = llaves. Flechas sig = lista de hojas en orden.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Definición y notación
 
-La búsqueda binaria trabaja con la proposición «existe un nodo con este prefijo a esta longitud». Si falla en longitud tres, probar longitud cuatro no puede dar éxito. Si acierta en tres, todavía puede haber un prefijo más largo. El salto final contesta una pregunta distinta: cuál extremo del subárbol bordea el lugar donde habría estado la rama faltante.
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $w$ | bits de cada llave; $u = 2^w$ | sube la altura del trie y el número de niveles de la búsqueda |
+| $n$ | número de llaves en $S$ | crecen las hojas, la lista y las entradas de la tabla |
+| $\ell$ | longitud de un prefijo, $0 \le \ell \le w$ | indexa el nivel; hay $w+1$ niveles |
+| $p = x \gg (w-\ell)$ | prefijo de longitud $\ell$ de $x$ | es la clave de búsqueda en la tabla |
+| $T$ | tabla hash con clave $(\ell, p)$ y valor $(\min, \max)$ | una entrada por cada prefijo existente |
 
-## Análisis de complejidad
+La tabla $T$ guarda, para cada prefijo $p$ que existe, la menor y la mayor llave de $S$ que empiezan por $p$. Así cada prefijo sabe qué hojas cubre sin recorrer el subárbol.
 
-La búsqueda binaria pregunta por $O(\lg w)$ longitudes. Con consultas hash de costo esperado constante, el tiempo esperado de consulta es $O(\lg w)$. Una inserción o eliminación puede alterar $w$ prefijos y punteros. El espacio es $O(nw)$ porque cada llave aporta a lo sumo un prefijo por longitud.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tabla T del ejemplo, un renglón por nivel ℓ. Cada celda es un prefijo que existe, con su (mín, máx) de llaves. El nivel 0 tiene una entrada (ε), el 4 tiene siete porque cada llave es una hoja con mín = máx.",
+      rows: [
+        { id: "l0", label: "ℓ = 0", cells: [{ value: "2–15", tag: "ε" }] },
+        { id: "l1", label: "ℓ = 1", cells: [{ value: "2–7", tag: "0" }, { value: "14–15", tag: "1" }] },
+        { id: "l2", label: "ℓ = 2", cells: [{ value: "2–3", tag: "00" }, { value: "4–7", tag: "01" }, { value: "14–15", tag: "11" }] },
+        { id: "l3", label: "ℓ = 3", cells: [{ value: "2–3", tag: "001" }, { value: "4–5", tag: "010" }, { value: "7", tag: "011" }, { value: "14–15", tag: "111" }] },
+        { id: "l4", label: "ℓ = 4", cells: [
+          { value: "2", tag: "0010" }, { value: "3", tag: "0011" }, { value: "4", tag: "0100" }, { value: "5", tag: "0101" },
+          { value: "7", tag: "0111" }, { value: "14", tag: "1110" }, { value: "15", tag: "1111" },
+        ] },
+      ],
+      caption: "Total: 1 + 2 + 3 + 4 + 7 = 17 entradas. Un prefijo sólo tiene entrada si existe.",
+    },
+  ],
+}} />
 
-### Cómo justificar la cota en el examen
+## Operaciones paso a paso: Sucesor(6)
 
-Hay $w+1$ longitudes posibles contando la raíz. Buscar la frontera entre prefijos presentes y ausentes toma $O(lg w)$ consultas a diccionarios. Para afirmar tiempo esperado debes sumar el costo esperado de cada consulta. En una actualización, una sola llave puede introducir un camino de $w$ nodos o eliminarlo. No uses la cota de búsqueda para una actualización que modifica muchos diccionarios.
+El sucesor de $x$ es la menor llave de $S$ mayor que $x$. Se resuelve en dos partes: primero encontrar el nivel $\ell$ del prefijo más largo de $x$ que existe, después convertir el fallo en un vecino. Este es el algoritmo, en prosa:
 
-## Tabla de complejidad
+1. Empieza con $\text{lo} = 0$ y $\text{hi} = w$. El prefijo de longitud $0$ existe siempre, así que $\text{lo}$ es válido desde el principio.
+2. Mientras $\text{lo} < \text{hi}$, toma $\text{mid} = \lceil (\text{lo} + \text{hi}) / 2 \rceil$ y pregunta a $T$ si el prefijo de $x$ de longitud $\text{mid}$ existe.
+3. Si existe, sube $\text{lo}$ a $\text{mid}$. Si no existe, baja $\text{hi}$ a $\text{mid} - 1$.
+4. Al terminar, $\ell = \text{lo}$ y $p$ es el prefijo de longitud $\ell$ de $x$. Si $\ell = w$, $x \in S$ y el sucesor es el siguiente en la lista.
+5. Si no, mira el bit $\ell + 1$ de $x$. Si es $0$, falta el hijo izquierdo: el sucesor es el mínimo de la rama derecha, $T[(\ell+1,\, 2p+1)].\min$.
+6. Si el bit es $1$, falta el hijo derecho: el predecesor es el máximo de la rama izquierda, $y = T[(\ell+1,\, 2p)].\max$, y el sucesor es el siguiente de $y$ en la lista.
 
-La tabla superior usa las unidades de costo de la explicación.
+Ahora el ejemplo corrido con $x = 6 = 0110_2$ sobre el trie de arriba. Los prefijos de $x$ son $\varepsilon$, $0$, $01$, $011$ y $0110$. Los cuatro primeros existen; $0110$ no.
 
-## Ejemplos
+Primero, la búsqueda por niveles. El diagrama de tabla muestra qué sondea cada paso.
 
-[Casos resueltos](/structures/x-fast-trie/examples) y [preguntas con pistas](/structures/x-fast-trie/exercises).
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Paso 1. lo = 0 y hi = 4. mid = ⌈(0+4)/2⌉ = 2. Pregunto por el prefijo de longitud 2, que es 01. Existe, así que puedo descartar las longitudes menores: la respuesta está en el intervalo de niveles de 2 a 4.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "0", tag: "1" }, { value: "01", tag: "2", state: "active" }, { value: "011", tag: "3" }, { value: "0110", tag: "4" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }] },
+      ],
+      spans: [{ id: "rango", row: "niv", from: 0, to: 4, label: "lo=0, hi=4" }],
+      caption: "Sondeo en el nivel 2.",
+    },
+    {
+      note: "Paso 2. Como 01 existe, lo = 2. Ahora mid = ⌈(2+4)/2⌉ = 3. Pregunto por 011. Existe, así que lo = 3: la búsqueda se acerca a la frontera del trie.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "0", tag: "1" }, { value: "01", tag: "2" }, { value: "011", tag: "3", state: "active" }, { value: "0110", tag: "4" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }] },
+      ],
+      spans: [{ id: "rango", row: "niv", from: 2, to: 4, label: "lo=2, hi=4" }],
+      caption: "Sondeo en el nivel 3.",
+    },
+    {
+      note: "Paso 3. lo = 3 y hi = 4. mid = ⌈(3+4)/2⌉ = 4. Pregunto por 0110. No existe, así que hi = mid - 1 = 3. Éste es el primer nivel que falla, y el intervalo se cierra en 3.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "0", tag: "1" }, { value: "01", tag: "2" }, { value: "011", tag: "3" }, { value: "0110", tag: "4", state: "active" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }] },
+      ],
+      spans: [{ id: "rango", row: "niv", from: 3, to: 4, label: "lo=3, hi=4" }],
+      caption: "Sondeo en el nivel 4: falla.",
+    },
+    {
+      note: "Paso 4. lo = hi = 3, así que ℓ = 3 y p = 011. El prefijo más largo de 6 que existe es 011. El bit 4 de x es 0, así que falta el hijo izquierdo 0110.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "0", tag: "1" }, { value: "01", tag: "2" }, { value: "011", tag: "3", state: "answer" }, { value: "0110", tag: "4" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }] },
+      ],
+      spans: [{ id: "rango", row: "niv", from: 3, to: 3, label: "ℓ = 3" }],
+      caption: "Respuesta de la búsqueda: ℓ = 3, p = 011.",
+    },
+  ],
+}} />
 
-## Comparación con estructuras relacionadas
+Ahora el trie, el mismo sondeo sobre el camino. Cada paso dibuja el nodo que se mira. El fantasma $0110$ es un nodo que no existe: se dibuja en gris para que se vea dónde debía estar.
 
-vEB reduce el tamaño del universo con una estructura recursiva. X-fast busca sobre los niveles de un trie y paga más espacio por los diccionarios.
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Paso 1. La raíz ε existe siempre: es el prefijo de longitud 0. Es el punto de partida del sondeo y del camino de x = 0110.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active" },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g0110", value: "0110", parent: "011", state: "muted" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 0 existe.",
+    },
+    {
+      note: "Paso 2. El prefijo de longitud 1 es 0. Existe, así que la búsqueda por niveles sube lo a 1, y la rama izquierda contiene llaves desde 2 hasta 7.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e", state: "active" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g0110", value: "0110", parent: "011", state: "muted" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 1 existe.",
+    },
+    {
+      note: "Paso 3. El prefijo 01 existe. Las llaves de 4 a 7 empiezan por 01, así que x = 0110 cae en esta rama. Sube lo a 2.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0", state: "active" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g0110", value: "0110", parent: "011", state: "muted" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 2 existe.",
+    },
+    {
+      note: "Paso 4. El prefijo 011 existe y es el último nivel que la búsqueda aprueba. Bajo 011 sólo hay una hoja, 0111 = 7. La llave 6 tendría que estar en el hijo izquierdo de 011, donde caería 0110, y es ahí donde se mira ahora.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01", state: "active" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g0110", value: "0110", parent: "011", state: "muted" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 3 existe.",
+    },
+    {
+      note: "Paso 5. El hijo izquierdo 0110 no existe: el fantasma en gris marca el lugar vacío. Por eso 011 es el delimitador de la búsqueda (ámbar). El bit 4 de x es 0, así que la llave 6 queda antes de todo lo que hay bajo 011 y el sucesor es el mínimo de esa rama.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01", state: "marked" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g0110", value: "0110", parent: "011", state: "muted" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Falta el hijo izquierdo 0110: se toma el mínimo de la rama derecha.",
+    },
+    {
+      note: "Paso 6. La rama derecha de 011 es la hoja 0111. Su mínimo, T[(4, 0111)].min = 7, es el sucesor de 6. No hizo falta bajar desde la raíz hasta la hoja: el salto va directo al extremo del subárbol.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01", state: "marked" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011", state: "answer" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g0110", value: "0110", parent: "011", state: "muted" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sucesor(6) = 7.",
+    },
+  ],
+}} />
 
-## Prueba de dominio
+Obsérvese que la respuesta salió de la rama que sí existe. Cuando falta la rama derecha en vez de la izquierda, el extremo que sirve es el máximo de la rama izquierda y el vecino real se busca en la lista; ese caso está en la página de ejemplos.
 
-[Lista de comprobación](/structures/x-fast-trie/mastery-check).
+## Operaciones paso a paso: insertar y eliminar
 
-*Fuente de clase: Sem11_Integers_II.pdf · pp. 25-39.*
+Insertar $x$ se hace en dos fases. Primero se busca el sucesor de $x$ para ubicarla en la lista. Después se agregan los $w+1$ prefijos de $x$ a $T$. Si un prefijo ya existía, se actualizan su mínimo y su máximo con $x$.
+
+Eliminar $x$ recorre los mismos $w+1$ prefijos. Si $x$ era la única llave de un prefijo, esa entrada se borra. Si $x$ era el mínimo o el máximo, el nuevo extremo es el vecino de $x$ en la lista (el siguiente o el anterior).
+
+Ninguna de las dos operaciones es rápida en el peor caso: tocar $w+1$ entradas cuesta $\Theta(w)$, aunque la búsqueda sea $O(\lg w)$. Es el precio de tener los prefijos a mano.
+
+## De dónde sale la cota
+
+La consulta de sucesor hace dos cosas: la búsqueda por niveles y el salto. Ambas se derivan término a término.
+
+**Búsqueda por niveles: $O(\lg w)$.** Cada sondeo parte en dos el intervalo de niveles candidatos. Empieza con $w+1$ niveles, $\ell = 0, \ldots, w$. Tras $k$ sondeos quedan a lo sumo $\lceil (w+1)/2^k \rceil$. La búsqueda termina cuando queda un nivel, así que el número de sondeos es el mínimo $k$ con $(w+1)/2^k \le 1$:
+
+$$k = \lceil \lg (w+1) \rceil = O(\lg w)$$
+
+El diagrama muestra el peor caso con $w = 8$: nueve niveles, cuatro sondeos que siempre encuentran el prefijo.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Paso 0. Con w = 8 hay 9 niveles candidatos, de 0 a 8. El intervalo tiene tamaño w + 1 = 9.",
+      rows: [{ id: "lv", label: "nivel", cells: [
+        { value: "0" }, { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7" }, { value: "8" },
+      ] }],
+      spans: [{ id: "r", row: "lv", from: 0, to: 8, label: "9 niveles" }],
+      caption: "Intervalo inicial: lo = 0, hi = 8.",
+    },
+    {
+      note: "Paso 1. mid = ⌈(0+8)/2⌉ = 4 existe, así que lo = 4. El intervalo pasa a 5 niveles, que es ⌈9/2⌉.",
+      rows: [{ id: "lv", label: "nivel", cells: [
+        { value: "0" }, { value: "1" }, { value: "2" }, { value: "3" }, { value: "4", state: "active" }, { value: "5" }, { value: "6" }, { value: "7" }, { value: "8" },
+      ] }],
+      spans: [{ id: "r", row: "lv", from: 4, to: 8, label: "5 niveles" }],
+      caption: "Tras 1 sondeo: 5 niveles.",
+    },
+    {
+      note: "Paso 2. mid = ⌈(4+8)/2⌉ = 6 existe, así que lo = 6. El intervalo pasa a 3 niveles.",
+      rows: [{ id: "lv", label: "nivel", cells: [
+        { value: "0" }, { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "5" }, { value: "6", state: "active" }, { value: "7" }, { value: "8" },
+      ] }],
+      spans: [{ id: "r", row: "lv", from: 6, to: 8, label: "3 niveles" }],
+      caption: "Tras 2 sondeos: 3 niveles.",
+    },
+    {
+      note: "Paso 3. mid = ⌈(6+8)/2⌉ = 7 existe, así que lo = 7. El intervalo pasa a 2 niveles.",
+      rows: [{ id: "lv", label: "nivel", cells: [
+        { value: "0" }, { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7", state: "active" }, { value: "8" },
+      ] }],
+      spans: [{ id: "r", row: "lv", from: 7, to: 8, label: "2 niveles" }],
+      caption: "Tras 3 sondeos: 2 niveles.",
+    },
+    {
+      note: "Paso 4. mid = ⌈(7+8)/2⌉ = 8 existe, así que lo = 8 = hi. El intervalo tiene un solo nivel: la búsqueda termina tras 4 sondeos, igual que ⌈lg 9⌉.",
+      rows: [{ id: "lv", label: "nivel", cells: [
+        { value: "0" }, { value: "1" }, { value: "2" }, { value: "3" }, { value: "4" }, { value: "5" }, { value: "6" }, { value: "7" }, { value: "8", state: "answer" },
+      ] }],
+      spans: [{ id: "r", row: "lv", from: 8, to: 8, label: "1 nivel" }],
+      caption: "Termina con 4 sondeos = ⌈lg 9⌉.",
+    },
+  ],
+}} />
+
+**Salto y lista: $O(1)$ esperado.** Tras la búsqueda queda un único nivel $\ell$. Hay una búsqueda en $T$ (hash), que es $O(1)$ esperado por consulta, y una lectura del mínimo o máximo guardado. Si hace falta un vecino, un paso por la lista doblemente enlazada. Todo eso es constante.
+
+**Total de la consulta:** $O(\lg w)$ sondeos esperados, cada uno $O(1)$ esperado, más $O(1)$ del salto. Por tanto $O(\lg w)$.
+
+**Espacio: $O(nw)$.** Cada llave $x \in S$ tiene $w+1$ prefijos, uno por nivel $\ell = 0, \ldots, w$. Cada uno puede necesitar una entrada en $T$. Dibujemos cada término: una fila por llave, con sus $w+1 = 5$ prefijos como celdas. Así se ve el $n \cdot (w+1)$ de la cota.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cada fila es una llave; cada celda es uno de sus prefijos, de ℓ = 0 (ε) a ℓ = 4 (la llave completa). Son n · (w+1) = 7 · 5 = 35 celdas: ésa es la cota sin compartir. Se ve que ε aparece en todas las filas, 0 en cinco y 1 en dos.",
+      rows: [
+        { id: "k2", label: "2", cells: [{ value: "ε" }, { value: "0" }, { value: "00" }, { value: "001" }, { value: "0010" }] },
+        { id: "k3", label: "3", cells: [{ value: "ε" }, { value: "0" }, { value: "00" }, { value: "001" }, { value: "0011" }] },
+        { id: "k4", label: "4", cells: [{ value: "ε" }, { value: "0" }, { value: "01" }, { value: "010" }, { value: "0100" }] },
+        { id: "k5", label: "5", cells: [{ value: "ε" }, { value: "0" }, { value: "01" }, { value: "010" }, { value: "0101" }] },
+        { id: "k7", label: "7", cells: [{ value: "ε" }, { value: "0" }, { value: "01" }, { value: "011" }, { value: "0111" }] },
+        { id: "k14", label: "14", cells: [{ value: "ε" }, { value: "1" }, { value: "11" }, { value: "111" }, { value: "1110" }] },
+        { id: "k15", label: "15", cells: [{ value: "ε" }, { value: "1" }, { value: "11" }, { value: "111" }, { value: "1111" }] },
+      ],
+      caption: "35 celdas como cota. Son 17 entradas distintas en T: los prefijos compartidos se guardan una vez.",
+    },
+  ],
+}} />
+
+Sumando las celdas por fila se obtiene el espacio de $T$ en el peor caso: como cada llave aporta a lo sumo $w+1$ prefijos, $|T| \le n(w+1) = O(nw)$. Esta cota no pide que los prefijos sean distintos, así que es una cota superior; en el ejemplo sólo hay 17 entradas de 35.
+
+## Errores típicos y casos límite
+
+- **Conjunto vacío.** La búsqueda sólo encuentra el nivel 0, y $\varepsilon$ no tiene vecinos. Hay que decidir qué devuelve la consulta cuando no hay sucesor.
+- **Una sola llave.** Todos los prefijos de la llave son sus únicos nodos, y el mínimo y el máximo de cada entrada coinciden.
+- **Duplicados.** Insertar una llave que ya está no debe agregar prefijos nuevos. Las entradas existentes sólo se revisan.
+- **Extremos del universo.** Cuando $x$ es mayor que todas las llaves, el salto da un nodo sin vecino a la derecha, y el sucesor no existe. El caso de $x$ en el borde de una rama se ve en la siguiente página de ejemplos.
+- **La búsqueda sólo halla el punto de corte.** Si el nivel encontrado es $\ell < w$, el bit $\ell+1$ decide hacia qué lado mirar, y el vecino de la lista puede faltar. No basta con leer la longitud.
+
+## Conexión
+
+Esta estructura continúa el [predecesor en enteros](/structures/integer-predecessor): allí se estudia la búsqueda por niveles sobre el trie, y aquí se añade la tabla hash $T$ para saltar a cualquier nivel. Su alternativa determinista es el [árbol de van Emde Boas](/structures/van-emde-boas-tree), que cambia la tabla por una descomposición recursiva en $\sqrt{u}$ y logra $O(\lg w)$ de consulta con espacio $\Theta(u)$. La siguiente estructura, el [y-fast trie](/structures/y-fast-trie), usa la misma idea pero guarda sólo $n/w$ llaves en el X-fast tree para bajar el espacio a $O(n)$.

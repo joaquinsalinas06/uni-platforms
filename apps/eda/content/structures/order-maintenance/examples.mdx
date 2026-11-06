@@ -1,0 +1,193 @@
+---
+kind: "examples"
+title: "Casos resueltos"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Estos casos tratan las etiquetas como nombres de orden. No hace falta conocer las direcciones físicas de los elementos. Los casos marcados como *derivados* no aparecen en las diapositivas: son ejecuciones a mano de la regla del mazo.
+
+## Mínimo: insertar con un hueco libre
+
+Tienes $A$ con etiqueta 4 y $B$ con etiqueta 8. Insertas $X$ entre ellos. Hay un entero libre (el 6), así que $X$ recibe 6 y nadie más cambia.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Lista inicial: A con 4 y B con 8. El entero 6 está estrictamente entre ambos, así que existe un hueco.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "X", value: "·", tag: "X" }, { id: "B", value: 8, tag: "B" },
+        ]},
+      ],
+      caption: "Antes de insertar: sólo A y B.",
+    },
+    {
+      note: "X recibe 6. Ahora Order(A, X) es la comparación 4 < 6 y Order(X, B) es 6 < 8. El resto de la lista conserva sus etiquetas.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "X", value: 6, tag: "X", state: "answer" }, { id: "B", value: 8, tag: "B" },
+        ]},
+      ],
+      caption: "Costo: O(1). Cero etiquetas reasignadas.",
+    },
+    {
+      note: "Ahora se inserta Y entre A y X. El entero 5 cae entre 4 y 6, así que Y recibe 5. Sigue sin haber reetiquetado nada.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "Y", value: 5, tag: "Y", state: "answer" },
+          { id: "X", value: 6, tag: "X" }, { id: "B", value: 8, tag: "B" },
+        ]},
+      ],
+      caption: "Ya no hay entero libre entre 4 y 5. La siguiente inserción en ese hueco sí necesitará reetiquetar.",
+    },
+  ],
+}} />
+
+## Normal: reetiquetar preserva las comparaciones existentes
+
+Antes del cambio tienes $A{:}4$, $Y{:}5$, $X{:}6$ y $B{:}8$. Quieres insertar $Z$ entre $A$ e $Y$, pero no hay entero entre 4 y 5. Reasignas $A, Y, X$ y $B$ a las etiquetas 4, 8, 12 y 16, en ese orden, y $Z$ recibe 6.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Estado antes del cambio. Z debe ir entre A (4) e Y (5), pero el hueco es vacío. Por eso hay que mover etiquetas.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "Z", value: "·", tag: "Z" },
+          { id: "Y", value: 5, tag: "Y" }, { id: "X", value: 6, tag: "X" }, { id: "B", value: 8, tag: "B" },
+        ]},
+      ],
+      caption: "Z no tiene etiqueta. Se necesita reetiquetar la región A, Y, X, B.",
+    },
+    {
+      note: "Se asignan las etiquetas nuevas 4, 8, 12 y 16 a A, Y, X y B, en ese orden. El orden relativo no cambia: Y sigue antes que X, y X sigue antes que B.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "Z", value: "·", tag: "Z" },
+          { id: "Y", value: 8, tag: "Y" }, { id: "X", value: 12, tag: "X" }, { id: "B", value: 16, tag: "B" },
+        ]},
+      ],
+      caption: "Cuatro etiquetas tocadas. Las comparaciones entre elementos antiguos se conservan.",
+    },
+    {
+      note: "Z recibe 6, que está entre 4 (A) y 8 (Y). Órdenes válidos: A < Z < Y < X < B.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "Z", value: 6, tag: "Z", state: "answer" },
+          { id: "Y", value: 8, tag: "Y" }, { id: "X", value: 12, tag: "X" }, { id: "B", value: 16, tag: "B" },
+        ]},
+      ],
+      caption: "El costo de esta inserción son las cuatro etiquetas reasignadas, no la comparación.",
+    },
+  ],
+}} />
+
+El trabajo que se cobra en list labeling es cuántas etiquetas cambian. Consultar el orden sigue siendo una comparación; actualizar puede tocar varios elementos.
+
+## Dos niveles: comparar por grupo
+
+Con indirección, cada elemento tiene un par (grupo, local). $X$ tiene par $(2, 8)$ y $Z$ tiene par $(5, 3)$. $X$ precede a $Z$ porque $2 < 5$. La segunda componente sólo se consulta cuando la primera coincide.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Dos grupos: el grupo 2 contiene a X con local 8, y el grupo 5 contiene a Z con local 3. Las etiquetas locales no se pueden comparar entre grupos.",
+      rows: [
+        { id: "grupos", label: "Grupos", cells: [
+          { id: "g2", value: 2, tag: "G2" }, { id: "g5", value: 5, tag: "G5" },
+        ]},
+        { id: "locales", label: "Locales", cells: [
+          { id: "X", value: 8, tag: "X" }, { id: "Z", value: 3, tag: "Z" },
+        ]},
+      ],
+      caption: "Par de X: (2, 8). Par de Z: (5, 3).",
+    },
+    {
+      note: "Order(X, Z) compara primero los grupos: 2 < 5. Como los grupos son distintos, la decisión está tomada y la local 8 de X no se mira.",
+      rows: [
+        { id: "grupos", label: "Grupos", cells: [
+          { id: "g2", value: 2, tag: "G2", state: "marked" }, { id: "g5", value: 5, tag: "G5", state: "answer" },
+        ]},
+        { id: "locales", label: "Locales", cells: [
+          { id: "X", value: 8, tag: "X", state: "idle" }, { id: "Z", value: 3, tag: "Z", state: "idle" },
+        ]},
+      ],
+      caption: "Resultado: X precede a Z. Una comparación superior decidió.",
+    },
+  ],
+}} />
+
+Si el grupo 5 cambia su etiqueta superior conservando su posición relativa, todos sus miembros cambian de representación a la vez. Por eso una sola escritura en el nivel superior sirve para $\Theta(\lg N)$ elementos.
+
+## Límite: agotar un hueco (derivado)
+
+*(Derivado de la regla del mazo; no aparece en las diapositivas.)*
+
+Empiezas con $A{:}0$ y $B{:}16$. Todas las inserciones piden quedar inmediatamente después de $A$. Cada inserción toma el punto medio del hueco que queda.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Punto de partida: A con 0 y B con 16. El hueco entre ambos tiene todos los enteros del 1 al 15.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 0, tag: "A" }, { id: "X", value: "·", tag: "X" }, { id: "B", value: 16, tag: "B" },
+        ]},
+      ],
+      caption: "Hueco de 15 enteros libres entre A y B.",
+    },
+    {
+      note: "Primera inserción tras A: el punto medio entre 0 y 16 es 8. X recibe 8.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 0, tag: "A" }, { id: "Y", value: "·", tag: "Y" },
+          { id: "X", value: 8, tag: "X", state: "answer" }, { id: "B", value: 16, tag: "B" },
+        ]},
+      ],
+      caption: "El hueco se parte a la mitad. Y queda entre A y X.",
+    },
+    {
+      note: "Segunda inserción tras A: el punto medio entre 0 y 8 es 4. Y recibe 4, y el hueco entre A y Y se reduce a la mitad otra vez.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 0, tag: "A" }, { id: "Z", value: "·", tag: "Z" },
+          { id: "Y", value: 4, tag: "Y", state: "answer" }, { id: "X", value: 8, tag: "X" },
+          { id: "B", value: 16, tag: "B" },
+        ]},
+      ],
+      caption: "Quedan 3 enteros libres entre A y Y.",
+    },
+    {
+      note: "Tercera y cuarta inserciones: Z recibe 2 (medio entre 0 y 4) y W recibe 1 (medio entre 0 y 2). Cada paso gasta la mitad del hueco que queda.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 0, tag: "A" }, { id: "W", value: 1, tag: "W", state: "answer" },
+          { id: "Z", value: 2, tag: "Z", state: "answer" }, { id: "Y", value: 4, tag: "Y" },
+          { id: "X", value: 8, tag: "X" }, { id: "B", value: 16, tag: "B" },
+        ]},
+      ],
+      caption: "Entre A (0) y W (1) no hay ningún entero. La siguiente inserción en ese hueco exige reetiquetar.",
+    },
+    {
+      note: "Para una quinta inserción tras A hay que reetiquetar: se reparte la región de A a B con huecos más grandes, por ejemplo 0, 4, 8, 12, 16, 20, y el elemento nuevo toma 2 tras A y antes de W. Ese reetiquetado es el trabajo de actualización que la cota amortizada reparte.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 0, tag: "A" }, { id: "N", value: 2, tag: "N", state: "active" },
+          { id: "W", value: 4, tag: "W" }, { id: "Z", value: 8, tag: "Z" },
+          { id: "Y", value: 12, tag: "Y" }, { id: "X", value: 16, tag: "X" },
+          { id: "B", value: 20, tag: "B" },
+        ]},
+      ],
+      caption: "Orden: A, N, W, Z, Y, X, B. Se conservan las comparaciones de los elementos viejos.",
+    },
+  ],
+}} />
+
+En la versión con grupos, un reetiquetado que se queda dentro del grupo no cambia el representante superior. Sólo cuando además el grupo cruza su umbral de tamaño hay que dividirlo, y eso sí modifica el nivel superior. El costo de reetiquetar se reparte entre las inserciones que agotaron el hueco; ese reparto es lo que da la cota amortizada.
+
+**Comprobación.** Una racha concentrada consume espacio entre las mismas llaves. Las cotas amortizadas se justifican con la holgura del reparto, no suponiendo inserciones uniformes.

@@ -1426,7 +1426,7 @@
       "status": "generated",
       "prerequisites": [],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "external-merge-sort": {
       "type": "algorithm",
@@ -1440,7 +1440,7 @@
         "external-memory-model"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "b-tree": {
       "type": "structure",
@@ -1484,7 +1484,7 @@
         "cache-oblivious-veb-layout"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "packed-memory-array": {
       "type": "structure",
@@ -1498,7 +1498,7 @@
         "ordered-file-maintenance"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "order-maintenance": {
       "type": "structure",
@@ -1512,7 +1512,7 @@
         "packed-memory-array"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "integer-predecessor": {
       "type": "concept",
@@ -1524,7 +1524,7 @@
       "status": "generated",
       "prerequisites": [],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "van-emde-boas-tree": {
       "type": "structure",
@@ -1539,7 +1539,7 @@
         "integer-predecessor"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "x-fast-trie": {
       "type": "structure",
@@ -1553,7 +1553,7 @@
         "integer-predecessor"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "tree"
     },
     "y-fast-trie": {
       "type": "structure",
@@ -1567,7 +1567,7 @@
         "x-fast-trie"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "fusion-tree": {
       "type": "structure",
@@ -1582,7 +1582,7 @@
         "b-tree"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "static-rmq": {
       "type": "structure",
@@ -1594,7 +1594,7 @@
       "status": "generated",
       "prerequisites": [],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "cartesian-tree": {
       "type": "structure",
@@ -1649,7 +1649,7 @@
       "status": "generated",
       "prerequisites": [],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "trie": {
       "type": "structure",
@@ -1688,7 +1688,7 @@
       "status": "generated",
       "prerequisites": [],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "kasai-lcp": {
       "type": "algorithm",
@@ -1703,7 +1703,7 @@
         "plus-minus-one-rmq"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     },
     "dc3": {
       "type": "algorithm",
@@ -1717,7 +1717,7 @@
         "suffix-array"
       ],
       "hasVisualization": true,
-      "visualizationType": "range-tree"
+      "visualizationType": "array"
     }
   }
 }

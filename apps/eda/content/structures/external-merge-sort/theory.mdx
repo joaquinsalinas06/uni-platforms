@@ -5,183 +5,338 @@ title: "Ordenamiento externo por mezcla"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Mezclar de dos en dos puede obligar a mover el archivo completo en demasiadas pasadas.
+Con la RAM sólo podemos leer o escribir bloques de $B$ registros, y cada transferencia cuenta. Si el archivo tiene $N$ registros, un merge sort binario en disco lee y escribe el archivo entero una vez por nivel de recursión. La recursión se detiene cuando el subproblema cabe en un bloque, así que hay $\lg(N/B)$ niveles. Con $N=10^{11}$ y $B=10^5$ hay $\lg(10^6)\approx 20$ niveles y cada uno cuesta $N/B=10^6$ transferencias: unas $2\cdot10^7$ en total.
 
-## Intuición
+El merge sort binario gana el factor $B$ de un escaneo, pero su logaritmo sigue en base 2. La pregunta de la clase es si también se puede atacar ese logaritmo. La respuesta es sí, con dos mejoras que usan toda la memoria.
 
-Usa la RAM de dos formas. Primero ordena trozos grandes que caben completos. Después reserva un bloque por entrada y uno para la salida, para mezclar muchas corridas simultáneamente.
+## Intuición dibujada
 
-## Estructura interna
+Imagina el archivo como una tira de bloques. Primero partimos la tira en trozos de tamaño $M$, que sí caben enteros en RAM, y ordenamos cada trozo allí. Luego mezclamos muchas tiras ordenadas a la vez, una por entrada, con un bloque de salida. Con $M/B$ bloques en RAM, una mezcla recorre todo el archivo una sola vez.
 
-Cada corrida está ordenada. Su frente es el menor registro pendiente. Cuando se vacía el bloque de una corrida, se carga su bloque siguiente. Cuando se llena el bloque de salida, se escribe y se reutiliza su espacio.
-
-### Generar una corrida y mezclar corridas son trabajos distintos
-
-En la primera fase, lee un trozo contiguo de tamaño hasta $M$. Mientras está completo en RAM, puedes ordenar sus registros sin pedir al disco cada comparación. Al escribirlos, obtienes una corrida ordenada. La corrida se distingue de un bloque: puede ocupar muchos bloques consecutivos, y sólo su primer bloque necesita estar residente al empezar una mezcla.
-
-En la segunda fase, la memoria se reparte. Cada entrada necesita retener el bloque del que toma su siguiente registro y la salida acumula registros hasta completar un bloque. Con espacio para cuatro bloques, abrir cuatro entradas dejaría la salida sin búfer. La reserva fija el máximo de entradas en tres. Si sólo hay una corrida después de ordenar el primer trozo, ya quedó resuelto el ordenamiento y no se añade una mezcla ficticia.
-
-### Qué ocurre si no caben todas las corridas
-
-Divide la lista de corridas en grupos de tamaño hasta $F$. Mezcla cada grupo hasta agotarlo. Las salidas de dos grupos distintos están ordenadas internamente, pero sus rangos de valores pueden superponerse. Por eso concatenarlas no produce un archivo ordenado. En la siguiente pasada vuelven a participar como corridas de entrada. La reducción de cantidad de corridas, y no un cambio en la cantidad de registros, es lo que termina el algoritmo.
-
-## Operaciones
-
-Genera corridas de hasta $M$ registros. En cada pasada agrupa hasta $F=\lfloor M/B\rfloor-1$ corridas por mezcla. Compara sus frentes, emite el mínimo y avanza sólo esa corrida.
-
-### Mezcla de tres corridas con bloques de dos
-
-*(Traza derivada de la explicación de clase.)*
+El primer diagrama muestra la primera mejora: cargar un trozo de $M$ registros, ordenarlo en RAM y escribir una corrida.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Carga un bloque por corrida. Reserva dos posiciones de salida.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["active", "idle"]},
-        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["active", "idle"]},
-        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
-        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["·", "·"], "states": ["idle", "idle"]},
+      note: "Entrada: 16 registros en disco. Con M = 8 y B = 2 caben 8 registros en RAM, es decir, M/B = 4 bloques. El primer trozo ocupa los primeros 8 registros.",
+      rows: [
+        { id: "in", label: "Disco: entrada", cells: [
+          {value: 9}, {value: 4}, {value: 7}, {value: 1}, {value: 8}, {value: 2}, {value: 6}, {value: 5},
+          {value: 3}, {value: 0}, {value: 10}, {value: 11}, {value: 14}, {value: 12}, {value: 15}, {value: 13} ] },
+        { id: "ram", label: "RAM", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "out", label: "Disco: corridas", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [ { id: "t1", row: "in", from: 0, to: 7, label: "trozo 1 (M)" }, { id: "t2", row: "in", from: 8, to: 15, label: "trozo 2 (M)" } ],
+      caption: "Ninguna corrida escrita todavía.",
     },
     {
-      note: "El mínimo de los frentes es 1. Avanza sólo A.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
-        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["active", "idle"]},
-        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
-        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["1", "·"], "states": ["answer", "idle"]},
+      note: "Se leen los 8 registros del trozo 1 a RAM: son 4 transferencias de lectura, una por bloque. El trozo queda marcado como consumido en disco.",
+      rows: [
+        { id: "in", label: "Disco: entrada", cells: [
+          {value: 9, state: "muted"}, {value: 4, state: "muted"}, {value: 7, state: "muted"}, {value: 1, state: "muted"}, {value: 8, state: "muted"}, {value: 2, state: "muted"}, {value: 6, state: "muted"}, {value: 5, state: "muted"},
+          {value: 3}, {value: 0}, {value: 10}, {value: 11}, {value: 14}, {value: 12}, {value: 15}, {value: 13} ] },
+        { id: "ram", label: "RAM", cells: [{value: 9, state: "active"}, {value: 4, state: "active"}, {value: 7, state: "active"}, {value: 1, state: "active"}, {value: 8, state: "active"}, {value: 2, state: "active"}, {value: 6, state: "active"}, {value: 5, state: "active"}] },
+        { id: "out", label: "Disco: corridas", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [ { id: "t1", row: "in", from: 0, to: 7, label: "trozo 1 (M)" } ],
+      caption: "Costo hasta aquí: 4 lecturas de bloque.",
     },
     {
-      note: "Sale 2 de B. El bloque de salida queda lleno.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
-        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "active"]},
-        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
-        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["1", "2"], "states": ["answer", "answer"]},
+      note: "Ordenar en RAM no toca el disco: el modelo sólo cuenta transferencias de bloque. El trozo queda en orden 1, 2, 4, 5, 6, 7, 8, 9.",
+      rows: [
+        { id: "in", label: "Disco: entrada", cells: [
+          {value: 9, state: "muted"}, {value: 4, state: "muted"}, {value: 7, state: "muted"}, {value: 1, state: "muted"}, {value: 8, state: "muted"}, {value: 2, state: "muted"}, {value: 6, state: "muted"}, {value: 5, state: "muted"},
+          {value: 3}, {value: 0}, {value: 10}, {value: 11}, {value: 14}, {value: 12}, {value: 15}, {value: 13} ] },
+        { id: "ram", label: "RAM", cells: [{value: 1, state: "active"}, {value: 2, state: "active"}, {value: 4, state: "active"}, {value: 5, state: "active"}, {value: 6, state: "active"}, {value: 7, state: "active"}, {value: 8, state: "active"}, {value: 9, state: "active"}] },
+        { id: "out", label: "Disco: corridas", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [],
+      caption: "El trozo ya está ordenado en RAM, listo para escribirse.",
     },
     {
-      note: "Escribe [1,2] y reinicia el búfer de salida.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
-        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "active"]},
-        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
-        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["·", "·"], "states": ["idle", "idle"]},
+      note: "Se escriben los 8 registros como la corrida R1. Ahora la corrida ocupa M registros contiguos y sólo su primer bloque tiene que estar en RAM al empezar una mezcla.",
+      rows: [
+        { id: "in", label: "Disco: entrada", cells: [
+          {value: 9, state: "muted"}, {value: 4, state: "muted"}, {value: 7, state: "muted"}, {value: 1, state: "muted"}, {value: 8, state: "muted"}, {value: 2, state: "muted"}, {value: 6, state: "muted"}, {value: 5, state: "muted"},
+          {value: 3}, {value: 0}, {value: 10}, {value: 11}, {value: 14}, {value: 12}, {value: 15}, {value: 13} ] },
+        { id: "ram", label: "RAM", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "out", label: "Disco: corridas", cells: [{value: 1, state: "answer"}, {value: 2, state: "answer"}, {value: 4, state: "answer"}, {value: 5, state: "answer"}, {value: 6, state: "answer"}, {value: 7, state: "answer"}, {value: 8, state: "answer"}, {value: 9, state: "answer"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [ { id: "r1", row: "out", from: 0, to: 7, label: "R1" } ],
+      caption: "Escritas: 4 de bloque. Corrida R1 completa.",
     },
     {
-      note: "Sale 3. B todavía conserva el 5 en RAM.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
-        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "active"]},
-        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["muted", "active"]},
-        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["3", "·"], "states": ["answer", "idle"]},
+      note: "Se repite con el segundo trozo: lectura, ordenación en RAM y escritura. El segundo trozo también queda de M registros contiguos, sin mezclar aún.",
+      rows: [
+        { id: "in", label: "Disco: entrada", cells: [
+          {value: 9, state: "muted"}, {value: 4, state: "muted"}, {value: 7, state: "muted"}, {value: 1, state: "muted"}, {value: 8, state: "muted"}, {value: 2, state: "muted"}, {value: 6, state: "muted"}, {value: 5, state: "muted"},
+          {value: 3, state: "muted"}, {value: 0, state: "muted"}, {value: 10, state: "muted"}, {value: 11, state: "muted"}, {value: 14, state: "muted"}, {value: 12, state: "muted"}, {value: 15, state: "muted"}, {value: 13, state: "muted"} ] },
+        { id: "ram", label: "RAM", cells: [{value: 0, state: "active"}, {value: 3, state: "active"}, {value: 10, state: "active"}, {value: 11, state: "active"}, {value: 12, state: "active"}, {value: 13, state: "active"}, {value: 14, state: "active"}, {value: 15, state: "active"}] },
+        { id: "out", label: "Disco: corridas", cells: [{value: 1, state: "idle"}, {value: 2, state: "idle"}, {value: 4, state: "idle"}, {value: 5, state: "idle"}, {value: 6, state: "idle"}, {value: 7, state: "idle"}, {value: 8, state: "idle"}, {value: 9, state: "idle"}, {value: 0, state: "answer"}, {value: 3, state: "answer"}, {value: 10, state: "answer"}, {value: 11, state: "answer"}, {value: 12, state: "answer"}, {value: 13, state: "answer"}, {value: 14, state: "answer"}, {value: 15, state: "answer"}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "Sale 5. Se agotó el bloque de B.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
-        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "muted"]},
-        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["muted", "active"]},
-        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["3", "5"], "states": ["answer", "answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Si B tiene más registros, ahora se carga su siguiente bloque; aquí termina.",
-      arrays: [
-        {"id": "row-0", "label": "A", "row": 0, "cells": ["6"], "states": ["active"]},
-        {"id": "row-1", "label": "C", "row": 1, "cells": ["7"], "states": ["active"]},
-        {"id": "row-2", "label": "Salida", "row": 2, "cells": ["·", "·"], "states": ["idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Se completa la salida con 6 y 7.",
-      arrays: [
-        {"id": "row-0", "label": "Salida total", "row": 0, "cells": ["1", "2", "3", "5", "6", "7"], "states": ["answer", "answer", "answer", "answer", "answer", "answer"]},
-      ],
-      bridges: [],
+      spans: [ { id: "r1", row: "out", from: 0, to: 7, label: "R1" }, { id: "r2", row: "out", from: 8, to: 15, label: "R2" } ],
+      caption: "Dos corridas, R = N/M = 2. Costo de la generación: 8 lecturas y 8 escrituras de bloque.",
     },
   ],
 }} />
 
-### Reducir nueve corridas con fan-in tres
+## Definición y notación
 
-*(Traza derivada de la explicación de clase.)*
+| Símbolo | Qué mide | Si crece |
+| --- | --- | --- |
+| $N$ | registros del archivo | sube el costo lineal de cada pasada |
+| $B$ | registros por bloque | baja el número de transferencias, porque un bloque lleva más datos |
+| $M$ | registros que caben en RAM | corridas iniciales más largas, menos corridas |
+| $M/B$ | bloques en RAM | sube el fan-in, porque caben más entradas |
+| $N/B$ | bloques del archivo | es el costo de una pasada, en lecturas o escrituras |
+| $R=\lceil N/M\rceil$ | corridas tras la generación | cada pasada de mezcla lo divide por el fan-in |
+| $F$ | fan-in: corridas que se mezclan a la vez | $F=M/B-1$, porque un bloque se reserva para la salida |
+
+Una corrida es una sucesión contigua de registros ordenados. Puede ocupar muchos bloques; sólo el primero necesita estar residente al empezar a mezclarla.
+
+## Operaciones paso a paso
+
+El algoritmo tiene dos fases. La primera genera corridas; la segunda mezcla corridas hasta que queda una. Ambas usan el mismo modelo de costo: una transferencia por bloque leído o escrito.
+
+### Generar corridas
+
+1. Lee un trozo de $M$ registros contiguos a RAM. Mira qué ocupa el trozo y cuántos bloques cuesta traerlo.
+2. Ordénalo en RAM. Este paso es gratis en el modelo, porque no toca el disco.
+3. Escribe los registros ordenados como una corrida. Mira que la corrida tiene $M$ registros, no un bloque.
+4. Repite con el siguiente trozo hasta agotar la entrada.
+
+El diagrama de arriba sigue esos pasos con $N=16$, $M=8$ y $B=2$. Como se ve en el último paso, la generación es un único escaneo: $\Theta(N/B)$ transferencias, y deja $R=\lceil N/M\rceil$ corridas.
+
+### Mezclar tres corridas con bloques de dos
+
+Con $M/B=4$ bloques en RAM, reservamos uno para salida y quedan tres entradas: $F=3$. Las corridas son $A=[1,6,10,12]$, $B=[2,5]$ y $C=[3,7]$. Cada bloque tiene dos registros.
+
+1. Carga el primer bloque de cada corrida: $[1,6]$, $[2,5]$, $[3,7]$. Son tres lecturas, y la salida está vacía.
+2. Compara los frentes $1$, $2$ y $3$. Emite $1$ porque es el mínimo; sólo avanza la corrida $A$, cuyo frente pasa a ser $6$.
+3. Compara $6$, $2$ y $3$. Emite $2$; avanza $B$, cuyo frente pasa a ser $5$. El bloque de salida $[1,2]$ ya está lleno.
+4. Escribe $[1,2]$ y limpia la salida. Es una escritura de bloque.
+5. Compara $6$, $5$ y $3$. Emite $3$; avanza $C$, cuyo frente es $7$.
+6. Compara $6$, $5$ y $7$. Emite $5$; $B$ se agota y deja de aportar candidatos. La salida tiene $[3,5]$.
+7. Escribe $[3,5]$.
+8. Compara $6$ y $7$ (B ya no cuenta). Emite $6$. El bloque de $A$ se agotó, así que se lee su siguiente bloque $[10,12]$.
+9. Compara $10$ y $7$. Emite $7$; $C$ se agota. La salida tiene $[6,7]$.
+10. Escribe $[6,7]$. Sólo queda $A$, así que se emiten $10$ y $12$ sin comparar con nadie.
+11. Escribe $[10,12]$. Todas las entradas están agotadas y la salida está vacía.
+
+Con esto el resultado es $[1,2,3,5,6,7,10,12]$, con 4 lecturas y 4 escrituras de bloque. El diagrama muestra la trayectoria completa: los bloques consumidos quedan en gris, la salida crece hasta llenar el bloque y se escribe.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Al terminar la generación, hay nueve corridas.",
-      arrays: [
-        {"id": "row-0", "label": "Corridas", "row": 0, "cells": ["A", "B", "C", "D", "E", "F", "G", "H", "I"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Carga el primer bloque de cada corrida. Son tres lecturas. La salida tiene un bloque de dos posiciones y empieza vacía.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "active"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "active"}, {value: 5, state: "active"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "active"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: "·"}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "b0", row: "B", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Lecturas hasta aquí: 3. Escrituras: 0.",
     },
     {
-      note: "La primera mezcla agrupa tres corridas por salida.",
-      arrays: [
-        {"id": "row-0", "label": "Corridas", "row": 0, "cells": ["ABC", "DEF", "GHI"], "states": ["active", "active", "active"]},
+      note: "Los frentes son 1, 2 y 3. El mínimo es 1 y sale de A; su frente pasa a ser 6, que sigue en el mismo bloque. Sólo cambia la corrida de la que sale el mínimo.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "active"}, {value: 5, state: "active"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "active"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: 1, state: "answer"}, {value: "·"}] },
       ],
-      bridges: [],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "b0", row: "B", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Salida: [1, ·]. Lecturas: 3. Escrituras: 0.",
     },
     {
-      note: "La segunda mezcla deja una sola corrida.",
-      arrays: [
-        {"id": "row-0", "label": "Corridas", "row": 0, "cells": ["ABCDEFGHI"], "states": ["answer"]},
+      note: "Ahora los frentes son 6, 2 y 3. El mínimo es 2 de B, así que B avanza a 5. Con 2 la salida tiene [1, 2]: el bloque está lleno.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "active"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "active"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: 1, state: "answer"}, {value: 2, state: "answer"}] },
       ],
-      bridges: [],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "b0", row: "B", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Salida llena: [1, 2]. Lecturas: 3. Escrituras: 0.",
+    },
+    {
+      note: "El bloque de salida se escribe: es una transferencia y su espacio queda libre para los siguientes mínimos. Los frentes siguen siendo 6, 5 y 3.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "active"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "active"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: "·"}, {value: "·"}] },
+      ],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "b0", row: "B", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Escritura 1: bloque [1, 2] en disco. Lecturas: 3. Escrituras: 1.",
+    },
+    {
+      note: "Frentes 6, 5 y 3. Gana el 3 de C, que avanza a 7. Esta decisión sólo mira los frentes, porque cada corrida está ordenada.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "active"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: 3, state: "answer"}, {value: "·"}] },
+      ],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "b0", row: "B", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Salida: [3, ·]. Escrituras: 1.",
+    },
+    {
+      note: "Frentes 6, 5 y 7. Sale el 5 de B, y B se agota: su bloque ya no tiene registros y B deja de ser candidata. La salida queda [3, 5] y está lleno.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "muted"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: 3, state: "answer"}, {value: 5, state: "answer"}] },
+      ],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Salida llena: [3, 5]. Lecturas: 3. Escrituras: 1.",
+    },
+    {
+      note: "Se escribe [3, 5]. Como B está agotada, el bloque de B ya no ocupa RAM para candidatos: sólo quedan A y C.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "active"}, {value: 10}, {value: 12}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "muted"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: "·"}, {value: "·"}] },
+      ],
+      spans: [ { id: "a0", row: "A", from: 0, to: 1, label: "bloque 0 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Escritura 2: bloque [3, 5]. Lecturas: 3. Escrituras: 2.",
+    },
+    {
+      note: "Frentes 6 (de A) y 7 (de C). Sale el 6. El bloque de A se agotó, así que se lee el siguiente bloque de A, [10, 12]. Es la única lectura nueva de la mezcla.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "muted"}, {value: 10, state: "active"}, {value: 12, state: "active"}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "muted"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "active"}] },
+        { id: "S", label: "Salida", cells: [{value: 6, state: "answer"}, {value: "·"}] },
+      ],
+      spans: [ { id: "a1", row: "A", from: 2, to: 3, label: "bloque 1 en RAM" }, { id: "c0", row: "C", from: 0, to: 1, label: "bloque 0 en RAM" } ],
+      caption: "Salida: [6, ·]. Lecturas: 4. Escrituras: 2.",
+    },
+    {
+      note: "Frentes 10 y 7. Sale el 7 de C, que se agota. La salida queda [6, 7] y se llena.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "muted"}, {value: 10, state: "active"}, {value: 12, state: "active"}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "muted"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "muted"}] },
+        { id: "S", label: "Salida", cells: [{value: 6, state: "answer"}, {value: 7, state: "answer"}] },
+      ],
+      spans: [ { id: "a1", row: "A", from: 2, to: 3, label: "bloque 1 en RAM" } ],
+      caption: "Salida llena: [6, 7]. Lecturas: 4. Escrituras: 2.",
+    },
+    {
+      note: "Se escribe [6, 7]. Sólo queda A, así que sus registros salen en orden sin comparar con nadie: 10 y 12 pasan directo a la salida.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "muted"}, {value: 10, state: "active"}, {value: 12, state: "active"}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "muted"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "muted"}] },
+        { id: "S", label: "Salida", cells: [{value: "·"}, {value: "·"}] },
+      ],
+      spans: [ { id: "a1", row: "A", from: 2, to: 3, label: "bloque 1 en RAM" } ],
+      caption: "Escritura 3: bloque [6, 7]. Lecturas: 4. Escrituras: 3.",
+    },
+    {
+      note: "Último bloque: se emiten 10 y 12 de A y se escribe [10, 12]. Es la cuarta escritura, y el total de la mezcla es 4 lecturas y 4 escrituras.",
+      rows: [
+        { id: "A", label: "A", cells: [{value: 1, state: "muted"}, {value: 6, state: "muted"}, {value: 10, state: "muted"}, {value: 12, state: "muted"}] },
+        { id: "B", label: "B", cells: [{value: 2, state: "muted"}, {value: 5, state: "muted"}] },
+        { id: "C", label: "C", cells: [{value: 3, state: "muted"}, {value: 7, state: "muted"}] },
+        { id: "S", label: "Salida", cells: [{value: 10, state: "answer"}, {value: 12, state: "answer"}] },
+      ],
+      spans: [],
+      caption: "Mezcla terminada: 4 lecturas y 4 escrituras de bloque.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+El resultado es la corrida $[1,2,3,5,6,7,10,12]$, que se escribió en los cuatro bloques de salida. Observa que la mezcla sólo lee bloques cuando el frente de una corrida agota el suyo, así que el número de lecturas es exactamente el de bloques del archivo.
 
-En el diagrama, marca dos tipos de evento. El primer evento es consumir un frente y adelantar un índice. El segundo es cambiar el bloque residente de esa corrida. Un frente puede cambiar varias veces antes de que haga falta otro bloque. La salida tiene una regla dual: varios mínimos pueden acumularse antes de una escritura.
+### Reducir corridas por pasadas
 
-El invariante de la mezcla es que lo emitido ya está en orden y ninguna llave pendiente es menor que el último elemento emitido. Sólo comparamos frentes porque el resto de cada corrida está detrás de su frente en orden. Esa observación sigue siendo válida cuando una corrida termina y desaparece del conjunto de candidatos.
+Si $R>F$ corridas no caben en una mezcla, se dividen en grupos de tamaño $F$. Cada grupo se mezcla hasta agotarlo y produce una corrida nueva. Las corridas de salida de dos grupos distintos están ordenadas internamente, pero sus rangos de valores pueden solaparse, por eso no se pueden concatenar. Cada pasada reduce el número de corridas por un factor de hasta $F$, y el algoritmo termina cuando queda una.
 
-## Análisis de complejidad
+El siguiente diagrama usa $R=4$ corridas con $F=3$. Cada fila es una pasada completa sobre los mismos 16 bloques.
 
-Cada pasada completa lee y escribe $\Theta(N/B)$ bloques. Tras la generación inicial hay $\lceil N/M\rceil$ corridas y cada pasada reduce esa cantidad por un factor de hasta $F$. Con $F\ge2$, el costo es $\Theta((N/B)(1+\lceil\log_F\lceil N/M\rceil\rceil))$ para $N\ge B$. Contar por pasadas muestra qué mejora al aumentar $M$. Contar por registros dentro de un bloque explica por qué una extracción del frente no exige siempre una lectura.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Pasada 0 (generación): 4 corridas de 4 bloques cada una. El archivo tiene N/B = 16 bloques, así que esta pasada cuesta 16 lecturas y 16 escrituras.",
+      rows: [
+        { id: "p0", label: "Pasada 0", cells: [{value: 1, state: "active"}, {value: 2, state: "active"}, {value: 3, state: "active"}, {value: 4, state: "active"}, {value: 5, state: "active"}, {value: 6, state: "active"}, {value: 7, state: "active"}, {value: 8, state: "active"}, {value: 9, state: "active"}, {value: 10, state: "active"}, {value: 11, state: "active"}, {value: 12, state: "active"}, {value: 13, state: "active"}, {value: 14, state: "active"}, {value: 15, state: "active"}, {value: 16, state: "active"}] },
+        { id: "p1", label: "Pasada 1", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+        { id: "p2", label: "Pasada 2", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+      ],
+      spans: [ { id: "s1", row: "p0", from: 0, to: 3, label: "R1" }, { id: "s2", row: "p0", from: 4, to: 7, label: "R2" }, { id: "s3", row: "p0", from: 8, to: 11, label: "R3" }, { id: "s4", row: "p0", from: 12, to: 15, label: "R4" } ],
+      caption: "Corridas tras la generación: R = 4. Pasadas hechas: 0 de mezcla, 1 de generación.",
+    },
+    {
+      note: "Pasada 1: se mezclan R1, R2 y R3 con fan-in 3 y se escriben 12 bloques. R4 queda sola: no se mezcla con nada, así que se copia tal cual. No se inventa una mezcla de una sola corrida.",
+      rows: [
+        { id: "p0", label: "Pasada 0", cells: [{value: 1, state: "muted"}, {value: 2, state: "muted"}, {value: 3, state: "muted"}, {value: 4, state: "muted"}, {value: 5, state: "muted"}, {value: 6, state: "muted"}, {value: 7, state: "muted"}, {value: 8, state: "muted"}, {value: 9, state: "muted"}, {value: 10, state: "muted"}, {value: 11, state: "muted"}, {value: 12, state: "muted"}, {value: 13, state: "muted"}, {value: 14, state: "muted"}, {value: 15, state: "muted"}, {value: 16, state: "muted"}] },
+        { id: "p1", label: "Pasada 1", cells: [{value: "a", state: "active"}, {value: "b", state: "active"}, {value: "c", state: "active"}, {value: "d", state: "active"}, {value: "e", state: "active"}, {value: "f", state: "active"}, {value: "g", state: "active"}, {value: "h", state: "active"}, {value: "i", state: "active"}, {value: "j", state: "active"}, {value: "k", state: "active"}, {value: "l", state: "active"}, {value: 13, state: "idle"}, {value: 14, state: "idle"}, {value: 15, state: "idle"}, {value: 16, state: "idle"}] },
+        { id: "p2", label: "Pasada 2", cells: [{value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}, {value: "·"}] },
+      ],
+      spans: [ { id: "m1", row: "p1", from: 0, to: 11, label: "R1+R2+R3 mezcladas" }, { id: "m2", row: "p1", from: 12, to: 15, label: "R4 sola" } ],
+      caption: "Corridas tras la pasada 1: 2. Escrituras acumuladas: 32 (16 + 16).",
+    },
+    {
+      note: "Pasada 2: sólo quedan 2 corridas, y como F = 3, las dos entran en una mezcla. La salida tiene 16 bloques y es la corrida final. Hubo dos pasadas de mezcla, porque $\lceil\log_3 4\rceil = 2$.",
+      rows: [
+        { id: "p0", label: "Pasada 0", cells: [{value: 1, state: "muted"}, {value: 2, state: "muted"}, {value: 3, state: "muted"}, {value: 4, state: "muted"}, {value: 5, state: "muted"}, {value: 6, state: "muted"}, {value: 7, state: "muted"}, {value: 8, state: "muted"}, {value: 9, state: "muted"}, {value: 10, state: "muted"}, {value: 11, state: "muted"}, {value: 12, state: "muted"}, {value: 13, state: "muted"}, {value: 14, state: "muted"}, {value: 15, state: "muted"}, {value: 16, state: "muted"}] },
+        { id: "p1", label: "Pasada 1", cells: [{value: "a", state: "muted"}, {value: "b", state: "muted"}, {value: "c", state: "muted"}, {value: "d", state: "muted"}, {value: "e", state: "muted"}, {value: "f", state: "muted"}, {value: "g", state: "muted"}, {value: "h", state: "muted"}, {value: "i", state: "muted"}, {value: "j", state: "muted"}, {value: "k", state: "muted"}, {value: "l", state: "muted"}, {value: 13, state: "muted"}, {value: 14, state: "muted"}, {value: 15, state: "muted"}, {value: 16, state: "muted"}] },
+        { id: "p2", label: "Pasada 2", cells: [{value: 1, state: "answer"}, {value: 2, state: "answer"}, {value: 3, state: "answer"}, {value: 4, state: "answer"}, {value: 5, state: "answer"}, {value: 6, state: "answer"}, {value: 7, state: "answer"}, {value: 8, state: "answer"}, {value: 9, state: "answer"}, {value: 10, state: "answer"}, {value: 11, state: "answer"}, {value: 12, state: "answer"}, {value: 13, state: "answer"}, {value: 14, state: "answer"}, {value: 15, state: "answer"}, {value: 16, state: "answer"}] },
+      ],
+      spans: [ { id: "f", row: "p2", from: 0, to: 15, label: "corrida final" } ],
+      caption: "Corrida final: 16 bloques. Total: 3 pasadas de 16 lecturas y 16 escrituras, es decir, 96 transferencias.",
+    },
+  ],
+}} />
 
-### Cómo justificar la cota en el examen
+## De dónde sale la cota
 
-Separa la cantidad de datos de la cantidad de pasadas. Con $R=lceil N/M
-ceil$ corridas y fan-in $F$, después de una pasada quedan $lceil R/F
-ceil$ corridas. Si $R=1$, ya acabaste al generar la corrida. Si $R>1$ y $Fge 2$, el número de reducciones está controlado por $log_F R$. El argumento logarítmico se aplica a las **corridas**, mientras que el factor de costo por pasada cuenta **bloques**.
+El costo total del ordenamiento es la suma del costo de cada pasada. Cada pasada lee y escribe todo el archivo, así que cuesta $\Theta(N/B)$. Hay una pasada de generación más un número de pasadas de mezcla que depende de cuántas corridas hay y de cuántas caben en una mezcla:
 
-La formulación de clase suele agrupar la pasada inicial en la expresión asintótica. Al contar transferencias para una entrada pequeña, conserva la pasada inicial y trata explícitamente la salida parcial.
+$$
+\Theta\left(\frac{N}{B}\right)\cdot\left(1 + \log_{M/B}\frac{N}{M}\right) = \Theta\left(\frac{N}{B}\log_{M/B}\frac{N}{B}\right)
+$$
 
-## Tabla de complejidad
+Cada término de la expresión sale de algo concreto del diagrama:
 
-La tabla superior usa las unidades de costo de la explicación.
+- $\frac{N}{B}$: bloques del archivo. Es lo que se lee y escribe en una pasada; en el ejemplo anterior son 16 bloques, es decir, 16 lecturas y 16 escrituras por pasada.
+- $1$: la pasada de generación. Sin ella, el archivo no tendría corridas; es la primera fila del último diagrama.
+- $\frac{N}{M}$: número de corridas iniciales $R$. En el ejemplo son $R=4$, porque $N/M = 16/4$.
+- $\log_{M/B}(\cdot)$: cuántas pasadas de mezcla hacen falta para reducir $R$ a 1, con un fan-in de orden $M/B$. Cada pasada divide el número de corridas por hasta $F = M/B-1$.
+- $\frac{N}{B}\log_{M/B}\frac{N}{B}$: una vez que se combinan los dos términos, la identidad $1+\log_{M/B}\frac{N}{M} = \log_{M/B}\frac{N}{B}$ elimina la pasada aparte, porque $\frac{N}{B} = \frac{M}{B}\cdot\frac{N}{M}$.
 
-## Ejemplos
+> **Nota de apoyo** (no está en las diapositivas): en el diagrama las pasadas se cuentan con el fan-in exacto $F=M/B-1$, que es lo que el algoritmo puede hacer. La cota usa $\log_{M/B}$. Como $\log_{F}x=\Theta(\log_{M/B}x)$ cuando $F\ge2$, ambas expresiones son asintóticamente iguales; el ejemplo de $R=4$ tiene dos pasadas de mezcla con $F=3$ frente a $\log_4 4 = 1$, y eso sólo cambia la constante.
 
-[Casos resueltos](/structures/external-merge-sort/examples) y [preguntas con pistas](/structures/external-merge-sort/exercises).
+## Casos límite y errores típicos
 
-## Comparación con estructuras relacionadas
+- **Un solo trozo**: si $N\le M$, la generación produce una única corrida. No hay pasadas de mezcla, y el costo es $\Theta(N/B)$.
+- **Bloque de salida**: si el fan-in se toma igual a $M/B$, no queda un bloque para acumular salida y el algoritmo no funciona. Por eso $F=M/B-1$.
+- **Bloque parcial**: si $N$ no es múltiplo de $B$, cada archivo tiene un bloque incompleto que también se escribe o se lee. El costo exacto lo cuenta.
+- **Concatenar corridas**: no ordena nada, porque los rangos de valores de dos grupos pueden solaparse.
+- **Olvidar la pasada de generación**: el término $1$ de la cota es esa pasada. Sin ella la expresión no describe el algoritmo completo.
 
-La mezcla binaria reduce corridas por pares. La mezcla múltiple usa el mismo invariante de mínimo pendiente con más frentes.
+## Permutar
 
-## Prueba de dominio
+Permutar es distinto de ordenar: cada registro ya conoce su posición destino. Hay dos métodos: moverlos uno por uno, que cuesta $\Theta(N)$ transferencias en el peor caso, o ordenarlos por posición destino, que cuesta $\Theta(\frac{N}{B}\log_{M/B}\frac{N}{B})$. El óptimo es el mínimo de ambos:
 
-[Lista de comprobación](/structures/external-merge-sort/mastery-check).
+$$
+\Theta\left(\min\left\{N,\ \frac{N}{B}\log_{M/B}\frac{N}{B}\right\}\right)
+$$
 
-*Fuente de clase: Sem10_Memory_Hierarchy_I.pdf · pp. 44-59.*
+No es lineal en $N/B$ porque juntar en un bloque los elementos con destino cercano es, en esencia, ordenar.
+
+## Conexión
+
+Este algoritmo es la aplicación del modelo de memoria externa a la mezcla. El modelo y sus unidades, $N$, $B$ y $M$, están en [el modelo de memoria externa](/structures/external-memory-model). La idea de mínimo pendiente sobre varios frentes es la misma que aparece en otras mezclas, pero aquí el costo se mide en bloques, no en comparaciones.
+
+*Fuente de clase: Sem10_Memory_Hierarchy_I.pdf · pp. 44-66 (mezcla múltiple, ejemplo numérico, permutación).*

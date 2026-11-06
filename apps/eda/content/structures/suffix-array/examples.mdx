@@ -1,0 +1,102 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+En los casos de clase el texto termina en el centinela `$`, menor que cualquier letra. Los índices empiezan en cero. Los casos marcados como derivados se resolvieron con el mismo método y no aparecen en las láminas.
+
+## Mínimo: `a$`
+
+Derivado. Dos caracteres bastan para ver la idea: el centinela va primero.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "El texto a$ tiene dos celdas. El $ en la posición 1 es el más pequeño, así que el sufijo $ va primero en el orden.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"a",tag:"0"},{value:"$",tag:"1"}] },
+      ],
+      caption: "Dos sufijos: a$ (inicio 0) y $ (inicio 1).",
+    },
+    {
+      note: "Ordenados, $ queda en el rango 0 y a$ en el rango 1. La fila SA guarda sólo los inicios.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:1,tag:"0"},{value:0,tag:"1"}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"}] },
+      ],
+      caption: "SA = [1,0].",
+    },
+  ],
+}} />
+
+## Normal: `aaaa$`
+
+Derivado. Es el peor caso de repetición: cada ronda sólo separa un nivel más.
+
+Las rondas separan así: longitud 1 agrupa las cuatro `a`; longitud 2 separa `a$` de `aa`; longitud 4 separa todo lo demás. Dos rondas bastan para ordenar cinco sufijos.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Texto aaaa$ con índices. Cuatro letras iguales: ninguna ronda puede separarlas por un solo carácter.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"$",tag:"4"}] },
+        { id: "r1", label: "rango 1 car.", cells: [{value:1},{value:1},{value:1},{value:1},{value:0}] },
+        { id: "r2", label: "rango 2 car.", cells: [{value:2},{value:2},{value:2},{value:1},{value:0}] },
+        { id: "r4", label: "rango 4 car.", cells: [{value:4,state:"active"},{value:3},{value:2},{value:1},{value:0}] },
+      ],
+      caption: "Rango 1: $ = 0, a = 1. Rango 2: $ = 0, a$ = 1, aa = 2. Rango 4 separa todo.",
+    },
+    {
+      note: "Índice 0 tiene el rango más alto en longitud 4: aaaa es mayor que aaa$, porque el cuarto carácter de aaa$ es el centinela.",
+      rows: [
+        { id: "txt", label: "S", cells: [{value:"a",tag:"0"},{value:"a",tag:"1"},{value:"a",tag:"2"},{value:"a",tag:"3"},{value:"$",tag:"4"}] },
+        { id: "r1", label: "rango 1 car.", cells: [{value:1},{value:1},{value:1},{value:1},{value:0}] },
+        { id: "r2", label: "rango 2 car.", cells: [{value:2},{value:2},{value:2},{value:1},{value:0}] },
+        { id: "r4", label: "rango 4 car.", cells: [{value:4,state:"active"},{value:3,state:"active"},{value:2},{value:1},{value:0}] },
+      ],
+      spans: [ { id: "rep", row: "txt", from: 0, to: 3, label: "cuatro a" } ],
+      caption: "SA = [4,3,2,1,0]: el sufijo más corto va primero.",
+    },
+  ],
+}} />
+
+## Límite: `anab` en `banana$`
+
+Derivado. El patrón no aparece en el texto. Las dos fronteras coinciden y el intervalo está vacío.
+
+La primera frontera es el primer sufijo no menor que `anab`. Entre los que empiezan por `ana`, `ana$` es menor, porque en el cuarto carácter `$` es menor que `b`; `anana$` es mayor, porque en ese mismo carácter `n` es mayor que `b`. Por eso la frontera cae en el rango 3.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Búsqueda de anab. Los sufijos que empiezan por ana están en los rangos 2 y 3. ana$ queda antes que anab, porque su cuarto carácter es el centinela.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6,state:"muted"},{value:5,state:"muted"},{value:3,state:"muted"},{value:1},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+      ],
+    },
+    {
+      note: "Primera frontera: anana$ es el primer sufijo que es mayor que anab. Como su cuarto carácter es n, mayor que b, la comparación se decide ahí.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6,state:"muted"},{value:5,state:"muted"},{value:3,state:"muted"},{value:1,state:"marked"},{value:0},{value:4},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$",state:"muted"},{value:"a$",state:"muted"},{value:"ana$",state:"muted"},{value:"anana$",state:"marked"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+      ],
+      caption: "Primera frontera: rango 3.",
+    },
+    {
+      note: "Segunda frontera: anana$ empieza por ana pero no por anab, y es mayor que el patrón. El primer sufijo fuera del intervalo también es anana$, así que las dos fronteras coinciden.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{value:6},{value:5},{value:3},{value:1,state:"marked"},{value:0},{value:4},{value:2}] },
+      ],
+      caption: "Intervalo [3,3): vacío. El patrón no ocurre.",
+    },
+  ],
+}} />
+
+Para justificar la respuesta vacía no basta mostrar que un pivote falla. Hay que explicar que el orden delimita el intervalo y que ningún sufijo queda dentro de él.

@@ -3,7 +3,7 @@ title: Kasai y aplicaciones de LCP
 type: algorithm
 week: week-13
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites:
 - suffix-array
 - plus-minus-one-rmq

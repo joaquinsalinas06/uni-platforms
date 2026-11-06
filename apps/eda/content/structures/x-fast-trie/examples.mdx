@@ -1,0 +1,459 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Tres casos. El primero es de la lámina (S = {2, 3, 4, 5, 7, 14, 15}, w = 4). Los otros dos usan un conjunto de cuatro hojas que **no** aparece en las diapositivas: son derivados y se marcan como tales. Cada caso tiene su diagrama paso a paso, en árbol y en tabla de niveles.
+
+## Sucesor(13): falta el hijo izquierdo
+
+Consulta $x = 13 = 1101_2$ sobre S = {2, 3, 4, 5, 7, 14, 15}. Los prefijos de $x$ son $\varepsilon$, $1$, $11$, $110$ y $1101$. Los tres primeros existen. $110$ no existe, así que la búsqueda de niveles termina en $\ell = 2$, con $p = 11$.
+
+El bit 3 de $x$ es 0, luego falta el hijo izquierdo de $11$. El sucesor es el mínimo de la rama derecha: $T[(3, 111)].\min = 14$.
+
+Primero, la búsqueda sobre los niveles. Hay sólo tres sondeos: $\lceil \lg(w+1) \rceil$ con $w = 4$ es 3.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Paso 1. lo = 0, hi = 4, mid = ⌈(0+4)/2⌉ = 2. Pregunto por 11, el prefijo de longitud 2 de 13. Existe, así que lo = 2.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "1", tag: "1" }, { value: "11", tag: "2", state: "active" }, { value: "110", tag: "3" }, { value: "1101", tag: "4" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }, { value: "no" }] },
+      ],
+      spans: [{ id: "r", row: "niv", from: 0, to: 4, label: "lo=0, hi=4" }],
+      caption: "Sondeo en el nivel 2.",
+    },
+    {
+      note: "Paso 2. lo = 2, hi = 4, mid = ⌈(2+4)/2⌉ = 3. Pregunto por 110. No existe, así que hi = 2: el prefijo más largo es 11.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "1", tag: "1" }, { value: "11", tag: "2" }, { value: "110", tag: "3", state: "active" }, { value: "1101", tag: "4" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }, { value: "no" }] },
+      ],
+      spans: [{ id: "r", row: "niv", from: 2, to: 4, label: "lo=2, hi=4" }],
+      caption: "Sondeo en el nivel 3: falla.",
+    },
+    {
+      note: "Paso 3. lo = hi = 2, así que ℓ = 2 y p = 11. El bit 3 de 13 es 0 y falta el hijo 110. Entonces el sucesor es T[(3, 111)].min = 14.",
+      rows: [
+        { id: "niv", label: "prefijo", cells: [
+          { value: "ε", tag: "0" }, { value: "1", tag: "1" }, { value: "11", tag: "2", state: "answer" }, { value: "110", tag: "3" }, { value: "1101", tag: "4" },
+        ] },
+        { id: "ok", label: "¿en T?", cells: [{ value: "sí" }, { value: "sí" }, { value: "sí" }, { value: "no" }, { value: "no" }] },
+      ],
+      spans: [{ id: "r", row: "niv", from: 2, to: 2, label: "ℓ = 2" }],
+      caption: "Respuesta de la búsqueda: ℓ = 2, p = 11.",
+    },
+  ],
+}} />
+
+El mismo caso en el trie. El fantasma $110$ marca el hijo que falta; el sucesor está en la rama que sí existe.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Paso 1. La raíz ε existe. x = 13 = 1101 empieza por el bit 1, y la rama 1 existe porque hay llaves de 14 y 15.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active" },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 0 existe.",
+    },
+    {
+      note: "Paso 2. El prefijo 1 existe. Las llaves 14 y 15 empiezan por 1, así que el sondeo sube lo a 1 y la búsqueda sigue en la rama derecha.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e", state: "active" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 1 existe.",
+    },
+    {
+      note: "Paso 3. El prefijo 11 existe: las llaves 14 y 15 empiezan por 11. Sube lo a 2.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1", state: "active" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 2 existe.",
+    },
+    {
+      note: "Paso 4. El prefijo 110 no existe: ninguna llave de S empieza por 110. El fantasma en gris es el hijo izquierdo que falta, y 11 queda como delimitador (ámbar).",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1", state: "marked" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Falta el hijo izquierdo 110 de 11.",
+    },
+    {
+      note: "Paso 5. Como falta el hijo izquierdo, el sucesor es el mínimo de la rama derecha de 11. Esa rama es 111, y T[(3, 111)].min guarda la menor llave bajo ese prefijo: 14.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1", state: "marked" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11", state: "active" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Mínimo de la rama derecha: 111.",
+    },
+    {
+      note: "Paso 6. La hoja mínima bajo 111 es 1110 = 14. Sucesor(13) = 14, porque 13 no está en S y 14 es la siguiente llave.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "01", value: "01", parent: "0" },
+        { id: "11", value: "11", parent: "1", state: "marked" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "010", value: "010", parent: "01" },
+        { id: "011", value: "011", parent: "01" },
+        { id: "111", value: "111", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "0011", value: "0011", parent: "001" },
+        { id: "0100", value: "0100", parent: "010" },
+        { id: "0101", value: "0101", parent: "010" },
+        { id: "0111", value: "0111", parent: "011" },
+        { id: "1110", value: "1110", parent: "111", state: "answer" },
+        { id: "1111", value: "1111", parent: "111" },
+        { id: "g110", value: "110", parent: "11", state: "muted" },
+      ],
+      caption: "Sucesor(13) = 14.",
+    },
+  ],
+}} />
+
+## Derivado: falta la rama derecha (consulta 1011)
+
+Este conjunto **no** está en la lámina: es un ejemplo derivado para ver el caso contrario. Hojas $\{0010, 1001, 1010, 1100\}$, $w = 4$, consulta $x = 1011$. Derivado del mismo algoritmo; no aparece en las diapositivas.
+
+Los prefijos existentes son $\varepsilon$, $1$, $10$ y $101$. El prefijo $1011$ no existe, así que $\ell = 3$ y $p = 101$. El bit 4 de $x$ es 1: falta el **hijo derecho** de $101$. Ahora el extremo útil es el máximo de la rama izquierda: $y = T[(4, 1010)].\max = 1010$, que es el predecesor. El sucesor es el siguiente de $1010$ en la lista, que es $1100$.
+
+Observa que $1100$ no empieza por $101$: la lista salta sobre el prefijo para llegar a él.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Paso 1 (derivado). La raíz ε existe. x = 1011 empieza por 1, y la rama 1 tiene llaves.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active" },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 0 existe.",
+    },
+    {
+      note: "Paso 2 (derivado). El prefijo 1 existe: las tres llaves 1001, 1010 y 1100 empiezan por 1.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e", state: "active" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 1 existe.",
+    },
+    {
+      note: "Paso 3 (derivado). El prefijo 10 existe: 1001 y 1010 empiezan por 10. Sube lo a 2.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1", state: "active" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 2 existe.",
+    },
+    {
+      note: "Paso 4 (derivado). El prefijo 101 existe: sólo la llave 1010 empieza por 101. Sube lo a 3. La búsqueda sólo puede terminar en ℓ = 3 o en ℓ = 4; el último sondeo, 1011, falla.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10", state: "active" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 3 existe.",
+    },
+    {
+      note: "Paso 5 (derivado). El hijo derecho 1011 falta: el bit 4 de x es 1 y el fantasma en gris ocupa su lugar. Ahora 101 es el delimitador (ámbar). El predecesor es el máximo de la rama izquierda, T[(4, 1010)].max = 1010.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10", state: "marked" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101", state: "answer" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Predecesor(1011) = 1010.",
+    },
+    {
+      note: "Paso 6 (derivado). El sucesor no está en la rama de 101: es el siguiente de 1010 en la lista de hojas. Esa lista salta de 1010 a 1100, que cuelga de 110 bajo 11. 1100 es el sucesor de 1011.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10", state: "marked" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101", state: "marked" },
+        { id: "1100", value: "1100", parent: "110", state: "answer" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sucesor(1011) = 1100.",
+    },
+  ],
+}} />
+
+## Derivado: extremo sin vecino (consulta 0000)
+
+Mismo conjunto derivado, consulta $x = 0000$. Los prefijos $\varepsilon$, $0$ y $00$ existen. $000$ no existe. El bit 3 de $x$ es 0, así que falta el hijo izquierdo de $00$. El sucesor es el mínimo de la rama derecha: $T[(3, 001)].\min = 0010$.
+
+El predecesor no existe: $0010$ es la primera hoja de la lista, y el anterior de la lista está vacío. La búsqueda por niveles encontró un punto válido, el salto dio un extremo válido, y el vecino puede faltar. Eso no se ve mirando sólo la longitud del prefijo.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Paso 1 (derivado). La raíz ε existe. La consulta 0000 empieza por 0 y la rama 0 contiene llaves.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active" },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 0 existe.",
+    },
+    {
+      note: "Paso 2 (derivado). El prefijo 00 existe: la única llave que lo cumple es 0010. Sube lo a 2.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0", state: "active" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sondeo: ℓ = 2 existe.",
+    },
+    {
+      note: "Paso 3 (derivado). El prefijo 000 no existe. El fantasma en gris es el hijo izquierdo de 00, y el bit 3 de x es 0. Falta la rama izquierda: el sucesor es el mínimo de la rama derecha 001.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0", state: "marked" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00", state: "active" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Falta el hijo izquierdo 000 de 00.",
+    },
+    {
+      note: "Paso 4 (derivado). El mínimo de la rama derecha es 0010 = T[(3, 001)].min. Sucesor(0000) = 0010. Como 0010 es la primera hoja de la lista, no tiene anterior: el predecesor no existe.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "0", value: "0", parent: "e" },
+        { id: "1", value: "1", parent: "e" },
+        { id: "00", value: "00", parent: "0", state: "marked" },
+        { id: "10", value: "10", parent: "1" },
+        { id: "11", value: "11", parent: "1" },
+        { id: "001", value: "001", parent: "00" },
+        { id: "100", value: "100", parent: "10" },
+        { id: "101", value: "101", parent: "10" },
+        { id: "110", value: "110", parent: "11" },
+        { id: "0010", value: "0010", parent: "001", state: "answer" },
+        { id: "1001", value: "1001", parent: "100" },
+        { id: "1010", value: "1010", parent: "101" },
+        { id: "1100", value: "1100", parent: "110" },
+        { id: "g000", value: "000", parent: "00", state: "muted" },
+        { id: "g1011", value: "1011", parent: "101", state: "muted" },
+      ],
+      caption: "Sucesor(0000) = 0010; predecesor: ninguno.",
+    },
+  ],
+}} />
+
+## Qué comprobar después de estos casos
+
+- Cada consulta de sucesor empieza por la búsqueda de niveles y termina en un salto, nunca en un recorrido bit a bit.
+- Cuando falta el hijo izquierdo, el sucesor es un mínimo; cuando falta el derecho, el predecesor es un máximo y el sucesor se busca en la lista.
+- Un vecino puede no existir aunque la búsqueda sea correcta: el borde de la lista también es un caso.

@@ -5,134 +5,698 @@ title: "Trie"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Un conjunto de palabras repite muchos prefijos. Queremos compartir el recorrido de las letras que tienen en común.
+Sea $\mathcal{S} = \{S_1, \ldots, S_k\}$ un conjunto de cadenas sobre un alfabeto $\Sigma$. Queremos responder tres preguntas: si una cadena $x$ pertenece al conjunto, si algún elemento empieza por un prefijo dado, y cuántas cadenas hay bajo cada prefijo.
 
-## Intuición
+Con un árbol binario de búsqueda sobre cadenas, cada comparación puede recorrer toda la cadena que se compara; la búsqueda cuesta $O(|x| \lg k)$ comparaciones de caracteres (nota de apoyo: el costo exacto depende del modelo de comparación). Con el conjunto $\{$he, she, his, hers$\}$, buscar `hers` debería bastar con leer cuatro letras, sin mirar las otras tres cadenas. La pregunta de esta estructura es: ¿se puede usar la propia cadena como camino hasta su respuesta?
 
-Cada arista añade un carácter. Caminar desde la raíz forma un prefijo. Un nodo puede ser terminal y seguir teniendo hijos.
+## Intuición dibujada
 
-## Estructura interna
+Un trie es un árbol donde cada arista lleva una letra y cada nodo representa el prefijo formado por las letras del camino desde la raíz. Un nodo es **terminal** si su prefijo es una cadena del conjunto. Los nodos terminales se marcan en ámbar.
 
-Cada nodo representa un único prefijo. La marca terminal indica que esa palabra pertenece al diccionario. Los hijos tienen caracteres distintos entre sí.
-
-### Qué representa un camino y qué representa una marca
-
-Desde la raíz, la secuencia de letras de las aristas determina el texto del nodo. Dos caminos pueden compartir sus primeras aristas y divergir cuando aparece la primera letra distinta. Después de divergir, aunque vuelvan a usar una letra igual, ya pertenecen a prefijos diferentes. Así, he y she tienen terminaciones parecidas, pero no representan el mismo prefijo desde la raíz.
-
-La marca terminal responde a otra pregunta. Todos los nodos representan prefijos de alguna palabra almacenada, pero sólo algunos representan palabras completas del conjunto. Insertar hers crea el nodo her sin marcarlo como palabra. Insertar he sí marca su nodo, y esa marca se conserva aunque más adelante le aparezca un descendiente. En un diagrama, el trazo del camino muestra que una secuencia de letras se pudo consumir; el estado terminal muestra si esa secuencia pertenece al diccionario.
-
-### Qué distingue al trie de una tabla de palabras completas
-
-Una tabla por igualdad puede decir si her está almacenada. El trie también puede decir en qué letra se aparta una consulta y qué prefijo había coincidido antes. Esa información será necesaria para definir los estados de Aho–Corasick. La forma del árbol refleja prefijos existentes y no un orden de inserción arbitrario: insertar las mismas palabras en otro orden conserva los mismos prefijos y marcas.
-
-## Operaciones
-
-Al insertar una palabra, sigue sus letras mientras haya aristas. Crea la rama que falta y marca terminal el último nodo. En búsqueda exacta se exigen tanto el camino completo como la marca terminal.
-
-### Insertar he, she, his y hers
+Este es el trie de la lámina para $\{$he, she, his, hers$\}$. Sólo existen los prefijos que aparecen en alguna cadena: son 10 nodos con la raíz para 12 caracteres, porque `h` se comparte por `he`, `his` y `hers`.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "Empieza con el prefijo vacío.",
+      note: "Trie final de las cuatro cadenas. Cada nodo es un prefijo: he, she, his y hers son terminales (ámbar) y her es sólo prefijo, no palabra. La raíz ε representa la cadena vacía y no es terminal, porque ε no está en el conjunto.",
       nodes: [
-        {"id": "r", "value": "ε", "parent": null, "state": "active"},
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
       ],
-    },
-    {
-      note: "Inserta he. e queda terminal.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
       ],
-    },
-    {
-      note: "Inserta she. La rama s sale de la raíz y termina en she.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh", "state": "answer"},
-      ],
-    },
-    {
-      note: "Para his se comparte h, pero la segunda letra abre otra rama.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r", "state": "active"},
-        {"id": "he", "value": "he", "parent": "h"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh"},
-        {"id": "hi", "value": "hi", "parent": "h", "state": "active"},
-        {"id": "his", "value": "his", "parent": "hi", "state": "answer"},
-      ],
-    },
-    {
-      note: "Para hers se reutiliza he, que sigue siendo terminal aunque ahora tenga hijos.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h", "state": "active"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh"},
-        {"id": "hi", "value": "hi", "parent": "h"},
-        {"id": "his", "value": "his", "parent": "hi"},
-        {"id": "her", "value": "her", "parent": "he", "state": "active"},
-        {"id": "hers", "value": "hers", "parent": "her", "state": "answer"},
-      ],
-    },
-    {
-      note: "La búsqueda de her completa el camino. El nodo no es terminal, así que her sólo es prefijo.",
-      nodes: [
-        {"id": "r", "value": "ε", "parent": null},
-        {"id": "h", "value": "h", "parent": "r"},
-        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
-        {"id": "s", "value": "s", "parent": "r"},
-        {"id": "sh", "value": "sh", "parent": "s"},
-        {"id": "she", "value": "she", "parent": "sh", "state": "answer"},
-        {"id": "hi", "value": "hi", "parent": "h"},
-        {"id": "his", "value": "his", "parent": "hi", "state": "answer"},
-        {"id": "her", "value": "her", "parent": "he", "state": "marked"},
-        {"id": "hers", "value": "hers", "parent": "her", "state": "answer"},
-      ],
+      caption: "10 nodos con la raíz. Ámbar = terminal (palabra del conjunto).",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Definición y notación
 
-En una traza anota las letras restantes y el prefijo del nodo actual. Si existe una arista con la siguiente letra, consumirla mantiene el invariante. Si falta durante una inserción, sólo a partir de ahí se crean nodos. En una consulta, la falta de arista descarta todas las palabras del diccionario que podrían coincidir con ese prefijo extendido.
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $\Sigma$ | alfabeto; cada arista lleva un símbolo de $\Sigma$ | más hijos posibles por nodo |
+| $k$ | número de cadenas en el conjunto | crece el número de caminos, no la altura |
+| $\lvert S_i \rvert$ | longitud de la cadena $S_i$ | sube la profundidad de su hoja |
+| $\sum_i \lvert S_i \rvert$ | suma de longitudes de todo el conjunto | acota el número de nodos |
+| $\lvert x \rvert$ | longitud de la consulta | es el número de aristas que se recorren |
 
-## Análisis de complejidad
+Dos invariantes definen el trie. Primero, los hijos de un nodo tienen etiquetas distintas, así que cada prefijo tiene a lo más un camino. Segundo, un nodo es terminal si y sólo si su prefijo pertenece al conjunto. El segundo invariante es el que separa «existe un camino» de «existe una palabra»: un nodo puede ser interno y terminal al mismo tiempo, como `he` en el trie de arriba.
 
-Se recorre o crea una arista por letra, así que buscar o insertar una palabra de longitud $m$ cuesta $O(m)$ si elegir un hijo cuesta constante. El número de nodos está acotado por uno más la suma de longitudes, y es menor cuando hay prefijos compartidos. El espacio para los hijos depende de su representación.
+Nota de apoyo (no está en las diapositivas): en la lámina se dibuja la raíz como $\varepsilon$, el prefijo vacío. Por eso el número de nodos incluye la raíz: $1 + \sum_i \lvert S_i \rvert$ como máximo.
 
-### Cómo justificar la cota en el examen
+## Operaciones paso a paso: insertar
 
-Una palabra de m letras genera a lo sumo m consultas a hijos y m nodos nuevos. La cota O(m) supone que localizar un hijo cuesta constante. Si la representación obliga a buscar entre etiquetas de aristas, incorpora ese costo. Para el tamaño del trie cuenta prefijos distintos, porque cada uno corresponde a un nodo. La suma de longitudes es una cota superior, no el número exacto de nodos.
+Insertar recibe una cadena $S$ (la notación de la lámina, Algoritmo 6) y la agrega. Los pasos en prosa:
 
-## Tabla de complejidad
+1. Empieza en la raíz $v = \varepsilon$.
+2. Para cada letra $c$ de $S$, mira si $v$ tiene hijo con etiqueta $c$. Si no lo tiene, lo crea.
+3. Mueve $v$ al hijo $c$ y repite con la siguiente letra.
+4. Al terminar, marca $v$ como terminal. Si $v$ ya era terminal, no pasa nada.
 
-La tabla superior usa las unidades de costo de la explicación.
+Qué mira cada paso: en el punto 2 se decide si el camino ya existe (se reutiliza) o se abre una rama nueva. El punto 4 separa la existencia del camino de la pertenencia de la cadena.
 
-## Ejemplos
+Con el conjunto de la lámina, insertar en este orden: `he`, `she`, `his`, `hers`. El diagrama muestra el trie creciendo palabra por palabra. Un nodo nuevo se dibuja en el paso que lo crea y, al terminar la inserción, aparece en su estado final. El nodo que se mira está en azul; los nodos reutilizados aparecen discontinuos (`shared`).
 
-[Casos resueltos](/structures/trie/examples) y [preguntas con pistas](/structures/trie/exercises).
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Insertar he. v empieza en la raíz ε, que representa el prefijo vacío. Todavía no hay ningún hijo.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active", edge: false },
+      ],
+      links: [],
+      caption: "Paso 1 de he: v = ε.",
+    },
+    {
+      note: "Insertar he, primera letra h. La raíz no tiene hijo h, así que se crea. v pasa a h. Este nodo es nuevo para el trie, no sólo para la cadena.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "active", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+      ],
+      caption: "Se crea h bajo ε.",
+    },
+    {
+      note: "Insertar he, segunda letra e. h no tiene hijo e, así que se crea. v pasa a he. Ya se consumieron las dos letras, pero he no está marcado todavía.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "active", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+      ],
+      caption: "Se crea e bajo h. Fin de la cadena.",
+    },
+    {
+      note: "Termina la cadena he: se marca el nodo final como terminal. Ahora he es palabra del conjunto y también tiene hijos posibles, que aún no existen.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+      ],
+      caption: "he queda terminal (ámbar).",
+    },
+    {
+      note: "Insertar she. v vuelve a la raíz. Ésta no tiene hijo s, porque ninguna cadena anterior empieza por s. La rama de she nace desde la raíz: se crea s y v pasa a s.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "active", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+      ],
+      caption: "Insertar she: se crea la rama s desde la raíz.",
+    },
+    {
+      note: "Segunda letra h de she. s no tiene hijo h: se crea sh y v pasa a sh. La rama s es nueva por completo, así que no comparte nada con he.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "active", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+      ],
+      caption: "Se crea h bajo s.",
+    },
+    {
+      note: "Última letra e de she. sh no tiene hijo e: se crea she y v pasa a she. Al terminar la cadena, she se marca como terminal. El camino s-h-e es nuevo; ningún nodo previo se modifica salvo la marca final.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "she queda terminal. Hay 6 nodos.",
+    },
+    {
+      note: "Insertar his. La primera letra h ya tiene hijo h en la raíz: se reutiliza esa arista y v pasa a h. Ningún nodo nuevo; h está discontinuo porque no se toca.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "active", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Insertar his: se reutiliza h (camino compartido).",
+    },
+    {
+      note: "Segunda letra i de his. h no tiene hijo i: se crea hi y v pasa a hi. La rama i nace bajo h, junto a la rama e de he. Aquí se bifurca el prefijo h.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", state: "active", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Se crea i bajo h: la bifurcación está en h.",
+    },
+    {
+      note: "Última letra s de his. hi no tiene hijo s: se crea his, que es terminal. El nodo hi era sólo prefijo y se queda como interno sin marca.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", state: "shared", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "his queda terminal. Hay 8 nodos.",
+    },
+    {
+      note: "Insertar hers. Las letras h y e ya existen en he: se recorren h y he sin crear nodos. v queda en he, que es terminal, pero la cadena no termina aquí.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "active", edge: false },
+        { id: "hi", value: "hi", parent: "h", state: "shared", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Insertar hers: se reutiliza h y he.",
+    },
+    {
+      note: "Letra r de hers. he no tiene hijo r: se crea her y v pasa a her. her no es palabra del conjunto, así que aún no se marca: es sólo un prefijo intermedio.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "active", edge: false },
+        { id: "hi", value: "hi", parent: "h", state: "shared", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Se crea r bajo he. her es prefijo, no palabra.",
+    },
+    {
+      note: "Última letra s de hers. her no tiene hijo s: se crea hers, que es terminal. Al final el trie tiene 10 nodos con la raíz, igual que el dibujo de arriba.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "shared", edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "her", value: "her", parent: "he", state: "shared", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", state: "shared", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", state: "shared", edge: false },
+        { id: "sh", value: "sh", parent: "s", state: "shared", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "hers queda terminal. Total: 10 nodos.",
+    },
+  ],
+}} />
 
-## Comparación con estructuras relacionadas
+Obsérvese que la inserción de `hers` no toca `he`: sólo lee sus aristas. El trie crece sólo donde el camino se corta.
 
-Un trie indexa prefijos de palabras. Aho–Corasick añade transiciones de fallo para buscar esos patrones en un texto continuo.
+## Operaciones paso a paso: buscar
 
-## Prueba de dominio
+Buscar sigue el mismo camino, pero sin crear nodos. Los pasos en prosa:
 
-[Lista de comprobación](/structures/trie/mastery-check).
+1. Empieza en la raíz $v = \varepsilon$.
+2. Para cada letra $c$ de la consulta, mira si $v$ tiene hijo $c$. Si no lo tiene, la búsqueda falla: ningún elemento empieza por ese prefijo.
+3. Si lo tiene, mueve $v$ a ese hijo.
+4. Al terminar de leer la consulta, la respuesta depende de la marca de $v$: si $v$ es terminal, la cadena pertenece al conjunto; si no, sólo es prefijo.
 
-*Fuente de clase: Sem12_Strings_I.pdf · pp. 28-30.*
+El paso 4 es lo que separa las tres consultas del ejemplo. Primero, buscar `hers`: las cuatro aristas existen y el último nodo es terminal.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Buscar hers. Empezamos en la raíz ε; la primera letra es h.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active", edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 1: la raíz tiene hijo h.",
+    },
+    {
+      note: "Segunda letra e. h tiene hijo e, así que v pasa a he. El prefijo he existe, y es terminal.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "active", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 2: he existe.",
+    },
+    {
+      note: "Tercera letra r. he tiene hijo r, así que v pasa a her. Aún quedan letras por leer, y el camino sigue existiendo.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "active", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 3: her existe.",
+    },
+    {
+      note: "Cuarta letra s. her tiene hijo s, así que v pasa a hers. Se leyeron las cuatro letras y el último nodo está marcado: hers pertenece al conjunto. Cuatro aristas, sin mirar las otras cadenas.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "shared", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "answer", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Respuesta: hers ∈ S (nodo en rojo).",
+    },
+  ],
+}} />
+
+Segundo, buscar el prefijo `her`. El camino existe igual que antes, pero se acaba la consulta en un nodo sin marca. La respuesta es «sí hay elementos que empiezan por her», pero «her no pertenece al conjunto».
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Buscar her. Igual que antes, se parte de la raíz y se lee h.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active", edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 1 de her.",
+    },
+    {
+      note: "Letras e y r. Los nodos he y her existen; v llega a her después de leer las tres letras.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "active", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Se leyeron las tres letras: v = her.",
+    },
+    {
+      note: "Se acabó la consulta en her, que no está marcado. El camino existe, así que her es prefijo de hers, pero no es palabra del conjunto: la respuesta es «prefijo sí, palabra no». El nodo hers queda debajo, sin visitar.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "answer", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "her: prefijo sí, palabra no (sin marca).",
+    },
+  ],
+}} />
+
+Tercero, buscar `hera`. Aquí la búsqueda falla antes de terminar: la letra `a` no tiene arista desde `her`. El nodo fantasma en gris muestra dónde debería estar `hera`, y no existe.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Buscar hera. Las tres primeras letras h, e, r recorren el mismo camino que her.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, state: "active", edge: false },
+        { id: "h", value: "h", parent: "e", edge: false },
+        { id: "he", value: "he", parent: "h", state: "marked", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 1 de hera: raíz.",
+    },
+    {
+      note: "Letras h, e: v llega a he, que existe.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "active", edge: false },
+        { id: "her", value: "her", parent: "he", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 2: he existe.",
+    },
+    {
+      note: "Letra r: v llega a her. Hasta aquí la consulta coincide con la de her, pero la palabra es hera, no her.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "active", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Paso 3: v = her.",
+    },
+    {
+      note: "Cuarta letra a. her no tiene hijo a: la arista falta y la búsqueda falla aquí. El fantasma hera en gris marca el lugar donde debería estar el nodo; no existe, así que hera no pertenece al conjunto ni es prefijo de nada.",
+      nodes: [
+        { id: "e", value: "ε", parent: null, edge: false },
+        { id: "h", value: "h", parent: "e", state: "shared", edge: false },
+        { id: "he", value: "he", parent: "h", state: "shared", edge: false },
+        { id: "her", value: "her", parent: "he", state: "active", edge: false },
+        { id: "gh", value: "hera", parent: "her", state: "muted", edge: false },
+        { id: "hers", value: "hers", parent: "her", state: "marked", edge: false },
+        { id: "hi", value: "hi", parent: "h", edge: false },
+        { id: "his", value: "his", parent: "hi", state: "marked", edge: false },
+        { id: "s", value: "s", parent: "e", edge: false },
+        { id: "sh", value: "sh", parent: "s", edge: false },
+        { id: "she", value: "she", parent: "sh", state: "marked", edge: false },
+      ],
+      links: [
+        { from: "e", to: "h", kind: "tree", label: "h" },
+        { from: "h", to: "he", kind: "tree", label: "e" },
+        { from: "he", to: "her", kind: "tree", label: "r" },
+        { from: "her", to: "gh", kind: "tree", label: "a" },
+        { from: "her", to: "hers", kind: "tree", label: "s" },
+        { from: "h", to: "hi", kind: "tree", label: "i" },
+        { from: "hi", to: "his", kind: "tree", label: "s" },
+        { from: "e", to: "s", kind: "tree", label: "s" },
+        { from: "s", to: "sh", kind: "tree", label: "h" },
+        { from: "sh", to: "she", kind: "tree", label: "e" },
+      ],
+      caption: "Falla en a: no hay arista her→a.",
+    },
+  ],
+}} />
+
+El costo de cada búsqueda es el número de aristas leídas, que es a lo sumo $\lvert x \rvert$. Lo que cambia es la respuesta final: `hers` y `her` recorren el mismo camino, y sólo la marca del último nodo las distingue.
+
+## De dónde sale la cota
+
+Insertar y buscar cuestan $O(\lvert S \rvert)$, sin depender del número de cadenas $k$ (lámina 24). El argumento tiene dos partes.
+
+**Tiempo: $O(\lvert S \rvert)$.** Cada letra de $S$ causa una única iteración del ciclo: una consulta de hijo y, si hace falta, la creación de un hijo y un paso de $v$ a él. Bajo el modelo de la clase, consultar o crear un hijo toma tiempo constante (supuesto de modelo; si el hijo se busca en una lista de hasta $\lvert\Sigma\rvert$ entradas, el costo por letra sube a $O(\lvert\Sigma\rvert)$). Con $\lvert S \rvert$ letras y tiempo constante por letra, el total es $O(\lvert S \rvert)$.
+
+**Espacio: $O(\sum_i \lvert S_i \rvert)$.** Cada cadena $S_i$ aporta a lo sumo $\lvert S_i \rvert$ nodos nuevos, uno por letra, y la raíz es una constante. Por eso el número de nodos es, como máximo, $1 + \sum_i \lvert S_i \rvert$. El diagrama muestra cada término: una fila por cadena, con sus letras como celdas, y las celdas atenuadas son las que no crean nodo porque su prefijo ya existe.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Cada fila es una cadena del conjunto y cada celda es una letra. La suma de las longitudes es 2 + 3 + 3 + 4 = 12 celdas. Ésta es la cota sin compartir: cada letra podría ser un nodo nuevo.",
+      rows: [
+        { id: "he", label: "he", cells: [{ value: "h" }, { value: "e" }] },
+        { id: "she", label: "she", cells: [{ value: "s" }, { value: "h" }, { value: "e" }] },
+        { id: "his", label: "his", cells: [{ value: "h" }, { value: "i" }, { value: "s" }] },
+        { id: "hers", label: "hers", cells: [{ value: "h" }, { value: "e" }, { value: "r" }, { value: "s" }] },
+      ],
+      caption: "Σ |Sᵢ| = 2 + 3 + 3 + 4 = 12 celdas.",
+    },
+    {
+      note: "Las celdas atenuadas son letras cuyo prefijo ya existe por otra cadena: la h de his y las h y e de hers se reutilizan. Quedan 12 − 3 = 9 letras que crean nodo. Con la raíz, el trie tiene 10 nodos, que es menos que la cota.",
+      rows: [
+        { id: "he", label: "he", cells: [{ value: "h" }, { value: "e" }] },
+        { id: "she", label: "she", cells: [{ value: "s" }, { value: "h" }, { value: "e" }] },
+        { id: "his", label: "his", cells: [{ value: "h", state: "muted" }, { value: "i" }, { value: "s" }] },
+        { id: "hers", label: "hers", cells: [{ value: "h", state: "muted" }, { value: "e", state: "muted" }, { value: "r" }, { value: "s" }] },
+      ],
+      caption: "9 nodos nuevos + la raíz = 10 ≤ 13 = 1 + Σ|Sᵢ|.",
+    },
+  ],
+}} />
+
+El espacio total es, por tanto, $O(\sum_i \lvert S_i \rvert)$: cada cadena se paga una vez, y los prefijos compartidos cuestan menos. La cota es superior: sólo se alcanza cuando ningún par de cadenas comparte primera letra. En el ejemplo sobran 3 celdas de ahorro.
+
+## Errores típicos y casos límite
+
+- **Conjunto vacío.** El trie es sólo la raíz, sin marca. Ninguna búsqueda encuentra nada.
+- **Cadena vacía.** Se inserta marcando la raíz. Si la raíz no está marcada, $\varepsilon \notin \mathcal{S}$; la búsqueda de la cadena vacía responde «no».
+- **Prefijo sin marca.** `her` es un nodo del camino de `hers`. Confundir «el camino existe» con «la cadena está» es el error más común.
+- **Duplicados.** Insertar `he` otra vez sólo recorre el camino existente y vuelve a marcarlo. No crea nodos.
+- **Una cadena que es prefijo de otra.** Si se inserta `her` después de `hers`, el trie no cambia de forma: sólo se marca `her`. Por eso una marca no puede inferirse de la existencia del nodo.
+
+## Conexión
+
+Este trie sirve de base a la estructura que resuelve búsquedas por niveles de prefijo en enteros: el [X-fast trie](/structures/x-fast-trie) toma la idea de un camino por prefijos y añade una tabla hash por nivel para saltar a cualquier profundidad en $O(\lg w)$. Allí no se reexplica el trie: se parte de este dibujo y de la marca terminal.

@@ -3,7 +3,7 @@ title: Packed-Memory Array
 type: structure
 week: week-11
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites:
 - ordered-file-maintenance
 complexity:

@@ -1,0 +1,132 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos siguen el mismo esquema: se escribe el SA, se completa la tabla LCP por pares vecinos y después se aplica la fórmula o la consulta que pide el enunciado. Usamos el sentinela $\mathdollar $ al final de cada texto y la convención $\mathrm{LCP}[k] = \operatorname{lcp}(SA[k-1], SA[k])$.
+
+## Mínimo: texto ab
+
+El texto más corto con dos letras distintas. Con $\mathdollar $ tenemos $ab\mathdollar $ y sus sufijos $\mathdollar $, $ab\mathdollar $, $b\mathdollar $. Ordenados: $\mathdollar $ (posición 2), $ab\mathdollar $ (posición 0), $b\mathdollar $ (posición 1). Entonces $SA = [2, 0, 1]$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tabla de ab$. Ningún sufijo comparte la primera letra con su vecino: a frente a $, y b frente a a. La tabla LCP es toda cero.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:0},{value:1},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"ab$"},{value:"b$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:0}] },
+      ],
+      caption: "LCP = [–, 0, 0]: no hay prefijos repetidos entre vecinos.",
+    },
+    {
+      note: "Contar subcadenas distintas con n = 2: 2·3/2 = 3 prefijos entre todos los sufijos, menos la suma de LCP que es 0. Las tres subcadenas son a, b y ab.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:1},{value:2}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"ab"},{value:"b"}] },
+        { id: "new", label: "nuevos", cells: [{value:2,state:"answer"},{value:1,state:"answer"}] },
+      ],
+      caption: "2 + 1 = 3 = n(n+1)/2 − 0. Subcadenas distintas: a, b, ab.",
+    },
+  ],
+}} />
+
+Este caso valida la fórmula en lo más simple posible. Si el texto no tiene repeticiones, la suma de LCP es cero y el resultado es $n(n+1)/2$.
+
+## Normal: banana y la repetición más larga
+
+Usamos $banana\mathdollar $ de la teoría, con $SA = [6, 5, 3, 1, 0, 4, 2]$ y $\mathrm{LCP} = [–, 0, 1, 3, 0, 0, 2]$. La subcadena repetida más larga es el máximo de toda la tabla, porque es el par vecino con más prefijo compartido.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tabla de banana$. Buscamos el máximo de LCP en toda la fila; ningún rango queda fuera de la búsqueda.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$"},{value:"anana$"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3},{value:0},{value:0},{value:2}] },
+      ],
+      caption: "Valores de LCP en orden de rango.",
+    },
+    {
+      note: "El máximo es 3, en el rango 3. Los sufijos anana$ y ana$ comparten ana, que es la subcadena repetida más larga del texto. Ninguna otra pareja de vecinos llega a tres letras.",
+      rows: [
+        { id: "k", label: "rango k", cells: [{value:0},{value:1},{value:2},{value:3},{value:4},{value:5},{value:6}] },
+        { id: "suf", label: "Sufijo", cells: [{value:"$"},{value:"a$"},{value:"ana$",state:"active"},{value:"anana$",state:"active"},{value:"banana$"},{value:"na$"},{value:"nana$"}] },
+        { id: "lcp", label: "LCP[k]", cells: [{value:"–"},{value:0},{value:1},{value:3,state:"answer"},{value:0},{value:0},{value:2}] },
+      ],
+      spans: [ { id: "rep", row: "suf", from: 2, to: 3, label: "repetida: ana", state: "marked" } ],
+      caption: "max LCP = 3, subcadena repetida más larga: ana.",
+    },
+  ],
+}} />
+
+La subcadena ana aparece dos veces, y no hay otra repetición de más de tres letras. Con la misma tabla, el mínimo sirve para otra pregunta: el prefijo común de $a\mathdollar $ con $anana\mathdollar $ es el mínimo de $LCP[2]$ y $LCP[3]$, es decir 1 (la letra a).
+
+## Límite: aaaa, con h cayendo de uno en uno
+
+Para $aaaa\mathdollar $ con $n = 4$, los sufijos quedan en el orden $\mathdollar $, $a\mathdollar $, $aa\mathdollar $, $aaa\mathdollar $, $aaaa\mathdollar $, es decir $SA = [4, 3, 2, 1, 0]$. Los LCP son $[–, 0, 1, 2, 3]$: cada vecino tiene una letra más que el anterior. Es el peor caso para comparar desde cero, y el mejor para mostrar la herencia.
+
+La tabla de $\mathrm{rank}$ es $[4, 3, 2, 1, 0]$, así que el recorrido por posición coincide con el recorrido por rango en sentido inverso. La figura sigue el recorrido de Kasai.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Antes de empezar: el recorrido por posición i = 0, 1, 2, 3, 4 da rangos 4, 3, 2, 1, 0. Todo h empieza en 0.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3},{value:4}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:2},{value:1},{value:0}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+      ],
+      caption: "Ninguna comparación hecha todavía.",
+    },
+    {
+      note: "i = 0 con rango 4. Vecino: aaa$ en la posición 1. Compara a con a tres veces y falla contra $: tres letras comunes. LCP[4] = 3 y h baja a 2.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0,state:"active"},{value:1},{value:2},{value:3},{value:4}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4,state:"active"},{value:3},{value:2},{value:1},{value:0}] },
+        { id: "h", label: "h entrada", cells: [{value:0},{value:"·"},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:"·"},{value:"·"},{value:3,state:"answer"}] },
+      ],
+      caption: "3 éxitos y 1 fallo. LCP[4] = 3.",
+    },
+    {
+      note: "i = 1 con rango 3. Hereda h = 2: aa$ y aaa$ ya comparten las dos primeras letras por herencia. Sólo se compara la posición siguiente, que falla. LCP[3] = 2 y h baja a 1.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1,state:"active"},{value:2},{value:3},{value:4}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3,state:"active"},{value:2},{value:1},{value:0}] },
+        { id: "h", label: "h entrada", cells: [{value:0},{value:2},{value:"·"},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:"·"},{value:2,state:"answer"},{value:3}] },
+      ],
+      caption: "1 fallo, ningún éxito. LCP[3] = 2.",
+    },
+    {
+      note: "i = 2 con rango 2. Hereda h = 1. Sólo falla la comparación siguiente. LCP[2] = 1 y h baja a 0. Desde aquí los pares restantes no tienen nada que heredar.",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2,state:"active"},{value:3},{value:4}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:2,state:"active"},{value:1},{value:0}] },
+        { id: "h", label: "h entrada", cells: [{value:0},{value:2},{value:1},{value:"·"},{value:"·"}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:"·"},{value:1,state:"answer"},{value:2},{value:3}] },
+      ],
+      caption: "1 fallo. LCP[2] = 1.",
+    },
+    {
+      note: "i = 3 y i = 4 con rangos 1 y 0. El rango 1 tiene vecino $ y falla de inmediato; el rango 0 es el sentinela. Total de comparaciones: 4 + 1 + 1 + 1 = 7 para n = 5, y la tabla final es [–, 0, 1, 2, 3].",
+      rows: [
+        { id: "i", label: "i", cells: [{value:0},{value:1},{value:2},{value:3,state:"active"},{value:4,state:"active"}] },
+        { id: "rk", label: "rank[i]", cells: [{value:4},{value:3},{value:2},{value:1,state:"active"},{value:0,state:"active"}] },
+        { id: "h", label: "h entrada", cells: [{value:0},{value:2},{value:1},{value:0},{value:0}] },
+        { id: "lcp", label: "LCP[r]", cells: [{value:"–"},{value:0,state:"answer"},{value:1},{value:2},{value:3}] },
+      ],
+      caption: "Tabla final [–, 0, 1, 2, 3]. Con n = 4, la fórmula da 10 − 6 = 4 subcadenas distintas.",
+    },
+  ],
+}} />
+
+Con $n = 4$, la fórmula de subcadenas distintas da $\tfrac{4\cdot 5}{2} - (0+1+2+3) = 10 - 6 = 4$: las cuatro subcadenas de $aaaa$ son $a$, $aa$, $aaa$ y $aaaa$. El caso límite muestra que la suma de LCP puede ser grande, pero el trabajo de Kasai sigue siendo proporcional a $n$: cada bajada de $h$ ahorra una comparación en la posición siguiente.

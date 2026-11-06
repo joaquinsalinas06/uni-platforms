@@ -2,9 +2,10 @@
 kind: mastery
 title: Prueba de dominio
 canExplain:
-- ¿Qué hace la r de ushers al salir de she?
-- ¿Por qué reportar puede costar más que recorrer el texto?
+- Por qué fail(v) es el sufijo propio más largo de str(v) que es nodo del trie.
+- Por qué dic salta a un terminal y no a un nodo cualquiera de la cadena de fallos.
 canDo:
-- ¿Por qué el fallo de she va a he?
-- ¿Qué hace la r de ushers al salir de she?
+- Calcular los fallos de un trie por niveles, de arriba hacia abajo.
+- Trazar una búsqueda sobre un texto reportando todas las coincidencias con dic.
+- Justificar la cota O(n + m + z) distinguiendo construcción y búsqueda.
 ---

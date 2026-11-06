@@ -5,147 +5,252 @@ title: "RMQ ±1 y método de los cuatro rusos"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-La sparse table sobre todo Euler responde rápido, pero usa preprocesamiento superlineal. Su secuencia de profundidades tiene una regularidad que permite compartir trabajo.
+Tenemos un arreglo $D[0..n-1]$ y queremos el índice del mínimo en $D[i..j]$. La sparse table responde en $O(1)$, pero cuesta $O(n\lg n)$ de memoria. Con $n=10^6$ son unos $2\cdot10^7$ entradas. Queremos lo mismo con $O(n)$ de preprocesamiento.
 
-## Intuición
+El truco es que el arreglo que aparece en el árbol de Euler no es arbitrario. Dos posiciones consecutivas difieren en exactamente $+1$ o $-1$. Esa regularidad permite compartir trabajo entre bloques distintos.
 
-Las subidas y bajadas determinan el orden relativo dentro de un bloque. Dos bloques con las mismas diferencias comparten todas sus respuestas locales, aunque empiecen a alturas distintas.
+## Intuición dibujada
 
-## Estructura interna
+Partimos $D$ en bloques de tamaño $b\approx\tfrac12\lg n$. Cada bloque tiene dos caras:
 
-Un bloque de $b$ entradas se identifica con $b-1$ signos. Normaliza restando su altura inicial. Mantén una tabla micro por patrón y una tabla macro sobre los mínimos de bloques completos.
+- Su **mínimo** y la posición de ese mínimo: un número por bloque. Son sólo $n/b=O(n/\lg n)$ números, así que una sparse table sobre ellos cabe en $O(n)$.
+- Su **patrón**: la secuencia de pasos $+1$ o $-1$ entre entradas consecutivas. Dos bloques con el mismo patrón tienen las mismas respuestas locales, aunque sus valores estén desplazados.
 
-### Qué información se puede compartir entre bloques
-
-Dos bloques con el mismo patrón de diferencias se obtienen uno del otro sumando una constante. Por ejemplo, [4,5,4,3] y [10,11,10,9] comparten la forma [0,1,0,−1]. Al sumar seis a todas las entradas, cualquier comparación interna da el mismo resultado y los empates también se conservan. Por eso una tabla de argmin locales sirve para ambos. El patrón no representa un valor mínimo global; representa cómo comparar posiciones dentro de ese bloque.
-
-### Separar las consultas por dónde caen sus extremos
-
-Si los dos extremos caen en el mismo bloque, las posiciones locales definen una consulta micro. Si caen en bloques diferentes, toma el sufijo del primero y el prefijo del último. Cuando esos bloques son consecutivos, esos dos intervalos ya cubren la consulta. Si quedan bloques enteros entre ellos, agrega un mínimo de la tabla macro. Esos tres trozos no requieren recorrer sus celdas una por una. Tras reunir los candidatos, conviértelos a índices absolutos y usa las profundidades originales para elegir.
-
-Un último bloque incompleto se puede tratar con su longitud real, o completar la forma para preparar la tabla siempre que las consultas nunca incluyan celdas de relleno. Lo importante es mantener separado qué se preprocesó y qué índices son parte de la entrada.
-
-## Operaciones
-
-Si los extremos caen en el mismo bloque, responde con su tabla micro. Si caen en bloques distintos, combina a lo sumo tres candidatos: sufijo inicial, bloques interiores completos y prefijo final. Un interior vacío se omite.
-
-### Cruzar de un bloque a otro · ejemplo de clase
+El primer diagrama muestra el arreglo de ejemplo, $n=16$, $b=4$, partido en cuatro bloques. Cada bloque se marca con un tramo.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Profundidades de Euler y dos bloques de cuatro entradas.",
-      arrays: [
-        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["2", "3", "2", "1", "2", "3", "4", "3"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Arreglo D de 16 entradas, consecutivas en ±1. Lo partimos en bloques de b = 4 posiciones. Cada tramo es un bloque completo.",
+      rows: [
+        { id: "D", label: "D", cells: [
+          {value: 2, tag: "0"}, {value: 3, tag: "1"}, {value: 2, tag: "2"}, {value: 1, tag: "3"},
+          {value: 2, tag: "4"}, {value: 3, tag: "5"}, {value: 4, tag: "6"}, {value: 3, tag: "7"},
+          {value: 3, tag: "8"}, {value: 2, tag: "9"}, {value: 0, tag: "10"}, {value: 2, tag: "11"},
+          {value: 3, tag: "12"}, {value: 4, tag: "13"}, {value: 5, tag: "14"}, {value: 4, tag: "15"} ] },
       ],
-      bridges: [],
+      spans: [
+        { id: "B0", row: "D", from: 0, to: 3, label: "bloque 0" },
+        { id: "B1", row: "D", from: 4, to: 7, label: "bloque 1" },
+        { id: "B2", row: "D", from: 8, to: 11, label: "bloque 2" },
+        { id: "B3", row: "D", from: 12, to: 15, label: "bloque 3" },
+      ],
+      caption: "n = 16, b = 4, cuatro bloques.",
     },
     {
-      note: "El primer bloque tiene patrón + − −. Su forma empieza en 0.",
-      arrays: [
-        {"id": "row-0", "label": "Bloque 0", "row": 0, "cells": ["2", "3", "2", "1"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Forma", "row": 1, "cells": ["0", "+1", "0", "−1"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Para cada bloque guardamos su mínimo y la posición donde aparece. Estos cuatro mínimos son el único dato que la parte macro necesita del arreglo original.",
+      rows: [
+        { id: "D", label: "D", cells: [
+          {value: 2, tag: "0"}, {value: 3, tag: "1"}, {value: 2, tag: "2"}, {value: 1, state: "marked", tag: "3"},
+          {value: 2, tag: "4"}, {value: 3, tag: "5"}, {value: 4, tag: "6"}, {value: 3, tag: "7"},
+          {value: 3, tag: "8"}, {value: 2, tag: "9"}, {value: 0, state: "marked", tag: "10"}, {value: 2, tag: "11"},
+          {value: 3, tag: "12"}, {value: 4, tag: "13"}, {value: 5, tag: "14"}, {value: 4, tag: "15"} ] },
+        { id: "bmin", label: "bmin", cells: [{value: 1, tag: "bloque 0"}, {value: 2, tag: "bloque 1"}, {value: 0, state: "answer", tag: "bloque 2"}, {value: 3, tag: "bloque 3"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "B0", row: "D", from: 0, to: 3, label: "bloque 0" },
+        { id: "B1", row: "D", from: 4, to: 7, label: "bloque 1" },
+        { id: "B2", row: "D", from: 8, to: 11, label: "bloque 2" },
+        { id: "B3", row: "D", from: 12, to: 15, label: "bloque 3" },
+      ],
+      caption: "Mínimos (valor, posición en D): B0 = 1 en 3, B1 = 2 en 4, B2 = 0 en 10, B3 = 3 en 12.",
     },
     {
-      note: "El segundo bloque tiene patrón + + −.",
-      arrays: [
-        {"id": "row-0", "label": "Bloque 1", "row": 0, "cells": ["2", "3", "4", "3"], "states": ["idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Forma", "row": 1, "cells": ["0", "+1", "+2", "+1"], "states": ["idle", "idle", "idle", "idle"]},
+      note: "Cada bloque tiene un patrón: sus b − 1 pasos ±1. El bloque 1 y el bloque 3 tienen el mismo patrón ++−, aunque sus valores son distintos. Ese es el punto del método de los cuatro rusos.",
+      rows: [
+        { id: "pat", label: "patrón", cells: [{value: "+−−", tag: "bloque 0"}, {value: "++−", tag: "bloque 1"}, {value: "−−+", tag: "bloque 2"}, {value: "++−", tag: "bloque 3"}] },
       ],
-      bridges: [],
+      caption: "Dos bloques comparten patrón (1 y 3). Sólo hay 2^(b−1) = 8 patrones posibles con b = 4.",
     },
     {
-      note: "Consulta [1,6]. El sufijo del primer bloque es [3,2,1].",
-      arrays: [
-        {"id": "row-0", "label": "Sufijo", "row": 0, "cells": ["3", "2", "1"], "states": ["active", "active", "answer"]},
+      note: "La sparse table se construye sobre la fila bmin. El nivel k guarda el mínimo de ventanas de longitud 2^k. Ese nivel 1 da, por ejemplo, el mínimo de los bloques 1 y 2 juntos.",
+      rows: [
+        { id: "L0", label: "k=0 (len 1)", cells: [{value: 1, tag: "0"}, {value: 2, tag: "1"}, {value: 0, tag: "2"}, {value: 3, tag: "3"}] },
+        { id: "L1", label: "k=1 (len 2)", cells: [{value: 1, tag: "0"}, {value: 0, state: "active", tag: "1"}, {value: 0, tag: "2"}] },
+        { id: "L2", label: "k=2 (len 4)", cells: [{value: 0, tag: "0"}] },
       ],
-      bridges: [],
+      caption: "L[k][i] = mínimo de bmin[i .. i+2^k−1]. Usa n_b lg n_b entradas, y n_b = n/b.",
     },
     {
-      note: "El prefijo del segundo bloque es [2,3,4].",
-      arrays: [
-        {"id": "row-0", "label": "Prefijo", "row": 0, "cells": ["2", "3", "4"], "states": ["answer", "active", "active"]},
+      note: "Las tablas micro se llenan una vez por patrón. Para el patrón −−+ del bloque 2, cada celda T[l][r] da la posición local del mínimo de D[l..r] dentro del bloque. Por ejemplo T[1][3] = 2, es decir la posición global 10.",
+      rows: [
+        { id: "t0", label: "l=0", cells: [{value: 0, tag: "r=0"}, {value: 1, tag: "r=1"}, {value: 2, tag: "r=2"}, {value: 2, tag: "r=3"}] },
+        { id: "t1", label: "l=1", cells: [{value: "—"}, {value: 1}, {value: 2}, {value: 2, state: "active"}] },
+        { id: "t2", label: "l=2", cells: [{value: "—"}, {value: "—"}, {value: 2}, {value: 2}] },
+        { id: "t3", label: "l=3", cells: [{value: "—"}, {value: "—"}, {value: "—"}, {value: 3}] },
       ],
-      bridges: [],
-    },
-    {
-      note: "No hay bloque completo entre los extremos. Compara sólo 1 y 2.",
-      arrays: [
-        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["1", "2"], "states": ["answer", "idle"]},
-        {"id": "row-1", "label": "Respuesta", "row": 1, "cells": ["índice:3"], "states": ["answer"]},
-      ],
-      bridges: [],
+      caption: "Tabla de un patrón: valores son posiciones locales (0..b−1). Hay b(b+1)/2 celdas útiles.",
     },
   ],
 }} />
 
-### Cuando sí hay un bloque interior completo
+## Definición y notación
 
-*(Traza derivada de la explicación de clase.)*
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | longitud de $D$ | sube el costo total |
+| $b = \max(1,\lfloor \lg n/2\rfloor)$ | tamaño de bloque | más bloques, pero patrones más largos |
+| $n_b = \lceil n/b\rceil$ | número de bloques | la sparse table macro tiene $n_b\lg n_b$ entradas |
+| $\mathrm{pat}[t]$ | patrón de pasos del bloque $t$, $b-1$ bits | define qué tabla micro usar |
+| $T[p][l][r]$ | posición local del mínimo de $D[l..r]$ para el patrón $p$ | una tabla por patrón; $b(b+1)/2$ celdas útiles |
+| $\mathrm{bmin}[t]$, $\mathrm{bidx}[t]$ | mínimo del bloque $t$ y su posición global | alimentan la sparse table macro |
+
+Los pasos de un bloque son $\delta_k = D[k+1]-D[k]\in\{+1,-1\}$ para $k$ dentro del bloque. El patrón es esa secuencia codificada en $b-1$ bits. Como el arreglo de Euler sube o baja en cada paso, todo $D$ cumple esto.
+
+## Por qué sólo importa el patrón
+
+Si dos bloques tienen los mismos pasos, la diferencia entre sus valores es constante. Restar la base a cada bloque lo deja igual. Así, el índice del mínimo de un rango dentro del bloque sólo depende del patrón.
+
+El argumento tiene un matiz importante. La tabla micro dice **qué posición** gana dentro del bloque, pero no compara con otros bloques. Para comparar hay que volver a las alturas originales, porque cada bloque tiene su propia base. Por eso la respuesta final se elige con los valores reales.
+
+## Preprocesamiento
+
+Algoritmo (en prosa):
+
+1. Fijar $b=\max(1,\lfloor\lg n/2\rfloor)$ y $n_b=\lceil n/b\rceil$.
+2. Para cada bloque $t$: guardar su mínimo y posición en $\mathrm{bmin}[t]$, $\mathrm{bidx}[t]$, y calcular $\mathrm{pat}[t]$ leyendo los $b-1$ pasos.
+3. Construir la sparse table sobre $\mathrm{bmin}[0..n_b-1]$.
+4. Para cada patrón $p$ que aparece, llenar $T[p][l][r]$ para todo $0\le l\le r<b$, recorriendo $r$ y manteniendo el mínimo.
+
+El paso 2 recorre cada elemento una vez. El paso 4 sólo llena tablas de patrones que aparecen, nunca más de $2^{b-1}$.
+
+## Consulta
+
+Para $\mathrm{RMQ}(i,j)$ con $s=\lfloor i/b\rfloor$, $t=\lfloor j/b\rfloor$:
+
+1. Si $s=t$: la respuesta está dentro de un bloque. Se devuelve $s\cdot b+T[\mathrm{pat}[s]][i\bmod b][j\bmod b]$.
+2. Si $s<t$: calcular el **sufijo** del bloque $s$ desde $i$, con $a=s\cdot b+T[\mathrm{pat}[s]][i\bmod b][b-1]$.
+3. Calcular el **prefijo** del bloque $t$ hasta $j$, con $c=t\cdot b+T[\mathrm{pat}[t]][0][j\bmod b]$.
+4. Si hay bloques enteros entre $s$ y $t$: consultar la sparse table en $[s+1,\,t-1]$ y obtener $u=\mathrm{bidx}[\cdot]$.
+5. Devolver el candidato de menor **valor** entre $a$, $c$ y, si existe, $u$.
+
+Se hacen como mucho dos consultas micro, una consulta macro y tres comparaciones. Todo es $O(1)$.
+
+## Una consulta paso a paso
+
+Usamos el mismo arreglo, $i=1$, $j=13$, $b=4$. Entonces $s=0$, $t=3$, así que hay bloques enteros en medio.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Para esta secuencia ±1, consulta desde 3 hasta 9.",
-      arrays: [
-        {"id": "row-0", "label": "Profundidad", "row": 0, "cells": ["3", "4", "3", "4", "3", "2", "1", "2", "3", "4", "5", "4"], "states": ["idle", "idle", "idle", "marked", "idle", "idle", "idle", "idle", "idle", "marked", "idle", "idle"]},
+      note: "Parte 1, sufijo del bloque 0 desde la posición 1: miramos D[1..3] = 3, 2, 1. La tabla micro del patrón +−− dice que el mínimo local está en la posición 3, valor 1.",
+      rows: [
+        { id: "D", label: "D", cells: [
+          {value: 2, tag: "0"}, {value: 3, tag: "1"}, {value: 2, tag: "2"}, {value: 1, state: "active", tag: "3"},
+          {value: 2, tag: "4"}, {value: 3, tag: "5"}, {value: 4, tag: "6"}, {value: 3, tag: "7"},
+          {value: 3, tag: "8"}, {value: 2, tag: "9"}, {value: 0, tag: "10"}, {value: 2, tag: "11"},
+          {value: 3, tag: "12"}, {value: 4, tag: "13"}, {value: 5, tag: "14"}, {value: 4, tag: "15"} ] },
       ],
-      bridges: [],
+      spans: [
+        { id: "S", row: "D", from: 1, to: 3, label: "sufijo B0" },
+        { id: "M", row: "D", from: 4, to: 11, label: "bloques 1-2" },
+        { id: "P", row: "D", from: 12, to: 13, label: "prefijo B3" },
+      ],
+      caption: "Candidato a: valor 1, posición 3.",
     },
     {
-      note: "El bloque interior [4,7] se consulta en la tabla macro.",
-      arrays: [
-        {"id": "row-0", "label": "Sufijo izquierdo", "row": 0, "cells": ["4"], "states": ["idle"]},
-        {"id": "row-1", "label": "Macro", "row": 1, "cells": ["3", "2", "1", "2"], "states": ["idle", "idle", "answer", "idle"]},
-        {"id": "row-2", "label": "Prefijo derecho", "row": 2, "cells": ["3", "4"], "states": ["idle", "idle"]},
+      note: "Parte 2, bloques completos entre s y t: los bloques 1 y 2. La sparse table con k = 1 cubre ambos de una vez, y da el mínimo de bmin[1] y bmin[2] = min(2, 0) = 0 en el bloque 2.",
+      rows: [
+        { id: "D", label: "D", cells: [
+          {value: 2, tag: "0"}, {value: 3, tag: "1"}, {value: 2, tag: "2"}, {value: 1, tag: "3"},
+          {value: 2, tag: "4"}, {value: 3, tag: "5"}, {value: 4, tag: "6"}, {value: 3, tag: "7"},
+          {value: 3, tag: "8"}, {value: 2, tag: "9"}, {value: 0, state: "active", tag: "10"}, {value: 2, tag: "11"},
+          {value: 3, tag: "12"}, {value: 4, tag: "13"}, {value: 5, tag: "14"}, {value: 4, tag: "15"} ] },
+        { id: "L1", label: "L[1]", cells: [{value: 1, tag: "i=0"}, {value: 0, state: "active", tag: "i=1"}, {value: 0, tag: "i=2"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "S", row: "D", from: 1, to: 3, label: "sufijo B0" },
+        { id: "M", row: "D", from: 4, to: 11, label: "bloques 1-2" },
+        { id: "P", row: "D", from: 12, to: 13, label: "prefijo B3" },
+      ],
+      caption: "Candidato medio: valor 0, posición 10 (bidx del bloque 2).",
     },
     {
-      note: "Las respuestas micro valen 4 y 3. Gana el candidato macro de valor 1.",
-      arrays: [
-        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["4", "1", "3"], "states": ["idle", "answer", "idle"]},
+      note: "Parte 3, prefijo del bloque 3 hasta 13 mod 4 = 1: miramos D[12..13] = 3, 4. Su mínimo es 3 en la posición 12. Los tres candidatos son 1, 0 y 3.",
+      rows: [
+        { id: "D", label: "D", cells: [
+          {value: 2, tag: "0"}, {value: 3, tag: "1"}, {value: 2, tag: "2"}, {value: 1, tag: "3"},
+          {value: 2, tag: "4"}, {value: 3, tag: "5"}, {value: 4, tag: "6"}, {value: 3, tag: "7"},
+          {value: 3, tag: "8"}, {value: 2, tag: "9"}, {value: 0, tag: "10"}, {value: 2, tag: "11"},
+          {value: 3, state: "active", tag: "12"}, {value: 4, tag: "13"}, {value: 5, tag: "14"}, {value: 4, tag: "15"} ] },
+        { id: "cand", label: "candidatos", cells: [{value: 1, tag: "pos 3"}, {value: 0, tag: "pos 10"}, {value: 3, tag: "pos 12"}] },
       ],
-      bridges: [],
+      spans: [
+        { id: "S", row: "D", from: 1, to: 3, label: "sufijo B0" },
+        { id: "M", row: "D", from: 4, to: 11, label: "bloques 1-2" },
+        { id: "P", row: "D", from: 12, to: 13, label: "prefijo B3" },
+      ],
+      caption: "Gana el candidato macro: valor 0 en la posición 10.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+Sin los bloques intermedios, la respuesta podría ser 1 (posición 3). Ahí se ve por qué la parte macro es necesaria.
 
-La tabla micro se consulta con posiciones relativas al comienzo de un bloque. Para comparar contra la respuesta macro, convierte el candidato local en un índice global y lee su profundidad real. Comparar profundidades normalizadas de bloques diferentes puede invertir el orden porque cada bloque tiene una base distinta.
+## De dónde sale la cota
 
-## Análisis de complejidad
+La parte macro tiene $n_b=\lceil n/b\rceil$ entradas, y como $b\approx\tfrac12\lg n$, $n_b\approx 2n/\lg n$. La sparse table sobre $n_b$ valores tiene $n_b\lceil\lg n_b\rceil$ entradas:
 
-Escoge $b\approx\tfrac12\lg n$, con un mínimo de una entrada. Hay a lo sumo $2^{b-1}=O(\sqrt n)$ patrones. Cada uno cuesta $O(b^2)$ si se extiende cada intervalo manteniendo su mínimo. En total, $O(\sqrt n\lg^2 n)=o(n)$. La sparse table de $O(n/b)$ bloques usa $O((n/b)\lg(n/b))=O(n)$ tiempo y espacio. Una consulta examina un número constante de candidatos.
+$$n_b\lg n_b \le \frac{2n}{\lg n}\cdot \lg n = 2n = O(n)$$
 
-### Cómo justificar la cota en el examen
+Los patrones: cada bloque tiene $b-1$ pasos, así que hay $2^{b-1}$ patrones. Como $b\le\tfrac12\lg n$,
 
-Elige $b$ del orden de $(lg n)/2$. Cada bloque de $b$ entradas tiene $b-1$ signos, así que hay a lo sumo $2^{b-1}$ patrones. Tabular todos los pares dentro de cada patrón cuesta $O(b^2)$ extendiendo un intervalo un elemento a la vez. El producto da $O(sqrt n,lg^2 n)=o(n)$. La sparse table superior trabaja con $O(n/b)$ mínimos, no con $n$ valores, y por eso cuesta $O(n)$.
+$$2^{b-1}\le 2^{\frac12\lg n}=\sqrt n$$
 
-## Tabla de complejidad
+Cada patrón tiene $b(b+1)/2\le b^2$ celdas. El total micro es
 
-La tabla superior usa las unidades de costo de la explicación.
+$$\sqrt n\cdot b^2 \le \sqrt n\cdot\tfrac14\lg^2 n = O(\sqrt n\,\lg^2 n)=o(n)$$
 
-## Ejemplos
+Esto da el preprocesamiento total:
 
-[Casos resueltos](/structures/plus-minus-one-rmq/examples) y [preguntas con pistas](/structures/plus-minus-one-rmq/exercises).
+$$O(n)\;(\text{bloques y patrones}) + O(n)\;(\text{macro}) + o(n)\;(\text{micro}) = O(n)$$
 
-## Comparación con estructuras relacionadas
+Y la consulta es $O(1)$: dos celdas micro, dos celdas macro y tres comparaciones.
 
-Una sparse table completa tabula ventanas sobre todos los índices. Aquí la sparse table sólo ve mínimos de bloques. Dentro de cada bloque, la forma ±1 permite reutilizar respuestas.
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Término macro: n/b bloques. Con b = lg n / 2 hay unos 2n / lg n bloques. Cada bloque aporta una entrada a la fila bmin.",
+      rows: [
+        { id: "D", label: "D (n)", cells: [{value: "n"}] },
+        { id: "bm", label: "bmin (n/b)", cells: [{value: "2n/lg n"}] },
+      ],
+      caption: "n/b ≈ 2n / lg n entradas en la sparse table.",
+    },
+    {
+      note: "Término macro, final: n_b lg n_b ≤ 2n. La tabla sobre bmin cuesta lineal porque el log del número de bloques es menor que lg n.",
+      rows: [
+        { id: "mac", label: "macro", cells: [{value: "n_b"}, {value: "lg n_b"}, {value: "≤ 2n"}] },
+      ],
+      caption: "n_b · lg n_b ≤ (2n/lg n) · lg n = 2n.",
+    },
+    {
+      note: "Término micro: 2^(b−1) patrones ≤ √n. Cada patrón tiene b(b+1)/2 ≤ b² celdas. Como b² ≈ lg² n / 4, el total √n · lg² n es o(n).",
+      rows: [
+        { id: "pat", label: "patrones", cells: [{value: "2^(b−1)"}, {value: "≤ √n"}] },
+        { id: "cel", label: "celdas por patrón", cells: [{value: "b(b+1)/2"}, {value: "≤ b²"}] },
+        { id: "tot", label: "total micro", cells: [{value: "√n·lg²n"}, {value: "= o(n)"}] },
+      ],
+      caption: "Micro: √n · lg² n = o(n). Macro: O(n). Total: O(n).",
+    },
+  ],
+}} />
 
-## Prueba de dominio
+## Errores típicos y casos límite
 
-[Lista de comprobación](/structures/plus-minus-one-rmq/mastery-check).
+- **Bloque último más corto.** Si $n$ no es múltiplo de $b$, el último bloque tiene menos de $b$ entradas. Su patrón tiene menos bits, y la tabla debe usar el tamaño real o rellenar con un patrón válido. No debes leer posiciones fuera de $D$.
+- **Comparar alturas normalizadas.** Restar la base hace que dos bloques distintos sean comparables sólo dentro de la tabla micro. Entre bloques, el candidato se compara con su valor original.
+- **Consulta dentro de un bloque.** Si $s=t$, no hay sufijo ni prefijo: sólo una celda micro. Usar la fórmula de dos bordes ahí da respuestas incorrectas.
+- **Bloques adyacentes.** Si $t=s+1$, no hay bloques intermedios. La parte macro se omite.
+- **Ventana macro vacía.** La parte macro sólo se consulta si $t-s>1$.
+- **Empates.** Si dos candidatos tienen el mismo valor, la convención del RMQ decide qué índice se devuelve. Hay que fijarla antes de llenar las tablas.
 
-*Fuente de clase: Sem12_Static_Trees.pdf · pp. 29-38.*
+## Conexión
+
+- Parte del problema de [RMQ estático](/structures/static-rmq): la sparse table es la versión $O(n\lg n)$ de la parte macro.
+- Se usa con [LCA por tour de Euler](/structures/lca-euler-tour): el árbol de Euler produce un arreglo ±1, y la consulta de LCA se reduce a RMQ sobre él.

@@ -3,7 +3,7 @@ title: Suffix array y duplicación de prefijos
 type: structure
 week: week-13
 hasVisualization: true
-visualizationType: range-tree
+visualizationType: array
 prerequisites: []
 complexity:
   Construcción con radix por rangos:

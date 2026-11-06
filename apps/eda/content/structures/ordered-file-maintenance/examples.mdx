@@ -1,0 +1,92 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Tres casos, de menor a mayor: el mínimo posible, una operación que sólo cambia el índice, y el límite en que el archivo ya no tiene dónde repartir. Todos parten del mismo archivo de la teoría cuando corresponde: $3,\cdot,7,9,\cdot,16,21,42$.
+
+## Mínimo: insertar en un archivo de dos celdas
+
+El archivo tiene dos celdas, $5$ y un hueco. Queremos insertar $3$, que va antes de $5$.
+
+1. El sucesor de $3$ es $5$, en la celda 0. El hueco está a la derecha, en la celda 1.
+2. Se mueve $5$ a la celda 1 y se escribe $3$ en la celda 0.
+
+Dos celdas, una sola región. El costo es $O(1)$ transferencias: el bloque que contiene ambas celdas se lee y se escribe una vez.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Archivo: 5 y un hueco. Llega el 3, que va antes del 5. El único hueco está a la derecha.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [{ value: 5, state: "marked" }, { value: "·", state: "active" }] },
+        { id: "nueva", label: "Llave nueva", cells: [{ value: 3, state: "active" }] },
+      ],
+      caption: "La celda libre queda a la derecha del sucesor. Hace falta correr el 5.",
+    },
+    {
+      note: "Se mueve el 5 a la celda libre y el 3 ocupa la celda 0. El orden se conserva.",
+      rows: [
+        { id: "arch", label: "Archivo", cells: [{ value: 3, state: "answer" }, { value: 5, state: "active" }] },
+      ],
+      caption: "Archivo final: 3, 5.",
+    },
+  ],
+}} />
+
+## Normal: borrar un elemento y el índice se corrige
+
+Borrar $9$ del archivo $3,\cdot,7,9,\cdot,16,21,42$ no requiere redistribuir nada. La celda 3 queda libre y el archivo sigue ordenado. Lo que sí cambia es el índice: la ventana 2–3 ya no tiene $9$, así que su máximo baja a $7$. Ese cambio sube hasta la raíz de la mitad izquierda.
+
+Si el índice no se corrigiera, una búsqueda de $8$ miraría la ventana 0–3, vería un máximo $9 \ge 8$ y bajaría a una ventana que ya no contiene la respuesta. Por eso el borrado también cuesta una reparación de máximos.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes de borrar 9, el índice dice que la ventana 2–3 tiene máximo 9, y la ventana 0–3 también.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7"},
+        {"id": "M0", "value": "9", "parent": "R", "tag": "0–3", "state": "marked"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1"},
+        {"id": "W1", "value": "9", "parent": "M0", "tag": "2–3", "state": "marked"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7"},
+      ],
+      links: [],
+    },
+    {
+      note: "Después de borrar 9, la celda 3 queda libre. Ventana 2–3 pasa a 7, y la ventana 0–3 también pasa a 7. La raíz no cambia porque la mitad derecha sigue teniendo 42.",
+      nodes: [
+        {"id": "R", "value": "42", "parent": null, "tag": "0–7", "state": "shared"},
+        {"id": "M0", "value": "7", "parent": "R", "tag": "0–3", "state": "active"},
+        {"id": "M1", "value": "42", "parent": "R", "tag": "4–7", "state": "shared"},
+        {"id": "W0", "value": "3", "parent": "M0", "tag": "0–1", "state": "shared"},
+        {"id": "W1", "value": "7", "parent": "M0", "tag": "2–3", "state": "active"},
+        {"id": "W2", "value": "16", "parent": "M1", "tag": "4–5", "state": "shared"},
+        {"id": "W3", "value": "42", "parent": "M1", "tag": "6–7", "state": "shared"},
+      ],
+      links: [],
+    },
+  ],
+}} />
+
+## Límite: el archivo ya no tiene ventana donde repartir
+
+Supón un archivo de ocho celdas con siete llaves, por ejemplo $3,7,9,16,21,42,50,\cdot$. Insertar $60$ al final hace que la ventana completa tenga ocho llaves. El umbral ilustrativo de la ventana de ocho celdas es siete.
+
+Esto significa que ninguna ventana alineada puede absorber la llave nueva. El archivo se reconstruye con un arreglo del doble de tamaño, de dieciséis celdas, y las llaves se reparten sobre él con holgura. Esa reconstrucción cuesta $O(N)$ transferencias, pero ocurre cuando el archivo se duplica. Repartida entre las $N$ inserciones que llenaron el espacio anterior, cuesta $O(1)$ amortizado por operación, igual que el crecimiento de una tabla dinámica.
+
+Este caso no es un error del algoritmo: es el borde del diseño. Una inserción que llena todo el arreglo no tiene región más grande en la cual repartir, y la única salida es crecer.
+
+## Preguntas para verificar
+
+- ¿Por qué el borrado de $9$ no mueve ninguna otra llave, pero sí cambia el máximo de dos ventanas?
+- ¿En qué caso la búsqueda termina sin leer el archivo de llaves, y en qué caso la inserción todavía tiene que tocarlo?
+- ¿Cuántas ventanas de la teoría se revisan antes de subir a la ventana completa al insertar $50$, y por qué no se reparte la ventana de cuatro celdas?
+
+*Ejemplos derivados del archivo de la teoría. El umbral es ilustrativo.*

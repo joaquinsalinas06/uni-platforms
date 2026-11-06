@@ -5,39 +5,21 @@ title: "LCA mediante recorrido de Euler"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Para hallar el ancestro común más bajo, queremos convertir las idas y vueltas de un árbol en una consulta sobre un arreglo.
+Sea un árbol con raíz y $n$ nodos. Una consulta $\mathrm{LCA}(u,v)$ devuelve el nodo más profundo que es ancestro de $u$ y de $v$ (un nodo es ancestro de sí mismo). Si cada consulta sube desde $u$ y desde $v$ hasta la raíz, cuesta la altura del árbol. En el árbol de clase la altura es 2, pero en una cadena de un millón de nodos cada consulta recorre un millón de aristas. La pregunta es: ¿podemos preprocesar el árbol una vez y responder cada consulta en tiempo constante?
 
-## Intuición
+## Intuición dibujada
 
-Anota un nodo al entrar y anota el padre cada vez que vuelves por una arista. Entre las primeras visitas de dos nodos, el punto menos profundo marca dónde se conectan sus rutas.
+Recorre el árbol en profundidad y escribe un nodo cada vez que pasas por él: al entrar y también cada vez que vuelves a él desde un hijo. Cada movimiento sobre una arista deja una marca. La secuencia resultante, la **traza de Euler**, conserva el camino entre dos nodos cualesquiera: entre sus primeras apariciones, el punto menos profundo es su ancestro común.
 
-## Estructura interna
-
-Guarda una secuencia de nodos, su secuencia paralela de profundidades y la primera posición de cada nodo. Las profundidades adyacentes difieren exactamente en uno.
-
-### Por qué hay que dibujar los retornos
-
-La secuencia guarda la posición del explorador al iniciar y tras cada movimiento por una arista. Llegar a una hoja no termina toda la visita: se vuelve a su padre para buscar otro hijo o continuar subiendo. Anotar ese retorno es lo que permite que el ancestro aparezca entre dos descendientes. Para D y E se pasa por B entre ambas visitas. Una lista de descubrimientos por sí sola omite ese punto.
-
-### Dos extremos, un mínimo, tres tipos de dato
-
-Primero usa los **nodos** consultados para localizar sus primeras apariciones. Luego toma sus **índices** en Euler y consulta el intervalo de **profundidades**. El mínimo de profundidad aún no identifica un nodo por sí solo porque puede haber muchos nodos a esa altura. Usa la posición del mínimo para leer la fila de nodos. Por ejemplo, entre las posiciones 2 y 4 la profundidad mínima es 1 en el índice 3 y la letra en ese índice es B.
-
-Si un extremo es ancestro del otro, aparece al comienzo del intervalo y ya es una profundidad mínima. Si los extremos están en ramas distintas, el retorno que cambia de rama pasa por su ancestro común. En ambos casos el recorrido nunca sube por encima de él antes de llegar al segundo extremo.
-
-## Operaciones
-
-Haz un recorrido en profundidad. Para $u,v$, toma los índices de sus primeras apariciones y consulta el mínimo de profundidad en ese intervalo. Devuelve el nodo en la posición ganadora.
-
-### Recorrido de clase · registra también los retornos
+Mira la traza paso a paso. El explorador baja, sube, baja otra vez y finalmente vuelve a la raíz.
 
 <Visualization viz={{
   type: "tree",
   steps: [
     {
-      note: "Empieza en A a profundidad 0.",
+      note: "Empieza en la raíz A, profundidad 0. Primera entrada de la traza: E[0] = A.",
       nodes: [
         {"id": "a", "value": "A", "parent": null, "state": "active"},
         {"id": "b", "value": "B", "parent": "a"},
@@ -45,9 +27,10 @@ Haz un recorrido en profundidad. Para $u,v$, toma los índices de sus primeras a
         {"id": "d", "value": "D", "parent": "b"},
         {"id": "e", "value": "E", "parent": "b"},
       ],
+      caption: "Traza: A",
     },
     {
-      note: "Baja a B, profundidad 1.",
+      note: "Baja por la arista A-B. Se anota B en E[1] porque la entrada a un nodo también cuenta.",
       nodes: [
         {"id": "a", "value": "A", "parent": null},
         {"id": "b", "value": "B", "parent": "a", "state": "active"},
@@ -55,9 +38,11 @@ Haz un recorrido en profundidad. Para $u,v$, toma los índices de sus primeras a
         {"id": "d", "value": "D", "parent": "b"},
         {"id": "e", "value": "E", "parent": "b"},
       ],
+      links: [{"from": "a", "to": "b", "kind": "pointer", "label": "baja", "curve": 0.8}],
+      caption: "Traza: A B",
     },
     {
-      note: "Baja a D, profundidad 2.",
+      note: "Baja a la hoja D. Entrada E[2] = D, profundidad 2.",
       nodes: [
         {"id": "a", "value": "A", "parent": null},
         {"id": "b", "value": "B", "parent": "a"},
@@ -65,39 +50,47 @@ Haz un recorrido en profundidad. Para $u,v$, toma los índices de sus primeras a
         {"id": "d", "value": "D", "parent": "b", "state": "active"},
         {"id": "e", "value": "E", "parent": "b"},
       ],
+      links: [{"from": "b", "to": "d", "kind": "pointer", "label": "baja", "curve": 0.8}],
+      caption: "Traza: A B D",
     },
     {
-      note: "Vuelve a B. Se registra otra aparición de B.",
+      note: "D es una hoja, así que volvemos a B por la misma arista. Se anota B otra vez en E[3]: esta entrada es el retorno.",
       nodes: [
         {"id": "a", "value": "A", "parent": null},
         {"id": "b", "value": "B", "parent": "a", "state": "active"},
         {"id": "c", "value": "C", "parent": "a"},
-        {"id": "d", "value": "D", "parent": "b", "state": "muted"},
+        {"id": "d", "value": "D", "parent": "b"},
         {"id": "e", "value": "E", "parent": "b"},
       ],
+      links: [{"from": "d", "to": "b", "kind": "pointer", "label": "sube", "curve": -0.8}],
+      caption: "Traza: A B D B",
     },
     {
-      note: "Baja a E. Entre D y E, el punto de menor profundidad fue B.",
+      note: "Baja a la hoja E. Entrada E[4] = E, profundidad 2. Entre D y E la traza pasó por B.",
       nodes: [
         {"id": "a", "value": "A", "parent": null},
-        {"id": "b", "value": "B", "parent": "a", "state": "answer"},
+        {"id": "b", "value": "B", "parent": "a"},
         {"id": "c", "value": "C", "parent": "a"},
         {"id": "d", "value": "D", "parent": "b"},
         {"id": "e", "value": "E", "parent": "b", "state": "active"},
       ],
+      links: [{"from": "b", "to": "e", "kind": "pointer", "label": "baja", "curve": 0.8}],
+      caption: "Traza: A B D B E",
     },
     {
-      note: "Vuelve por B a A y baja a C. Entre D y C se alcanza la raíz A.",
+      note: "E también es hoja: vuelve a B en E[5]. Ya no quedan hijos de B por visitar.",
       nodes: [
-        {"id": "a", "value": "A", "parent": null, "state": "answer"},
-        {"id": "b", "value": "B", "parent": "a"},
-        {"id": "c", "value": "C", "parent": "a", "state": "active"},
+        {"id": "a", "value": "A", "parent": null},
+        {"id": "b", "value": "B", "parent": "a", "state": "active"},
+        {"id": "c", "value": "C", "parent": "a"},
         {"id": "d", "value": "D", "parent": "b"},
         {"id": "e", "value": "E", "parent": "b"},
       ],
+      links: [{"from": "e", "to": "b", "kind": "pointer", "label": "sube", "curve": -0.8}],
+      caption: "Traza: A B D B E B",
     },
     {
-      note: "Regresa a A para cerrar el recorrido.",
+      note: "Sube de B a la raíz en E[6] = A. Ahora A tiene otro hijo sin visitar.",
       nodes: [
         {"id": "a", "value": "A", "parent": null, "state": "active"},
         {"id": "b", "value": "B", "parent": "a"},
@@ -105,69 +98,149 @@ Haz un recorrido en profundidad. Para $u,v$, toma los índices de sus primeras a
         {"id": "d", "value": "D", "parent": "b"},
         {"id": "e", "value": "E", "parent": "b"},
       ],
+      links: [{"from": "b", "to": "a", "kind": "pointer", "label": "sube", "curve": -0.8}],
+      caption: "Traza: A B D B E B A",
+    },
+    {
+      note: "Baja a C por la última arista de la raíz. Entrada E[7] = C, profundidad 1.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null},
+        {"id": "b", "value": "B", "parent": "a"},
+        {"id": "c", "value": "C", "parent": "a", "state": "active"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+      links: [{"from": "a", "to": "c", "kind": "pointer", "label": "baja", "curve": 0.8}],
+      caption: "Traza: A B D B E B A C",
+    },
+    {
+      note: "C es hoja. Vuelve a A en E[8] y termina el recorrido. Son 9 entradas: 2n - 1 con n = 5.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null, "state": "active"},
+        {"id": "b", "value": "B", "parent": "a"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+      links: [{"from": "c", "to": "a", "kind": "pointer", "label": "sube", "curve": -0.8}],
+      caption: "Traza final: A B D B E B A C A",
     },
   ],
 }} />
 
-### Resolver dos consultas sobre profundidades
+## Definición y notación
+
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | número de nodos del árbol | la traza crece como $2n-1$ |
+| $E[t]$ | nodo en la posición $t$ de la traza, $0 \le t \le 2n-2$ | cada posición añade una visita o un retorno |
+| $D[t]$ | profundidad de $E[t]$; la raíz tiene profundidad $0$ | es la fila sobre la que se hace RMQ |
+| $\mathrm{first}[v]$ | primera posición de $v$ en $E$ | define el intervalo de cada consulta |
+
+En la traza, cada nodo aparece tantas veces como entradas tiene: una por entrar y una más por cada hijo al que regresa. Un nodo con $k$ hijos aparece $k+1$ veces. Por eso $\mathrm{first}[v]$ es necesario: sin ella no sabemos dónde empieza el intervalo.
+
+Dibujamos dos filas para tener los tres tipos de dato a la vista: la traza $E$, la profundidad $D$ y la primera aparición.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Fila de nodos y fila de profundidades comparten índices.",
-      arrays: [
-        {"id": "row-0", "label": "Nodos", "row": 0, "cells": ["A", "B", "D", "B", "E", "B", "A", "C", "A"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["0", "1", "2", "1", "2", "1", "0", "1", "0"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      note: "Fila E: los nodos en orden de traza. Fila D: la profundidad de cada entrada. Ambas comparten índice t.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1"},{value:"D",tag:"2"},{value:"B",tag:"3"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:1,tag:"3"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+        { id: "f", label: "primera", cells: [{value:"A"},{value:"B"},{value:"D"},{value:"·"},{value:"E"},{value:"·"},{value:"·"},{value:"C"},{value:"·"}] },
       ],
-      bridges: [],
+      caption: "Primera aparición: A en 0, B en 1, D en 2, E en 4, C en 7.",
     },
     {
-      note: "LCA(D,E) consulta [2,4]. El mínimo del intervalo está en la segunda visita a B.",
-      arrays: [
-        {"id": "row-0", "label": "Nodos", "row": 0, "cells": ["A", "B", "D", "B", "E", "B", "A", "C", "A"], "states": ["idle", "idle", "marked", "answer", "marked", "idle", "idle", "idle", "idle"]},
-        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["0", "1", "2", "1", "2", "1", "0", "1", "0"], "states": ["idle", "idle", "active", "answer", "active", "idle", "idle", "idle", "idle"]},
+      note: "Para LCA(D,E) leemos first[D] = 2 y first[E] = 4. Esos índices delimitan la ventana en la que buscamos el mínimo de profundidad.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1"},{value:"D",tag:"2",state:"active"},{value:"B",tag:"3"},{value:"E",tag:"4",state:"active"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:1,tag:"3"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+        { id: "f", label: "primera", cells: [{value:"A"},{value:"B"},{value:"D",state:"active"},{value:"·"},{value:"E",state:"active"},{value:"·"},{value:"·"},{value:"C"},{value:"·"}] },
       ],
-      bridges: [],
+      spans: [{ id: "v", row: "d", from: 2, to: 4, label: "ventana [2,4]", state: "marked" }],
+      caption: "LCA(D,E) consulta D sobre [2,4].",
     },
     {
-      note: "LCA(D,C) consulta [2,7]. En el camino aparece A a profundidad 0.",
-      arrays: [
-        {"id": "row-0", "label": "Nodos", "row": 0, "cells": ["A", "B", "D", "B", "E", "B", "A", "C", "A"], "states": ["idle", "idle", "marked", "idle", "idle", "idle", "answer", "marked", "idle"]},
-        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["0", "1", "2", "1", "2", "1", "0", "1", "0"], "states": ["idle", "idle", "active", "active", "active", "active", "answer", "active", "idle"]},
+      note: "El mínimo de profundidad en [2,4] es 1 y está en t = 3. La letra de la fila E en esa misma columna es B, así que el ancestro es B. El 1 es una profundidad; el 3 es una posición de la traza; B es el nodo.",
+      rows: [
+        { id: "e", label: "E", cells: [{value:"A",tag:"0"},{value:"B",tag:"1"},{value:"D",tag:"2"},{value:"B",tag:"3",state:"answer"},{value:"E",tag:"4"},{value:"B",tag:"5"},{value:"A",tag:"6"},{value:"C",tag:"7"},{value:"A",tag:"8"}] },
+        { id: "d", label: "D", cells: [{value:0,tag:"0"},{value:1,tag:"1"},{value:2,tag:"2"},{value:1,tag:"3",state:"answer"},{value:2,tag:"4"},{value:1,tag:"5"},{value:0,tag:"6"},{value:1,tag:"7"},{value:0,tag:"8"}] },
+        { id: "f", label: "primera", cells: [{value:"A"},{value:"B"},{value:"D"},{value:"·"},{value:"E"},{value:"·"},{value:"·"},{value:"C"},{value:"·"}] },
       ],
-      bridges: [],
+      spans: [{ id: "v", row: "d", from: 2, to: 4, label: "ventana [2,4]", state: "marked" }],
+      caption: "LCA(D,E) = B: mínimo de profundidad 1 en t = 3.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+## Operaciones paso a paso
 
-Dibuja una fila de nodos y otra de profundidades. Cada flecha en el árbol genera exactamente una nueva celda, incluso cuando vuelve a una letra que ya apareció. Marca las primeras visitas una sola vez. La consulta empieza y termina por esas marcas, pero puede encontrar el mínimo en un retorno intermedio.
+El método tiene dos fases: una preparación que se hace una vez y una consulta por cada par de nodos.
 
-## Análisis de complejidad
+### Preparación: escribir la traza
 
-Cada una de las $n-1$ aristas se recorre una vez hacia abajo y una vez hacia arriba. Con la raíz inicial, la traza tiene $2n-1$ entradas y cuesta $O(n)$ construirla. Entre primeras visitas, se llega al ancestro común antes de entrar a la rama que contiene el segundo nodo, y el recorrido no sale de su subárbol. Si se usa sparse table, se obtiene $O(n\lg n)$ de preparación y $O(1)$ por consulta. La propiedad ±1 permite reducir la preparación a $O(n)$.
+1. Recorre el árbol en profundidad desde la raíz. Al entrar a cualquier nodo, añade ese nodo a $E$ con su profundidad a $D$.
+2. Al volver desde un hijo a su padre, añade el padre otra vez a $E$ con su profundidad.
+3. Cuando un nodo recibe su primera entrada, guarda esa posición en $\mathrm{first}[v]$.
+4. Al terminar, $E$ tiene $2n-1$ entradas.
 
-### Cómo justificar la cota en el examen
+### Consulta: LCA(u,v)
 
-Una DFS recorre cada arista al bajar y al volver. Con $n-1$ aristas, más la raíz inicial, hay $2n-1$ celdas. Entre las primeras apariciones de dos nodos se atraviesa su ancestro común al cambiar de rama y nunca se sale del subárbol de ese ancestro. De ahí sale la reducción a RMQ. La cota final de consulta y la preparación dependen de qué estructura elijas para ese arreglo.
+1. Lee $a = \mathrm{first}[u]$ y $b = \mathrm{first}[v]$. Si $a > b$, intercámbialos. El orden no cambia la respuesta, pero el intervalo debe ir de menor a mayor.
+2. Toma el tramo $D[a..b]$, que contiene todas las profundidades entre las dos primeras apariciones.
+3. Localiza la posición $t^*$ de la profundidad mínima de ese tramo.
+4. Devuelve $E[t^*]$.
 
-## Tabla de complejidad
+El paso 3 necesita una estructura de consulta de mínimo sobre rangos (RMQ) sobre $D$. Esa es la única parte que cambia según la cota que quieras.
 
-La tabla superior usa las unidades de costo de la explicación.
+## De dónde sale la cota
 
-## Ejemplos
+**Longitud $2n-1$.** Un árbol con $n$ nodos tiene $n-1$ aristas. Cada arista se recorre una vez al bajar y una vez al subir. A eso se suma la primera entrada en la raíz:
 
-[Casos resueltos](/structures/lca-euler-tour/examples) y [preguntas con pistas](/structures/lca-euler-tour/exercises).
+$$|E| = 1 + 2(n-1) = 2n-1$$
 
-## Comparación con estructuras relacionadas
+**Propiedad ±1.** En cada paso de la traza recorremos una arista. Una arista une un padre con un hijo, cuyas profundidades difieren exactamente en uno. Por eso:
 
-El árbol cartesiano traduce RMQ en LCA. El recorrido de Euler traduce LCA en un RMQ de profundidades con una restricción adicional.
+$$|D[t] - D[t-1]| = 1 \quad \text{para todo } t \ge 1$$
 
-## Prueba de dominio
+Como consecuencia, el mínimo de un tramo no puede saltar: cada profundidad vecina sólo puede ser igual a la anterior más uno o menos uno.
 
-[Lista de comprobación](/structures/lca-euler-tour/mastery-check).
+**Reducción LCA a RMQ.** Consultar LCA sobre el árbol equivale a consultar RMQ sobre $D$ entre $\mathrm{first}[u]$ y $\mathrm{first}[v]$. Con una tabla dispersa (sparse table) sobre $D$ se obtiene una preparación de $O(n\lg n)$ y consultas en $O(1)$. Con la propiedad ±1, la preparación puede bajar a $O(n)$.
 
-*Fuente de clase: Sem12_Static_Trees.pdf · pp. 24-28.*
+**La reducción va en ambos sentidos.** El árbol cartesiano traduce RMQ en LCA. Esta página traduce LCA en un RMQ sobre $D$ con la restricción ±1. Si se resuelve ±1 RMQ en $\langle O(n), O(1)\rangle$, también se resuelven RMQ general y LCA.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Tres caminos de reducción. RMQ general se pasa a LCA con el árbol cartesiano. LCA se pasa a RMQ ±1 con la traza de Euler. Un RMQ ±1 se resuelve en tiempo lineal; eso cierra el ciclo.",
+      rows: [
+        { id: "r", label: "Problemas", cells: [{value:"RMQ",tag:"0"},{value:"LCA",tag:"1"},{value:"±1 RMQ",tag:"2"}] },
+      ],
+      links: [
+        { from: "r-0", to: "r-1", kind: "pointer", label: "cartesiano" },
+        { from: "r-1", to: "r-2", kind: "pointer", label: "Euler" },
+      ],
+      caption: "RMQ -> LCA (cartesiano) -> ±1 RMQ (Euler). El último es el caso fácil.",
+    },
+  ],
+}} />
+
+## Errores típicos y casos límite
+
+- **Guardar sólo las primeras visitas.** La lista A,B,D,E,C pierde el retorno a B. Entre D y E el tramo sólo tiene profundidades 2 y 2, y ningún nodo de ese tramo es el ancestro común.
+- **Mirar sólo una profundidad igual a la de los extremos.** Para LCA(B,C), ambos tienen profundidad 1, pero el mínimo del tramo está en la raíz. La regla es buscar el mínimo, no la altura de los extremos.
+- **Confundir índice y profundidad.** El 1 de $D[3]$ es una profundidad; el 3 es una posición. La respuesta es el nodo $E[3] = B$.
+- **Caso $u = v$.** Entonces $\mathrm{first}[u] = \mathrm{first}[v]$, el tramo tiene una sola posición y la respuesta es $u$.
+- **Caso $u$ ancestro de $v$.** La primera aparición de $u$ está antes que la de $v$, y en el tramo todos los nodos están en el subárbol de $u$. El mínimo es $u$ mismo.
+
+## Conexión
+
+- Prerrequisito: [árbol cartesiano](/structures/cartesian-tree), donde RMQ se convierte en LCA.
+- Sigue: [RMQ ±1](/structures/plus-minus-one-rmq), donde la propiedad ±1 permite resolver la consulta en tiempo lineal.
+- Práctica: [casos resueltos](/structures/lca-euler-tour/examples), [preguntas con pistas](/structures/lca-euler-tour/exercises) y [prueba de dominio](/structures/lca-euler-tour/mastery-check).
+
+*Fuente de clase: Sem12_Static_Trees.pdf, pp. 21-25.*

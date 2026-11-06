@@ -5,150 +5,339 @@ title: "Etiquetado de listas y mantenimiento del orden"
 
 import Visualization from '../../../src/components/Visualization.astro';
 
-## ¿Qué problema resuelve?
+## Motivación
 
-Dada una lista que admite insertar después de un elemento, queremos responder si un elemento precede a otro sin recorrer la lista.
+Tenemos una lista a la que se insertan y se eliminan elementos, y queremos responder muchas veces la pregunta $\text{Order}(x,y)$: ¿está $x$ antes que $y$ en la lista? Sin estructura auxiliar hay que recorrer la lista desde el principio. Si cada elemento guarda un entero que crece a lo largo de la lista, la pregunta se vuelve comparar dos enteros, $O(1)$. El precio aparece al insertar: si no queda ningún entero libre entre las etiquetas vecinas, hay que cambiar etiquetas de otros elementos. La pregunta de la clase es cuánto cuesta ese cambio, y si se puede hacer que el costo amortizado por inserción sea constante.
 
-## Intuición
+## Intuición dibujada
 
-Asigna etiquetas ordenadas con espacio libre. Consultar orden se vuelve comparar etiquetas. Cuando se agota el espacio local, hay que relabelar una región.
-
-## Estructura interna
-
-Las etiquetas crecen en el orden de la lista. Con indirección, cada elemento tiene una etiqueta local y un grupo. Dos elementos del mismo grupo se comparan localmente. Entre grupos manda la etiqueta del grupo.
-
-### Etiquetado y orden responden preguntas distintas
-
-La lista define qué elemento va antes. Una etiqueta es una representación para responder esa pregunta con pocas comparaciones. Si las etiquetas se cambian simultáneamente y respetan el orden, todas las respuestas de orden se conservan. Por eso una etiqueta no debe confundirse con una posición que el usuario de la estructura pueda guardar para siempre.
-
-El caso del hueco agotado muestra por qué contar comparaciones de consultas no basta para entender las inserciones. Entre 4 y 5 no existe entero aunque queden muchos disponibles a la derecha de toda la lista. Debes mover etiquetas de una región o cambiar la escala. El mazo distingue regímenes de espacio de etiquetas: con más valores representables puedes espaciar mejor y reducir la frecuencia de reparaciones.
-
-### Qué cambia con dos niveles
-
-Pon varios elementos en un grupo y conserva su orden local. Los grupos también forman una lista ordenada. Para comparar X e Y, primero mira si sus grupos son iguales. Si coinciden, decide la etiqueta local. Si difieren, cualquier elemento del grupo anterior precede a todos los del posterior. Mover una etiqueta superior mientras conserva el orden de los grupos afecta cómo representas a todos sus miembros sin escribir una etiqueta nueva en cada elemento. Esa separación hace posible cargar el cambio superior a varias actualizaciones del grupo.
-
-## Operaciones
-
-Inserta una etiqueta entre las vecinas si hay espacio. Si se agota, redistribuye etiquetas. Con grupos, una división local puede añadir una etiqueta al índice de grupos.
-
-### Hueco libre, hueco agotado y comparación entre grupos
-
-*(Traza derivada de la explicación de clase.)*
+Cada elemento lleva una etiqueta. Insertar entre dos vecinos significa buscar un valor estrictamente intermedio. El primer diagrama es el caso feliz: la lista $a, b, c, d$ tiene etiquetas $10, 20, 30, 40$, hay un hueco libre entre $20$ y $30$, y el nuevo elemento $x$ recibe $25$.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Entre etiquetas 4 y 8 hay espacio.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "B:8", "C:12"], "states": ["idle", "marked", "idle"]},
+      note: "Lista con etiquetas crecientes y un hueco entre b (20) y c (30). El hueco es el espacio libre donde podría caer un elemento nuevo sin tocar a nadie.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "a", value: 10, tag: "a" }, { id: "b", value: 20, tag: "b" },
+          { id: "x", value: "·", tag: "x" }, { id: "c", value: 30, tag: "c" }, { id: "d", value: 40, tag: "d" },
+        ]},
       ],
-      bridges: [],
+      caption: "Orden de la lista: a, b, x, c, d. Las etiquetas crecen en ese mismo sentido.",
     },
     {
-      note: "Insertar X tras A permite asignar 6.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "X:6", "B:8", "C:12"], "states": ["idle", "answer", "idle", "idle"]},
+      note: "Insertar x entre b y c: el entero 25 cae estrictamente entre 20 y 30, así que x recibe 25 y no hace falta cambiar ninguna otra etiqueta. Order(b, x) y Order(x, c) se responden con dos comparaciones.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "a", value: 10, tag: "a" }, { id: "b", value: 20, tag: "b" },
+          { id: "x", value: 25, tag: "x", state: "answer" }, { id: "c", value: 30, tag: "c" }, { id: "d", value: 40, tag: "d" },
+        ]},
       ],
-      bridges: [],
-    },
-    {
-      note: "Si A y X terminan en 4 y 5, no existe una etiqueta entera entre ambas.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "X:5", "B:8", "C:12"], "states": ["marked", "marked", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Renumerar una región crea huecos manteniendo el orden relativo.",
-      arrays: [
-        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "Y:6", "X:8", "B:12", "C:16"], "states": ["idle", "answer", "idle", "idle", "idle"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "Con dos grupos, la etiqueta del grupo decide la comparación entre X y C.",
-      arrays: [
-        {"id": "row-0", "label": "Grupos", "row": 0, "cells": ["G1:8", "G2:16"], "states": ["marked", "marked"]},
-        {"id": "row-1", "label": "G1", "row": 1, "cells": ["A:4", "Y:6", "X:8"], "states": ["idle", "idle", "active"]},
-        {"id": "row-2", "label": "G2", "row": 2, "cells": ["B:4", "C:8"], "states": ["idle", "answer"]},
-      ],
-      bridges: [],
+      caption: "Costo de esta inserción: O(1). Ninguna etiqueta existente cambió.",
     },
   ],
 }} />
 
-### Cómo seguir los cambios de estado
+La mayoría de las inserciones se comportan así. El problema aparece cuando los enteros libres entre dos vecinos se agotan, y eso es lo que estudiamos a continuación.
 
-Separa tres cosas en una traza: la posición lógica de un elemento, la etiqueta local que la representa y la etiqueta superior de su grupo. Si un grupo se divide, las llaves de cada mitad siguen en el mismo orden y aparece un representante adicional. Si dos grupos se fusionan, el índice pierde un representante. Esa diferencia determina cuándo hay trabajo superior.
+## Definición y notación
 
-Los huecos entre etiquetas son un recurso. Una serie de inserciones concentradas en el mismo par de vecinos puede gastarlos aunque el resto del espacio de etiquetas esté vacío.
+| Símbolo | Qué mide | Qué pasa si crece |
+| --- | --- | --- |
+| $N$ | Elementos vivos en la lista | Más etiquetas que repartir y más reparaciones posibles |
+| $\ell(x)$ | Etiqueta entera de $x$ | Debe ser estrictamente creciente a lo largo de la lista |
+| $\Theta(\lg N)$ | Tamaño de un grupo en la versión con indirección | Grupos más grandes cuestan más por división, pero caben más etiquetas locales |
+| $c_i$ | Costo real de la $i$-ésima operación | Lo que queremos acotar en promedio |
+| $\Phi$ | Función potencial (crédito guardado) | Sube con el trabajo que todavía no se ha pagado |
 
-## Análisis de complejidad
+Dos palabras clave del mazo: **hueco** es la diferencia entre las etiquetas de dos vecinos, y **reetiquetar** es cambiar las etiquetas de una región manteniendo su orden relativo.
 
-Comparar las etiquetas que caben en una palabra cuesta $O(1)$. Renumerar todas las etiquetas en cada inserción costaría lineal. En la construcción de clase, los grupos de $\Theta(\lg N)$ permiten usar dentro de cada grupo un espacio de etiquetas exponencial en su tamaño, que sigue siendo polinomial en $N$ y cabe en una palabra. Una división o fusión cuesta $O(\lg N)$ en el índice superior y se paga con $\Omega(\lg N)$ actualizaciones del grupo. La actualización cuesta $O(1)$ amortizado.
+## Por qué un entero libre no siempre existe
 
-### Separar la operación local del costo de dividir
+Antes de pensar en costos, conviene ver el fallo. Supón $A$ con etiqueta $4$ e $Y$ con etiqueta $5$, y quieres insertar $Z$ entre ellos. No existe ningún entero $z$ con $4 < z < 5$, aunque la lista tenga millones de etiquetas libres más a la derecha. La consulta $\text{Order}(A, Z)$ es una comparación que funciona, pero la inserción no tiene dónde escribir.
 
-*(Traza derivada de la explicación de clase.)*
+El segundo diagrama muestra la reparación más simple: reasignar las etiquetas de la región $A, Z, Y, X, B$ con huecos de tamaño 2, de modo que el orden relativo de los elementos antiguos siga igual.
 
 <Visualization viz={{
-  type: "range-tree",
-  mode: "layers",
+  type: "array",
   steps: [
     {
-      note: "Cada grupo mantiene Θ(lg N) elementos. Su actualización local cuesta O(1) amortizado con espacio exponencial en el tamaño del grupo.",
-      arrays: [
-        {"id": "row-0", "label": "Grupo", "row": 0, "cells": ["local"], "states": ["active"]},
-        {"id": "row-1", "label": "Costo", "row": 1, "cells": ["O(1)_amort."], "states": ["answer"]},
+      note: "Antes de insertar, A (4) e Y (5) son vecinos sin hueco. Z debe quedar entre ellos, pero no hay entero estrictamente intermedio. Es el caso de la inserción bloqueada.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "Z", value: "·", tag: "Z" },
+          { id: "Y", value: 5, tag: "Y" }, { id: "X", value: 6, tag: "X" }, { id: "B", value: 8, tag: "B" },
+        ]},
       ],
-      bridges: [],
+      caption: "Hueco agotado entre A y Y. Z no tiene etiqueta válida.",
     },
     {
-      note: "Cuando se llena el grupo, la división sí toca el índice superior.",
-      arrays: [
-        {"id": "row-0", "label": "Grupo", "row": 0, "cells": ["lleno", "división"], "states": ["marked", "active"]},
-        {"id": "row-1", "label": "Costo_superior", "row": 1, "cells": ["O(lg_N)"], "states": ["answer"]},
+      note: "Se reasignan A, Y, X y B a 4, 8, 12 y 16 en ese orden. Ahora hay espacio y Z recibe 6. Compara dos elementos antiguos antes y después: Y sigue antes que X, y X sigue antes que B, aunque sus valores cambiaron.",
+      rows: [
+        { id: "lista", label: "Lista", cells: [
+          { id: "A", value: 4, tag: "A" }, { id: "Z", value: 6, tag: "Z", state: "active" },
+          { id: "Y", value: 8, tag: "Y" }, { id: "X", value: 12, tag: "X" }, { id: "B", value: 16, tag: "B" },
+        ]},
       ],
-      bridges: [],
-    },
-    {
-      note: "Tras dividir, hacen falta Ω(lg N) actualizaciones en un grupo para otro cambio comparable.",
-      arrays: [
-        {"id": "row-0", "label": "Costo", "row": 0, "cells": ["O(lg_N)"], "states": ["marked"]},
-        {"id": "row-1", "label": "Operaciones", "row": 1, "cells": ["Ω(lg_N)"], "states": ["answer"]},
-      ],
-      bridges: [],
-    },
-    {
-      note: "El trabajo superior repartido aporta O(1) por actualización.",
-      arrays: [
-        {"id": "row-0", "label": "Costo_total", "row": 0, "cells": ["O(1)_amortizado"], "states": ["answer"]},
-      ],
-      bridges: [],
+      caption: "Cuatro etiquetas cambiaron. El costo de la inserción es el número de etiquetas tocadas, no la comparación.",
     },
   ],
 }} />
 
-### Cómo justificar la cota en el examen
+Esta es la distinción que hay que tener clara: **una etiqueta no es una posición que puedas guardar para siempre**. Lo que se conserva en la reparación es el orden entre elementos, no los valores. Por eso la cota no se mide en comparaciones sino en cuántas etiquetas cambian.
 
-Explica primero por qué consultar cuesta constante: compara dos pares de enteros que caben en palabras. Para actualizar, distingue la reparación local de la estructura superior. Con grupos de tamaño $Theta(lg N)$, un espacio exponencial en el tamaño del grupo sigue siendo polinomial en $N$. El método local del mazo permite costo amortizado constante bajo ese régimen. Una partición o fusión paga $O(lg N)$ arriba, pero necesita $Omega(lg N)$ cambios locales para volver a ocurrir. La división de esos dos términos da el cargo amortizado superior; no acota por constante el costo de un evento aislado.
+## Qué mide el costo
 
-## Tabla de complejidad
+Sea $c$ el número de etiquetas que cambian en una inserción. Con una sola capa de etiquetas, la reparación puede tocar toda la lista. La pregunta del curso es cómo elegir el espacio de etiquetas para que esos cambios se repartan.
 
-La tabla superior usa las unidades de costo de la explicación.
+El mazo compara tres regímenes de espacio de etiquetas. La idea es que, cuanto más grande es el conjunto de enteros disponibles, más espaciado puedes dejar los elementos y menos veces necesitas reparar:
 
-## Ejemplos
+| Espacio de etiquetas | Costo por inserción | Cómo |
+| --- | --- | --- |
+| Lineal, hasta $N \lg N$ | $O(\lg^2 N)$ | Packed-Memory Array |
+| Polinomial, $N^{O(1)}$ | $\Theta(\lg N)$ | La misma idea, con más holgura |
+| Exponencial, $2^N$ | $\Theta(1)$ | Punto medio entre vecinos |
 
-[Casos resueltos](/structures/order-maintenance/examples) y [preguntas con pistas](/structures/order-maintenance/exercises).
+El caso exponencial es el más curioso. Si cada etiqueta tiene $N$ bits, el nuevo elemento toma el punto medio de sus vecinos, y siempre queda lugar durante $N$ inserciones seguidas en el mismo hueco. Luego se reetiqueta todo. El problema es que etiquetas de $N$ bits no caben en una palabra, así que la comparación $\text{Order}(x,y)$ dejaría de ser $O(1)$. El truco de la indirección resuelve esa tensión.
 
-## Comparación con estructuras relacionadas
+## Operaciones paso a paso
 
-List labeling mantiene etiquetas de una sola capa. La indirección separa la reparación local de la modificación de los grupos.
+### Indirección: dos niveles de etiquetas
 
-## Prueba de dominio
+En lugar de una lista con $N$ elementos, separamos los elementos en **grupos de tamaño $\Theta(\lg N)$**. Cada grupo tiene una etiqueta superior, y los grupos forman una lista de unos $N/\lg N$ nodos que se etiqueta con el método polinomial. Dentro de cada grupo, los elementos usan etiquetas locales de $\Theta(\lg N)$ bits, es decir, $2^{\Theta(\lg N)} = N^{O(1)}$ valores posibles, que siguen cabiendo en una palabra.
 
-[Lista de comprobación](/structures/order-maintenance/mastery-check).
+La consulta compara pares en orden lexicográfico: primero la etiqueta superior del grupo, y sólo si son iguales, la local.
 
-*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf · pp. 44-67.*
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Nivel superior: los grupos tienen etiquetas 100, 200, 300 y 400. Esta fila tiene un nodo por grupo, no por elemento, así que es mucho más corta que la lista original.",
+      rows: [
+        { id: "arriba", label: "Arriba", cells: [
+          { id: "g100", value: 100, tag: "G1" }, { id: "g200", value: 200, tag: "G2" },
+          { id: "g300", value: 300, tag: "G3" }, { id: "g400", value: 400, tag: "G4" },
+        ]},
+      ],
+      caption: "Una lista de N/lg N nodos, etiquetada con el método polinomial.",
+    },
+    {
+      note: "Nivel inferior: el grupo G2 (etiqueta 200) guarda cuatro elementos con etiquetas locales 1, 4, 6 y 7. Las etiquetas locales sólo importan dentro de su grupo.",
+      rows: [
+        { id: "arriba", label: "Arriba", cells: [
+          { id: "g100", value: 100, tag: "G1" }, { id: "g200", value: 200, tag: "G2", state: "active" },
+          { id: "g300", value: 300, tag: "G3" }, { id: "g400", value: 400, tag: "G4" },
+        ]},
+        { id: "dentro", label: "Dentro de G2", cells: [
+          { id: "p1", value: 1, tag: "p" }, { id: "p4", value: 4, tag: "q" },
+          { id: "p6", value: 6, tag: "r" }, { id: "p7", value: 7, tag: "s" },
+        ]},
+      ],
+      caption: "Dentro de cada grupo, las etiquetas caben en el espacio exponencial de su tamaño.",
+    },
+    {
+      note: "Order(q, x) con q en G2 (etiqueta local 4) y x en G3. Primero se comparan las etiquetas superiores: 200 < 300, así que q precede a x sin mirar sus locales.",
+      rows: [
+        { id: "arriba", label: "Arriba", cells: [
+          { id: "g100", value: 100, tag: "G1" }, { id: "g200", value: 200, tag: "G2", state: "marked" },
+          { id: "g300", value: 300, tag: "G3", state: "answer" }, { id: "g400", value: 400, tag: "G4" },
+        ]},
+        { id: "dentro", label: "Dentro de G2", cells: [
+          { id: "p1", value: 1, tag: "p" }, { id: "p4", value: 4, tag: "q", state: "active" },
+          { id: "p6", value: 6, tag: "r" }, { id: "p7", value: 7, tag: "s" },
+        ]},
+      ],
+      caption: "Dos comparaciones en el peor caso: superior y, si empata, local. Ambas son enteros de una palabra.",
+    },
+  ],
+}} />
+
+Una propiedad clave: cambiar la etiqueta superior de un grupo **no toca** las etiquetas locales de sus miembros. El orden relativo dentro del grupo queda igual, así que una sola escritura en el nivel de arriba actualiza el orden de $\Theta(\lg N)$ elementos a la vez.
+
+### Insertar dentro de un grupo
+
+Si el grupo tiene espacio local libre, la inserción es igual que en una sola capa: se busca un entero intermedio entre las etiquetas locales vecinas dentro del grupo. Como el grupo es pequeño y usa espacio exponencial en su tamaño, cada inserción local es barata.
+
+Pasos para insertar $x$ después de un elemento $u$ dentro de su grupo $G$:
+
+1. Mira la etiqueta local de $u$ y la de su vecino derecho dentro de $G$.
+2. Si hay un entero libre entre ellas, asígnalo a $x$. Terminaste sin tocar ningún otro grupo.
+3. Si no hay, reetiqueta sólo el grupo $G$ con etiquetas espaciadas. Este paso es local y su costo es proporcional al tamaño del grupo.
+4. Si $G$ llega a su tamaño máximo, divídelo en dos grupos. Esta es la única situación que toca la lista superior.
+
+El diagrama de abajo recorre el caso 2 y el caso 4 en un mismo grupo. La lista superior sólo cambia cuando el grupo se parte.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Grupo G2 con etiquetas locales 4 y 8 a sus lados, y un hueco de un entero libre (el 6). Insertar x entre ellas no cambia la lista superior.",
+      rows: [
+        { id: "arriba", label: "Arriba", cells: [
+          { id: "g100", value: 100, tag: "G1" }, { id: "g200", value: 200, tag: "G2", state: "idle" },
+          { id: "g300", value: 300, tag: "G3" },
+        ]},
+        { id: "dentro", label: "Dentro de G2", cells: [
+          { id: "u", value: 4, tag: "u" }, { id: "x", value: "·", tag: "x" },
+          { id: "v", value: 8, tag: "v" },
+        ]},
+      ],
+      caption: "Grupo lleno a medias. Hay espacio local para x.",
+    },
+    {
+      note: "x recibe la etiqueta local 6. Sólo se modificó el grupo G2: ninguna etiqueta superior cambió, y todas las comparaciones con elementos de G1 o G3 siguen igual.",
+      rows: [
+        { id: "arriba", label: "Arriba", cells: [
+          { id: "g100", value: 100, tag: "G1" }, { id: "g200", value: 200, tag: "G2", state: "idle" },
+          { id: "g300", value: 300, tag: "G3" },
+        ]},
+        { id: "dentro", label: "Dentro de G2", cells: [
+          { id: "u", value: 4, tag: "u" }, { id: "x", value: 6, tag: "x", state: "answer" },
+          { id: "v", value: 8, tag: "v" },
+        ]},
+      ],
+      caption: "Costo local, O(1) amortizado. No se tocó el nivel superior.",
+    },
+    {
+      note: "El grupo G2 se llena y se parte en dos grupos. Ahora la lista superior gana un nodo más: aparece G2' con su propia etiqueta. Es el único momento que paga el costo O(lg N) del nivel superior.",
+      rows: [
+        { id: "arriba", label: "Arriba", cells: [
+          { id: "g100", value: 100, tag: "G1" }, { id: "g200", value: 200, tag: "G2", state: "marked" },
+          { id: "g250", value: 250, tag: "G2'", state: "copied" }, { id: "g300", value: 300, tag: "G3" },
+        ]},
+        { id: "dentro", label: "Dentro de G2", cells: [
+          { id: "u", value: 4, tag: "u" }, { id: "x", value: 6, tag: "x" },
+          { id: "v", value: 8, tag: "v" },
+        ]},
+      ],
+      caption: "División: un nodo nuevo en el índice superior, a costo O(lg N), que luego se reparte entre las actualizaciones del grupo.",
+    },
+  ],
+}} />
+
+### De dónde sale el costo de dividir
+
+El índice superior tiene unos $N/\lg N$ nodos. Reetiquetarlo cuesta $O(\lg N)$ por división. Después de una división, los dos grupos nuevos tienen cada uno cerca de $\lg N$ elementos, y para que vuelva a haber una división hace falta llenar uno de ellos otra vez, es decir, hacer $\Omega(\lg N)$ actualizaciones locales.
+
+### Árbol implícito de rangos
+
+El índice superior y el reetiquetado necesitan decidir qué región reparar. El mazo usa un árbol imaginario sobre los intervalos de posiciones: la raíz cubre todo el arreglo, cada hijo cubre la mitad de su padre, y las hojas son trozos de tamaño $\Theta(\lg N)$. No se guarda como estructura: se recorre de hoja a raíz comprobando cuántos elementos caben en cada intervalo.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Árbol de intervalos sobre 16 posiciones. La raíz cubre todo el rango 0 a 15; cada nivel divide a la mitad. Nada de esto se almacena como punteros reales: es la forma de decidir qué intervalo reparar.",
+      nodes: [
+        { id: "r", value: "0-15", parent: null },
+        { id: "l", value: "0-7", parent: "r" }, { id: "rr", value: "8-15", parent: "r" },
+        { id: "a", value: "0-3", parent: "l" }, { id: "b", value: "4-7", parent: "l" },
+        { id: "c", value: "8-11", parent: "rr" }, { id: "d", value: "12-15", parent: "rr" },
+      ],
+      highlight: [],
+    },
+    {
+      note: "Se inserta en la posición 5, que cae en el intervalo 4-7. Ese intervalo está lleno, así que se mira su padre 0-7, que tiene más espacio para repartir.",
+      nodes: [
+        { id: "r", value: "0-15", parent: null },
+        { id: "l", value: "0-7", parent: "r", state: "marked" }, { id: "rr", value: "8-15", parent: "r" },
+        { id: "a", value: "0-3", parent: "l" }, { id: "b", value: "4-7", parent: "l", state: "active" },
+        { id: "c", value: "8-11", parent: "rr" }, { id: "d", value: "12-15", parent: "rr" },
+      ],
+      highlight: ["b"],
+    },
+    {
+      note: "El padre 0-7 también está demasiado denso. Se sube al nodo 0-15, la raíz. El umbral de densidad es más estricto cerca de la raíz, así que la raíz es la que decide si hay que reetiquetar todo el arreglo.",
+      nodes: [
+        { id: "r", value: "0-15", parent: null, state: "answer" },
+        { id: "l", value: "0-7", parent: "r", state: "marked" }, { id: "rr", value: "8-15", parent: "r" },
+        { id: "a", value: "0-3", parent: "l" }, { id: "b", value: "4-7", parent: "l", state: "active" },
+        { id: "c", value: "8-11", parent: "rr" }, { id: "d", value: "12-15", parent: "rr" },
+      ],
+      highlight: ["r"],
+    },
+  ],
+}} />
+
+La regla de decisión tiene dos partes. Al bajar desde la raíz, un intervalo con espacio libre suficiente se reparte dentro de sí mismo. Cuando un intervalo se llena, se pasa al padre, que reparte entre sus dos mitades. Por eso el costo de una reparación sube por niveles, y cada nivel se paga con las inserciones que lo agotaron.
+
+## De dónde sale la cota
+
+Ya tenemos todas las piezas. La cota amortizada de una actualización se obtiene al repartir el costo superior entre las actualizaciones que lo provocan:
+
+$$\text{costo amortizado por actualización} = O(1) + \frac{O(\lg N)}{\Omega(\lg N)} = O(1)$$
+
+El diagrama muestra de dónde sale cada término. El primer $O(1)$ es la inserción local. El numerador $O(\lg N)$ es la reparación del nivel superior. El denominador $\Omega(\lg N)$ son las actualizaciones que tuvieron que ocurrir antes de la siguiente reparación superior. El cociente es constante.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Término 1: la inserción local dentro de un grupo. Es O(1) porque se busca un entero libre entre dos etiquetas de una palabra, y no se toca otro grupo.",
+      rows: [
+        { id: "terminos", label: "Término", cells: [
+          { id: "local", value: "O(1)", tag: "local", state: "active" },
+          { id: "sup", value: "·", tag: "superior" },
+          { id: "frec", value: "·", tag: "frecuencia" },
+          { id: "cociente", value: "·", tag: "cociente" },
+        ]},
+      ],
+      caption: "Cada término ocupa su casilla y se llena en el paso en el que aparece.",
+    },
+    {
+      note: "Término 2: la reparación del índice superior, de costo O(lg N). Ocurre sólo cuando un grupo se parte o se fusiona.",
+      rows: [
+        { id: "terminos", label: "Término", cells: [
+          { id: "local", value: "O(1)", tag: "local" },
+          { id: "sup", value: "O(lg N)", tag: "superior", state: "active" },
+          { id: "frec", value: "·", tag: "frecuencia" },
+          { id: "cociente", value: "·", tag: "cociente" },
+        ]},
+      ],
+      caption: "Costo del nivel superior: una vez por división, no por inserción.",
+    },
+    {
+      note: "Término 3: la frecuencia. Tras una división, hacen falta Ω(lg N) actualizaciones dentro de un grupo para volver a dividirlo. Ese número es el que reparte el costo superior.",
+      rows: [
+        { id: "terminos", label: "Término", cells: [
+          { id: "local", value: "O(1)", tag: "local" },
+          { id: "sup", value: "O(lg N)", tag: "superior" },
+          { id: "frec", value: "Ω(lg N)", tag: "frecuencia", state: "active" },
+          { id: "cociente", value: "·", tag: "cociente" },
+        ]},
+      ],
+      caption: "Denominador: al menos lg N operaciones por cada reparación superior.",
+    },
+    {
+      note: "Término 4: el cociente O(lg N) / Ω(lg N) = O(1). Sumado al término local, el costo amortizado por actualización es O(1).",
+      rows: [
+        { id: "terminos", label: "Término", cells: [
+          { id: "local", value: "O(1)", tag: "local" },
+          { id: "sup", value: "O(lg N)", tag: "superior" },
+          { id: "frec", value: "Ω(lg N)", tag: "frecuencia" },
+          { id: "cociente", value: "O(1)", tag: "cociente", state: "answer" },
+        ]},
+      ],
+      caption: "Resultado: O(1) amortizado por actualización.",
+    },
+  ],
+}} />
+
+La cota es amortizada, no de peor caso. Una sola división puede costar $O(\lg N)$ en el índice superior, pero no se repite hasta que pasen $\Omega(\lg N)$ actualizaciones en el mismo grupo. Lo que se cobra es la secuencia, no un evento aislado.
+
+## Errores típicos y casos límite
+
+- **Lista vacía o un solo elemento.** No hay huecos que agotar. Un solo grupo basta, y el índice superior tiene un nodo.
+- **Insertar siempre en el mismo hueco.** Es el peor caso para el espacio local: cada inserción divide el hueco a la mitad y el espacio se agota en pocos pasos. La cota amortizada sigue valiendo, pero la reparación ocurre con más frecuencia de la que sugiere una distribución uniforme. No supongas que las llaves se reparten al azar.
+- **Confundir etiqueta con posición.** La etiqueta de un elemento puede cambiar en una reparación. Si guardas una etiqueta como identificador, ya no es válida después de la siguiente inserción.
+- **Comparar etiquetas locales de grupos distintos.** Las etiquetas locales sólo se comparan dentro del mismo grupo. Entre grupos decide la etiqueta superior.
+- **Olvidar el costo de la división.** Una operación local puede disparar una división que toca el índice superior. El costo amortizado es constante, pero el peor caso de una sola operación no lo es.
+
+## Conexión
+
+Esta estructura necesita la **Packed-Memory Array** para el caso de una sola capa, porque la reparación con umbrales de densidad es la misma idea de redistribuir un intervalo cuando se llena. Ver [/structures/packed-memory-array](/structures/packed-memory-array). La indirección que se usa aquí es la misma que aparece en el [B-Tree cache-oblivious](/structures/cache-oblivious-veb-layout): una etiqueta superior que decide el orden de muchos elementos a la vez.
+
+Los ejemplos resueltos están en [/structures/order-maintenance/examples](/structures/order-maintenance/examples) y las preguntas con pistas en [/structures/order-maintenance/exercises](/structures/order-maintenance/exercises).
+
+*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf, diapositivas 17 a 26 (páginas 44 a 67 del PDF).*

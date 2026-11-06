@@ -476,7 +476,7 @@ export default function VisualizationCanvas({ steps, width = 640, height = 260, 
                   fill="none"
                   stroke={visual.stroke}
                   strokeWidth={visual.strokeWidth}
-                  strokeDasharray={visual.dash}
+                  strokeDasharray={e.dash ? '5 4' : visual.dash}
                   markerStart={e.arrowStart ? `url(#${state === 'active' ? `${arrowId}-accent` : `${arrowId}-ink`})` : undefined}
                   markerEnd={e.arrow ? `url(#${state === 'active' ? `${arrowId}-accent` : `${arrowId}-ink`})` : undefined}
                   // `d` explícito (no `all`): `all` también intentaba transicionar
