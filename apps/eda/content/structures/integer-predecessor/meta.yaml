@@ -1,0 +1,13 @@
+id: integer-predecessor
+title: Predecesor entero y modelos de cómputo
+type: concept
+week: week-11
+hasVisualization: true
+visualizationType: range-tree
+prerequisites: []
+complexity:
+  Vecino en arreglo ordenado:
+    worst: O(lg n)
+    reasoning: La búsqueda del punto de inserción reduce a la mitad el intervalo de índices candidato
+      en cada comparación.
+    source: Sem11_Integers_I.pdf#7-26

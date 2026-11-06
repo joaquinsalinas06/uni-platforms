@@ -1,0 +1,14 @@
+id: ordered-file-maintenance
+title: Ordered File Maintenance
+type: structure
+week: week-10
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- cache-oblivious-veb-layout
+complexity:
+  Reescritura de s celdas:
+    worst: O(1 + s/B)
+    reasoning: El intervalo es contiguo y una transferencia trae o escribe un bloque completo de hasta
+      B celdas.
+    source: Sem10_Memory_Hierarchy_III.pdf#26-61

@@ -1,0 +1,12 @@
+id: external-memory-model
+title: Modelo de memoria externa
+type: concept
+week: week-10
+hasVisualization: true
+visualizationType: range-tree
+prerequisites: []
+complexity:
+  Escaneo:
+    worst: Θ(⌈N/B⌉)
+    reasoning: Cada bloque contiguo se transfiere una sola vez, incluido el bloque final incompleto.
+    source: Sem10_Memory_Hierarchy_I.pdf#28-42

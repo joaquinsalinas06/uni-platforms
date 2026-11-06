@@ -1,0 +1,196 @@
+---
+kind: "theory"
+title: "Aho–Corasick"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Buscar por separado cada patrón en el mismo texto repite recorridos. Queremos que un solo estado represente la parte útil de lo que acabamos de leer.
+
+## Intuición
+
+El trie contiene los prefijos de todos los patrones. Si la siguiente letra no prolonga el estado, un enlace de fallo conserva el sufijo más largo que todavía es prefijo de algún patrón.
+
+## Estructura interna
+
+El estado representa el sufijo más largo del texto leído que aparece en el trie. El enlace de fallo va a un sufijo propio de menor profundidad. Una coincidencia puede aparecer en el estado actual o en un terminal alcanzable por enlaces de salida.
+
+### Construir el fallo a partir de un estado más corto
+
+Los hijos de la raíz fallan al estado vacío. Supón que ya conoces el fallo de un nodo y quieres calcular el del hijo que añade una letra. Pregunta si el estado de fallo del padre puede extenderse con esa letra. Si no, continúa por fallos más cortos hasta poder extender o llegar a la raíz. La búsqueda en anchura garantiza que esas transiciones de estados menos profundos ya se resolvieron. Para she, el fallo de sh conserva h y añadir e desde h conduce a he.
+
+### Distinguir transición, fallo y reporte
+
+La transición de búsqueda consume la siguiente letra. Si la arista directa falta, los fallos que se recorren antes de consumirla preservan sufijos compatibles. El reporte ocurre después de saber cuál es el nuevo estado. Un estado terminal da una coincidencia por sí mismo. Sus terminales de salida corresponden a patrones más cortos que terminaron exactamente en la misma posición. En ushers, she y he se reportan al consumir e, y al consumir r se conserva he para llegar a her. Son usos distintos del mismo conocimiento de sufijos.
+
+Cuando piden sólo conteos, cada visita a un estado terminal largo contribuye también a sus fallos terminales. Procesar estados de mayor a menor profundidad permite sumar todas esas contribuciones una sola vez por arista de fallo.
+
+## Operaciones
+
+Construye fallos en orden BFS, desde prefijos cortos hacia largos. Para buscar, sigue la transición de la letra actual, resolviendo el fallo si falta la arista directa. Reporta todos los terminales relevantes, o acumula visitas y propágalas por fallos en orden BFS inverso si sólo se quieren conteos.
+
+### Enlaces de fallo sobre he, she, his y hers
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Las ramas h y s nacen en el prefijo vacío.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null, "state": "active"},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh"},
+        {"id": "hi", "value": "hi", "parent": "h"},
+        {"id": "his", "value": "his", "parent": "hi"},
+        {"id": "her", "value": "her", "parent": "he"},
+        {"id": "hers", "value": "hers", "parent": "her"},
+      ],
+    },
+    {
+      note: "El sufijo h de sh es un prefijo existente. Enlaza sh con h.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r", "state": "answer"},
+        {"id": "he", "value": "he", "parent": "h"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s", "state": "active"},
+        {"id": "she", "value": "she", "parent": "sh"},
+        {"id": "hi", "value": "hi", "parent": "h"},
+        {"id": "his", "value": "his", "parent": "hi"},
+        {"id": "her", "value": "her", "parent": "he"},
+        {"id": "hers", "value": "hers", "parent": "her"},
+      ],
+      links: [
+        {"to": "h", "kind": "pointer", "label": "fallo", "from": "sh"},
+      ],
+    },
+    {
+      note: "El sufijo he de she también existe y es terminal. Se deben reportar ambas palabras.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh", "state": "active"},
+        {"id": "hi", "value": "hi", "parent": "h"},
+        {"id": "his", "value": "his", "parent": "hi"},
+        {"id": "her", "value": "her", "parent": "he"},
+        {"id": "hers", "value": "hers", "parent": "her"},
+      ],
+      links: [
+        {"to": "he", "kind": "pointer", "label": "fallo", "from": "she"},
+      ],
+    },
+    {
+      note: "El sufijo s de hers existe, pero s no es terminal. No añade una coincidencia.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h"},
+        {"id": "s", "value": "s", "parent": "r", "state": "marked"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh"},
+        {"id": "hi", "value": "hi", "parent": "h"},
+        {"id": "his", "value": "his", "parent": "hi"},
+        {"id": "her", "value": "her", "parent": "he"},
+        {"id": "hers", "value": "hers", "parent": "her", "state": "active"},
+      ],
+      links: [
+        {"to": "s", "kind": "pointer", "label": "fallo", "from": "hers"},
+      ],
+    },
+  ],
+}} />
+
+### Leer ushers sin retroceder en el texto
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Desde ε, u no inicia ningún patrón.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["active", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Estado", "row": 1, "cells": ["ε"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "s inicia la rama s.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "active", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Estado", "row": 1, "cells": ["s"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "h extiende el prefijo a sh.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "active", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Estado", "row": 1, "cells": ["sh"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "e completa she y su salida he. Ambas ocurrencias terminan aquí.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "idle", "active", "idle", "idle"]},
+        {"id": "row-1", "label": "Coincidencias", "row": 1, "cells": ["she", "he"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "r no prolonga she. El fallo lleva a he y la misma r prolonga a her.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "idle", "idle", "active", "idle"]},
+        {"id": "row-1", "label": "Transición", "row": 1, "cells": ["she", "he", "her"], "states": ["muted", "marked", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "s completa hers. En total hubo tres coincidencias.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["u", "s", "h", "e", "r", "s"], "states": ["idle", "idle", "idle", "idle", "idle", "active"]},
+        {"id": "row-1", "label": "Coincidencias totales", "row": 1, "cells": ["she", "he", "hers"], "states": ["answer", "answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+El enlace de fallo conserva el mayor sufijo que aún puede extenderse como prefijo de algún patrón. Un enlace de salida permite recorrer los terminales de esa cadena. Es útil dibujarlos con roles distintos: un estado puede servir para continuar, aunque no corresponda a una palabra completa. La construcción en BFS permite consultar los fallos de prefijos más cortos al calcular uno nuevo.
+
+## Análisis de complejidad
+
+Para $V$ nodos y alfabeto $\Sigma$, completar todas las transiciones cuesta $O(V|\Sigma|)$. Con ese autómata, leer $n$ caracteres cuesta $O(n)$ y emitir $z$ coincidencias añade $O(z)$. Si sólo se piden conteos, sumar visitas a cada fallo en orden BFS inverso cuesta $O(n+V)$ después del preprocesamiento. El costo de listar coincidencias y el de contarlas son preguntas distintas.
+
+### Cómo justificar la cota en el examen
+
+Distingue construcción y consulta. Materializar todas las transiciones cuesta $O(V|Sigma|)$, una entrada por nodo y letra. Con esa tabla el texto cuesta $O(n)$ de recorrer. Si se emiten $z$ coincidencias, sumar $O(z)$ es indispensable porque varias pueden terminar en la misma posición. Para conteos, propagar una vez por nodo después del recorrido reemplaza la enumeración, dando $O(n+V)$ tras construir.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/aho-corasick/examples) y [preguntas con pistas](/structures/aho-corasick/exercises).
+
+## Comparación con estructuras relacionadas
+
+KMP usa la cadena de bordes de un patrón. Aho–Corasick usa una red de enlaces de fallo sobre un trie con varios patrones.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/aho-corasick/mastery-check).
+
+*Fuente de clase: Sem12_Strings_I.pdf · pp. 32-45.*

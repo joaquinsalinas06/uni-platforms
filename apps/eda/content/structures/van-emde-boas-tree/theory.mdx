@@ -1,0 +1,175 @@
+---
+kind: "theory"
+title: "Árbol van Emde Boas"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Las consultas de vecino sobre enteros pueden aprovechar que la palabra tiene una cantidad fija de bits.
+
+## Intuición
+
+Usa los bits altos como dirección de clúster y los bajos como llave local. Un resumen representa los clústeres ocupados. Mínimo y máximo permiten decidir si queda algún candidato en el clúster actual.
+
+## Estructura interna
+
+En un universo de 16 usamos cuatro clústeres de tamaño cuatro. Una llave se recompone como $4\cdot high+low$. El mínimo del nodo se guarda fuera de los clústeres. El resumen contiene un índice si y sólo si su clúster está ocupado.
+
+### Leer una llave desde tres perspectivas
+
+En el estado de clase, 7 pertenece al universo global, aparece bajo el clúster 1 y allí se representa por el sufijo 3. El resumen guarda 1, que identifica un clúster, y no guarda 7. Esta diferencia es la que permite consultar el resumen como una estructura más pequeña. Si el resumen devuelve 3, ese 3 es un prefijo, no una respuesta global. Todavía se necesita un sufijo local para recomponer la llave.
+
+El campo mínimo desempeña un papel especial. El 2 global se guarda directamente, fuera de los clústeres. Si consultas por un valor menor que 2, el sucesor puede obtenerse del campo sin descender. Si borras 2, tienes que encontrar quién asciende. El primer clúster ocupado tiene el menor prefijo disponible. Su mínimo local da la menor llave restante dentro de ese prefijo.
+
+### Tres cambios de ocupación que no deben confundirse
+
+| Cambio local | Qué pasa con el resumen |
+| --- | --- |
+| Se añade una llave a un clúster ya ocupado | Su índice ya figuraba en el resumen |
+| Aparece la primera llave de un clúster | Se añade su índice al resumen |
+| Se elimina la última llave de un clúster | Se elimina su índice del resumen |
+
+El primer caso puede desencadenar recursión dentro del clúster. Los dos últimos pueden desencadenarla en el resumen. La distinción permite defender la recurrencia con una sola llamada no trivial.
+
+## Operaciones
+
+Para sucesor, si el clúster actual tiene un máximo mayor que el sufijo, recurre dentro de él. Si no, pregunta al resumen por el siguiente clúster y toma su mínimo. Para predecesor invierte el sentido y considera el mínimo global cuando el resumen no devuelve un grupo anterior. Al insertar el primer elemento de un clúster, fija su mínimo y máximo en tiempo constante y actualiza el resumen. Al borrar el mínimo global, asciende el menor elemento que sigue dentro de un clúster.
+
+### Clúster local o salto por el resumen
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Estado de clase. El mínimo global 2 está fuera de los clústeres.",
+      arrays: [
+        {"id": "row-0", "label": "Extremos", "row": 0, "cells": ["min:2", "max:15"], "states": ["marked", "marked"]},
+        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["0", "1", "3"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-2", "label": "Clústeres con sufijos", "row": 2, "cells": ["0:{3}", "1:{0,1,3}", "2:∅", "3:{2,3}"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Sucesor de 5. high=1 y low=1.",
+      arrays: [
+        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["1", "1"], "states": ["active", "active"]},
+        {"id": "row-1", "label": "Clúster 1", "row": 1, "cells": ["0", "1", "3"], "states": ["idle", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El máximo local 3 supera a 1. Se puede resolver dentro del mismo grupo.",
+      arrays: [
+        {"id": "row-0", "label": "Clúster 1", "row": 0, "cells": ["0", "1", "3"], "states": ["idle", "marked", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Reconstruye 4·1+3=7.",
+      arrays: [
+        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["7"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Sucesor de 9. high=2 y low=1. El clúster 2 está vacío.",
+      arrays: [
+        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["2", "1"], "states": ["active", "active"]},
+        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El resumen da el clúster 3. Toma su mínimo local, 2.",
+      arrays: [
+        {"id": "row-0", "label": "Resumen", "row": 0, "cells": ["0", "1", "3"], "states": ["idle", "idle", "answer"]},
+        {"id": "row-1", "label": "Clúster 3", "row": 1, "cells": ["2", "3"], "states": ["answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Reconstruye 4·3+2=14.",
+      arrays: [
+        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["14"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Insertar en un grupo vacío y borrar el mínimo global
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Parte del estado de clase. 9 pertenece al grupo 2.",
+      arrays: [
+        {"id": "row-0", "label": "Resumen", "row": 0, "cells": ["0", "1", "3"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Grupo 2", "row": 1, "cells": ["·"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Inicializa el grupo 2 con sufijo 1. Agrega 2 al resumen.",
+      arrays: [
+        {"id": "row-0", "label": "Resumen", "row": 0, "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "answer", "idle"]},
+        {"id": "row-1", "label": "Grupo 2", "row": 1, "cells": ["1"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para borrar el mínimo 2, localiza el primer grupo ocupado, 0.",
+      arrays: [
+        {"id": "row-0", "label": "Mínimo", "row": 0, "cells": ["2"], "states": ["active"]},
+        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["answer", "idle", "idle", "idle"]},
+        {"id": "row-2", "label": "Grupo 0", "row": 2, "cells": ["3"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El 3 asciende a mínimo global y desaparece como entrada del clúster 0.",
+      arrays: [
+        {"id": "row-0", "label": "Mínimo", "row": 0, "cells": ["3"], "states": ["answer"]},
+        {"id": "row-1", "label": "Resumen", "row": 1, "cells": ["1", "2", "3"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-2", "label": "Grupo 0", "row": 2, "cells": ["·"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+La rama del sucesor se decide comparando el sufijo consultado con el máximo local. Si hay candidato dentro del grupo, el orden por prefijo garantiza que cualquier clúster posterior tendría una llave mayor. Si no hay candidato local, el primer grupo ocupado posterior es suficiente. Dentro de ese grupo basta leer su mínimo guardado. Este último paso explica por qué consultar el resumen no exige otra búsqueda recursiva en el clúster encontrado.
+
+## Análisis de complejidad
+
+La división reduce aproximadamente a la mitad la longitud $w$ de la palabra. En sucesor se recurre dentro de un clúster **o** al resumen. En inserción, sólo hay recursión en el resumen si el clúster estaba vacío, caso en que inicializarlo es constante. En eliminación, el resumen cambia si desaparece el último elemento de un clúster, caso en que vaciarlo es constante. Por tanto $T(w)\le T(\lceil w/2\rceil)+O(1)=O(\lg w)=O(\lg\lg u)$. La representación densa reserva espacio en función del universo. La versión compacta de Enteros II guarda sólo clústeres ocupados en un diccionario. Cada llave puede dejar información en $O(\lg w)$ escalas, de donde sale la cota de espacio $O(n\lg w)$ para esa versión. Si se usa hashing, el costo de consultar el diccionario es esperado.
+
+### Cómo justificar la cota en el examen
+
+Escribe la recurrencia en bits, $T(w)le T(lceil w/2
+ceil)+O(1)$. En una actualización pueden cambiar tanto el resumen como un clúster, así que debes explicar por qué eso no duplica el término recursivo. Cuando aparece un clúster, era vacío y se inicializa con extremos iguales. Cuando desaparece, tenía un único elemento. En esos casos la modificación local es constante y sólo el resumen puede requerir recursión no trivial.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/van-emde-boas-tree/examples) y [preguntas con pistas](/structures/van-emde-boas-tree/exercises).
+
+## Comparación con estructuras relacionadas
+
+Un BST divide el conjunto según llaves presentes. vEB divide el universo y utiliza resumen y extremos para evitar dos llamadas recursivas no triviales.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/van-emde-boas-tree/mastery-check).
+
+*Fuente de clase: Sem11_Integers_I.pdf · pp. 27-60.*

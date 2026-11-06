@@ -1,0 +1,143 @@
+---
+kind: "theory"
+title: "Fusion tree y operaciones de palabra"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+En word RAM, un nodo con muchas ramas sólo acelera la búsqueda si elegir una rama cuesta poco.
+
+## Intuición
+
+Un nodo fusiona varias comparaciones en una palabra. Conserva los bits que distinguen las llaves del nodo y empaqueta sus sketches para obtener un rango provisional.
+
+## Estructura interna
+
+Los bits relevantes son las posiciones de ramificación del trie de las llaves del nodo. Comparar los sketches preserva el orden relativo de esas llaves. Para una consulta ajena, su sketch puede omitir el primer bit en el que se aparta del conjunto.
+
+### De dónde salen los bits que vale la pena guardar
+
+Dibuja un trie de las llaves de un nodo. Un bit relevante es una posición en la que dos ramas existentes se separan. Entre dos llaves almacenadas, su primer bit distinto tiene que corresponder a alguna bifurcación. Por eso ese primer desacuerdo sigue presente al comparar sus sketches. Si una posición tiene el mismo valor en toda una rama y no separa pares almacenados, puede desaparecer sin cambiar su orden relativo.
+
+La consulta puede traer un patrón que no aparecía en las llaves. Entonces un bit omitido puede ser justo su primer desacuerdo con la rama candidata. Comparar la consulta comprimida localiza vecinos provisionales. La segunda fase busca el prefijo real que comparte con las llaves candidatas. El primer bit distinto identifica la frontera del rango correcto. Este caso explica por qué no basta con una tabla de sketches aunque todos los separadores estén perfectamente ordenados en ella.
+
+### Cómo interpretar las comparaciones empaquetadas
+
+Cada separador ocupa un campo. Replica la consulta en campos correspondientes y reserva bits de guarda para que una resta o comparación paralela no mezcle resultados entre campos. Los bits resultantes indican qué separadores quedan de un lado. El mecanismo usa el paralelismo interno de la palabra: la operación sobre la palabra se cobra una vez, aunque el resultado represente varias comparaciones.
+
+## Operaciones
+
+Empaqueta sketches en campos con bits de guarda. Una operación aritmética permite comparar varios campos en paralelo. Para una consulta no presente, usa el vecino con mayor prefijo común, localiza el primer bit distinto y corrige el rango con una consulta a la frontera del prefijo, como en el mazo.
+
+### Los sketches ordenan llaves y requieren corrección para q
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Llaves de cuatro bits: 0000, 0010 y 1000.",
+      arrays: [
+        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["0000", "0010", "1000"], "states": ["idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Las primeras diferencias entre ramas ocurren en los bits 3 y 1.",
+      arrays: [
+        {"id": "row-0", "label": "Posiciones", "row": 0, "cells": ["3", "2", "1", "0"], "states": ["active", "idle", "active", "idle"]},
+        {"id": "row-1", "label": "Sketches", "row": 1, "cells": ["00", "01", "10"], "states": ["idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Consulta q=0100. Sus bits 3 y 1 son 00.",
+      arrays: [
+        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["0", "1", "0", "0"], "states": ["idle", "active", "idle", "idle"]},
+        {"id": "row-1", "label": "Sketches", "row": 1, "cells": ["00", "01", "10"], "states": ["marked", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El sketch coincide con 0000, pero 0100 también supera a 0010.",
+      arrays: [
+        {"id": "row-0", "label": "Orden real", "row": 0, "cells": ["0000", "0010", "0100", "1000"], "states": ["idle", "answer", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El bit 2 descartado es el primer desacuerdo con las llaves del prefijo 0. Corregir en esa frontera recupera el rango real.",
+      arrays: [
+        {"id": "row-0", "label": "Bits", "row": 0, "cells": ["3", "2", "1", "0"], "states": ["idle", "answer", "idle", "idle"]},
+        {"id": "row-1", "label": "Vecinos reales", "row": 1, "cells": ["0010", "0100", "1000"], "states": ["answer", "marked", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Qué compra la comparación empaquetada
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Cada separador ocupa un campo propio en la palabra.",
+      arrays: [
+        {"id": "row-0", "label": "Campos", "row": 0, "cells": ["00", "01", "10"], "states": ["idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Replica la consulta en campos correspondientes.",
+      arrays: [
+        {"id": "row-0", "label": "Consulta", "row": 0, "cells": ["01", "01", "01"], "states": ["active", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Con bits de guarda, los resultados por campo se pueden leer juntos.",
+      arrays: [
+        {"id": "row-0", "label": "¿Separador ≤ consulta?", "row": 0, "cells": ["sí", "sí", "no"], "states": ["answer", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+En un nodo, el rango entre sketches sirve para acotar qué llaves merece la pena comparar con la consulta completa. El argumento de corrección vuelve al prefijo común más largo y a la primera posición donde la consulta deja de coincidir con la rama. Una corrección por esa frontera recupera el intervalo real. Esto es distinto del costo de seguir la rama al siguiente nodo.
+
+## Análisis de complejidad
+
+En el modelo word RAM de clase, la representación del nodo permite seleccionar una rama en $O(1)$ operaciones de palabra. Con grado $w^{\Theta(1)}$, una ruta tiene $O(1+\log_w n)$ niveles. La deducción depende de que la extracción, el empaquetado y la comparación quepan en un número constante de palabras. Si se recorren los separadores uno a uno, se pierde esa cota.
+
+### Cómo justificar la cota en el examen
+
+Primero calcula la altura con grado $w^c$: $log_{w^c} n = (lg n)/(clg w)$. Después justifica el multiplicador por nivel. La cota exige obtener sketches y comparar los campos con un número constante de operaciones de palabra bajo las hipótesis del mazo. Si para elegir el hijo recorrieras separadores uno por uno, el factor por nivel ya no sería constante. El árbol ancho por sí solo no demuestra la mejora.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/fusion-tree/examples) y [preguntas con pistas](/structures/fusion-tree/exercises).
+
+## Comparación con estructuras relacionadas
+
+B-tree cuenta transferencias. Fusion tree cuenta operaciones de palabra y usa bits para hacer barata la decisión dentro de un nodo de alta ramificación.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/fusion-tree/mastery-check).
+
+*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf · pp. 7-67.*

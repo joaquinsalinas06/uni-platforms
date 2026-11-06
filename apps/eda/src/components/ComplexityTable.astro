@@ -8,6 +8,7 @@ interface Props {
 }
 const { meta } = Astro.props;
 const rows = Object.entries(meta.complexity);
+const boundHeader = rows.some(([, c]) => c.analysis) ? 'cota' : 'peor';
 const HEAP_FAMILY = ['binary-heap', 'binomial-heap', 'fibonacci-heap'];
 const comparable = HEAP_FAMILY.includes(meta.id);
 ---
@@ -32,7 +33,7 @@ const comparable = HEAP_FAMILY.includes(meta.id);
           <table class="w-full border-collapse">
             <thead>
               <tr class="bg-[var(--fill)]">
-                {['op', 'mejor', 'promedio', 'peor', 'espacio', ''].map((h) => (
+                {['op', 'mejor', 'promedio', boundHeader, 'espacio', ''].map((h) => (
                   <th class="tag border-b border-[var(--rule)] px-4 py-2.5 text-left font-medium whitespace-nowrap">
                     {h}
                   </th>
@@ -60,6 +61,7 @@ const comparable = HEAP_FAMILY.includes(meta.id);
                   {/* El peor caso es el número que importa: va en grande. */}
                   <td class="px-4 py-3.5 font-mono text-[1.0625rem] font-medium min-w-40 max-w-[28rem] whitespace-normal break-words">
                     {c.worst}
+                    {c.analysis && <span class="tag mt-1 block">{c.analysis}</span>}
                   </td>
                   <td class="px-4 py-3.5 font-mono text-[0.9375rem] whitespace-normal min-w-24 max-w-64">
                     {c.space ? (

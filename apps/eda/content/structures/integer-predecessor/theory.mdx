@@ -1,0 +1,146 @@
+---
+kind: "theory"
+title: "Predecesor entero y modelos de cómputo"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Buscar por igualdad y encontrar el vecino ordenado son preguntas distintas. Una tabla hash puede reconocer 12 rápidamente y aun así no decir cuál es la mayor llave por debajo de 12.
+
+## Intuición
+
+Piensa en un universo de $u=2^w$ posiciones. Cada llave es un patrón de $w$ bits. Comparar llaves sólo informa el orden. Operar sobre una palabra permite inspeccionar varios bits en una operación.
+
+## Estructura interna
+
+Usaremos predecesor estricto, máximo $x<q$, y sucesor estricto, mínimo $x>q$. La respuesta puede estar ausente. Word RAM cuenta operaciones sobre palabras de $w$ bits. Cell probe cuenta accesos a celdas y permite cómputo gratuito entre ellos. Pointer machine se mueve siguiendo punteros.
+
+### Dónde vive la respuesta a una búsqueda ordenada
+
+En el conjunto {2,5,9,13} hay huecos antes de 2, después de 13 y entre cada par consecutivo. Todas las consultas ausentes que caen dentro del mismo hueco comparten sus vecinos. Encontrar el predecesor es identificar el borde izquierdo de ese hueco. Si la consulta coincide con una llave, el ejercicio debe decir si esa llave puede ser su propia respuesta. El caso estricto desplaza el resultado al elemento anterior. Dibuja la consulta entre llaves, incluso si es una posición ausente del universo.
+
+### Tres cuentas que conviene escribir por separado
+
+| Modelo | Qué operación guía la cota | Qué debes declarar |
+| --- | --- | --- |
+| Comparaciones | Decisiones de orden entre llaves | Cada decisión ofrece pocas alternativas |
+| Word RAM | Operaciones y accesos sobre palabras | Una palabra tiene $w$ bits y se especifican sus operaciones |
+| Cell probe | Lecturas y escrituras de celdas | El cálculo entre accesos queda fuera del conteo |
+
+Una cota dependiente de $w$ puede ser mejor o peor que otra dependiente de $n$, según la relación entre cantidad de llaves y tamaño del universo. Si sólo hay pocas llaves, un arreglo puede ser suficiente. Si los prefijos informan sobre grandes regiones y el modelo permite acceder a ellos eficientemente, agrupar por bits ofrece otra vía de búsqueda.
+
+## Operaciones
+
+En una lista ordenada, localiza el punto de inserción. Para el vecino estricto, descarta una coincidencia exacta antes de elegir el lado. En las estructuras siguientes, divide la palabra en prefijo y sufijo para localizar primero la región.
+
+### Consulta entre llaves, coincidencia y extremo
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Consulta 6. Sus vecinos pueden estar a ambos lados de una posición vacía.",
+      arrays: [
+        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["2", "5", "6", "9", "13"], "states": ["idle", "idle", "marked", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El predecesor estricto es 5 y el sucesor estricto es 9.",
+      arrays: [
+        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["2", "5", "6", "9", "13"], "states": ["idle", "answer", "marked", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Consulta 9. La coincidencia se excluye de la respuesta estricta.",
+      arrays: [
+        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["2", "5", "9", "13"], "states": ["idle", "answer", "marked", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Consulta 1. Queda a la izquierda de todas las llaves.",
+      arrays: [
+        {"id": "row-0", "label": "Llaves", "row": 0, "cells": ["1", "2", "5", "9", "13"], "states": ["marked", "answer", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El vecino derecho es 2. No existe vecino izquierdo.",
+      arrays: [
+        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["sucesor:2", "predecesor:∅"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Separar una palabra por prefijo y sufijo
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "En cuatro bits, 13 se escribe 1101.",
+      arrays: [
+        {"id": "row-0", "label": "Palabra", "row": 0, "cells": ["1", "1", "0", "1"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Los bits altos 11 identifican el grupo de 12 a 15.",
+      arrays: [
+        {"id": "row-0", "label": "Bits altos", "row": 0, "cells": ["1", "1"], "states": ["active", "active"]},
+        {"id": "row-1", "label": "Intervalo", "row": 1, "cells": ["12", "13", "14", "15"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Los bits bajos 01 dan el desplazamiento 1 dentro del grupo.",
+      arrays: [
+        {"id": "row-0", "label": "Bits bajos", "row": 0, "cells": ["0", "1"], "states": ["active", "active"]},
+        {"id": "row-1", "label": "Intervalo", "row": 1, "cells": ["12", "13", "14", "15"], "states": ["idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Para una consulta en el universo dibuja primero la posición solicitada aunque no sea una llave. Marca los candidatos a cada lado. Una estructura de vecinos debe localizar ese hueco, mientras que una estructura de pertenencia puede parar con un sí o un no. Las estructuras de enteros sacan información de la representación de las llaves para localizar el hueco.
+
+## Análisis de complejidad
+
+La búsqueda binaria sobre $n$ llaves descarta la mitad en cada comparación. Después de $t$ comparaciones quedan del orden de $n/2^t$ candidatos, por lo que necesita $O(\lg n)$. Las cotas de las estructuras de enteros usan parámetros adicionales como $w$ y operaciones de palabra. Especificar ambos modelos permite comparar las afirmaciones.
+
+### Cómo justificar la cota en el examen
+
+En un arreglo ordenado, la cantidad de comparaciones se obtiene contando cuántas veces puedes partir el intervalo por la mitad. Una cota en función de $w$ dice algo distinto: puede aprovechar operaciones que ven muchos bits a la vez. En cell probe incluso se separa el costo de consultar celdas del costo de computar con lo leído. Escribe qué mide cada cota antes de comparar los logaritmos.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/integer-predecessor/examples) y [preguntas con pistas](/structures/integer-predecessor/exercises).
+
+## Comparación con estructuras relacionadas
+
+La comparación ordena cualquier tipo con una relación de orden. Las estructuras de enteros explotan una codificación de longitud acotada.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/integer-predecessor/mastery-check).
+
+*Fuente de clase: Sem11_Integers_I.pdf · pp. 7-26.*

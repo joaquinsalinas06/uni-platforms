@@ -1,0 +1,14 @@
+id: dc3
+title: Construcción lineal con DC3
+type: algorithm
+week: week-13
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- suffix-array
+complexity:
+  Construcción:
+    worst: O(n)
+    reasoning: La recursión conserva aproximadamente dos tercios de las posiciones y el resto de cada
+      nivel hace trabajo lineal.
+    source: Sem13_Strings_II.pdf#31-40

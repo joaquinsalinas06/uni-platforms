@@ -1,0 +1,175 @@
+---
+kind: "theory"
+title: "Packed-Memory Array"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Un arreglo ordenado muy compacto hace cara una inserción. Demasiados huecos desperdician espacio y dañan el escaneo.
+
+## Intuición
+
+Organiza los intervalos en una jerarquía binaria. Los intervalos grandes tienen límites de densidad más estrictos, de modo que una redistribución grande deje margen para futuras inserciones.
+
+## Estructura interna
+
+Para profundidad $d$ y altura $h$, la cota superior de clase es $\tau_d=3/4+d/(4h)$. La cota inferior es $1/2-d/(4h)$. Con $h=2$, los máximos son $3/4$ para la raíz, $7/8$ para una mitad y $1$ para una hoja.
+
+### Cómo leer los intervalos en el árbol implícito
+
+Con 16 celdas y trozos de cuatro, la capa inferior tiene [0,3], [4,7], [8,11] y [12,15]. Arriba aparecen [0,7] y [8,15]. La raíz representa [0,15]. Subir desde [4,7] lleva a [0,7], aunque [8,11] esté al lado en el arreglo. La jerarquía elige regiones alineadas de tamaño creciente. El algoritmo necesita sus límites y ocupaciones; el dibujo del árbol permite calcular esos límites sin imaginar punteros que se hayan almacenado.
+
+### Por qué dejar umbrales diferentes
+
+Si la hoja y el padre admitieran la misma densidad, repartir un padre muy lleno podría dejar sus hijos casi al límite. Una inserción posterior volvería a provocar el mismo movimiento grande. El padre más estricto obliga a repartir con margen frente a los umbrales de sus hijos. Esa diferencia de umbrales es la cantidad que aparece después en el análisis amortizado.
+
+Los límites inferiores cumplen el papel dual al eliminar. Una región muy vacía malgasta espacio y obliga a escanear muchos huecos para pocos registros. Redistribuir dentro de una región admisible restaura una densidad útil. Cuando la raíz misma incumple, redistribuir cambia la posición de los registros, pero conserva su número y su capacidad total. Para corregir la densidad global tiene que cambiar la capacidad.
+
+## Operaciones
+
+Localiza la hoja por orden. Evalúa la densidad con la nueva llave incluida. Sube hasta el primer intervalo admisible y reparte sus llaves uniformemente en el mismo orden. Si la raíz supera su umbral, se necesita redimensionar.
+
+### Dos inserciones que disparan rebalanceos distintos
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Ejemplo de densidad de clase. Capacidad de hoja 4, mitad 8 y raíz 16.",
+      arrays: [
+        {"id": "row-0", "label": "Capacidad", "row": 0, "cells": ["4", "8", "16"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Umbral", "row": 1, "cells": ["1", "7/8", "3/4"], "states": ["idle", "idle", "idle"]},
+        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "30", "40", "50", "·", "·", "·"]},
+        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Insertar 25 deja la hoja candidata con cinco llaves en cuatro huecos.",
+      arrays: [
+        {"id": "row-0", "label": "Hoja", "row": 0, "cells": ["5", "4"], "states": ["active", "marked"]},
+        {"id": "row-1", "label": "Densidad", "row": 1, "cells": ["5/4"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Sube a la mitad. Sus seis llaves en ocho celdas cumplen el límite.",
+      arrays: [
+        {"id": "row-0", "label": "Mitad", "row": 0, "cells": ["6", "8"], "states": ["active", "marked"]},
+        {"id": "row-1", "label": "Densidad", "row": 1, "cells": ["6/8", "7/8"], "states": ["answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Redistribuye. Tres llaves por hoja dejan un hueco en cada una.",
+      arrays: [
+        {"id": "row-0", "label": "Hoja izquierda", "row": 0, "cells": ["3", "·"], "states": ["answer", "idle"]},
+        {"id": "row-1", "label": "Hoja derecha", "row": 1, "cells": ["3", "·"], "states": ["answer", "idle"]},
+        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "25", "·", "30", "40", "50", "·"]},
+        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Insertar 26 todavía cabe en la hoja. Se consume el hueco local.",
+      arrays: [
+        {"id": "row-0", "label": "Hoja", "row": 0, "cells": ["4/4"], "states": ["answer"]},
+        {"id": "row-1", "label": "Mitad", "row": 1, "cells": ["7/8"], "states": ["answer"]},
+        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "25", "26", "30", "40", "50", "·"]},
+        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Insertar 27 vuelve a exceder la hoja y la mitad llega a 8/8.",
+      arrays: [
+        {"id": "row-0", "label": "Hoja", "row": 0, "cells": ["5/4"], "states": ["active"]},
+        {"id": "row-1", "label": "Mitad", "row": 1, "cells": ["8/8", "7/8"], "states": ["active", "marked"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La raíz queda exactamente en 12/16. La igualdad con el umbral se admite.",
+      arrays: [
+        {"id": "row-0", "label": "Raíz", "row": 0, "cells": ["12/16", "3/4"], "states": ["answer", "marked"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Reparte las doce llaves entre las cuatro hojas. Cada hoja recupera un hueco.",
+      arrays: [
+        {"id": "row-0", "label": "Ocupación por hoja", "row": 0, "cells": ["3", "3", "3", "3"], "states": ["answer", "answer", "answer", "answer"]},
+        {"id": "half-0", "row": 2, "label": "Mitad 1 · en orden de memoria", "cells": ["10", "20", "25", "·", "26", "27", "30", "·"]},
+        {"id": "half-1", "row": 3, "label": "Mitad 2 · en orden de memoria", "cells": ["40", "50", "60", "·", "70", "80", "90", "·"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### El margen entre dos niveles paga el movimiento
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Tras repartir, la mitad hereda aproximadamente la densidad de su padre.",
+      arrays: [
+        {"id": "row-0", "label": "Densidad", "row": 0, "cells": ["τ_padre", "τ_hijo"], "states": ["active", "marked"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Cada inserción eleva su densidad en 1/m.",
+      arrays: [
+        {"id": "row-0", "label": "Margen", "row": 0, "cells": ["1/m", "1/m", "…", "1/(4h)"], "states": ["active", "idle", "idle", "marked"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para agotar ese margen se necesitan del orden de m/h inserciones.",
+      arrays: [
+        {"id": "row-0", "label": "Balance", "row": 0, "cells": ["O(m)_movimientos", "O(h)_por_inserción"], "states": ["marked", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Al seguir el diagrama, toma la ocupación que resultaría **incluyendo** la llave nueva. Compara cada cociente con el umbral de su propio nivel. Que una hoja admita densidad uno no autoriza la misma densidad en la mitad o en la raíz. El árbol que usamos para razonar representa intervalos del arreglo. Puedes encontrar el padre de un intervalo duplicando su tamaño y alineando su comienzo, sin guardar un nodo para cada región.
+
+Redistribuir no altera el orden relativo. Cambia la cantidad de espacio disponible entre llaves futuras y, por tanto, cuántas actualizaciones pueden pasar antes de repetir el trabajo.
+
+## Análisis de complejidad
+
+Si un padre con dos mitades de tamaño $m$ se redistribuye, cada mitad queda cerca de la densidad del padre. Los umbrales de dos niveles difieren en $1/(4h)$. Hacen falta del orden de $m/h$ inserciones en una mitad para volver a disparar una reescritura de $O(m)$ celdas, salvo redondeos de intervalos pequeños. Repartir ese costo da $O(h)$ por nivel y $O(\log^2 N)$ movimientos amortizados con $h=O(\log N)$. Una inserción concreta aún puede reescribir todo el arreglo.
+
+### Cómo justificar la cota en el examen
+
+Después de una redistribución de tamaño $2m$, un hijo de $m$ celdas vuelve aproximadamente a la densidad del padre. Para alcanzar su propio umbral debe absorber unas $m/(4h)$ inserciones, pues cada una aumenta la densidad en $1/m$. El costo de reescribir el padre se cobra a esas inserciones. Así sale $O(h)$ de cargo en un nivel. Una operación puede recibir cargos de $O(h)$ niveles y el total amortizado es $O(h^2)$. En una traza concreta la última inserción puede mover muchas celdas; el cálculo explica quién paga ese movimiento acumulado.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/packed-memory-array/examples) y [preguntas con pistas](/structures/packed-memory-array/exercises).
+
+## Comparación con estructuras relacionadas
+
+OFM es el problema de sostener un archivo ordenado con actualizaciones. PMA lo aborda con umbrales y redistribución de intervalos.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/packed-memory-array/mastery-check).
+
+*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf · pp. 19-43.*

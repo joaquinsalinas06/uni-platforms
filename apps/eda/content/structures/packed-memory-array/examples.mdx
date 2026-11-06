@@ -1,0 +1,94 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from "../../../src/components/Visualization.astro";
+
+
+La traza de 25, 26 y 27 toma el ejemplo de densidad de clase. El caso de crecimiento se deriva del mismo criterio.
+
+## Insertar 25 · la primera mitad basta
+En el estado inicial de clase, el primer trozo tiene cuatro llaves en cuatro celdas. Insertar 25 entre 20 y 30 produciría cinco llaves en ese trozo. El cociente 5/4 supera 1. No se puede reparar moviendo llaves dentro de esas mismas cuatro posiciones.
+
+Al examinar la mitad izquierda, la nueva ocupación es 6/8. El umbral de ese nivel es 7/8, así que alcanza con redistribuir esa mitad. Los dos trozos de la región recuperan holgura. La mitad derecha conserva su contenido y sus posiciones.
+
+## Insertar 26 y 27 · ahora se llega a la raíz
+El 26 entra en un hueco recuperado y deja el trozo lleno. Con el 27, la hoja vuelve a quedar en 5/4, pero esta vez la mitad estaría en 8/8. Como 8/8 supera 7/8, subir un nivel es obligatorio. La raíz quedaría en 12/16, exactamente 3/4. La desigualdad permite el empate y se redistribuye todo el arreglo.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Tras la primera reparación, la mitad izquierda recupera huecos.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Mitad izquierda", "cells": ["10", "20", "25", "·", "30", "40", "50", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Mitad derecha", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "26 consume el hueco del primer trozo. La mitad izquierda alcanza 7/8.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Mitad izquierda", "cells": ["10", "20", "25", "26", "30", "40", "50", "·"], "states": ["idle", "idle", "idle", "active", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Mitad derecha", "cells": ["60", "·", "70", "·", "80", "·", "90", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Agregar 27 deja ocho llaves en la mitad. Su límite era siete. Examina la raíz.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Mitad candidata", "cells": ["10", "20", "25", "26", "27", "30", "40", "50"], "states": ["idle", "idle", "idle", "idle", "active", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Ocupación", "cells": ["8/8", "límite:7/8"], "states": ["marked", "marked"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Con capacidad 16, la raíz admite las doce llaves. El reparto deja un hueco por trozo.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Mitad izquierda", "cells": ["10", "20", "25", "·", "26", "27", "30", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "answer", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Mitad derecha", "cells": ["40", "50", "60", "·", "70", "80", "90", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+Repartir 12 llaves entre cuatro trozos deja tres en cada uno. Conserva el orden global y vuelve a aparecer un hueco por trozo.
+
+## La raíz tampoco admite otra llave
+Si la prueba de una actualización llega a la raíz y la ocupación sería 13/16, ninguna permutación de esas 13 llaves entre las mismas 16 celdas reduce la densidad. Hace falta cambiar la capacidad. Distingue esta decisión de redistribuir: en la redistribución cambias posiciones con la misma capacidad; en el redimensionamiento cambias el denominador de la densidad.
+
+## Borrar puede producir el problema opuesto
+
+Supón un PMA de 16 celdas con cuatro trozos de cuatro. Si un trozo queda vacío,
+examina la mitad que lo contiene. Con altura dos, la densidad inferior de la
+hoja es 1/4 y la de la mitad es 3/8. Si el trozo hermano conserva tres llaves,
+la mitad tiene tres llaves sobre ocho celdas y cumple exactamente su umbral.
+Puedes distribuirlas como una en un trozo y dos en el otro. Ambos recuperan
+la densidad mínima y la otra mitad conserva sus posiciones.
+
+Si el hermano sólo tuviera dos llaves, la mitad quedaría en 2/8 y tampoco
+sería admisible. En ese caso hay que examinar la raíz. Este es el mismo
+procedimiento de subir por intervalos, con la desigualdad invertida.
+Al insertar preocupa que falten huecos. Al borrar preocupa que sobren
+tantos que un escaneo lea bloques con demasiado pocos registros.
+
+## Seguir todos los umbrales de la secuencia 25, 26, 27
+
+Caso de clase. Capacidad 16, trozos de cuatro, dos mitades de ocho. La ocupación superior permitida es 4, 7 y 12 llaves en cada escala respectiva.
+
+1. Ubica 25 entre 20 y 30, dentro del primer trozo. Ya había cuatro llaves allí.
+2. Incluye la llave nueva al calcular la densidad. Cinco sobre cuatro supera el umbral uno.
+3. Sube a la mitad izquierda. Hay seis llaves contando 25, por debajo de siete.
+4. Redistribuye las seis en el mismo orden. Quedan tres llaves en cada trozo y vuelve un hueco a cada uno.
+5. Ubica 26 detrás de 25, todavía en el primer trozo.
+6. Comprueba 4/4. La igualdad se permite, así que la inserción usa el hueco y no requiere redistribuir la mitad.
+7. Ubica 27 entre 26 y 30. El trozo vuelve a exceder su capacidad.
+8. Calcula la ocupación de la mitad: ocho llaves en ocho celdas. Aunque caben físicamente, su umbral es siete.
+9. Examina la raíz. Hay doce llaves contando 27 y eso iguala el límite.
+10. Reescribe la región de 16 celdas en orden global, con tres llaves por trozo.
+11. Comprueba que el movimiento dejó un hueco por trozo. La siguiente inserción no tiene por qué repetir el mismo costo.
+
+**Comprobación.** La última inserción es cara. Los umbrales explican cuándo se ejecuta y el margen recuperado explica por qué no se ejecuta siempre.

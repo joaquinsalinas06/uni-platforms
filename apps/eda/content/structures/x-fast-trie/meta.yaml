@@ -1,0 +1,15 @@
+id: x-fast-trie
+title: X-fast trie
+type: structure
+week: week-11
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- integer-predecessor
+complexity:
+  Consulta esperada:
+    worst: O(lg w)
+    reasoning: La existencia es monótona por longitud y cada consulta hash cuesta tiempo esperado
+      constante.
+    source: Sem11_Integers_II.pdf#25-39
+    analysis: esperado

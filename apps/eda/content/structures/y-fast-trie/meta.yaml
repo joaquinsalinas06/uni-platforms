@@ -1,0 +1,20 @@
+id: y-fast-trie
+title: Y-fast trie
+type: structure
+week: week-11
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- x-fast-trie
+complexity:
+  Consulta esperada:
+    worst: O(lg w)
+    reasoning: Se consulta un X-fast de representantes y un árbol balanceado con O(w) elementos.
+    source: Sem11_Integers_II.pdf#40-64
+    analysis: esperado
+  Actualización amortizada:
+    worst: O(lg w)
+    reasoning: Una reconstrucción de O(w) se paga con Ω(w) cambios en el grupo y se añade la búsqueda
+      esperada en el índice.
+    source: Sem11_Integers_II.pdf#40-64
+    analysis: amortizado esperado

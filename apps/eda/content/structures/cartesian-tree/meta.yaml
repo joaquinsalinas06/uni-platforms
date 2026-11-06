@@ -1,0 +1,14 @@
+id: cartesian-tree
+title: Árbol cartesiano
+type: structure
+week: week-12
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- static-rmq
+complexity:
+  Construcción:
+    worst: O(n)
+    reasoning: Cada índice se apila una vez y se desapila a lo sumo una vez durante el recorrido de
+      izquierda a derecha.
+    source: Sem12_Static_Trees.pdf#19-23

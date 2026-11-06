@@ -196,6 +196,7 @@ const complexityCase = z.object({
   // distingue mejor/promedio ni menciona espacio: dejar esos campos vacíos es
   // FIEL al material; rellenarlos sería inventar. La tabla muestra "no lo da".
   worst: z.string(),
+  analysis: z.enum(['amortizado', 'esperado', 'amortizado esperado']).optional(),
   best: z.string().optional(),
   avg: z.string().optional(),
   space: z.string().optional(),
@@ -239,6 +240,11 @@ export const topicSchema = z.object({
 });
 
 export const knowledgeMapSchema = z.object({
+  units: z.array(z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    topics: z.array(z.string()),
+  })),
   weeks: z.array(
     z.object({
       id: z.string(),

@@ -71,7 +71,7 @@ const { meta, section, tabs, rail = false } = Astro.props;
           <a
             href={tab.href}
             data-tab-link
-            aria-current={active}
+            aria-current={active ? "page" : undefined}
             class:list={['tab-link -mb-px shrink-0 px-3 py-2.5 text-[0.875rem] whitespace-nowrap no-underline', active && 'is-active']}
           >
             {tab.label}
@@ -115,14 +115,15 @@ const { meta, section, tabs, rail = false } = Astro.props;
   // ejecutarlo una vez, porque un usuario puede llegar por primera vez a
   // CUALQUIER estructura, no sólo a la primera que persiste este bloque.
   function syncActiveTab() {
-    const path = location.pathname;
+    const path = location.pathname.replace(/\/$/, "");
     // Exacto, no por prefijo: todas las pestañas son hermanas bajo la misma
     // ruta base (teoría vive en /structures/<id>, las demás cuelgan de ahí),
     // así que un prefijo marcaría "teoría" activa en cualquier otra pestaña.
     for (const a of document.querySelectorAll<HTMLAnchorElement>('[data-tab-link]')) {
-      const active = path === a.getAttribute('href');
+      const active = path === a.pathname.replace(/\/$/, '');
       a.classList.toggle('is-active', active);
-      a.setAttribute('aria-current', String(active));
+      if (active) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
     }
   }
   document.addEventListener('astro:page-load', syncActiveTab);

@@ -1,0 +1,15 @@
+id: fusion-tree
+title: Fusion tree y operaciones de palabra
+type: structure
+week: week-12
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- integer-predecessor
+- b-tree
+complexity:
+  Búsqueda:
+    worst: O(1 + log_w n)
+    reasoning: Cada nodo fusionado elige una rama en tiempo constante y la ramificación es una potencia
+      positiva de w.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf#7-67

@@ -1,0 +1,16 @@
+id: suffix-array
+title: Suffix array y duplicación de prefijos
+type: structure
+week: week-13
+hasVisualization: true
+visualizationType: range-tree
+prerequisites: []
+complexity:
+  Construcción con radix por rangos:
+    worst: O(n lg n)
+    reasoning: Hay O(lg n) duplicaciones y se ordenan n pares de rangos en tiempo lineal en cada una.
+    source: Sem13_Strings_II.pdf#8-19
+  Buscar patrón de longitud m:
+    worst: O(m lg n)
+    reasoning: Las dos búsquedas binarias hacen O(lg n) comparaciones de prefijos de hasta m caracteres.
+    source: Sem13_Strings_II.pdf#8-19

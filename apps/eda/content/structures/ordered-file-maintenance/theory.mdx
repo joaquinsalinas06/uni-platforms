@@ -1,0 +1,124 @@
+---
+kind: "theory"
+title: "Ordered File Maintenance"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Queremos mantener datos ordenados y recorribles en almacenamiento contiguo mientras aparecen llaves nuevas entre las existentes.
+
+## Intuición
+
+Deja huecos para absorber inserciones y usa un índice de máximos para localizar dónde insertar. Los huecos reducen desplazamientos inmediatos. Cuando se concentran las llaves, se redistribuye una región.
+
+## Estructura interna
+
+Las llaves ocupadas siguen en orden. Cada entrada del índice resume un tramo con su máximo. Si una redistribución altera límites de tramos, se reparan los resúmenes afectados.
+
+### Por qué los huecos se dejan entre elementos
+
+Con un arreglo compacto, insertar una llave pequeña puede mover todas las llaves posteriores. Reservar todas las celdas libres al final sólo facilita agregar llaves grandes. El archivo ordenado con huecos distribuye espacio entre regiones. Eso permite que algunas inserciones pequeñas se resuelvan moviendo unas pocas posiciones y mantiene el orden para recorrer rangos en almacenamiento secuencial.
+
+Un tramo del archivo es un intervalo físico. El índice de máximos describe intervalos lógicos de valores. Los dos coinciden mientras los máximos reflejan los registros reales de cada tramo. Si mueves una llave que determina una frontera, actualizar el índice forma parte de la operación. Un máximo antiguo demasiado bajo puede hacer que una búsqueda salte un tramo que ya contiene una llave candidata.
+
+### Cuándo mirar arriba y cuándo mirar abajo
+
+Primero usa el índice para ubicar una región. Dentro del tramo, una búsqueda de sucesor inspecciona registros que todavía pueden ser mayores que la consulta. En una actualización, distingue un desplazamiento interno, una redistribución que afecta vecinos y un cambio de grupos en la versión con indirección. Si el diagrama muestra celdas que cambian de lado, pregunta también qué resumen perdió o ganó su última llave. En el ejemplo de insertar 19, precisamente el 20 deja de ser el máximo del tramo izquierdo porque pasa a la derecha.
+
+## Operaciones
+
+Busca el primer tramo cuyo máximo alcanza la llave. Inserta conservando el orden, redistribuye si la región lo requiere y propaga los nuevos máximos donde cambien.
+
+### Buscar por máximos y reparar tras mover un límite
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Cada tramo contiene llaves en orden y huecos. Su máximo vive en el índice.",
+      arrays: [
+        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "20", "35"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Tramo 0", "row": 1, "cells": ["2", "·", "8", "·"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-2", "label": "Tramo 1", "row": 2, "cells": ["12", "16", "20", "·"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-3", "label": "Tramo 2", "row": 3, "cells": ["25", "·", "35", "·"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para 18, 8 queda corto. 20 identifica el primer tramo candidato.",
+      arrays: [
+        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "20", "35"], "states": ["muted", "active", "idle"]},
+        {"id": "row-1", "label": "Tramo 1", "row": 1, "cells": ["12", "16", "20", "·"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Inserta 18 antes de 20. El máximo permanece en 20.",
+      arrays: [
+        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "20", "35"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Tramo 1", "row": 1, "cells": ["12", "16", "18", "20"], "states": ["idle", "idle", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para insertar 19, el tramo ya está lleno. Considera dos tramos juntos.",
+      arrays: [
+        {"id": "row-0", "label": "Tramo 1", "row": 0, "cells": ["12", "16", "18", "20"], "states": ["marked", "marked", "marked", "marked"]},
+        {"id": "row-1", "label": "Tramo 2", "row": 1, "cells": ["25", "·", "35", "·"], "states": ["marked", "idle", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Redistribuye las siete llaves conservando su orden.",
+      arrays: [
+        {"id": "row-0", "label": "Tramo 1", "row": 0, "cells": ["12", "16", "18", "19"], "states": ["idle", "idle", "idle", "answer"]},
+        {"id": "row-1", "label": "Tramo 2", "row": 1, "cells": ["20", "25", "35", "·"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El resumen del tramo 1 cambia de 20 a 19. El tramo 2 conserva 35.",
+      arrays: [
+        {"id": "row-0", "label": "Máximos", "row": 0, "cells": ["8", "19", "35"], "states": ["idle", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Para decidir qué tramo responde una consulta, compara con sus máximos en el orden del archivo. Un máximo menor que la consulta elimina el tramo completo. Encontrar un máximo suficiente sólo dice dónde buscar; todavía falta comprobar cuáles llaves concretas quedaron dentro de ese tramo.
+
+La diapositiva de indirección añade otra distinción. En la versión superior se pueden indexar representantes de grupos, mientras que abajo se inspeccionan celdas contiguas. Que el índice de máximos cambie al mover fronteras no implica que todos los registros del grupo tengan que subir al índice.
+
+## Análisis de complejidad
+
+Separa tres costos. Localizar toca niveles del índice. Mover un intervalo contiguo de $s$ celdas cuesta $O(1+s/B)$ E/S. Reparar los máximos cuesta según cuántos tramos cambian. La estructura dinámica de clase usa **indirección**. Agrupa $\Theta(\lg N)$ llaves contiguas y arriba indexa un representante por grupo. Reescribir un grupo cuesta $O(1+\lg N/B)$ E/S. Con suficiente holgura, separar o fusionar un grupo se cobra a $\Omega(\lg N)$ cambios locales. Así, el término de redistribución del índice superior baja de $O(\lg^2 N/B)$ a $O(\lg N/B)$ amortizado. Sumando la búsqueda, la actualización de la estructura con indirección cuesta $O(\log_{B+1} N)$ E/S amortizadas en el análisis del mazo.
+
+### Cómo justificar la cota en el examen
+
+Cuenta primero el costo que sí está determinado por la figura: mover una región de $s$ celdas ocupa $O(1+s/B)$ bloques. La cota amortizada de la estructura completa requiere además explicar con qué frecuencia se repite un movimiento grande. Agrupar $Theta(lg N)$ llaves separa las actualizaciones ordinarias de las particiones y fusiones que cambian el nivel superior. Una reparación de arriba se distribuye entre las operaciones que consumieron la holgura. Divide ese costo entre la cantidad de actualizaciones **del grupo afectado**, en vez de dividirlo entre todas las operaciones sin una razón de carga.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/ordered-file-maintenance/examples) y [preguntas con pistas](/structures/ordered-file-maintenance/exercises).
+
+## Comparación con estructuras relacionadas
+
+El layout estático van Emde Boas ordena el índice para buscar. OFM se ocupa del archivo ordenado que puede cambiar. PMA concreta cómo decidir el tamaño de la región a redistribuir.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/ordered-file-maintenance/mastery-check).
+
+*Fuente de clase: Sem10_Memory_Hierarchy_III.pdf · pp. 26-61.*

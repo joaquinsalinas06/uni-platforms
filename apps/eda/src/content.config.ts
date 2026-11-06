@@ -29,6 +29,7 @@ const exercises = z.object({
     .array(
       z.object({
         level: z.number().int().min(1).max(6),
+        label: z.string().optional(),
         statement: z.string(),
         // El brief prohíbe revelar la solución antes de las pistas progresivas.
         hints: z.array(z.string()).min(1, 'un ejercicio sin pistas no puede revelar solución'),

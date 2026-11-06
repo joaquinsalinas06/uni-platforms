@@ -1,0 +1,167 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from "../../../src/components/Visualization.astro";
+
+
+Separa el índice de texto del estado del patrón. Las dos primeras trazas retoman los ejemplos de clase.
+
+## La c de ababaca dispara dos retrocesos
+Justo antes de c, el prefijo propio reconocido mide tres y vale aba. Para extenderlo tendría que llegar b. Como llega c, prueba el borde a de aba, de longitud uno. También exigiría b a continuación. Al fallar, prueba el borde vacío. La c tampoco coincide con la primera a del patrón. Por tanto la función prefijo en c vale cero. El mismo carácter se compara varias veces, sin volver a leer posiciones anteriores.
+
+## Tres coincidencias que se solapan
+Busca aba en abababa. Después de consumir los primeros tres caracteres, reporta inicio 0. El final a es también el principio del patrón, así que deja k=1. Con las próximas b y a vuelve a completar el patrón y reporta inicio 2. La última b y la última a completan inicio 4. Si reiniciaras a cero cada vez, perderías información de una aparición solapada.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "La primera coincidencia termina al consumir la a de índice 2.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Texto", "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["answer", "answer", "answer", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Estado tras reportar", "cells": ["k=1"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La a de índice 2 se conserva como inicio. La b de índice 3 extiende el borde.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Texto", "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "marked", "active", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Estado", "cells": ["k=2"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La a de índice 4 completa el segundo match. Sus letras comparten una posición con el anterior.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Texto", "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "answer", "answer", "answer", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Inicios", "cells": ["0", "2"], "states": ["idle", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Se repite la misma transición y se reconoce el inicio 4.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Texto", "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "idle", "idle", "answer", "answer", "answer"]},
+        {"id": "row-1", "row": 1, "label": "Inicios", "cells": ["0", "2", "4"], "states": ["idle", "idle", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+## Una racha de aes amplifica el costo de un reinicio incorrecto
+Para patrón aaaa, la tabla π es [0,1,2,3]. En texto aaaaaa aparecen inicios 0, 1 y 2. Tras cada aparición conserva tres letras. En cambio, si el carácter siguiente fuera b, tendrías que probar bordes de tamaño 2, 1 y 0 antes de avanzar con estado cero. Ese único carácter cuesta más, pero destruye progreso acumulado en caracteres previos.
+
+## El prefijo reconocido no siempre se pierde cuando falla una letra
+
+Busca aba en aaba. Tras leer la primera a, k vale uno. La segunda a no coincide con la b esperada. Retrocede a cero y compara **esa misma segunda a** con el primer carácter del patrón. Ahora sí coincide y vuelve a dejar k en uno. Luego b y a completan una aparición de inicio 1.
+
+Si en cada fallo avanzaras el texto antes de probar el borde más corto, perderías la segunda a como posible inicio. El valor de k puede caer y recuperarse durante la misma posición de texto.
+
+## Separar la letra actual de todos sus intentos
+
+Construye la función prefijo de ababaca, ejemplo de clase. Usa k para la longitud del borde candidato.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "i=0: una letra sola no tiene borde propio no vacío.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "·", "·", "·", "·", "·", "·"], "states": ["answer", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "i=1: b no puede extender el borde vacío con la a inicial.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "active", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "0", "·", "·", "·", "·", "·"], "states": ["idle", "answer", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "i=2: a coincide con el primer carácter del patrón. El borde mide uno.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "active", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "0", "1", "·", "·", "·", "·"], "states": ["idle", "idle", "answer", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "i=3: b extiende el borde anterior a ab.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "marked", "idle", "active", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "0", "1", "2", "·", "·", "·"], "states": ["idle", "idle", "idle", "answer", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "i=4: a extiende el borde anterior a aba.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "marked", "idle", "active", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "0", "1", "2", "3", "·", "·"], "states": ["idle", "idle", "idle", "idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "i=5: c no coincide con P[3]=b. Conserva i=5 y busca un borde menor.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "marked", "idle", "active", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Candidato", "cells": ["3"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El siguiente candidato es π[2]=1. La comparación contra P[1]=b vuelve a fallar.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "marked", "idle", "idle", "idle", "active", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Candidato", "cells": ["3", "1"], "states": ["muted", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El borde de tamaño uno tiene borde vacío. Con k=0, compara c contra P[0]=a.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "idle", "idle", "idle", "active", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Candidato", "cells": ["3", "1", "0"], "states": ["muted", "muted", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "No queda ningún candidato. Sólo ahora se escribe π[5]=0 y se avanza.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "idle", "idle", "active", "idle"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "0", "1", "2", "3", "0", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "i=6: la última a vuelve a coincidir con el inicio. Guarda π[6]=1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Patrón", "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "idle", "idle", "idle", "idle", "active"]},
+        {"id": "row-1", "row": 1, "label": "π", "cells": ["0", "0", "1", "2", "3", "0", "1"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+1. Para el primer carácter a no existe borde propio no vacío. Escribe π[0]=0.
+2. En i=1 llega b. No extiende el borde vacío con a, así que escribe 0.
+3. En i=2 llega a. Coincide con el inicio y deja k=1.
+4. En i=3 llega b. Extiende el borde a y deja k=2, que representa ab.
+5. En i=4 llega a. Extiende ab a aba. Escribe π[4]=3.
+6. En i=5 llega c. Con k=3 esperabas b. Mantén i en 5.
+7. Prueba k=π[2]=1. Ese borde es a, y para extenderlo también esperas b.
+8. Vuelve a fallar y pasa a k=π[0]=0. Todavía estás procesando c.
+9. Compara c con la primera a. Falla el borde vacío y queda π[5]=0.
+10. En i=6 llega a. Desde cero sí puede empezar el prefijo. Guarda π[6]=1.
+
+**Comprobación.** La tabla queda [0,0,1,2,3,0,1]. La posición 5 consume varios intentos y un solo avance. Los retrocesos se pagan con progreso acumulado.

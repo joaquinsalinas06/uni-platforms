@@ -1,0 +1,15 @@
+id: cache-oblivious-veb-layout
+title: Modelo cache-oblivious y layout van Emde Boas
+type: algorithm
+week: week-10
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- external-memory-model
+- b-tree
+complexity:
+  Búsqueda estática:
+    worst: O(1 + log_B N)
+    reasoning: Los fragmentos contiguos de tamaño a lo sumo B cubren grupos de niveles consecutivos
+      en el camino.
+    source: Sem10_Memory_Hierarchy_III.pdf#9-25

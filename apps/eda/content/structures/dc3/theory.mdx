@@ -1,0 +1,193 @@
+---
+kind: "theory"
+title: "Construcción lineal con DC3"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+La duplicación de prefijos repite un ordenamiento para cada potencia de dos. DC3 obtiene una construcción lineal ordenando recursivamente sólo parte de los sufijos.
+
+## Intuición
+
+Separa comienzos por su residuo módulo tres. Ordena primero los residuos 1 y 2. Con esos rangos, ordena el residuo 0 y mezcla. En la mezcla, lee hasta dos letras para que ambas colas caigan en clases con rango conocido.
+
+## Estructura interna
+
+La muestra contiene residuos 1 y 2. Ordena sus ternas y asigna el mismo nombre a ternas iguales. Si hay empates, resuélvelos en el texto reducido. Usa un centinela menor que cualquier carácter al completar una terna.
+
+### Qué compra muestrear dos de los tres residuos
+
+Queremos comparar sufijos leyendo pocas letras antes de mirar rangos ya resueltos. Si ambos comienzos están en la muestra, esos rangos ya permiten compararlos. Si un comienzo es de residuo cero, quitar una letra lo lleva a residuo uno y quitar dos lo lleva a residuo dos. Frente a un residuo uno basta quitar una, pues la otra cola llega a residuo dos. Frente a un residuo dos se quitan dos, pues la otra cola llega a residuo uno. Las dos reglas aseguran que ambos rangos existan al momento de consultarlos.
+
+### Los empates de ternas son empates locales
+
+En mississippi se repiten iss y ssi. Radix puede ordenar los prefijos de tres letras sin saber todavía cómo se comparan dos sufijos que empiezan igual. Nombrar una terna convierte ese bloque en un símbolo del problema reducido. La recursión conserva el orden de los símbolos y distingue qué secuencia de nombres sigue después de cada terna repetida. Cuando los nombres ya separan todos los comienzos de la muestra, se conocen los rangos sin esa llamada adicional.
+
+Con los rangos definitivos, cada comienzo de residuo cero se puede ordenar por la primera letra y el rango de su cola. Entonces quedan dos listas ordenadas para la mezcla final. Si dos primeras letras difieren, no hace falta tocar los rangos. Se consultan precisamente cuando las primeras letras no bastan.
+
+## Operaciones
+
+Ordena las ternas con radix. Asigna nombres y recurre si no son únicos. Ordena los sufijos del residuo 0 por su primera letra y el rango de su cola. Mezcla comparando letra y rango cuando el otro sufijo es residuo 1, o dos letras y rango cuando es residuo 2.
+
+### mississippi · detectar las ternas que exigen recursión
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Marca los comienzos de residuo 1 y 2. Los de residuo 0 quedan para después.",
+      arrays: [
+        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"], "states": ["muted", "active", "active", "muted", "active", "active", "muted", "active", "active", "muted", "active"]},
+        {"id": "row-1", "label": "Texto", "row": 1, "cells": ["m", "i", "s", "s", "i", "s", "s", "i", "p", "p", "i"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "En residuo 1 se leen las ternas que empiezan en 1, 4, 7 y 10.",
+      arrays: [
+        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["1", "4", "7", "10"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Ternas", "row": 1, "cells": ["iss", "iss", "ipp", "i$$"], "states": ["marked", "marked", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "En residuo 2 se leen las que empiezan en 2, 5 y 8.",
+      arrays: [
+        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["2", "5", "8"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Ternas", "row": 1, "cells": ["ssi", "ssi", "ppi"], "states": ["marked", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Ordena las ternas distintas y asigna sus nombres.",
+      arrays: [
+        {"id": "row-0", "label": "Ternas únicas", "row": 0, "cells": ["i$$", "ipp", "iss", "ppi", "ssi"], "states": ["idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Nombres", "row": 1, "cells": ["0", "1", "2", "3", "4"], "states": ["idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Concatena los nombres de residuo 1 y luego los de residuo 2 según el ejemplo de clase.",
+      arrays: [
+        {"id": "row-0", "label": "Texto reducido", "row": 0, "cells": ["2", "2", "1", "0", "4", "4", "3"], "states": ["marked", "marked", "idle", "idle", "marked", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Las ternas repetidas conservan el empate local. El orden de las colas se resuelve en el problema reducido.",
+      arrays: [
+        {"id": "row-0", "label": "Nombres repetidos", "row": 0, "cells": ["2", "4"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Mezclar comparando hasta dos caracteres
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Compara los sufijos de mississippi en 3 y 2. Sus residuos son 0 y 2.",
+      arrays: [
+        {"id": "row-0", "label": "Inicio 3", "row": 0, "cells": ["s", "i", "s", "s", "i", "p", "p", "i"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Inicio 2", "row": 1, "cells": ["s", "s", "i", "s", "s", "i", "p", "p", "i"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La primera s coincide. La segunda letra decide: i es menor que s.",
+      arrays: [
+        {"id": "row-0", "label": "Inicio 3", "row": 0, "cells": ["s", "i", "s", "s", "i", "p", "p", "i"], "states": ["idle", "answer", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Inicio 2", "row": 1, "cells": ["s", "s", "i", "s", "s", "i", "p", "p", "i"], "states": ["idle", "active", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Si las dos letras coincidieran, compararías los rangos de 3+2 y 2+2. Ambas colas ya están en la muestra.",
+      arrays: [
+        {"id": "row-0", "label": "Colas de muestra", "row": 0, "cells": ["5:residuo_2", "4:residuo_1"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Los nombres de ternas ordenan prefijos de longitud tres. La recursión distingue la sucesión de ternas cuando esos nombres empatan. Después, la mezcla tiene dos listas ya ordenadas: los residuos de muestra y el residuo restante. Cada comparación elige una cabeza y la emite. La parte crítica es que, cuando quedan letras empatadas, las colas estén en clases cuyos rangos ya fueron calculados.
+
+## Análisis de complejidad
+
+Ordenar ternas y pares de enteros en rangos lineales cuesta $O(n)$ por nivel con radix y alfabeto entero adecuado. La mezcla consume $O(n)$ porque cada comparación emite un sufijo y usa hasta dos caracteres y un rango por lado. El único subproblema tiene tamaño $2n/3+O(1)$. Sumando $n+2n/3+4n/9+\cdots$ se obtiene $O(n)$.
+
+### Contar el trabajo por nivel de la recursión
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "En el nivel inicial se preparan ternas y se mezclan n sufijos.",
+      arrays: [
+        {"id": "row-0", "label": "Nivel 0", "row": 0, "cells": ["n"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El único subproblema tiene unos 2n/3 comienzos.",
+      arrays: [
+        {"id": "row-0", "label": "Nivel 0", "row": 0, "cells": ["n"], "states": ["idle"]},
+        {"id": "row-1", "label": "Nivel 1", "row": 1, "cells": ["2n/3"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "En el siguiente quedan unos 4n/9. El trabajo por nivel es proporcional a su tamaño.",
+      arrays: [
+        {"id": "row-0", "label": "Nivel 0", "row": 0, "cells": ["n"], "states": ["idle"]},
+        {"id": "row-1", "label": "Nivel 1", "row": 1, "cells": ["2n/3"], "states": ["idle"]},
+        {"id": "row-2", "label": "Nivel 2", "row": 2, "cells": ["4n/9"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La suma geométrica n(1+2/3+4/9+…) está acotada por 3n, ignorando redondeos del caso base.",
+      arrays: [
+        {"id": "row-0", "label": "Costo total", "row": 0, "cells": ["O(n)"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo justificar la cota en el examen
+
+En cada nivel hay trabajo lineal para formar la muestra, ordenar ternas con radix, ordenar los comienzos de residuo cero y mezclar. Sólo hay una llamada recursiva con aproximadamente $2n/3$ posiciones. Desplegar $T(n)$ produce $n+2n/3+4n/9+cdots$. Que la suma sea geométrica depende de que el **tamaño** disminuye, no de que cada nivel cueste $O(n)$ respecto a la entrada original.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/dc3/examples) y [preguntas con pistas](/structures/dc3/exercises).
+
+## Comparación con estructuras relacionadas
+
+Manber–Myers duplica el prefijo en todas las posiciones. DC3 reduce el número de posiciones del subproblema. La presentación también menciona SA-IS entre las construcciones lineales.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/dc3/mastery-check).
+
+*Fuente de clase: Sem13_Strings_II.pdf · pp. 31-40.*

@@ -1,0 +1,13 @@
+id: knuth-morris-pratt
+title: Función prefijo y KMP
+type: algorithm
+week: week-12
+hasVisualization: true
+visualizationType: range-tree
+prerequisites: []
+complexity:
+  Preparación y búsqueda:
+    worst: O(m+n)
+    reasoning: El total de retrocesos está acotado por los incrementos del prefijo reconocido al recorrer
+      una vez el patrón y el texto.
+    source: Sem12_Strings_I.pdf#12-26

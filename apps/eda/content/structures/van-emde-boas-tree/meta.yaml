@@ -1,0 +1,14 @@
+id: van-emde-boas-tree
+title: Árbol van Emde Boas
+type: structure
+week: week-11
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- integer-predecessor
+complexity:
+  Vecinos y actualización:
+    worst: O(lg lg u)
+    reasoning: Cada llamada reduce la palabra a la mitad y consulta recursivamente a lo sumo un subproblema
+      no trivial.
+    source: Sem11_Integers_I.pdf#27-60

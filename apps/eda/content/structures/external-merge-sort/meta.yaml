@@ -1,0 +1,14 @@
+id: external-merge-sort
+title: Ordenamiento externo por mezcla
+type: algorithm
+week: week-10
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- external-memory-model
+complexity:
+  Ordenamiento:
+    worst: Θ((N/B)(1 + log_F(N/M)))
+    reasoning: La generación y cada pasada de mezcla leen y escriben todos los bloques, con fan-in
+      F y N ≥ M.
+    source: Sem10_Memory_Hierarchy_I.pdf#44-59

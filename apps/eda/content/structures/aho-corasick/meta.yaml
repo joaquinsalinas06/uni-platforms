@@ -1,0 +1,18 @@
+id: aho-corasick
+title: Aho–Corasick
+type: algorithm
+week: week-12
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- knuth-morris-pratt
+- trie
+complexity:
+  Construcción del autómata:
+    worst: O(V |Σ|)
+    reasoning: La tabla completa contiene una transición para cada par de nodo y carácter del alfabeto.
+    source: Sem12_Strings_I.pdf#32-45
+  Búsqueda con reporte:
+    worst: O(n+z)
+    reasoning: Hay una transición por carácter y se cobra una vez cada coincidencia emitida.
+    source: Sem12_Strings_I.pdf#32-45

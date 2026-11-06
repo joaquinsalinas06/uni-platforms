@@ -1,0 +1,168 @@
+---
+kind: "theory"
+title: "Función prefijo y KMP"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Después de una discrepancia, reiniciar el patrón y retroceder en el texto repite comparaciones que ya tenían respuesta.
+
+## Intuición
+
+Lo que acabas de reconocer puede terminar con el comienzo del mismo patrón. Reutiliza el mayor borde y vuelve a comparar el carácter actual con el siguiente carácter de ese borde.
+
+## Estructura interna
+
+$\pi[i]$ es la longitud del mayor prefijo propio de $P[0..i]$ que también es sufijo. Durante la búsqueda, $k$ es la longitud de un prefijo de $P$ que coincide con el sufijo del texto leído. Los siguientes candidatos son $\pi[k-1]$, luego el borde de ese borde.
+
+### El borde es lo que permite mantener el texto quieto
+
+Supón que ya coincidieron $k$ letras y falla la siguiente. Si todavía hay una aparición parcial que termina justo antes del fallo, empieza dentro de ese fragmento leído. Su prefijo coincide con un sufijo de las $k$ letras conocidas. Por tanto sólo sirven los bordes del prefijo que acabas de reconocer. El mayor borde ofrece la coincidencia parcial más larga todavía compatible. Si también falla, sus propios bordes son exactamente los candidatos más cortos que quedan por probar.
+
+La función prefijo reúne esas alternativas antes de recorrer el texto. Para construir su entrada siguiente se usa la misma idea: intenta extender el borde anterior. Cuando el carácter nuevo no coincide con el que habría que agregar, recorta al siguiente borde disponible y repite la comparación. Si el borde vacío no se puede extender, la respuesta queda en cero.
+
+### Qué se conserva al reportar
+
+Al completar el patrón, las últimas letras podrían ser el inicio de otra aparición. Retener el mayor borde propio conserva esa posibilidad. En aba, el borde es a. Por eso reconocer una aparición que empieza en 0 todavía deja información para la que empieza en 2. El diagrama de solapamiento sirve para distinguir el fin de una coincidencia del fin de la búsqueda.
+
+## Operaciones
+
+Al comparar un carácter nuevo, retrocede por bordes mientras haya discrepancia. Incrementa $k$ si coincide. Si $k=m$, reporta el inicio y pasa a $\pi[m-1]$ para conservar solapamientos.
+
+### Función prefijo de ababaca · dos retrocesos en la misma letra
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Las cuatro primeras posiciones producen π=0,0,1,2.",
+      arrays: [
+        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "·", "·", "·"], "states": ["idle", "idle", "idle", "answer", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La a de índice 4 extiende el prefijo ab y reconoce aba.",
+      arrays: [
+        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "idle", "active", "idle", "idle"]},
+        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "3", "·", "·"], "states": ["idle", "idle", "idle", "idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "En c esperamos b con k=3. Falla la comparación.",
+      arrays: [
+        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "idle", "idle", "marked", "idle", "active", "idle"]},
+        {"id": "row-1", "label": "k", "row": 1, "cells": ["3"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "π[2]=1. Prueba c frente a P[1]=b. Vuelve a fallar.",
+      arrays: [
+        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["idle", "marked", "idle", "idle", "idle", "active", "idle"]},
+        {"id": "row-1", "label": "k", "row": 1, "cells": ["3", "1"], "states": ["muted", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "π[0]=0. Tampoco coincide con a. Guarda π[5]=0.",
+      arrays: [
+        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "idle", "idle", "idle", "active", "idle"]},
+        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "3", "0", "·"], "states": ["idle", "idle", "idle", "idle", "idle", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La última a coincide con P[0]. Guarda 1.",
+      arrays: [
+        {"id": "row-0", "label": "Patrón", "row": 0, "cells": ["a", "b", "a", "b", "a", "c", "a"], "states": ["marked", "idle", "idle", "idle", "idle", "idle", "active"]},
+        {"id": "row-1", "label": "π", "row": 1, "cells": ["0", "0", "1", "2", "3", "0", "1"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Patrón aba en abababa · conservar solapamientos
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Reconoce el primer carácter del patrón.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["active", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "k", "row": 1, "cells": ["1"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Lee b. El prefijo reconocido es ab.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "active", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "k", "row": 1, "cells": ["2"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Lee a. Reporta inicio 0 y conserva el borde a.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["answer", "answer", "answer", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "k tras reportar", "row": 1, "cells": ["1"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Desde ese borde, b y a completan otra aparición, inicio 2.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "answer", "answer", "answer", "idle", "idle"]},
+        {"id": "row-1", "label": "k tras reportar", "row": 1, "cells": ["1"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Los dos últimos caracteres completan la aparición de inicio 4.",
+      arrays: [
+        {"id": "row-0", "label": "Texto", "row": 0, "cells": ["a", "b", "a", "b", "a", "b", "a"], "states": ["idle", "idle", "idle", "idle", "answer", "answer", "answer"]},
+        {"id": "row-1", "label": "Inicios", "row": 1, "cells": ["0", "2", "4"], "states": ["answer", "answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Al hacer la traza escribe el carácter actual una sola vez y debajo todos los valores de k probados para él. Pasar de k a π[k−1] conserva exactamente un sufijo que ya fue comparado, y la próxima comparación decide si puede crecer. Después de reportar, el mismo razonamiento explica cómo conservar el mayor borde propio sin reportar el mismo inicio dos veces.
+
+## Análisis de complejidad
+
+Cada avance del texto puede incrementar $k$ a lo sumo una vez. Cada retroceso disminuye $k$ al menos en uno y $k$ nunca es negativo. Por tanto el total de retrocesos es a lo sumo el total de incrementos, aunque un solo carácter pueda disparar varios. Aplicar el mismo argumento al patrón y al texto da $O(m+n)$ tiempo. El arreglo de prefijos usa $O(m)$ espacio.
+
+### Cómo justificar la cota en el examen
+
+Usa $k$ como contador de progreso. Cada carácter nuevo puede aportar una unidad y cada retroceso consume al menos una unidad disponible. Como $k$ no baja de cero, en todo el recorrido hay a lo sumo tantas disminuciones como unidades aportadas. Cuenta además las comparaciones que cierran el procesamiento de un carácter. Construir $pi$ aplica ese mismo argumento al patrón y la búsqueda lo aplica al texto.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/knuth-morris-pratt/examples) y [preguntas con pistas](/structures/knuth-morris-pratt/exercises).
+
+## Comparación con estructuras relacionadas
+
+La búsqueda directa prueba cada alineación desde cero. KMP resume las alineaciones compatibles con lo que ya leyó. Aho–Corasick comparte ese razonamiento entre patrones.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/knuth-morris-pratt/mastery-check).
+
+*Fuente de clase: Sem12_Strings_I.pdf · pp. 12-26.*

@@ -1,0 +1,183 @@
+---
+kind: "theory"
+title: "Árbol cartesiano"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+RMQ habla de posiciones de arreglo. Si esas posiciones se convierten en nodos con la relación de ancestros correcta, la consulta se vuelve un LCA.
+
+## Intuición
+
+El menor valor es la raíz. Los elementos a su izquierda forman el subárbol izquierdo. Los de su derecha forman el derecho. Se repite el criterio en cada subintervalo.
+
+## Estructura interna
+
+El recorrido inorden recupera los índices originales. Cada padre tiene valor menor o igual que sus hijos, con desempate por índice. El stack conserva la espina derecha del árbol parcial en orden creciente de la prioridad valor–índice.
+
+### Un nodo tiene posición y prioridad
+
+Cada nodo representa un índice del arreglo. Colocarlo a la izquierda o a la derecha es una decisión sobre **posición**. Ponerlo encima o debajo de otro nodo es una decisión sobre **valor**. En [7,8,2,6,9,4], el 4 está a la derecha de 2 porque se leyó después. Dentro de esa región queda encima de 6 y 9 porque es el menor valor de su intervalo. Por eso un árbol cartesiano puede tener un hijo izquierdo con valor mayor que el padre, algo que no sucedería en un BST ordenado por esos mismos valores.
+
+### Cómo actualizar la espina sin perder nodos
+
+Antes de insertar la siguiente posición, todos los nodos capaces de recibir un hijo nuevo están en el camino derecho. Si el elemento nuevo es mayor que el tope, se conecta directamente al final de la espina. Si es menor, quita de la pila los nodos que ya no pueden quedar encima de él. El último retirado encabeza el fragmento que termina antes del nuevo índice. Se conecta como hijo izquierdo del nodo entrante. Su descendencia queda intacta. Si queda un tope previo, apunta a la raíz nueva de ese fragmento ampliado.
+
+En caso de empate, desempatar por índice fija qué aparición queda arriba. Así el árbol y el RMQ devuelven consistentemente el primer mínimo cuando hay repetidos.
+
+## Operaciones
+
+Lee el arreglo de izquierda a derecha. Retira los valores mayores del stack. El último subárbol retirado pasa a la izquierda del nuevo nodo. Si queda un tope, el nuevo nodo pasa a su derecha. Si el stack se vacía, el nuevo nodo se vuelve raíz.
+
+### Construcción de clase · [7,8,2,6,9,4]
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "7 entra primero y es raíz provisional.",
+      nodes: [
+        {"id": "a", "value": "7", "parent": null, "state": "active"},
+      ],
+    },
+    {
+      note: "8 es mayor que 7. Se enlaza como hijo derecho.",
+      nodes: [
+        {"id": "a", "value": "7", "parent": null},
+        {"id": "b", "value": "8", "parent": "a", "state": "active", "side": "right"},
+      ],
+    },
+    {
+      note: "2 es menor que 8. Retira 8 de la espina, pero conserva el nodo en el árbol.",
+      nodes: [
+        {"id": "a", "value": "7", "parent": null},
+        {"id": "b", "value": "8", "parent": "a", "state": "marked", "side": "right"},
+      ],
+    },
+    {
+      note: "2 también retira 7. El subárbol de 7 pasa entero a su izquierda.",
+      nodes: [
+        {"id": "c", "value": "2", "parent": null, "state": "active"},
+        {"id": "a", "value": "7", "parent": "c", "state": "marked"},
+        {"id": "b", "value": "8", "parent": "a", "side": "right"},
+      ],
+    },
+    {
+      note: "6 se enlaza a la derecha de 2.",
+      nodes: [
+        {"id": "c", "value": "2", "parent": null},
+        {"id": "a", "value": "7", "parent": "c"},
+        {"id": "b", "value": "8", "parent": "a", "side": "right"},
+        {"id": "d", "value": "6", "parent": "c", "state": "active"},
+      ],
+    },
+    {
+      note: "9 se enlaza a la derecha de 6.",
+      nodes: [
+        {"id": "c", "value": "2", "parent": null},
+        {"id": "a", "value": "7", "parent": "c"},
+        {"id": "b", "value": "8", "parent": "a", "side": "right"},
+        {"id": "d", "value": "6", "parent": "c"},
+        {"id": "e", "value": "9", "parent": "d", "state": "active", "side": "right"},
+      ],
+    },
+    {
+      note: "4 retira 9 y 6, pero se detiene en 2.",
+      nodes: [
+        {"id": "c", "value": "2", "parent": null},
+        {"id": "a", "value": "7", "parent": "c"},
+        {"id": "b", "value": "8", "parent": "a", "side": "right"},
+        {"id": "d", "value": "6", "parent": "c", "state": "marked"},
+        {"id": "e", "value": "9", "parent": "d", "state": "marked", "side": "right"},
+      ],
+    },
+    {
+      note: "4 se enlaza a la derecha de 2. 6 pasa a su izquierda, con 9 intacto.",
+      nodes: [
+        {"id": "c", "value": "2", "parent": null},
+        {"id": "a", "value": "7", "parent": "c"},
+        {"id": "b", "value": "8", "parent": "a", "side": "right"},
+        {"id": "f", "value": "4", "parent": "c", "state": "active"},
+        {"id": "d", "value": "6", "parent": "f", "side": "left"},
+        {"id": "e", "value": "9", "parent": "d", "side": "right"},
+      ],
+    },
+    {
+      note: "Para RMQ(3,5), los extremos son 6 y 4. El LCA es 4, índice 5.",
+      nodes: [
+        {"id": "c", "value": "2", "parent": null},
+        {"id": "a", "value": "7", "parent": "c"},
+        {"id": "b", "value": "8", "parent": "a", "side": "right"},
+        {"id": "f", "value": "4", "parent": "c", "state": "answer"},
+        {"id": "d", "value": "6", "parent": "f", "state": "active", "side": "left"},
+        {"id": "e", "value": "9", "parent": "d", "side": "right"},
+      ],
+    },
+  ],
+}} />
+
+### Contabilidad de la espina derecha
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Después de 7,8, la espina es creciente.",
+      arrays: [
+        {"id": "row-0", "label": "Stack", "row": 0, "cells": ["7", "8"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Al llegar 2 se hacen dos retiros y una inserción.",
+      arrays: [
+        {"id": "row-0", "label": "Retiros", "row": 0, "cells": ["8", "7"], "states": ["active", "active"]},
+        {"id": "row-1", "label": "Stack", "row": 1, "cells": ["2"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Al llegar 4 se retiran 9 y 6. El 2 permanece.",
+      arrays: [
+        {"id": "row-0", "label": "Retiros", "row": 0, "cells": ["9", "6"], "states": ["active", "active"]},
+        {"id": "row-1", "label": "Stack", "row": 1, "cells": ["2", "4"], "states": ["idle", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+La pila muestra sólo la frontera por donde pueden entrar posiciones nuevas. Los nodos retirados dejan de ser candidatos para recibir el siguiente hijo derecho, pero conservan todos sus descendientes. Al dibujar, verifica dos propiedades por separado: el nuevo nodo queda después de todos los índices anteriores en inorden y las conexiones nuevas respetan prioridad por valor.
+
+## Análisis de complejidad
+
+Cada índice entra al stack una vez y sale a lo sumo una vez. Aunque leer un nuevo mínimo pueda retirar muchos nodos en un solo paso, la suma de retiros de toda la construcción es $O(n)$. En un RMQ, el LCA de los extremos pertenece al intervalo por el orden inorden. Todos los índices del intervalo están bajo ese ancestro, así que su valor es el menor por el invariante de heap.
+
+### Cómo justificar la cota en el examen
+
+En un arreglo decreciente puede cambiar la raíz en cada paso. En otros arreglos, un único nuevo mínimo puede retirar muchos índices. En ambos casos, carga cada retiro a ese índice: se insertó una vez y ya no regresará a la espina. Así hay $n$ inserciones de pila y a lo sumo $n$ retiros. El costo total $O(n)$ se refiere a construir todo el árbol.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/cartesian-tree/examples) y [preguntas con pistas](/structures/cartesian-tree/exercises).
+
+## Comparación con estructuras relacionadas
+
+El árbol cartesiano combina orden inorden por índice con prioridad por valor. En un BST ordinario, la comparación por llave determina el orden inorden.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/cartesian-tree/mastery-check).
+
+*Fuente de clase: Sem12_Static_Trees.pdf · pp. 19-23.*

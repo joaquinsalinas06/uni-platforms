@@ -1,0 +1,155 @@
+---
+kind: "theory"
+title: "Y-fast trie"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+X-fast acelera la búsqueda, pero materializar los prefijos de todas las llaves ocupa demasiado espacio.
+
+## Intuición
+
+Divide las llaves ordenadas en grupos de tamaño del orden de $w$. Indexa sólo un representante por grupo con X-fast. Un árbol balanceado resuelve la consulta local.
+
+## Estructura interna
+
+Los grupos cubren intervalos consecutivos. En la escena cada máximo representa su grupo. Para responder un predecesor, si el grupo elegido no tiene candidato, se considera el máximo del grupo anterior. La representación puede usar representantes estables o muestreados según la variante.
+
+### Por qué el representante es una frontera
+
+Si representas cada grupo por su máximo, el primero que alcanza $q$ ubica el único grupo que puede contener una llave igual a $q$. También es el primer lugar donde vale la pena buscar un vecino cercano. El grupo puede no contener predecesor, aunque su máximo sí alcance a la consulta: su mínimo podría estar por encima de $q$. En ese caso cualquier grupo posterior queda aún más lejos. El candidato correcto es el extremo del grupo previo. Para un sucesor estricto, una coincidencia en el máximo del grupo obliga a considerar el siguiente grupo.
+
+### Por qué el umbral importa para el costo
+
+Dividir cada vez que entra una llave sería caro. La construcción deja a los grupos fluctuar entre tamaños permitidos y se reorganiza sólo al cruzar un umbral. Al dividir un grupo grande, ambas mitades quedan lejos del umbral de desborde. Al combinar grupos pequeños, se busca recuperar una holgura comparable. Eso hace que cambios locales ordinarios financien la próxima operación que sí modifica representantes.
+
+El índice superior crece con el número de grupos, no con el número de llaves de cada uno. El trabajo local conserva todas las llaves en árboles pequeños. Es la misma separación que debes señalar al explicar por qué el espacio deja de ser proporcional a $nw$.
+
+## Operaciones
+
+Busca el grupo candidato mediante el índice. Resuelve el vecino local. Una actualización ordinaria toca el grupo. Si un grupo se vuelve demasiado grande, lo divide y actualiza el índice de representantes. Si queda demasiado pequeño, combina o redistribuye con un vecino.
+
+### Buscar en el grupo y cruzar al vecino
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Cada máximo resume un grupo contiguo.",
+      arrays: [
+        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-1", "label": "G0", "row": 1, "cells": ["1", "4", "7"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-2", "label": "G1", "row": 2, "cells": ["10", "13", "15"], "states": ["idle", "idle", "idle"]},
+        {"id": "row-3", "label": "G2", "row": 3, "cells": ["18", "20", "23"], "states": ["idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Consulta 14. El primer máximo que alcanza 14 es 15.",
+      arrays: [
+        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["muted", "answer", "idle"]},
+        {"id": "row-1", "label": "G1", "row": 1, "cells": ["10", "13", "14", "15"], "states": ["idle", "idle", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El candidato local es 13.",
+      arrays: [
+        {"id": "row-0", "label": "G1", "row": 0, "cells": ["10", "13", "14", "15"], "states": ["idle", "answer", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Consulta 9. El índice selecciona el mismo grupo, pero el mínimo 10 es demasiado grande.",
+      arrays: [
+        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["idle", "answer", "idle"]},
+        {"id": "row-1", "label": "G1", "row": 1, "cells": ["9", "10", "13", "15"], "states": ["marked", "muted", "muted", "muted"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Cruza al grupo anterior y usa su máximo, 7.",
+      arrays: [
+        {"id": "row-0", "label": "G0", "row": 0, "cells": ["1", "4", "7"], "states": ["idle", "idle", "answer"]},
+        {"id": "row-1", "label": "G1", "row": 1, "cells": ["9", "10", "13", "15"], "states": ["marked", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Una división cambia el índice
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Modelo pequeño con capacidad pedagógica cuatro. El grupo de máximo 15 está lleno.",
+      arrays: [
+        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "15", "23"], "states": ["idle", "marked", "idle"]},
+        {"id": "row-1", "label": "Grupo", "row": 1, "cells": ["10", "11", "13", "15"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Inserta 12. El grupo pasa a cinco entradas.",
+      arrays: [
+        {"id": "row-0", "label": "Grupo", "row": 0, "cells": ["10", "11", "12", "13", "15"], "states": ["idle", "idle", "active", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Divide los cinco elementos en dos intervalos consecutivos.",
+      arrays: [
+        {"id": "row-0", "label": "Grupo izquierdo", "row": 0, "cells": ["10", "11"], "states": ["idle", "answer"]},
+        {"id": "row-1", "label": "Grupo derecho", "row": 1, "cells": ["12", "13", "15"], "states": ["idle", "idle", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El índice incorpora el representante 11. El 15 conserva el grupo de la derecha.",
+      arrays: [
+        {"id": "row-0", "label": "Representantes", "row": 0, "cells": ["7", "11", "15", "23"], "states": ["idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Para seguir la traza, mantén dos filas separadas. Arriba viven los representantes ordenados. Abajo viven todas las llaves, agrupadas en intervalos consecutivos. Una búsqueda puede leer un representante sin que sea el resultado. Una actualización que altera la partición puede tocar ambos niveles aunque las llaves sigan en su orden original.
+
+## Análisis de complejidad
+
+Con $O(n/w)$ representantes y $O(w)$ prefijos por representante, el índice ocupa $O(n)$ espacio, usando un caso base directo para un conjunto pequeño. La consulta combina $O(\lg w)$ tiempo esperado en el índice con $O(\lg w)$ en el árbol local. Una reparación estructural puede cambiar prefijos en $O(w)$ tiempo esperado. La agrupación paga esa reparación con las $\Omega(w)$ actualizaciones entre eventos, o con la baja probabilidad de modificar una llave representativa en la variante muestreada. En la variante agrupada de clase, el costo total de actualizar es $O(\lg w)$ amortizado, con el costo esperado del diccionario cuando se usa hashing.
+
+### Cómo justificar la cota en el examen
+
+La consulta paga un X-fast y luego una búsqueda balanceada sobre $O(w)$ llaves. Los dos términos son del orden de $lg w$, con esperanza para los diccionarios. Dividir o fusionar cuesta $O(w)$ cuando hay que reconstruir un grupo y cambiar prefijos del índice. Tras la reparación, hacen falta $Omega(w)$ cambios para volver al umbral. Eso justifica sumar un cargo amortizado constante por reparación al costo ordinario de buscar y actualizar.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/y-fast-trie/examples) y [preguntas con pistas](/structures/y-fast-trie/exercises).
+
+## Comparación con estructuras relacionadas
+
+X-fast indexa todas las llaves. Y-fast reduce el índice a representantes y paga una búsqueda local.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/y-fast-trie/mastery-check).
+
+*Fuente de clase: Sem11_Integers_II.pdf · pp. 40-64.*

@@ -1,0 +1,13 @@
+id: trie
+title: Trie
+type: structure
+week: week-12
+hasVisualization: true
+visualizationType: tree
+prerequisites: []
+complexity:
+  Búsqueda e inserción:
+    worst: O(m)
+    reasoning: Se consume una letra por paso y, bajo el modelo de clase, consultar o crear un hijo
+      toma tiempo constante.
+    source: Sem12_Strings_I.pdf#28-30

@@ -1,0 +1,151 @@
+---
+kind: "theory"
+title: "Modelo de memoria externa"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Un acceso a disco mueve un bloque entero. Contar comparaciones puede ocultar la diferencia entre recorrer datos contiguos y saltar entre bloques.
+
+Un algoritmo puede hacer el mismo trabajo de CPU que otro y tardar más porque sus datos llegan en un orden distinto. Por ejemplo, una matriz almacenada fila por fila guarda las celdas de una fila juntas. Recorrerla por filas suele aprovechar las celdas que llegaron con cada carga. Saltar de fila en fila para leer una columna puede pedir un bloque distinto en cada visita. Qué pasa cuando vuelves a una fila depende de si su bloque todavía cabe en la memoria rápida.
+
+El modelo aísla esa diferencia. En un ejercicio puedes tener que dar dos respuestas para el mismo algoritmo, una para comparaciones y otra para E/S. Las cotas tienen sentido sólo después de decir qué estás contando y dónde están los datos al comenzar.
+
+## Intuición
+
+Imagina que cada lectura trae una bandeja de $B$ registros a RAM. Cualquier registro de la bandeja ya cargada se consulta sin otra transferencia.
+
+## Estructura interna
+
+$N$ es el número de registros, $B$ los registros por bloque y $M$ los registros que caben en RAM. La métrica es el número de transferencias entre RAM y almacenamiento externo. La última bandeja también cuenta si queda incompleta.
+
+### Qué describe cada parámetro
+
+| Símbolo | Qué mide | Qué cambia si aumenta |
+| --- | --- | --- |
+| $N$ | Registros que componen la entrada | Crece el volumen a leer o escribir |
+| $B$ | Registros por bloque | Cada transferencia trae más registros juntos |
+| $M$ | Registros que caben simultáneamente en memoria rápida | Se pueden mantener más bloques o más corridas abiertas |
+
+Si $M=12$ y $B=4$, hay tres ranuras de bloque. Una puede servir para salida y quedarían dos para entradas. Esta restricción es la que reaparece en [mezcla externa](/structures/external-merge-sort). La posición de un registro dentro del archivo determina a qué bloque pertenece. Cargar un bloque reemplaza otro cuando todas las ranuras están ocupadas. Una visita posterior sólo evita una lectura si el bloque sobrevivió a ese reemplazo.
+
+**Qué cuenta como escritura.** Un algoritmo que lee para sumar puede devolver un acumulador sin escribir todo el archivo. Si copia cada registro a otro archivo, además debe vaciar los bloques de salida. Al contar una pasada, aclara si se está leyendo, escribiendo o haciendo las dos cosas. Un búfer parcial al final también puede requerir una escritura.
+
+## Operaciones
+
+En un escaneo, consume el bloque actual antes de leer el siguiente. En una búsqueda binaria, cada comparación reduce el intervalo, pero el siguiente pivote puede estar lejos del bloque actual.
+
+### Diez registros, cuatro por bloque
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Transferencia 1. Se cargan cuatro registros juntos.",
+      arrays: [
+        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["active", "active", "active", "active", "marked", "marked", "marked", "marked", "idle", "idle"]},
+        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["active", "active", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Recorrer los cuatro registros no añade lecturas.",
+      arrays: [
+        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "idle", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Transferencia 2. Carga el siguiente bloque contiguo.",
+      arrays: [
+        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["idle", "idle", "idle", "idle", "active", "active", "active", "active", "idle", "idle"]},
+        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["4", "5", "6", "7"], "states": ["active", "active", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Transferencia 3. Los dos últimos registros todavía ocupan una lectura.",
+      arrays: [
+        {"id": "row-0", "label": "Disco", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "active", "active"]},
+        {"id": "row-1", "label": "RAM", "row": 1, "cells": ["8", "9"], "states": ["active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Balance final. Diez visitas a registros y tres transferencias.",
+      arrays: [
+        {"id": "row-0", "label": "Bloques transferidos", "row": 0, "cells": ["1", "2", "3"], "states": ["answer", "answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cuatro separadores, cinco destinos
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Las llaves de un bloque separan cinco intervalos.",
+      arrays: [
+        {"id": "row-0", "label": "Separadores", "row": 0, "cells": ["10", "20", "30", "40"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Intervalos", "row": 1, "cells": ["<10", "10–20", "20–30", "30–40", ">40"], "states": ["idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para q=27 sólo interesa el tercer intervalo.",
+      arrays: [
+        {"id": "row-0", "label": "Separadores", "row": 0, "cells": ["10", "20", "30", "40"], "states": ["idle", "active", "active", "idle"]},
+        {"id": "row-1", "label": "Intervalos", "row": 1, "cells": ["<10", "10–20", "20–30", "30–40", ">40"], "states": ["idle", "idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+## Análisis de complejidad
+
+Un escaneo alineado necesita $\lceil N/B\rceil$ transferencias. Una búsqueda binaria sobre un arreglo grande puede gastar una lectura por reducción hasta que queden $O(B)$ registros, de modo que cuesta $O(1+\lg(N/B))$ E/S. En el modelo de comparaciones, un bloque con $B$ llaves distingue hasta $B+1$ intervalos de ausencia. Un árbol de decisiones de $t$ lecturas distingue a lo sumo $(B+1)^t$ intervalos y necesita cubrir $N+1$. De ahí sale $\Omega(\log_{B+1}(N+1))$ para búsqueda por comparaciones.
+
+### De una traza a una cota de escaneo
+
+Particiona los índices del archivo en grupos de $B$. Cada grupo debe leerse al menos una vez si cualquier registro puede cambiar la respuesta. El recorrido secuencial alcanza esa cota porque termina el bloque antes de abandonarlo. Es un argumento en dos direcciones: la necesidad de inspeccionar todos los datos da la cota inferior y la traza concreta da el algoritmo que la alcanza.
+
+### Por qué una búsqueda binaria puede desaprovechar el bloque
+
+Al principio, los pivotes de la búsqueda binaria se separan por distancias grandes. Aunque una lectura traiga $B$ llaves, el algoritmo elige su próxima mitad según el pivote y puede saltar fuera del bloque. Tras $t$ reducciones queda un intervalo de tamaño aproximado $N/2^t$. Igualarlo a $B$ da $tapproxlg(N/B)$. A partir de ahí la región cabe en uno o dos bloques contiguos, según alineación. Las comparaciones restantes ocurren dentro de lo cargado. El término constante es importante cuando todo el arreglo ya tiene tamaño de un bloque o menos.
+
+### Por qué el profesor cambia de base para la cota inferior
+
+La cota anterior describe lo que hace **una búsqueda binaria**. La cota inferior pregunta qué podría lograr cualquier método de comparaciones bajo el modelo. Si una lectura muestra hasta $B$ separadores, hay hasta $B+1$ decisiones para una consulta ausente. Para distinguir todos los puntos de inserción hacen falta al menos $N+1$ hojas. Escribe $(B+1)^tge N+1$ y despeja $t$. El [B-tree](/structures/b-tree) organiza justamente los separadores que permiten tomar una decisión de muchas ramas por bloque.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/external-memory-model/examples) y [preguntas con pistas](/structures/external-memory-model/exercises).
+
+## Comparación con estructuras relacionadas
+
+La permutación también ilustra por qué se debe declarar el modelo. El mazo compara mover registros uno por uno con ordenarlos por su posición de destino. En el modelo de registros indivisibles, la cota de permutación toma el mínimo entre $N$ y el costo de ordenar externamente.
+
+Una búsqueda binaria usa dos ramas por comparación. El B-tree convierte un bloque entero en un nodo de muchas ramas.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/external-memory-model/mastery-check).
+
+*Fuente de clase: Sem10_Memory_Hierarchy_I.pdf · pp. 28-42.*

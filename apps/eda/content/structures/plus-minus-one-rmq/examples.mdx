@@ -1,0 +1,156 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from "../../../src/components/Visualization.astro";
+
+
+Los ejemplos de micro y macro usan índices desde cero. Las alturas se usan para comparar candidatos; la respuesta es una posición.
+
+## Dos alturas iniciales, misma tabla micro
+Normaliza [4,5,4,3] y [10,11,10,9] restando respectivamente 4 y 10. Ambos quedan [0,1,0,−1]. El patrón +,−,− comparte todos los argmin locales. Para [1,3] gana la posición local 3. Recuperar el valor absoluto requiere sumar la base original, pero la posición ganadora se puede reutilizar directamente.
+
+## Cruzar dos bloques consecutivos
+En el ejemplo de clase [2,3,2,1 | 2,3,4,3], consulta [1,6]. El sufijo izquierdo aporta valor 1 en índice 3. El prefijo derecho aporta valor 2 en índice 4. No hay bloque interior. Compara esos dos candidatos y devuelve índice 3. Si ambos extremos hubieran caído dentro del primer bloque, se haría una sola consulta micro con sus dos posiciones locales.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "En la consulta [1,6], el bloque inicial aporta sólo su sufijo desde 1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque inicial", "cells": ["2", "3", "2", "1"], "states": ["idle", "active", "active", "answer"]},
+        {"id": "row-1", "row": 1, "label": "Bloque final", "cells": ["2", "3", "4", "3"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El segundo aporta su prefijo hasta 6. La última celda queda fuera.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque inicial", "cells": ["2", "3", "2", "1"], "states": ["idle", "idle", "idle", "answer"]},
+        {"id": "row-1", "row": 1, "label": "Bloque final", "cells": ["2", "3", "4", "3"], "states": ["answer", "active", "active", "muted"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "No hay bloques interiores. Compara 1 y 2 y devuelve el índice global 3.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Candidatos", "cells": ["1", "2"], "states": ["answer", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Argmin", "cells": ["3"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+## Un bloque interior sí decide
+En [3,4,3,4 | 3,2,1,2 | 3,4,5,4], consulta [3,9]. La parte izquierda aporta 4, el bloque completo del medio aporta 1 en el índice 6 y la parte derecha aporta 3. Gana el candidato macro. Si se eligiera el menor de sólo los dos extremos parciales, se devolvería 3 y se perdería el mínimo del bloque interior.
+
+## Una normalización puede invertir una comparación entre bloques
+
+Supón que una consulta deja como candidatos el valor 7 de un bloque cuya base es 8 y el valor 3 de otro cuya base es 2. Las formas normalizadas dan respectivamente −1 y +1. Si comparas esos valores, elegirías −1 y devolverías el candidato de valor 7. El argmin global correcto es el candidato de valor 3.
+
+Las tablas micro pueden decir qué posición minimiza cada fragmento sin saber su base. Una vez seleccionadas las posiciones, el último paso compara profundidades absolutas. La tabla macro también debe representar los mínimos reales de los bloques que resume.
+
+## Hacer una consulta con los tres candidatos activos
+
+Derivado. Profundidades [3,4,3,4 | 3,2,1,2 | 3,4,5,4], bloques de cuatro. Consulta [3,9].
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Marca los extremos 3 y 9. Los bloques son de cuatro entradas.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["3", "4", "3", "4"], "states": ["idle", "idle", "idle", "active"]},
+        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["3", "2", "1", "2"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-2", "row": 2, "label": "Bloque 2", "cells": ["3", "4", "5", "4"], "states": ["idle", "active", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "3 es el último índice del bloque inicial. Sólo entra esa celda.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["3", "4", "3", "4"], "states": ["muted", "muted", "muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "Candidato inicial", "cells": ["4"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El índice 9 corresponde a la posición local 1 del bloque final.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 2", "cells": ["3", "4", "5", "4"], "states": ["idle", "active", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Extremo local", "cells": ["1"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El patrón normalizado del bloque final es [0,1,2,1].",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Forma del bloque 2", "cells": ["0", "1", "2", "1"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La consulta micro usa sólo posiciones locales 0 y 1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Forma del bloque 2", "cells": ["0", "1", "2", "1"], "states": ["answer", "active", "muted", "muted"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El índice local 0 corresponde a índice global 8 y profundidad absoluta 3.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 2", "cells": ["3", "4", "5", "4"], "states": ["answer", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Candidato final", "cells": ["3"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El bloque 1 queda entero dentro de la consulta. Su mínimo está en la tabla macro.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 1", "cells": ["3", "2", "1", "2"], "states": ["active", "active", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La respuesta macro está en índice global 6, profundidad 1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 1", "cells": ["3", "2", "1", "2"], "states": ["idle", "idle", "answer", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Candidato macro", "cells": ["1"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Compara profundidades absolutas. El candidato macro supera a ambos candidatos micro por ser menor.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Candidatos", "cells": ["4", "3", "1"], "states": ["idle", "idle", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Devuelve el índice global del ganador, 6. El valor 1 sólo decidió la comparación.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Índice", "cells": ["6"], "states": ["answer"]},
+        {"id": "row-1", "row": 1, "label": "Profundidad", "cells": ["1"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+1. Ubica el extremo 3 en el bloque 0. Su posición local es 3.
+2. Ubica el extremo 9 en el bloque 2. Su posición local es 1.
+3. Como los extremos están en bloques distintos, prepara un sufijo, un prefijo y el interior completo.
+4. El sufijo del bloque 0 contiene sólo el valor 4 en índice global 3.
+5. Para el prefijo del bloque 2 usa su patrón +,+,− y el intervalo local [0,1].
+6. La consulta micro devuelve el índice local 0. Convertido a global, es 8 y su profundidad real es 3.
+7. Entre ambos extremos quedó completo el bloque 1. En la tabla macro consulta sólo ese bloque.
+8. Su mínimo corresponde a la posición local 2, global 6, con profundidad 1.
+9. Compara las profundidades absolutas 4, 3 y 1. La normalización ya cumplió su función dentro de cada bloque.
+10. Devuelve el índice 6. Si se omitiera el bloque central se devolvería erróneamente el índice 8.
+
+**Comprobación.** El bloque interior puede decidir aunque las dos consultas micro sean correctas. El algoritmo usa tres consultas, con independencia de cuántos bloques completos haya dentro.

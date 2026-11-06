@@ -1,0 +1,138 @@
+---
+kind: "theory"
+title: "Trie"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Un conjunto de palabras repite muchos prefijos. Queremos compartir el recorrido de las letras que tienen en común.
+
+## Intuición
+
+Cada arista añade un carácter. Caminar desde la raíz forma un prefijo. Un nodo puede ser terminal y seguir teniendo hijos.
+
+## Estructura interna
+
+Cada nodo representa un único prefijo. La marca terminal indica que esa palabra pertenece al diccionario. Los hijos tienen caracteres distintos entre sí.
+
+### Qué representa un camino y qué representa una marca
+
+Desde la raíz, la secuencia de letras de las aristas determina el texto del nodo. Dos caminos pueden compartir sus primeras aristas y divergir cuando aparece la primera letra distinta. Después de divergir, aunque vuelvan a usar una letra igual, ya pertenecen a prefijos diferentes. Así, he y she tienen terminaciones parecidas, pero no representan el mismo prefijo desde la raíz.
+
+La marca terminal responde a otra pregunta. Todos los nodos representan prefijos de alguna palabra almacenada, pero sólo algunos representan palabras completas del conjunto. Insertar hers crea el nodo her sin marcarlo como palabra. Insertar he sí marca su nodo, y esa marca se conserva aunque más adelante le aparezca un descendiente. En un diagrama, el trazo del camino muestra que una secuencia de letras se pudo consumir; el estado terminal muestra si esa secuencia pertenece al diccionario.
+
+### Qué distingue al trie de una tabla de palabras completas
+
+Una tabla por igualdad puede decir si her está almacenada. El trie también puede decir en qué letra se aparta una consulta y qué prefijo había coincidido antes. Esa información será necesaria para definir los estados de Aho–Corasick. La forma del árbol refleja prefijos existentes y no un orden de inserción arbitrario: insertar las mismas palabras en otro orden conserva los mismos prefijos y marcas.
+
+## Operaciones
+
+Al insertar una palabra, sigue sus letras mientras haya aristas. Crea la rama que falta y marca terminal el último nodo. En búsqueda exacta se exigen tanto el camino completo como la marca terminal.
+
+### Insertar he, she, his y hers
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Empieza con el prefijo vacío.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null, "state": "active"},
+      ],
+    },
+    {
+      note: "Inserta he. e queda terminal.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
+      ],
+    },
+    {
+      note: "Inserta she. La rama s sale de la raíz y termina en she.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh", "state": "answer"},
+      ],
+    },
+    {
+      note: "Para his se comparte h, pero la segunda letra abre otra rama.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r", "state": "active"},
+        {"id": "he", "value": "he", "parent": "h"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh"},
+        {"id": "hi", "value": "hi", "parent": "h", "state": "active"},
+        {"id": "his", "value": "his", "parent": "hi", "state": "answer"},
+      ],
+    },
+    {
+      note: "Para hers se reutiliza he, que sigue siendo terminal aunque ahora tenga hijos.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h", "state": "active"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh"},
+        {"id": "hi", "value": "hi", "parent": "h"},
+        {"id": "his", "value": "his", "parent": "hi"},
+        {"id": "her", "value": "her", "parent": "he", "state": "active"},
+        {"id": "hers", "value": "hers", "parent": "her", "state": "answer"},
+      ],
+    },
+    {
+      note: "La búsqueda de her completa el camino. El nodo no es terminal, así que her sólo es prefijo.",
+      nodes: [
+        {"id": "r", "value": "ε", "parent": null},
+        {"id": "h", "value": "h", "parent": "r"},
+        {"id": "he", "value": "he", "parent": "h", "state": "answer"},
+        {"id": "s", "value": "s", "parent": "r"},
+        {"id": "sh", "value": "sh", "parent": "s"},
+        {"id": "she", "value": "she", "parent": "sh", "state": "answer"},
+        {"id": "hi", "value": "hi", "parent": "h"},
+        {"id": "his", "value": "his", "parent": "hi", "state": "answer"},
+        {"id": "her", "value": "her", "parent": "he", "state": "marked"},
+        {"id": "hers", "value": "hers", "parent": "her", "state": "answer"},
+      ],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+En una traza anota las letras restantes y el prefijo del nodo actual. Si existe una arista con la siguiente letra, consumirla mantiene el invariante. Si falta durante una inserción, sólo a partir de ahí se crean nodos. En una consulta, la falta de arista descarta todas las palabras del diccionario que podrían coincidir con ese prefijo extendido.
+
+## Análisis de complejidad
+
+Se recorre o crea una arista por letra, así que buscar o insertar una palabra de longitud $m$ cuesta $O(m)$ si elegir un hijo cuesta constante. El número de nodos está acotado por uno más la suma de longitudes, y es menor cuando hay prefijos compartidos. El espacio para los hijos depende de su representación.
+
+### Cómo justificar la cota en el examen
+
+Una palabra de m letras genera a lo sumo m consultas a hijos y m nodos nuevos. La cota O(m) supone que localizar un hijo cuesta constante. Si la representación obliga a buscar entre etiquetas de aristas, incorpora ese costo. Para el tamaño del trie cuenta prefijos distintos, porque cada uno corresponde a un nodo. La suma de longitudes es una cota superior, no el número exacto de nodos.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/trie/examples) y [preguntas con pistas](/structures/trie/exercises).
+
+## Comparación con estructuras relacionadas
+
+Un trie indexa prefijos de palabras. Aho–Corasick añade transiciones de fallo para buscar esos patrones en un texto continuo.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/trie/mastery-check).
+
+*Fuente de clase: Sem12_Strings_I.pdf · pp. 28-30.*

@@ -85,7 +85,7 @@ const hasRail = headings.some((h) => h.depth === 2);
         {data.items
           .sort((a, b) => a.level - b.level)
           .map((item) => (
-            <ExerciseBlock client:visible exercise={item} />
+            <ExerciseBlock client:visible exercise={item} label={item.label} />
           ))}
       </div>
     )

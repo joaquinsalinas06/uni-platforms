@@ -1,0 +1,19 @@
+id: plus-minus-one-rmq
+title: RMQ ±1 y método de los cuatro rusos
+type: algorithm
+week: week-12
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- static-rmq
+- lca-euler-tour
+complexity:
+  Preprocesamiento:
+    worst: O(n)
+    reasoning: Las tablas micro de patrones cuestan o(n) y la tabla macro sobre n/b mínimos cuesta
+      O(n).
+    source: Sem12_Static_Trees.pdf#29-38
+  Consulta:
+    worst: O(1)
+    reasoning: Se combinan a lo sumo dos respuestas micro y una respuesta macro.
+    source: Sem12_Static_Trees.pdf#29-38

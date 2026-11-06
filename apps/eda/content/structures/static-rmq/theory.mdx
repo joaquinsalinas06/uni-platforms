@@ -1,0 +1,164 @@
+---
+kind: "theory"
+title: "RMQ estático y sparse table"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Queremos devolver el índice de un mínimo en un intervalo de un arreglo fijo. Un escaneo repite comparaciones en cada consulta. Tabular todos los intervalos consume espacio cuadrático.
+
+## Intuición
+
+Precalcula el mínimo de cada ventana de longitud potencia de dos. Cubre la consulta con dos ventanas de la mayor potencia que quepa. Se permite solapamiento porque repetir un candidato no cambia el mínimo.
+
+## Estructura interna
+
+$M[k,i]$ guarda el índice del mínimo de $[i,i+2^k-1]$. Para empates usa el índice menor. Una ventana de nivel $k$ se compone de dos medias ventanas del nivel anterior.
+
+### El preprocesamiento es un intercambio de trabajo
+
+Sin preparar nada, un intervalo de longitud $L$ exige examinar sus $L$ valores. Si preparas todos los intervalos, cada consulta sólo lee una entrada, pero ya existen $n(n+1)/2$ pares de extremos. La sparse table se ubica entre esos extremos: prepara ventanas de ciertas longitudes y aprende a combinar dos de ellas para las consultas restantes.
+
+Para construir la fila de longitud cuatro no se vuelve a recorrer cada grupo de cuatro valores. La fila de longitud dos ya resuelve las mitades consecutivas. Cada ventana de cuatro compara los valores de los dos índices previamente guardados. El mismo principio sirve para cualquier potencia. Si en la tabla aparecen 5 y 7 como candidatos, compara $A[5]$ con $A[7]$. Elegir el menor de los índices sin mirar sus valores devolvería una respuesta incorrecta.
+
+### La cobertura necesita una propiedad del mínimo
+
+Una consulta de seis valores se cubre con dos ventanas de cuatro que se tocan en dos posiciones. Cualquier mínimo de la consulta aparece en al menos una de las ventanas. Si aparece en ambas, repetirlo no altera el resultado. Para una suma, esas dos posiciones cambiarían el total si se agregan dos veces. En el examen conviene separar la prueba geométrica de cobertura de la propiedad algebraica que permite usarla.
+
+## Operaciones
+
+Para $[l,r]$, calcula $k=\lfloor\lg(r-l+1)\rfloor$. Lee $M[k,l]$ y $M[k,r-2^k+1]$. Compara sus valores y devuelve el índice ganador. Para ventanas que caen dentro del mismo bloque, una descomposición por bloques requiere una estrategia local adicional.
+
+### Construir ventanas y resolver RMQ(1,6)
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Arreglo de clase. Los índices empiezan en cero.",
+      arrays: [
+        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "A", "row": 1, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Longitud 1. El mínimo de una celda es su propio índice.",
+      arrays: [
+        {"id": "row-0", "label": "M[0]", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para M[1,2], compara A[2]=8 y A[3]=1. Gana el índice 3.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "active", "answer", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "M[1]", "row": 1, "cells": ["1", "1", "3", "3", "5", "5", "7"], "states": ["idle", "idle", "answer", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Para M[2,4], compara los mínimos de [4,5] y [6,7]. Gana A[7]=2.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "idle", "idle", "idle", "active", "idle", "answer"]},
+        {"id": "row-1", "label": "M[2]", "row": 1, "cells": ["3", "3", "3", "3", "7"], "states": ["idle", "idle", "idle", "idle", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La consulta [1,6] tiene longitud 6. Usa ventanas de longitud 4.",
+      arrays: [
+        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "marked", "marked", "marked", "marked", "marked", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Primera ventana: [1,4]. El mínimo está en 3.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "active", "active", "answer", "active", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Segunda ventana: [3,6]. Su mínimo también está en 3.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "idle", "idle", "answer", "active", "active", "active", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El solapamiento incluye el mínimo dos veces. La respuesta sigue siendo el índice 3.",
+      arrays: [
+        {"id": "row-0", "label": "Resultado", "row": 0, "cells": ["índice:3", "valor:1"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cruzar un límite de bloque
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Con bloques de dos, consulta [1,6]. Los extremos no alinean con el bloque.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["5", "3", "8", "1", "9", "4", "7", "2"], "states": ["idle", "marked", "idle", "idle", "idle", "idle", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Toma el sufijo izquierdo, los bloques interiores completos y el prefijo derecho.",
+      arrays: [
+        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["3", "1", "4", "7"], "states": ["active", "active", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El mínimo global es 1. Una consulta dentro de un único bloque necesita una consulta local.",
+      arrays: [
+        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["3", "1", "4", "7"], "states": ["idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Una celda de la tabla representa un intervalo completo. Su índice ganador sirve como representante porque ningún elemento de esa mitad puede vencerlo bajo el mismo desempate. En la consulta, coloca las dos ventanas a partir de sus extremos y comprueba la cobertura antes de mirar los valores. Así se ve por qué la tabla no necesita guardar una entrada para todas las longitudes.
+
+## Análisis de complejidad
+
+Hay $O(n\lg n)$ ventanas válidas y cada una combina dos índices en constante. La consulta usa dos lecturas y una comparación, con el logaritmo entero disponible en constante. La cobertura funciona porque $2^k\le r-l+1<2^{k+1}$. El solapamiento puede duplicar elementos. Eso es inocuo para mínimo y altera una suma.
+
+### Cómo justificar la cota en el examen
+
+Cuenta filas y costo por celda. Hay $lfloorlg n
+floor+1$ longitudes y a lo sumo $n$ comienzos por longitud. Una vez construida la fila anterior, cada celda hace una comparación. Para la consulta se leen dos entradas de una misma fila. El paso constante depende de obtener $lfloorlg L
+floor$ en tiempo constante, por ejemplo con una tabla de logaritmos enteros.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/static-rmq/examples) y [preguntas con pistas](/structures/static-rmq/exercises).
+
+## Comparación con estructuras relacionadas
+
+Un segment tree permite actualizaciones y consulta en $O(\lg n)$. La sparse table paga preprocesamiento sobre un arreglo fijo para contestar en constante.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/static-rmq/mastery-check).
+
+*Fuente de clase: Sem12_Static_Trees.pdf · pp. 8-17.*

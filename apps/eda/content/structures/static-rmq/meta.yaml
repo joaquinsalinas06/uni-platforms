@@ -1,0 +1,18 @@
+id: static-rmq
+title: RMQ estático y sparse table
+type: structure
+week: week-12
+hasVisualization: true
+visualizationType: range-tree
+prerequisites: []
+complexity:
+  Preprocesamiento:
+    worst: O(n lg n)
+    reasoning: Por cada longitud potencia de dos se calcula a lo sumo una ventana por posición en
+      tiempo constante.
+    source: Sem12_Static_Trees.pdf#8-17
+  Consulta:
+    worst: O(1)
+    reasoning: Dos ventanas precomputadas cubren todo el intervalo y basta comparar los mínimos de
+      ambas.
+    source: Sem12_Static_Trees.pdf#8-17

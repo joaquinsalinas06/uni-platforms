@@ -1,0 +1,221 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from "../../../src/components/Visualization.astro";
+
+
+En cada caso vamos a llevar dos cuentas. **Trabajo sobre registros** es lo que sucede una vez que los datos están en RAM. **Transferencias** es lo que cruza entre el almacenamiento y la RAM. Antes de aplicar una fórmula, dibuja los límites físicos de bloque. Los casos pequeños son ejemplos derivados del modelo de clase.
+
+## Un archivo de 19 registros, bloque de 4
+
+**Pregunta.** Un programa cuenta cuántos registros cumplen una condición. Empieza con la RAM vacía y puede conservar un bloque. ¿Cuántas lecturas realiza? ¿Qué pasa si vuelve a verificar los últimos tres registros?
+
+| Lectura | Índices que entran a RAM | Registros examinados hasta aquí |
+| --- | --- | --- |
+| 1 | 0–3 | 4 |
+| 2 | 4–7 | 8 |
+| 3 | 8–11 | 12 |
+| 4 | 12–15 | 16 |
+| 5 | 16–18, más una celda sin registro | 19 |
+
+Mientras trabaja con el bloque 0, el programa aplica la condición cuatro veces sin tocar disco. Cuando llega al registro 4, necesita el bloque 1. Repite el mismo razonamiento hasta el bloque 4. La última lectura todavía cuesta una transferencia porque 16, 17 y 18 viven en ese bloque físico, aunque no esté lleno.
+
+**Resultado.** Cinco lecturas, 19 evaluaciones de la condición y cero escrituras para contar. El acumulador cabe en RAM. Si verifica de nuevo 16–18 antes de cargar otro bloque, suma tres evaluaciones y **cero lecturas**. Si primero vuelve al registro 0 y su única ranura se ocupa con el bloque 0, releer 18 sí exige cargar otra vez el bloque 4.
+
+## Mismos seis registros, distinto costo por alineación
+
+Con bloques de cuatro, compara leer el intervalo cerrado $[0,5]$ con leer $[3,8]$. Ambos tienen longitud seis. El primero toca los bloques 0 y 1. El segundo toca los bloques 0, 1 y 2: empieza en la última celda del primero y termina en la primera del tercero.
+
+Para un intervalo $[l,r]$ con índices desde cero, sus bloques extremos son $lfloor l/B
+floor$ y $lfloor r/B
+floor$. El número exacto de bloques es la diferencia de esos índices más uno. Esto explica por qué $lceil N/B
+ceil$ es exacto para el archivo alineado y por qué una subconsulta de la misma longitud puede requerir una lectura más.
+
+**Caso límite.** Leer el intervalo vacío cuesta cero. Leer un intervalo no vacío de menos de cuatro registros cuesta uno si cabe dentro de un bloque y dos si cruza la frontera. El tamaño de la consulta por sí solo no determina el costo exacto.
+
+## Dos recorridos sobre las mismas 16 celdas
+
+Supón cuatro bloques de cuatro, RAM para un bloque y lecturas en frío. El orden $0,1,2,ldots,15$ hace cuatro transferencias. Ahora recorre por columnas, $0,4,8,12,1,5,9,13,ldots$. Las primeras cuatro visitas cargan los bloques 0, 1, 2 y 3. Cuando la quinta visita pide el índice 1, el bloque 0 ya salió de RAM. El patrón se repite en cada columna.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Dos filas de cuatro bastan para ver el cambio de bloque. La RAM tiene una sola ranura.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["·", "·", "·", "·"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Solicita 0. Carga el bloque 0. Cuenta acumulada: 1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["active", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["active", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Solicita 4. El bloque 1 reemplaza al bloque 0. Cuenta acumulada: 2.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["muted", "muted", "muted", "muted"]},
+        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["active", "idle", "idle", "idle"]},
+        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["active", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Solicita 1. Compartía bloque con 0, pero ese bloque ya salió. Cuenta acumulada: 3.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["idle", "active", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["muted", "muted", "muted", "muted"]},
+        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "active", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Solicita 5. Hay que traer de nuevo el bloque 1. Cuenta acumulada: 4.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "Bloque 0", "cells": ["0", "1", "2", "3"], "states": ["muted", "muted", "muted", "muted"]},
+        {"id": "row-1", "row": 1, "label": "Bloque 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "active", "idle", "idle"]},
+        {"id": "row-2", "row": 2, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "active", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Con dos ranuras, las dos últimas visitas reutilizan los bloques. La cuenta baja a 2.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM · ranura 0", "cells": ["0", "1", "2", "3"], "states": ["idle", "answer", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "RAM · ranura 1", "cells": ["4", "5", "6", "7"], "states": ["idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+**Resultado.** La traza por columnas hace 16 transferencias y el escaneo hace 4. Ambos inspeccionan 16 registros. Si la RAM pudiera retener los cuatro bloques, la segunda traza también pagaría sólo las cuatro cargas iniciales. Así se separan la localidad del recorrido y la capacidad de retención.
+
+## Cuatro llaves separan cinco resultados de ausencia
+
+Un bloque contiene $10,20,30,40$. Si la consulta es 27, sabemos que cae entre 20 y 30. Si la consulta es 5, queda antes de 10. Para obtener el punto de inserción de cualquier consulta ausente hay cinco intervalos posibles. Dos niveles con cinco ramas pueden distinguir como máximo $5^2=25$ intervalos. Si hay 100 llaves ordenadas, existen 101 huecos, así que dos niveles no alcanzan. Tres niveles ofrecen hasta 125 hojas. Eso es una capacidad del árbol de decisiones, y explica la cota inferior sin afirmar que cualquier organización de tres bloques alcance todos los casos.
+
+En una respuesta de examen, indica primero el modelo de comparaciones y la pregunta de búsqueda ordenada. Después cuenta resultados distinguibles por lectura. La [teoría](/structures/external-memory-model#análisis-de-complejidad) desarrolla el paso al logaritmo.
+
+## Seguir cada acierto y cada fallo del búfer
+
+Derivado del modelo de clase. Bloques de cuatro, una ranura, RAM inicialmente vacía. Se piden las posiciones 0, 3, 4, 6, 1, 5, 7, 8, 11 y 2.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "La RAM empieza vacía. Las divisiones de cuatro posiciones están fijadas antes de visitar un registro.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["·", "·", "·", "·"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["0"], "states": ["idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 0. El bloque solicitado no estaba en RAM. Cárgalo. El contador queda en 1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["answer", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["1"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 3. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 1.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "idle", "answer"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["1"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 4. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 2.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["answer", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["2"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 6. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 2.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "answer", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["2"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 1. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 3.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "answer", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["3"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 5. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 4.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "answer", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["4"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 7. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 4.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["4", "5", "6", "7"], "states": ["idle", "idle", "idle", "answer"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["4"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 8. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 5.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["8", "9", "10", "11"], "states": ["answer", "idle", "idle", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["5"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 11. El bloque sigue en RAM. Esta visita no añade una lectura. El contador queda en 5.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["8", "9", "10", "11"], "states": ["idle", "idle", "idle", "answer"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["5"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Pide el índice 2. El bloque solicitado no estaba en RAM. Cárgalo y reemplaza el anterior. El contador queda en 6.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "RAM", "cells": ["0", "1", "2", "3"], "states": ["idle", "idle", "answer", "idle"]},
+        {"id": "row-1", "row": 1, "label": "Lecturas", "cells": ["6"], "states": ["active"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+1. Antes de leer, fija las fronteras: bloque 0 contiene [0,3], bloque 1 contiene [4,7] y bloque 2 contiene [8,11]. Los índices de acceso no son números de bloque.
+2. Solicita 0. La ranura está vacía, así que entra el bloque 0. El contador vale uno.
+3. Solicita 3. Pertenece al mismo bloque que 0. Extrae su registro de RAM y conserva el contador.
+4. Solicita 4. Cruzaste una frontera. Carga el bloque 1 y desaloja el 0. El contador vale dos.
+5. Solicita 6. El bloque 1 sigue residente. Esta visita añade trabajo de CPU y cero E/S.
+6. Solicita 1. Aunque ya se había leído su bloque, fue desalojado. Vuelve a traer el bloque 0. El contador vale tres.
+7. Solicita 5. Hay que volver a cargar el bloque 1. El contador vale cuatro.
+8. Solicita 7. Se reutiliza el bloque de 5. El contador queda en cuatro.
+9. Solicita 8. Entra el bloque 2 y sale el 1. El contador vale cinco.
+10. Solicita 11. Se reutiliza el bloque 2.
+11. Solicita 2. Vuelve a cargar el bloque 0. El contador final vale seis.
+
+**Comprobación.** Hubo diez accesos a registros y seis lecturas. Si caben tres bloques simultáneamente, cada uno se carga una sola vez y son tres lecturas. La traza y la condición evaluada no cambian; sólo cambia qué se conserva en RAM.

@@ -1,0 +1,15 @@
+id: packed-memory-array
+title: Packed-Memory Array
+type: structure
+week: week-11
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- ordered-file-maintenance
+complexity:
+  Rebalanceo amortizado:
+    worst: O(log² N)
+    reasoning: Los umbrales consecutivos dejan margen de orden m/log N y permiten repartir el costo
+      de cada redistribución por nivel.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf#19-43
+    analysis: amortizado

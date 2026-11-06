@@ -1,0 +1,19 @@
+id: b-tree
+title: B-tree
+type: structure
+week: week-10
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- external-memory-model
+complexity:
+  Búsqueda:
+    worst: Θ(log_{B+1} N)
+    reasoning: Cada lectura decide un hijo y la ramificación mínima por nodo interno no raíz es proporcional
+      a B.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf#19-33
+  Inserción:
+    worst: O(log_{B+1} N)
+    reasoning: Cada nivel del camino de búsqueda puede desbordar y se corrige con un número constante
+      de transferencias por nivel.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf#19-33

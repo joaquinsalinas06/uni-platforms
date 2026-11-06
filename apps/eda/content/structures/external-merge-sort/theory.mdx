@@ -1,0 +1,187 @@
+---
+kind: "theory"
+title: "Ordenamiento externo por mezcla"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Mezclar de dos en dos puede obligar a mover el archivo completo en demasiadas pasadas.
+
+## Intuición
+
+Usa la RAM de dos formas. Primero ordena trozos grandes que caben completos. Después reserva un bloque por entrada y uno para la salida, para mezclar muchas corridas simultáneamente.
+
+## Estructura interna
+
+Cada corrida está ordenada. Su frente es el menor registro pendiente. Cuando se vacía el bloque de una corrida, se carga su bloque siguiente. Cuando se llena el bloque de salida, se escribe y se reutiliza su espacio.
+
+### Generar una corrida y mezclar corridas son trabajos distintos
+
+En la primera fase, lee un trozo contiguo de tamaño hasta $M$. Mientras está completo en RAM, puedes ordenar sus registros sin pedir al disco cada comparación. Al escribirlos, obtienes una corrida ordenada. La corrida se distingue de un bloque: puede ocupar muchos bloques consecutivos, y sólo su primer bloque necesita estar residente al empezar una mezcla.
+
+En la segunda fase, la memoria se reparte. Cada entrada necesita retener el bloque del que toma su siguiente registro y la salida acumula registros hasta completar un bloque. Con espacio para cuatro bloques, abrir cuatro entradas dejaría la salida sin búfer. La reserva fija el máximo de entradas en tres. Si sólo hay una corrida después de ordenar el primer trozo, ya quedó resuelto el ordenamiento y no se añade una mezcla ficticia.
+
+### Qué ocurre si no caben todas las corridas
+
+Divide la lista de corridas en grupos de tamaño hasta $F$. Mezcla cada grupo hasta agotarlo. Las salidas de dos grupos distintos están ordenadas internamente, pero sus rangos de valores pueden superponerse. Por eso concatenarlas no produce un archivo ordenado. En la siguiente pasada vuelven a participar como corridas de entrada. La reducción de cantidad de corridas, y no un cambio en la cantidad de registros, es lo que termina el algoritmo.
+
+## Operaciones
+
+Genera corridas de hasta $M$ registros. En cada pasada agrupa hasta $F=\lfloor M/B\rfloor-1$ corridas por mezcla. Compara sus frentes, emite el mínimo y avanza sólo esa corrida.
+
+### Mezcla de tres corridas con bloques de dos
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Carga un bloque por corrida. Reserva dos posiciones de salida.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["active", "idle"]},
+        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["active", "idle"]},
+        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
+        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["·", "·"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El mínimo de los frentes es 1. Avanza sólo A.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["active", "idle"]},
+        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
+        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["1", "·"], "states": ["answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Sale 2 de B. El bloque de salida queda lleno.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "active"]},
+        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
+        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["1", "2"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Escribe [1,2] y reinicia el búfer de salida.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "active"]},
+        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["active", "idle"]},
+        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["·", "·"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Sale 3. B todavía conserva el 5 en RAM.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "active"]},
+        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["muted", "active"]},
+        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["3", "·"], "states": ["answer", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Sale 5. Se agotó el bloque de B.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "label": "B", "row": 1, "cells": ["2", "5"], "states": ["muted", "muted"]},
+        {"id": "row-2", "label": "C", "row": 2, "cells": ["3", "7"], "states": ["muted", "active"]},
+        {"id": "row-3", "label": "Salida", "row": 3, "cells": ["3", "5"], "states": ["answer", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Si B tiene más registros, ahora se carga su siguiente bloque; aquí termina.",
+      arrays: [
+        {"id": "row-0", "label": "A", "row": 0, "cells": ["6"], "states": ["active"]},
+        {"id": "row-1", "label": "C", "row": 1, "cells": ["7"], "states": ["active"]},
+        {"id": "row-2", "label": "Salida", "row": 2, "cells": ["·", "·"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Se completa la salida con 6 y 7.",
+      arrays: [
+        {"id": "row-0", "label": "Salida total", "row": 0, "cells": ["1", "2", "3", "5", "6", "7"], "states": ["answer", "answer", "answer", "answer", "answer", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Reducir nueve corridas con fan-in tres
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Al terminar la generación, hay nueve corridas.",
+      arrays: [
+        {"id": "row-0", "label": "Corridas", "row": 0, "cells": ["A", "B", "C", "D", "E", "F", "G", "H", "I"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La primera mezcla agrupa tres corridas por salida.",
+      arrays: [
+        {"id": "row-0", "label": "Corridas", "row": 0, "cells": ["ABC", "DEF", "GHI"], "states": ["active", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "La segunda mezcla deja una sola corrida.",
+      arrays: [
+        {"id": "row-0", "label": "Corridas", "row": 0, "cells": ["ABCDEFGHI"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+En el diagrama, marca dos tipos de evento. El primer evento es consumir un frente y adelantar un índice. El segundo es cambiar el bloque residente de esa corrida. Un frente puede cambiar varias veces antes de que haga falta otro bloque. La salida tiene una regla dual: varios mínimos pueden acumularse antes de una escritura.
+
+El invariante de la mezcla es que lo emitido ya está en orden y ninguna llave pendiente es menor que el último elemento emitido. Sólo comparamos frentes porque el resto de cada corrida está detrás de su frente en orden. Esa observación sigue siendo válida cuando una corrida termina y desaparece del conjunto de candidatos.
+
+## Análisis de complejidad
+
+Cada pasada completa lee y escribe $\Theta(N/B)$ bloques. Tras la generación inicial hay $\lceil N/M\rceil$ corridas y cada pasada reduce esa cantidad por un factor de hasta $F$. Con $F\ge2$, el costo es $\Theta((N/B)(1+\lceil\log_F\lceil N/M\rceil\rceil))$ para $N\ge B$. Contar por pasadas muestra qué mejora al aumentar $M$. Contar por registros dentro de un bloque explica por qué una extracción del frente no exige siempre una lectura.
+
+### Cómo justificar la cota en el examen
+
+Separa la cantidad de datos de la cantidad de pasadas. Con $R=lceil N/M
+ceil$ corridas y fan-in $F$, después de una pasada quedan $lceil R/F
+ceil$ corridas. Si $R=1$, ya acabaste al generar la corrida. Si $R>1$ y $Fge 2$, el número de reducciones está controlado por $log_F R$. El argumento logarítmico se aplica a las **corridas**, mientras que el factor de costo por pasada cuenta **bloques**.
+
+La formulación de clase suele agrupar la pasada inicial en la expresión asintótica. Al contar transferencias para una entrada pequeña, conserva la pasada inicial y trata explícitamente la salida parcial.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/external-merge-sort/examples) y [preguntas con pistas](/structures/external-merge-sort/exercises).
+
+## Comparación con estructuras relacionadas
+
+La mezcla binaria reduce corridas por pares. La mezcla múltiple usa el mismo invariante de mínimo pendiente con más frentes.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/external-merge-sort/mastery-check).
+
+*Fuente de clase: Sem10_Memory_Hierarchy_I.pdf · pp. 44-59.*

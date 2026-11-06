@@ -53,6 +53,22 @@ for (const [id, t] of Object.entries(map.topics)) {
   }
 }
 
+// Cada tema aparece exactamente una vez en la navegación por unidades.
+const unitIds = new Set();
+const unitTopics = new Set();
+for (const unit of map.units) {
+  if (unitIds.has(unit.id)) fail(`unidad duplicada: ${unit.id}`);
+  unitIds.add(unit.id);
+  for (const id of unit.topics) {
+    if (!ids.has(id)) fail(`${unit.id} lista "${id}", que no existe en topics`);
+    if (unitTopics.has(id)) fail(`"${id}" aparece más de una vez en las unidades`);
+    unitTopics.add(id);
+  }
+}
+for (const id of ids) {
+  if (!unitTopics.has(id)) fail(`"${id}" quedó fuera de las unidades`);
+}
+
 // 3. status=generated ⟺ hay carpeta con meta.yaml válido.
 for (const [id, t] of Object.entries(map.topics)) {
   if (t.status !== 'generated') continue;

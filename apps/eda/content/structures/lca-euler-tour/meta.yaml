@@ -1,0 +1,14 @@
+id: lca-euler-tour
+title: LCA mediante recorrido de Euler
+type: algorithm
+week: week-12
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- cartesian-tree
+complexity:
+  Recorrido y primeras visitas:
+    worst: O(n)
+    reasoning: Cada arista aporta exactamente una bajada y una subida a una secuencia de longitud
+      2n−1.
+    source: Sem12_Static_Trees.pdf#24-28

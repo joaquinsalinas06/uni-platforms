@@ -1,0 +1,20 @@
+id: order-maintenance
+title: Etiquetado de listas y mantenimiento del orden
+type: structure
+week: week-11
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- packed-memory-array
+complexity:
+  Consulta de orden:
+    worst: O(1)
+    reasoning: Comparar un par de etiquetas de grupo o de etiquetas locales de tamaño palabra consume
+      trabajo constante.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf#44-67
+  Actualización amortizada:
+    worst: O(1)
+    reasoning: La reparación de O(lg N) en el índice superior se reparte entre Ω(lg N) actualizaciones
+      del grupo.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf#44-67
+    analysis: amortizado

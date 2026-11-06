@@ -1,0 +1,197 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from "../../../src/components/Visualization.astro";
+
+
+Los tres casos separan la generación de corridas, la mezcla y las escrituras. Las trazas pequeñas derivan del procedimiento de clase.
+
+## Una mezcla en la que sí hay que recargar
+Con bloques de dos, mezcla A=[1,6,10,12], B=[2,5] y C=[3,7]. Abre un bloque de cada entrada. Emite 1 y 2; escribe el primer bloque. A todavía ofrece 6 y B ofrece 5. Entre esos y el 3 de C gana 3. Después gana 5, se escribe [3,5] y B se agota.
+
+Sigue con 6. Ahora sí se necesita leer [10,12] de A porque su bloque inicial ya se consumió. C todavía ofrece 7 y gana la comparación frente a 10. La salida completa es [1,2,3,5,6,7,10,12]. Se leen cuatro bloques y se escriben cuatro. Las comparaciones de frentes suceden en RAM.
+
+## Nueve corridas, memoria para cuatro bloques
+Reserva un bloque de salida. Abre tres entradas a la vez. Mezcla A–C, D–F y G–I para producir tres corridas. En la siguiente pasada mezcla las tres. Cada registro entra y sale de RAM una vez en cada pasada de mezcla. Si se pregunta por el ordenamiento completo, agrega la pasada que generó las nueve corridas.
+
+Si intentas abrir cuatro entradas y mantienes el mismo espacio, ya no queda un bloque para acumular salida. Usar cuatro como fan-in oculta precisamente el recurso que limita la mezcla.
+
+## Una última salida parcial
+Si dos entradas contienen cinco registros en total con bloques de dos, la salida tiene dos bloques llenos y uno parcial. Antes de terminar debes escribir el quinto registro. Si sólo cuentas vaciados cuando el búfer se llena, pierdes una escritura y además el último dato. Para el costo exacto, cuenta también el bloque parcial de cada archivo de entrada.
+
+## El ejemplo grande del mazo · dos pasadas de mezcla múltiple
+
+Toma $N=10^{11}$ registros, $M=10^9$ y $B=10^5$. Hay un millón de bloques de datos, cien corridas iniciales y memoria para diez mil bloques. Reservando uno para salida, el fan-in todavía supera las cien corridas. Por tanto basta una pasada para generarlas y otra para mezclarlas todas. Una mezcla binaria de cien corridas necesitaría siete pasadas de mezcla, además de la generación.
+
+El mazo usa estas cifras para comparar pasadas sobre el archivo. Si la pregunta pide **lecturas más escrituras**, cada pasada completa cuesta aproximadamente dos millones de transferencias. Declara esa convención antes de dar la cifra.
+
+## Mezcla hasta la última escritura
+
+Derivado. Mezcla A=[1,6,10,12], B=[2,5] y C=[3,7]. Un bloque contiene dos registros.
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Carga un bloque de cada entrada. Ya pagaste tres lecturas y el búfer de salida está vacío.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["active", "muted"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["2", "5"], "states": ["active", "muted"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["active", "muted"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "0"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 1 de la corrida A. La siguiente llave ya está en RAM.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["2", "5"], "states": ["active", "muted"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["active", "muted"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["1"], "states": ["answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "0"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 2 de la corrida B. La siguiente llave ya está en RAM.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["2", "5"], "states": ["muted", "active"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["active", "muted"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["1", "2"], "states": ["answer", "answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "0"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Escribe el bloque [1, 2]. La escritura libera el búfer de salida.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["2", "5"], "states": ["muted", "active"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["active", "muted"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "1"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 3 de la corrida C. La siguiente llave ya está en RAM.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["2", "5"], "states": ["muted", "active"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["muted", "active"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["3"], "states": ["answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "1"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 5 de la corrida B. La corrida quedó agotada.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["muted", "active"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["3", "5"], "states": ["answer", "answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "1"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Escribe el bloque [3, 5]. La escritura libera el búfer de salida.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["1", "6"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["muted", "active"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["3", "2"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 6 de la corrida A. Su bloque se agotó, así que cargas el siguiente de la misma corrida.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["10", "12"], "states": ["active", "muted"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["3", "7"], "states": ["muted", "active"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["6"], "states": ["answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["4", "2"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 7 de la corrida C. La corrida quedó agotada.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["10", "12"], "states": ["active", "muted"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["6", "7"], "states": ["answer", "answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["4", "2"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Escribe el bloque [6, 7]. La escritura libera el búfer de salida.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["10", "12"], "states": ["active", "muted"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["4", "3"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 10 de la corrida A. La siguiente llave ya está en RAM.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["10", "12"], "states": ["muted", "active"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["10"], "states": ["answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["4", "3"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Emite 12 de la corrida A. La corrida quedó agotada.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["10", "12"], "states": ["answer", "answer"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["4", "3"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Escribe el bloque [10, 12]. La escritura libera el búfer de salida.",
+      arrays: [
+        {"id": "row-0", "row": 0, "label": "A", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-1", "row": 1, "label": "B", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-2", "row": 2, "label": "C", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-3", "row": 3, "label": "Búfer de salida", "cells": ["·"], "states": ["idle"]},
+        {"id": "row-4", "row": 4, "label": "Lecturas / escrituras", "cells": ["4", "4"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+1. Reserva cuatro espacios de bloque. Tres retendrán entradas y uno acumulará la salida.
+2. Lee [1,6], [2,5] y [3,7]. Los frentes son 1,2,3 y ya se pagaron tres lecturas.
+3. Emite 1. A queda con frente 6, todavía en el mismo bloque.
+4. Emite 2. B queda con frente 5 y la salida [1,2] está llena.
+5. Escribe [1,2] y limpia su búfer. Ninguna entrada requiere una lectura nueva todavía.
+6. Compara 6,5,3 y emite 3. El próximo frente de C es 7.
+7. Emite 5 porque 5 es menor que 6 y que 7. B queda agotada, así que deja de aportar candidatos.
+8. Escribe [3,5]. La salida vuelve a tener dos lugares libres.
+9. Emite 6. Acabas el primer bloque de A. Como A todavía tiene registros, lee [10,12].
+10. Entre 10 y 7, emite 7. C se agota y el búfer de salida queda [6,7].
+11. Escribe [6,7]. Sólo A tiene registros pendientes, por lo que puedes emitir 10 y 12 sin comparar otras corridas.
+12. Escribe [10,12]. Todas las entradas están agotadas y el búfer final está vacío.
+
+**Comprobación.** Cuatro lecturas y cuatro escrituras. Agotar un bloque no implica recargar si también agotaste la corrida.

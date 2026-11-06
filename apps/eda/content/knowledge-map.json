@@ -1,4 +1,121 @@
 {
+  "units": [
+    {
+      "id": "heaps",
+      "title": "Montículos",
+      "topics": [
+        "binary-heap",
+        "binomial-tree",
+        "binomial-heap",
+        "potential-method",
+        "fibonacci-heap"
+      ]
+    },
+    {
+      "id": "persistence-retroactivity",
+      "title": "Persistencia y retroactividad",
+      "topics": [
+        "segment-tree",
+        "pointer-machine",
+        "persistence-levels",
+        "fat-nodes",
+        "path-copying",
+        "retroactivity",
+        "commutative-invertible-retroactivity",
+        "decomposable-search-problem",
+        "rollback-method",
+        "retroactive-priority-queue"
+      ]
+    },
+    {
+      "id": "geometric-structures",
+      "title": "Estructuras geométricas",
+      "topics": [
+        "balanced-bst",
+        "fenwick-tree",
+        "orthogonal-range-search",
+        "range-tree",
+        "planar-point-location",
+        "vertical-ray-shooting",
+        "segment-intersection-sweep-line",
+        "fractional-cascading",
+        "layered-range-tree",
+        "dominance-2d",
+        "d2-bound-x",
+        "d3-separation-node",
+        "d4-bound-z",
+        "generalized-fractional-cascading"
+      ]
+    },
+    {
+      "id": "dynamic-optimality",
+      "title": "Optimalidad dinámica",
+      "topics": [
+        "bst-computational-model",
+        "search-sequence-properties",
+        "dynamic-optimality",
+        "splay-tree",
+        "splay-tree-adt",
+        "logarithm-lemma",
+        "access-lemma",
+        "static-optimality",
+        "geometric-view",
+        "arborally-satisfied-set",
+        "greedy-algorithm",
+        "independent-rectangles-bound",
+        "wilber-2-bound",
+        "wilber-1-bound",
+        "tango-tree",
+        "signed-greedy"
+      ]
+    },
+    {
+      "id": "memory-hierarchy",
+      "title": "Jerarquía de memoria",
+      "topics": [
+        "external-memory-model",
+        "external-merge-sort",
+        "b-tree",
+        "cache-oblivious-veb-layout",
+        "ordered-file-maintenance",
+        "packed-memory-array",
+        "order-maintenance"
+      ]
+    },
+    {
+      "id": "integers",
+      "title": "Enteros",
+      "topics": [
+        "integer-predecessor",
+        "van-emde-boas-tree",
+        "x-fast-trie",
+        "y-fast-trie",
+        "fusion-tree"
+      ]
+    },
+    {
+      "id": "static-trees",
+      "title": "Árboles estáticos",
+      "topics": [
+        "static-rmq",
+        "cartesian-tree",
+        "lca-euler-tour",
+        "plus-minus-one-rmq"
+      ]
+    },
+    {
+      "id": "strings",
+      "title": "Strings",
+      "topics": [
+        "knuth-morris-pratt",
+        "trie",
+        "aho-corasick",
+        "suffix-array",
+        "kasai-lcp",
+        "dc3"
+      ]
+    }
+  ],
   "weeks": [
     {
       "id": "week-01",
@@ -120,6 +237,70 @@
         "wilber-1-bound",
         "tango-tree",
         "signed-greedy"
+      ]
+    },
+    {
+      "id": "week-10",
+      "title": "Semana 10 — Jerarquía de memoria I–III",
+      "sourceFiles": [
+        "raw-materials/new/Sem10_Memory_Hierarchy_I.pdf",
+        "raw-materials/new/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf",
+        "raw-materials/new/Sem10_Memory_Hierarchy_III.pdf"
+      ],
+      "topics": [
+        "external-memory-model",
+        "external-merge-sort",
+        "b-tree",
+        "cache-oblivious-veb-layout",
+        "ordered-file-maintenance"
+      ]
+    },
+    {
+      "id": "week-11",
+      "title": "Semana 11 — Jerarquía de memoria IV y Enteros I–II",
+      "sourceFiles": [
+        "raw-materials/new/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf",
+        "raw-materials/new/Sem11_Integers_I.pdf",
+        "raw-materials/new/Sem11_Integers_II.pdf"
+      ],
+      "topics": [
+        "packed-memory-array",
+        "order-maintenance",
+        "integer-predecessor",
+        "van-emde-boas-tree",
+        "x-fast-trie",
+        "y-fast-trie"
+      ]
+    },
+    {
+      "id": "week-12",
+      "title": "Semana 12 — Enteros III, Árboles estáticos y Strings I",
+      "sourceFiles": [
+        "raw-materials/new/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf",
+        "raw-materials/new/Sem12_Static_Trees.pdf",
+        "raw-materials/new/Sem12_Strings_I.pdf"
+      ],
+      "topics": [
+        "fusion-tree",
+        "static-rmq",
+        "cartesian-tree",
+        "lca-euler-tour",
+        "plus-minus-one-rmq",
+        "knuth-morris-pratt",
+        "trie",
+        "aho-corasick"
+      ]
+    },
+    {
+      "id": "week-13",
+      "title": "Semana 13 — Strings II",
+      "sourceFiles": [
+        "raw-materials/new/Sem13_Strings_II.pdf"
+      ],
+      "topics": [
+        "suffix-array",
+        "kasai-lcp",
+        "dc3"
       ]
     }
   ],
@@ -1234,6 +1415,309 @@
       "supportConcept": false,
       "placeholder": false,
       "status": "generated"
+    },
+    "external-memory-model": {
+      "type": "concept",
+      "title": "Modelo de memoria externa",
+      "week": "week-10",
+      "sourceSlides": [
+        "Sem10_Memory_Hierarchy_I.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "external-merge-sort": {
+      "type": "algorithm",
+      "title": "Ordenamiento externo por mezcla",
+      "week": "week-10",
+      "sourceSlides": [
+        "Sem10_Memory_Hierarchy_I.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "external-memory-model"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "b-tree": {
+      "type": "structure",
+      "title": "B-tree",
+      "week": "week-10",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "external-memory-model"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "cache-oblivious-veb-layout": {
+      "type": "algorithm",
+      "title": "Modelo cache-oblivious y layout van Emde Boas",
+      "week": "week-10",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf",
+        "Sem10_Memory_Hierarchy_III.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "external-memory-model",
+        "b-tree"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "ordered-file-maintenance": {
+      "type": "structure",
+      "title": "Ordered File Maintenance",
+      "week": "week-10",
+      "sourceSlides": [
+        "Sem10_Memory_Hierarchy_III.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "cache-oblivious-veb-layout"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "packed-memory-array": {
+      "type": "structure",
+      "title": "Packed-Memory Array",
+      "week": "week-11",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "ordered-file-maintenance"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "order-maintenance": {
+      "type": "structure",
+      "title": "Etiquetado de listas y mantenimiento del orden",
+      "week": "week-11",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "packed-memory-array"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "integer-predecessor": {
+      "type": "concept",
+      "title": "Predecesor entero y modelos de cómputo",
+      "week": "week-11",
+      "sourceSlides": [
+        "Sem11_Integers_I.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "van-emde-boas-tree": {
+      "type": "structure",
+      "title": "Árbol van Emde Boas",
+      "week": "week-11",
+      "sourceSlides": [
+        "Sem11_Integers_I.pdf",
+        "Sem11_Integers_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "integer-predecessor"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "x-fast-trie": {
+      "type": "structure",
+      "title": "X-fast trie",
+      "week": "week-11",
+      "sourceSlides": [
+        "Sem11_Integers_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "integer-predecessor"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "y-fast-trie": {
+      "type": "structure",
+      "title": "Y-fast trie",
+      "week": "week-11",
+      "sourceSlides": [
+        "Sem11_Integers_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "x-fast-trie"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "fusion-tree": {
+      "type": "structure",
+      "title": "Fusion tree y operaciones de palabra",
+      "week": "week-12",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "integer-predecessor",
+        "b-tree"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "static-rmq": {
+      "type": "structure",
+      "title": "RMQ estático y sparse table",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Static_Trees.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "cartesian-tree": {
+      "type": "structure",
+      "title": "Árbol cartesiano",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Static_Trees.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "static-rmq"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "lca-euler-tour": {
+      "type": "algorithm",
+      "title": "LCA mediante recorrido de Euler",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Static_Trees.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "cartesian-tree"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "plus-minus-one-rmq": {
+      "type": "algorithm",
+      "title": "RMQ ±1 y método de los cuatro rusos",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Static_Trees.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "static-rmq",
+        "lca-euler-tour"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "knuth-morris-pratt": {
+      "type": "algorithm",
+      "title": "Función prefijo y KMP",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Strings_I.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "trie": {
+      "type": "structure",
+      "title": "Trie",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Strings_I.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "aho-corasick": {
+      "type": "algorithm",
+      "title": "Aho–Corasick",
+      "week": "week-12",
+      "sourceSlides": [
+        "Sem12_Strings_I.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "knuth-morris-pratt",
+        "trie"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "suffix-array": {
+      "type": "structure",
+      "title": "Suffix array y duplicación de prefijos",
+      "week": "week-13",
+      "sourceSlides": [
+        "Sem13_Strings_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "kasai-lcp": {
+      "type": "algorithm",
+      "title": "Kasai y aplicaciones de LCP",
+      "week": "week-13",
+      "sourceSlides": [
+        "Sem13_Strings_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "suffix-array",
+        "plus-minus-one-rmq"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
+    },
+    "dc3": {
+      "type": "algorithm",
+      "title": "Construcción lineal con DC3",
+      "week": "week-13",
+      "sourceSlides": [
+        "Sem13_Strings_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "suffix-array"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "range-tree"
     }
   }
 }

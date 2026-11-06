@@ -1,0 +1,151 @@
+---
+kind: "theory"
+title: "RMQ ±1 y método de los cuatro rusos"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+La sparse table sobre todo Euler responde rápido, pero usa preprocesamiento superlineal. Su secuencia de profundidades tiene una regularidad que permite compartir trabajo.
+
+## Intuición
+
+Las subidas y bajadas determinan el orden relativo dentro de un bloque. Dos bloques con las mismas diferencias comparten todas sus respuestas locales, aunque empiecen a alturas distintas.
+
+## Estructura interna
+
+Un bloque de $b$ entradas se identifica con $b-1$ signos. Normaliza restando su altura inicial. Mantén una tabla micro por patrón y una tabla macro sobre los mínimos de bloques completos.
+
+### Qué información se puede compartir entre bloques
+
+Dos bloques con el mismo patrón de diferencias se obtienen uno del otro sumando una constante. Por ejemplo, [4,5,4,3] y [10,11,10,9] comparten la forma [0,1,0,−1]. Al sumar seis a todas las entradas, cualquier comparación interna da el mismo resultado y los empates también se conservan. Por eso una tabla de argmin locales sirve para ambos. El patrón no representa un valor mínimo global; representa cómo comparar posiciones dentro de ese bloque.
+
+### Separar las consultas por dónde caen sus extremos
+
+Si los dos extremos caen en el mismo bloque, las posiciones locales definen una consulta micro. Si caen en bloques diferentes, toma el sufijo del primero y el prefijo del último. Cuando esos bloques son consecutivos, esos dos intervalos ya cubren la consulta. Si quedan bloques enteros entre ellos, agrega un mínimo de la tabla macro. Esos tres trozos no requieren recorrer sus celdas una por una. Tras reunir los candidatos, conviértelos a índices absolutos y usa las profundidades originales para elegir.
+
+Un último bloque incompleto se puede tratar con su longitud real, o completar la forma para preparar la tabla siempre que las consultas nunca incluyan celdas de relleno. Lo importante es mantener separado qué se preprocesó y qué índices son parte de la entrada.
+
+## Operaciones
+
+Si los extremos caen en el mismo bloque, responde con su tabla micro. Si caen en bloques distintos, combina a lo sumo tres candidatos: sufijo inicial, bloques interiores completos y prefijo final. Un interior vacío se omite.
+
+### Cruzar de un bloque a otro · ejemplo de clase
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Profundidades de Euler y dos bloques de cuatro entradas.",
+      arrays: [
+        {"id": "row-0", "label": "Índices", "row": 0, "cells": ["0", "1", "2", "3", "4", "5", "6", "7"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["2", "3", "2", "1", "2", "3", "4", "3"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El primer bloque tiene patrón + − −. Su forma empieza en 0.",
+      arrays: [
+        {"id": "row-0", "label": "Bloque 0", "row": 0, "cells": ["2", "3", "2", "1"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Forma", "row": 1, "cells": ["0", "+1", "0", "−1"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El segundo bloque tiene patrón + + −.",
+      arrays: [
+        {"id": "row-0", "label": "Bloque 1", "row": 0, "cells": ["2", "3", "4", "3"], "states": ["idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Forma", "row": 1, "cells": ["0", "+1", "+2", "+1"], "states": ["idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Consulta [1,6]. El sufijo del primer bloque es [3,2,1].",
+      arrays: [
+        {"id": "row-0", "label": "Sufijo", "row": 0, "cells": ["3", "2", "1"], "states": ["active", "active", "answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El prefijo del segundo bloque es [2,3,4].",
+      arrays: [
+        {"id": "row-0", "label": "Prefijo", "row": 0, "cells": ["2", "3", "4"], "states": ["answer", "active", "active"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "No hay bloque completo entre los extremos. Compara sólo 1 y 2.",
+      arrays: [
+        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["1", "2"], "states": ["answer", "idle"]},
+        {"id": "row-1", "label": "Respuesta", "row": 1, "cells": ["índice:3"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cuando sí hay un bloque interior completo
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Para esta secuencia ±1, consulta desde 3 hasta 9.",
+      arrays: [
+        {"id": "row-0", "label": "Profundidad", "row": 0, "cells": ["3", "4", "3", "4", "3", "2", "1", "2", "3", "4", "5", "4"], "states": ["idle", "idle", "idle", "marked", "idle", "idle", "idle", "idle", "idle", "marked", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El bloque interior [4,7] se consulta en la tabla macro.",
+      arrays: [
+        {"id": "row-0", "label": "Sufijo izquierdo", "row": 0, "cells": ["4"], "states": ["idle"]},
+        {"id": "row-1", "label": "Macro", "row": 1, "cells": ["3", "2", "1", "2"], "states": ["idle", "idle", "answer", "idle"]},
+        {"id": "row-2", "label": "Prefijo derecho", "row": 2, "cells": ["3", "4"], "states": ["idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Las respuestas micro valen 4 y 3. Gana el candidato macro de valor 1.",
+      arrays: [
+        {"id": "row-0", "label": "Candidatos", "row": 0, "cells": ["4", "1", "3"], "states": ["idle", "answer", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+La tabla micro se consulta con posiciones relativas al comienzo de un bloque. Para comparar contra la respuesta macro, convierte el candidato local en un índice global y lee su profundidad real. Comparar profundidades normalizadas de bloques diferentes puede invertir el orden porque cada bloque tiene una base distinta.
+
+## Análisis de complejidad
+
+Escoge $b\approx\tfrac12\lg n$, con un mínimo de una entrada. Hay a lo sumo $2^{b-1}=O(\sqrt n)$ patrones. Cada uno cuesta $O(b^2)$ si se extiende cada intervalo manteniendo su mínimo. En total, $O(\sqrt n\lg^2 n)=o(n)$. La sparse table de $O(n/b)$ bloques usa $O((n/b)\lg(n/b))=O(n)$ tiempo y espacio. Una consulta examina un número constante de candidatos.
+
+### Cómo justificar la cota en el examen
+
+Elige $b$ del orden de $(lg n)/2$. Cada bloque de $b$ entradas tiene $b-1$ signos, así que hay a lo sumo $2^{b-1}$ patrones. Tabular todos los pares dentro de cada patrón cuesta $O(b^2)$ extendiendo un intervalo un elemento a la vez. El producto da $O(sqrt n,lg^2 n)=o(n)$. La sparse table superior trabaja con $O(n/b)$ mínimos, no con $n$ valores, y por eso cuesta $O(n)$.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/plus-minus-one-rmq/examples) y [preguntas con pistas](/structures/plus-minus-one-rmq/exercises).
+
+## Comparación con estructuras relacionadas
+
+Una sparse table completa tabula ventanas sobre todos los índices. Aquí la sparse table sólo ve mínimos de bloques. Dentro de cada bloque, la forma ±1 permite reutilizar respuestas.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/plus-minus-one-rmq/mastery-check).
+
+*Fuente de clase: Sem12_Static_Trees.pdf · pp. 29-38.*

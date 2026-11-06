@@ -1,0 +1,15 @@
+id: kasai-lcp
+title: Kasai y aplicaciones de LCP
+type: algorithm
+week: week-13
+hasVisualization: true
+visualizationType: range-tree
+prerequisites:
+- suffix-array
+- plus-minus-one-rmq
+complexity:
+  Construir LCP con Kasai:
+    worst: O(n)
+    reasoning: La longitud heredada sólo disminuye una vez por posición salvo un reinicio, así que
+      las extensiones exitosas se cobran linealmente.
+    source: Sem13_Strings_II.pdf#21-29

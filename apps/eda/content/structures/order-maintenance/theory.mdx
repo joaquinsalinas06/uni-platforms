@@ -1,0 +1,154 @@
+---
+kind: "theory"
+title: "Etiquetado de listas y mantenimiento del orden"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Dada una lista que admite insertar después de un elemento, queremos responder si un elemento precede a otro sin recorrer la lista.
+
+## Intuición
+
+Asigna etiquetas ordenadas con espacio libre. Consultar orden se vuelve comparar etiquetas. Cuando se agota el espacio local, hay que relabelar una región.
+
+## Estructura interna
+
+Las etiquetas crecen en el orden de la lista. Con indirección, cada elemento tiene una etiqueta local y un grupo. Dos elementos del mismo grupo se comparan localmente. Entre grupos manda la etiqueta del grupo.
+
+### Etiquetado y orden responden preguntas distintas
+
+La lista define qué elemento va antes. Una etiqueta es una representación para responder esa pregunta con pocas comparaciones. Si las etiquetas se cambian simultáneamente y respetan el orden, todas las respuestas de orden se conservan. Por eso una etiqueta no debe confundirse con una posición que el usuario de la estructura pueda guardar para siempre.
+
+El caso del hueco agotado muestra por qué contar comparaciones de consultas no basta para entender las inserciones. Entre 4 y 5 no existe entero aunque queden muchos disponibles a la derecha de toda la lista. Debes mover etiquetas de una región o cambiar la escala. El mazo distingue regímenes de espacio de etiquetas: con más valores representables puedes espaciar mejor y reducir la frecuencia de reparaciones.
+
+### Qué cambia con dos niveles
+
+Pon varios elementos en un grupo y conserva su orden local. Los grupos también forman una lista ordenada. Para comparar X e Y, primero mira si sus grupos son iguales. Si coinciden, decide la etiqueta local. Si difieren, cualquier elemento del grupo anterior precede a todos los del posterior. Mover una etiqueta superior mientras conserva el orden de los grupos afecta cómo representas a todos sus miembros sin escribir una etiqueta nueva en cada elemento. Esa separación hace posible cargar el cambio superior a varias actualizaciones del grupo.
+
+## Operaciones
+
+Inserta una etiqueta entre las vecinas si hay espacio. Si se agota, redistribuye etiquetas. Con grupos, una división local puede añadir una etiqueta al índice de grupos.
+
+### Hueco libre, hueco agotado y comparación entre grupos
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Entre etiquetas 4 y 8 hay espacio.",
+      arrays: [
+        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "B:8", "C:12"], "states": ["idle", "marked", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Insertar X tras A permite asignar 6.",
+      arrays: [
+        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "X:6", "B:8", "C:12"], "states": ["idle", "answer", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Si A y X terminan en 4 y 5, no existe una etiqueta entera entre ambas.",
+      arrays: [
+        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "X:5", "B:8", "C:12"], "states": ["marked", "marked", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Renumerar una región crea huecos manteniendo el orden relativo.",
+      arrays: [
+        {"id": "row-0", "label": "Orden", "row": 0, "cells": ["A:4", "Y:6", "X:8", "B:12", "C:16"], "states": ["idle", "answer", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Con dos grupos, la etiqueta del grupo decide la comparación entre X y C.",
+      arrays: [
+        {"id": "row-0", "label": "Grupos", "row": 0, "cells": ["G1:8", "G2:16"], "states": ["marked", "marked"]},
+        {"id": "row-1", "label": "G1", "row": 1, "cells": ["A:4", "Y:6", "X:8"], "states": ["idle", "idle", "active"]},
+        {"id": "row-2", "label": "G2", "row": 2, "cells": ["B:4", "C:8"], "states": ["idle", "answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Separa tres cosas en una traza: la posición lógica de un elemento, la etiqueta local que la representa y la etiqueta superior de su grupo. Si un grupo se divide, las llaves de cada mitad siguen en el mismo orden y aparece un representante adicional. Si dos grupos se fusionan, el índice pierde un representante. Esa diferencia determina cuándo hay trabajo superior.
+
+Los huecos entre etiquetas son un recurso. Una serie de inserciones concentradas en el mismo par de vecinos puede gastarlos aunque el resto del espacio de etiquetas esté vacío.
+
+## Análisis de complejidad
+
+Comparar las etiquetas que caben en una palabra cuesta $O(1)$. Renumerar todas las etiquetas en cada inserción costaría lineal. En la construcción de clase, los grupos de $\Theta(\lg N)$ permiten usar dentro de cada grupo un espacio de etiquetas exponencial en su tamaño, que sigue siendo polinomial en $N$ y cabe en una palabra. Una división o fusión cuesta $O(\lg N)$ en el índice superior y se paga con $\Omega(\lg N)$ actualizaciones del grupo. La actualización cuesta $O(1)$ amortizado.
+
+### Separar la operación local del costo de dividir
+
+*(Traza derivada de la explicación de clase.)*
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Cada grupo mantiene Θ(lg N) elementos. Su actualización local cuesta O(1) amortizado con espacio exponencial en el tamaño del grupo.",
+      arrays: [
+        {"id": "row-0", "label": "Grupo", "row": 0, "cells": ["local"], "states": ["active"]},
+        {"id": "row-1", "label": "Costo", "row": 1, "cells": ["O(1)_amort."], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Cuando se llena el grupo, la división sí toca el índice superior.",
+      arrays: [
+        {"id": "row-0", "label": "Grupo", "row": 0, "cells": ["lleno", "división"], "states": ["marked", "active"]},
+        {"id": "row-1", "label": "Costo_superior", "row": 1, "cells": ["O(lg_N)"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "Tras dividir, hacen falta Ω(lg N) actualizaciones en un grupo para otro cambio comparable.",
+      arrays: [
+        {"id": "row-0", "label": "Costo", "row": 0, "cells": ["O(lg_N)"], "states": ["marked"]},
+        {"id": "row-1", "label": "Operaciones", "row": 1, "cells": ["Ω(lg_N)"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "El trabajo superior repartido aporta O(1) por actualización.",
+      arrays: [
+        {"id": "row-0", "label": "Costo_total", "row": 0, "cells": ["O(1)_amortizado"], "states": ["answer"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo justificar la cota en el examen
+
+Explica primero por qué consultar cuesta constante: compara dos pares de enteros que caben en palabras. Para actualizar, distingue la reparación local de la estructura superior. Con grupos de tamaño $Theta(lg N)$, un espacio exponencial en el tamaño del grupo sigue siendo polinomial en $N$. El método local del mazo permite costo amortizado constante bajo ese régimen. Una partición o fusión paga $O(lg N)$ arriba, pero necesita $Omega(lg N)$ cambios locales para volver a ocurrir. La división de esos dos términos da el cargo amortizado superior; no acota por constante el costo de un evento aislado.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/order-maintenance/examples) y [preguntas con pistas](/structures/order-maintenance/exercises).
+
+## Comparación con estructuras relacionadas
+
+List labeling mantiene etiquetas de una sola capa. La indirección separa la reparación local de la modificación de los grupos.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/order-maintenance/mastery-check).
+
+*Fuente de clase: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf · pp. 44-67.*

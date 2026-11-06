@@ -1,0 +1,173 @@
+---
+kind: "theory"
+title: "LCA mediante recorrido de Euler"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## ¿Qué problema resuelve?
+
+Para hallar el ancestro común más bajo, queremos convertir las idas y vueltas de un árbol en una consulta sobre un arreglo.
+
+## Intuición
+
+Anota un nodo al entrar y anota el padre cada vez que vuelves por una arista. Entre las primeras visitas de dos nodos, el punto menos profundo marca dónde se conectan sus rutas.
+
+## Estructura interna
+
+Guarda una secuencia de nodos, su secuencia paralela de profundidades y la primera posición de cada nodo. Las profundidades adyacentes difieren exactamente en uno.
+
+### Por qué hay que dibujar los retornos
+
+La secuencia guarda la posición del explorador al iniciar y tras cada movimiento por una arista. Llegar a una hoja no termina toda la visita: se vuelve a su padre para buscar otro hijo o continuar subiendo. Anotar ese retorno es lo que permite que el ancestro aparezca entre dos descendientes. Para D y E se pasa por B entre ambas visitas. Una lista de descubrimientos por sí sola omite ese punto.
+
+### Dos extremos, un mínimo, tres tipos de dato
+
+Primero usa los **nodos** consultados para localizar sus primeras apariciones. Luego toma sus **índices** en Euler y consulta el intervalo de **profundidades**. El mínimo de profundidad aún no identifica un nodo por sí solo porque puede haber muchos nodos a esa altura. Usa la posición del mínimo para leer la fila de nodos. Por ejemplo, entre las posiciones 2 y 4 la profundidad mínima es 1 en el índice 3 y la letra en ese índice es B.
+
+Si un extremo es ancestro del otro, aparece al comienzo del intervalo y ya es una profundidad mínima. Si los extremos están en ramas distintas, el retorno que cambia de rama pasa por su ancestro común. En ambos casos el recorrido nunca sube por encima de él antes de llegar al segundo extremo.
+
+## Operaciones
+
+Haz un recorrido en profundidad. Para $u,v$, toma los índices de sus primeras apariciones y consulta el mínimo de profundidad en ese intervalo. Devuelve el nodo en la posición ganadora.
+
+### Recorrido de clase · registra también los retornos
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Empieza en A a profundidad 0.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null, "state": "active"},
+        {"id": "b", "value": "B", "parent": "a"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+    },
+    {
+      note: "Baja a B, profundidad 1.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null},
+        {"id": "b", "value": "B", "parent": "a", "state": "active"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+    },
+    {
+      note: "Baja a D, profundidad 2.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null},
+        {"id": "b", "value": "B", "parent": "a"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b", "state": "active"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+    },
+    {
+      note: "Vuelve a B. Se registra otra aparición de B.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null},
+        {"id": "b", "value": "B", "parent": "a", "state": "active"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b", "state": "muted"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+    },
+    {
+      note: "Baja a E. Entre D y E, el punto de menor profundidad fue B.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null},
+        {"id": "b", "value": "B", "parent": "a", "state": "answer"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b", "state": "active"},
+      ],
+    },
+    {
+      note: "Vuelve por B a A y baja a C. Entre D y C se alcanza la raíz A.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null, "state": "answer"},
+        {"id": "b", "value": "B", "parent": "a"},
+        {"id": "c", "value": "C", "parent": "a", "state": "active"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+    },
+    {
+      note: "Regresa a A para cerrar el recorrido.",
+      nodes: [
+        {"id": "a", "value": "A", "parent": null, "state": "active"},
+        {"id": "b", "value": "B", "parent": "a"},
+        {"id": "c", "value": "C", "parent": "a"},
+        {"id": "d", "value": "D", "parent": "b"},
+        {"id": "e", "value": "E", "parent": "b"},
+      ],
+    },
+  ],
+}} />
+
+### Resolver dos consultas sobre profundidades
+
+<Visualization viz={{
+  type: "range-tree",
+  mode: "layers",
+  steps: [
+    {
+      note: "Fila de nodos y fila de profundidades comparten índices.",
+      arrays: [
+        {"id": "row-0", "label": "Nodos", "row": 0, "cells": ["A", "B", "D", "B", "E", "B", "A", "C", "A"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["0", "1", "2", "1", "2", "1", "0", "1", "0"], "states": ["idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "LCA(D,E) consulta [2,4]. El mínimo del intervalo está en la segunda visita a B.",
+      arrays: [
+        {"id": "row-0", "label": "Nodos", "row": 0, "cells": ["A", "B", "D", "B", "E", "B", "A", "C", "A"], "states": ["idle", "idle", "marked", "answer", "marked", "idle", "idle", "idle", "idle"]},
+        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["0", "1", "2", "1", "2", "1", "0", "1", "0"], "states": ["idle", "idle", "active", "answer", "active", "idle", "idle", "idle", "idle"]},
+      ],
+      bridges: [],
+    },
+    {
+      note: "LCA(D,C) consulta [2,7]. En el camino aparece A a profundidad 0.",
+      arrays: [
+        {"id": "row-0", "label": "Nodos", "row": 0, "cells": ["A", "B", "D", "B", "E", "B", "A", "C", "A"], "states": ["idle", "idle", "marked", "idle", "idle", "idle", "answer", "marked", "idle"]},
+        {"id": "row-1", "label": "Profundidad", "row": 1, "cells": ["0", "1", "2", "1", "2", "1", "0", "1", "0"], "states": ["idle", "idle", "active", "active", "active", "active", "answer", "active", "idle"]},
+      ],
+      bridges: [],
+    },
+  ],
+}} />
+
+### Cómo seguir los cambios de estado
+
+Dibuja una fila de nodos y otra de profundidades. Cada flecha en el árbol genera exactamente una nueva celda, incluso cuando vuelve a una letra que ya apareció. Marca las primeras visitas una sola vez. La consulta empieza y termina por esas marcas, pero puede encontrar el mínimo en un retorno intermedio.
+
+## Análisis de complejidad
+
+Cada una de las $n-1$ aristas se recorre una vez hacia abajo y una vez hacia arriba. Con la raíz inicial, la traza tiene $2n-1$ entradas y cuesta $O(n)$ construirla. Entre primeras visitas, se llega al ancestro común antes de entrar a la rama que contiene el segundo nodo, y el recorrido no sale de su subárbol. Si se usa sparse table, se obtiene $O(n\lg n)$ de preparación y $O(1)$ por consulta. La propiedad ±1 permite reducir la preparación a $O(n)$.
+
+### Cómo justificar la cota en el examen
+
+Una DFS recorre cada arista al bajar y al volver. Con $n-1$ aristas, más la raíz inicial, hay $2n-1$ celdas. Entre las primeras apariciones de dos nodos se atraviesa su ancestro común al cambiar de rama y nunca se sale del subárbol de ese ancestro. De ahí sale la reducción a RMQ. La cota final de consulta y la preparación dependen de qué estructura elijas para ese arreglo.
+
+## Tabla de complejidad
+
+La tabla superior usa las unidades de costo de la explicación.
+
+## Ejemplos
+
+[Casos resueltos](/structures/lca-euler-tour/examples) y [preguntas con pistas](/structures/lca-euler-tour/exercises).
+
+## Comparación con estructuras relacionadas
+
+El árbol cartesiano traduce RMQ en LCA. El recorrido de Euler traduce LCA en un RMQ de profundidades con una restricción adicional.
+
+## Prueba de dominio
+
+[Lista de comprobación](/structures/lca-euler-tour/mastery-check).
+
+*Fuente de clase: Sem12_Static_Trees.pdf · pp. 24-28.*
