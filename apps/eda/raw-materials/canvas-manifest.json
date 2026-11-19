@@ -1,0 +1,141 @@
+{
+  "sem9": [
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (5).pdf",
+      "path": "apps/eda/raw-materials/sem09/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (5).pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem9_Dynamic_Optimality_V.pdf",
+      "path": "apps/eda/raw-materials/sem09/Sem9_Dynamic_Optimality_V.pdf"
+    }
+  ],
+  "sem10": [
+    {
+      "course": 24666,
+      "name": "Sem10_Memory_Hierarchy_I.pdf",
+      "path": "apps/eda/raw-materials/sem10/Sem10_Memory_Hierarchy_I.pdf"
+    },
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf",
+      "path": "apps/eda/raw-materials/sem10/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (9).pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem10_Memory_Hierarchy_III.pdf",
+      "path": "apps/eda/raw-materials/sem10/Sem10_Memory_Hierarchy_III.pdf"
+    }
+  ],
+  "sem11": [
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf",
+      "path": "apps/eda/raw-materials/sem11/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (7).pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem11_Integers_I.pdf",
+      "path": "apps/eda/raw-materials/sem11/Sem11_Integers_I.pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem11_Integers_II.pdf",
+      "path": "apps/eda/raw-materials/sem11/Sem11_Integers_II.pdf"
+    }
+  ],
+  "sem12": [
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf",
+      "path": "apps/eda/raw-materials/sem12/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (8).pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem12_Static_Trees.pdf",
+      "path": "apps/eda/raw-materials/sem12/Sem12_Static_Trees.pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem12_Strings_I.pdf",
+      "path": "apps/eda/raw-materials/sem12/Sem12_Strings_I.pdf"
+    }
+  ],
+  "sem13": [
+    {
+      "course": 24666,
+      "name": "Sem13_Strings_II.pdf",
+      "path": "apps/eda/raw-materials/sem13/Sem13_Strings_II.pdf"
+    },
+    {
+      "course": 24666,
+      "name": "Sem13_Strings_III.pdf",
+      "path": "apps/eda/raw-materials/sem13/Sem13_Strings_III.pdf"
+    },
+    {
+      "course": 24666,
+      "name": "manber-myers.cpp",
+      "path": "apps/eda/raw-materials/sem13/manber-myers.cpp"
+    },
+    {
+      "course": 24666,
+      "name": "sais.cpp",
+      "path": "apps/eda/raw-materials/sem13/sais.cpp"
+    },
+    {
+      "course": 24666,
+      "name": "dc3.cpp",
+      "path": "apps/eda/raw-materials/sem13/dc3.cpp"
+    },
+    {
+      "course": 24666,
+      "name": "black-order-712.cpp",
+      "path": "apps/eda/raw-materials/sem13/black-order-712.cpp"
+    },
+    {
+      "course": 24666,
+      "name": "black-order-712 (1).cpp",
+      "path": "apps/eda/raw-materials/sem13/black-order-712 (1).cpp"
+    },
+    {
+      "course": 24666,
+      "name": "black-order-712 (2).cpp",
+      "path": "apps/eda/raw-materials/sem13/black-order-712 (2).cpp"
+    },
+    {
+      "course": 24666,
+      "name": "black-order-712 (3).cpp",
+      "path": "apps/eda/raw-materials/sem13/black-order-712 (3).cpp"
+    }
+  ],
+  "sem14": [
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf",
+      "path": "apps/eda/raw-materials/sem14/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf"
+    },
+    {
+      "course": 24666,
+      "name": "abstracted-order-104.cpp",
+      "path": "apps/eda/raw-materials/sem14/abstracted-order-104.cpp"
+    }
+  ],
+  "sem15": [
+    {
+      "course": 24666,
+      "name": "Sem15_Dynamic_Graphs_II.pdf",
+      "path": "apps/eda/raw-materials/sem15/Sem15_Dynamic_Graphs_II.pdf"
+    },
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas_2s2026___Lista_de_ejercicios_para_el_examen_final (1).pdf",
+      "path": "apps/eda/raw-materials/sem15/CS3014_Estructuras_de_Datos_Avanzadas_2s2026___Lista_de_ejercicios_para_el_examen_final (1).pdf"
+    },
+    {
+      "course": 24666,
+      "name": "CS3014_Estructuras_de_Datos_Avanzadas___Simulacro_de_Examen_Final.pdf",
+      "path": "apps/eda/raw-materials/sem15/CS3014_Estructuras_de_Datos_Avanzadas___Simulacro_de_Examen_Final.pdf"
+    }
+  ]
+}

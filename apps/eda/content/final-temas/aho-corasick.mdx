@@ -1,0 +1,385 @@
+---
+title: "Aho–Corasick"
+summary: "Trie de patrones, fail, dic y transición δ; construcción por BFS, búsqueda en O(|T| + occ) y conteo de ocurrencias con el árbol de fail."
+order: 5
+prioridad: "tema prioritario"
+lista: ["L24", "S5a", "S5b", "S5c", "S5d", "L22", "L23"]
+items:
+  # ───── Predicción 1: construir, buscar y justificar ─────
+  - level: 2
+    etiqueta: "Predicción 1 · Diccionario con solapes · (a) Conocimientos (3 pts)"
+    statement: >-
+      Sobre $\Sigma = \{a, b\}$ con los patrones $\{\mathtt{ab}, \mathtt{ba}, \mathtt{aba}, \mathtt{b}\}$: construye el trie, da $\mathrm{fail}$ y $\mathrm{dic}$ de cada nodo y la tabla completa $\delta$. Luego recorre $T = \mathtt{abababa}$ e indica, en cada posición, el estado y todos los patrones que terminan allí.
+    hints:
+      - >-
+        Nodos: $\varepsilon$, a, ab, aba, b, ba. El nodo b es terminal y además es el fail de ab.
+      - >-
+        $\mathrm{fail}(\mathtt{aba}) = \delta(\mathrm{fail}(\mathtt{ab}), a) = \delta(\mathtt b, a) = \mathtt{ba}$.
+    solution: |-
+      **Trie.** Raíz con hijos a y b; a tiene hijo ab; ab tiene hijo aba; b tiene hijo ba. Terminales: ab, ba, aba, b.
+
+      **fail y dic** (BFS por profundidad):
+
+      - a: fail $\varepsilon$, dic nulo.
+      - b (terminal): fail $\varepsilon$, dic nulo.
+      - ab (terminal): fail $= \delta(\varepsilon, b) = $ b, que es terminal: dic **b**.
+      - ba (terminal): fail $= \delta(\varepsilon, a) = $ a, no terminal; $\mathrm{fail}(\mathtt a) = \varepsilon$: dic nulo.
+      - aba (terminal): fail $= \delta(\mathtt b, a) = $ ba, terminal: dic **ba**.
+
+      **δ** (los huecos se rellenan con $\delta(\mathrm{fail}(v), c)$):
+
+      - $\delta(\varepsilon, a) = $ a, $\delta(\varepsilon, b) = $ b
+      - $\delta(\mathtt a, a) = \delta(\varepsilon, a) = $ a, $\delta(\mathtt a, b) = $ ab
+      - $\delta(\mathtt b, a) = $ ba, $\delta(\mathtt b, b) = \delta(\varepsilon, b) = $ b
+      - $\delta(\mathtt{ab}, a) = $ aba, $\delta(\mathtt{ab}, b) = \delta(\mathtt b, b) = $ b
+      - $\delta(\mathtt{ba}, a) = \delta(\mathtt a, a) = $ a, $\delta(\mathtt{ba}, b) = \delta(\mathtt a, b) = $ ab
+      - $\delta(\mathtt{aba}, a) = \delta(\mathtt{ba}, a) = $ a, $\delta(\mathtt{aba}, b) = \delta(\mathtt{ba}, b) = $ ab
+
+      **Búsqueda en $T = \mathtt{abababa}$:**
+
+      - $i=0$ a: a; nada.
+      - $i=1$ b: ab; terminan **ab** y (dic) **b**.
+      - $i=2$ a: aba; terminan **aba** y (dic) **ba**.
+      - $i=3$ b: ab; **ab**, **b**.
+      - $i=4$ a: aba; **aba**, **ba**.
+      - $i=5$ b: ab; **ab**, **b**.
+      - $i=6$ a: aba; **aba**, **ba**.
+
+      Total: 12 ocurrencias (3 de cada patrón), todas reportadas siguiendo dic sin recorrer nodos inútiles.
+  - level: 6
+    etiqueta: "Predicción 1 · Diccionario con solapes · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra que la búsqueda con el autómata (avanzar por $\delta$ y, en cada posición, reportar el nodo actual si es terminal y luego recorrer la cadena dic) reporta **todas** las ocurrencias y cuesta $O(\lvert T\rvert + \mathrm{occ})$. Explica por qué sin dic, siguiendo fail, el costo podría ser $\Theta(\lvert T\rvert \cdot L)$ con $L$ la longitud del patrón más largo.
+    hints:
+      - >-
+        Invariante: tras leer $T[0..i]$, el estado es el sufijo más largo de $T[0..i]$ que es prefijo de algún patrón.
+      - >-
+        Todo patrón que termina en $i$ es sufijo de ese estado; los sufijos del estado que son nodos del trie son exactamente la cadena de fail.
+    solution: |-
+      **Invariante.** Tras leer $T[0..i]$, el estado $v_i$ es el nodo del sufijo más largo de $T[0..i]$ que es prefijo de un patrón. Base: $v_{-1} = \varepsilon$. Paso: por la definición de $\delta$ (que es correcta por la construcción), $\delta(v_{i-1}, T[i])$ es el sufijo más largo de $\mathrm{str}(v_{i-1})\,T[i]$ en el trie; cualquier sufijo de $T[0..i]$ en el trie, sin su última letra, es sufijo de $T[0..i-1]$ en el trie y por tanto sufijo de $\mathrm{str}(v_{i-1})$. Las dos cosas coinciden.
+
+      **Completitud.** Un patrón $P$ que termina en $i$ es un sufijo de $T[0..i]$ que está en el trie, así que es sufijo de $\mathrm{str}(v_i)$. Los sufijos de $\mathrm{str}(v_i)$ que son nodos del trie son exactamente $v_i, \mathrm{fail}(v_i), \mathrm{fail}^2(v_i), \dots$ (fail da el siguiente más largo). La cadena dic salta de terminal en terminal dentro de esa misma cadena: recorre **todos** los terminales y sólo ellos.
+
+      **Costo.** Avanzar por $\delta$ es $O(1)$ por carácter: $O(\lvert T\rvert)$. Cada paso por la cadena dic reporta una ocurrencia nueva: $O(\mathrm{occ})$. Total $O(\lvert T\rvert + \mathrm{occ})$ (más la construcción, $O(\lvert\Sigma\rvert \sum \lvert P_i\rvert)$).
+
+      **Sin dic.** Siguiendo fail se visitan también los nodos **no** terminales de la cadena. Con los patrones $\{\mathtt{a}^L \mathtt b\}$ y $T = \mathtt a^n$, cada estado es $\mathtt a^L$ y su cadena de fail tiene $L$ nodos sin ninguna ocurrencia: $\Theta(\lvert T\rvert L)$ con $\mathrm{occ} = 0$.
+  - level: 5
+    etiqueta: "Predicción 1 · Diccionario con solapes · (c) Diseño (2 pts)"
+    statement: >-
+      Se quiere responder, para cada patrón del diccionario $\{\mathtt{a}, \mathtt{aa}, \mathtt{aba}\}$, **cuántas veces** aparece en $T = \mathtt{aabaaba}$, en tiempo $O(\lvert T\rvert + \sum \lvert P_i\rvert)$ (sin pagar por ocurrencia). Diseña el procedimiento y aplícalo.
+    hints:
+      - >-
+        Cuenta cuántas veces el recorrido **pasa** por cada nodo ($\mathrm{freq}$). Una ocurrencia de $P$ termina en $i$ si y sólo si $P$ está en la cadena de fail de $v_i$.
+      - >-
+        Los enlaces fail forman un árbol (el padre de $u$ es $\mathrm{fail}(u)$). Suma $\mathrm{freq}$ de abajo hacia arriba, en orden inverso de BFS.
+    solution: |-
+      **Procedimiento** (es el de `black-order-712 (1).cpp`):
+
+      1. Construir el autómata.
+      2. Recorrer $T$ y hacer $\mathrm{freq}[v_i] \mathrel{+}= 1$ en cada posición (un contador por nodo, sin seguir fail).
+      3. Recorrer los nodos en **orden inverso de BFS** y hacer $\mathrm{freq}[\mathrm{fail}(u)] \mathrel{+}= \mathrm{freq}[u]$. Como $\mathrm{fail}(u)$ es menos profundo, se procesa después: al final $\mathrm{freq}[x]$ = número de posiciones cuya cadena de fail contiene a $x$ = número de ocurrencias de $\mathrm{str}(x)$.
+      4. La respuesta de $P_j$ es $\mathrm{freq}$ de su nodo terminal.
+
+      Costo: $O(\sum\lvert P_i\rvert)$ construir, $O(\lvert T\rvert)$ recorrer, $O(\sum \lvert P_i\rvert)$ propagar.
+
+      **Aplicación.** Nodos: a (terminal, fail $\varepsilon$), aa (terminal, fail a), ab (fail $\varepsilon$), aba (terminal, fail a). Recorrido de $\mathtt{aabaaba}$: estados a, aa, ab, aba, aa, ab, aba. Conteo directo: a: 1, aa: 2, ab: 2, aba: 2. Propagación (inversa de BFS: aba, ab, aa, a): $\mathrm{freq}[\mathtt a] \mathrel{+}= 2$ (de aba) $+ 2$ (de aa) $= 5$; ab y aba van a la raíz.
+
+      Resultado: $\mathtt a$: **5**, $\mathtt{aa}$: **2**, $\mathtt{aba}$: **2** (posiciones de inicio: a en 0, 1, 3, 4, 6; aa en 0, 3; aba en 1, 4).
+  - level: 4
+    etiqueta: "Predicción 1 · Diccionario con solapes · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone contar las ocurrencias de cada patrón recorriendo, en cada posición, la cadena dic y sumando 1 a cada terminal visitado. ¿Es correcto? ¿Cuál es su costo en el peor caso? Construye un diccionario y un texto en que su método sea asintóticamente peor que el del inciso (c).
+    hints:
+      - >-
+        El método de Chris es correcto; la pregunta es cuánto cuesta.
+      - >-
+        Piensa en patrones que son todos sufijos unos de otros.
+    solution: |-
+      **Correcto**, porque la cadena dic visita exactamente los patrones que terminan en cada posición (inciso (b)). Pero cuesta $\Theta(\lvert T\rvert + \mathrm{occ})$, y $\mathrm{occ}$ puede ser enorme.
+
+      **Peor caso.** Diccionario $\{\mathtt a, \mathtt{aa}, \dots, \mathtt a^k\}$ y $T = \mathtt a^n$. En la posición $i \ge k-1$ terminan los $k$ patrones: la cadena dic tiene $k$ nodos. Chris paga $\Theta(nk)$; con $k = \sqrt n$ son $\Theta(n^{1.5})$, aunque el diccionario mide $\Theta(k^2) = \Theta(n)$.
+
+      El método del inciso (c) paga $O(n + k^2)$: un contador por posición y una propagación por nodo, sin importar cuántas ocurrencias haya. La idea es que el árbol de fail **agrega** las ocurrencias en vez de enumerarlas.
+  # ───── Predicción 2: primera y última ocurrencia, y la regla de construcción ─────
+  - level: 2
+    etiqueta: "Predicción 2 · Extremos de ocurrencias · (a) Conocimientos (3 pts)"
+    statement: >-
+      Con los patrones $\{\mathtt{he}, \mathtt{she}, \mathtt{his}, \mathtt{hers}\}$ sobre las letras que aparecen, construye el trie, calcula $\mathrm{fail}$ y $\mathrm{dic}$ de cada nodo y recorre $T = \mathtt{ushers}$ indicando estado y patrones reportados en cada posición.
+    hints:
+      - >-
+        Nodos: h, he, her, hers, hi, his, s, sh, she. Terminales: he, she, his, hers.
+      - >-
+        $\mathrm{fail}(\mathtt{she}) = \mathtt{he}$, que es terminal; $\mathrm{fail}(\mathtt{hers}) = \mathtt s$.
+    solution: |-
+      **fail y dic:**
+
+      - h, s: fail $\varepsilon$, dic nulo.
+      - he (terminal), hi: fail $\varepsilon$, dic nulo.
+      - sh: fail h, dic nulo.
+      - her: fail $\varepsilon$; his (terminal): fail s, dic nulo.
+      - she (terminal): fail he, dic **he**.
+      - hers (terminal): fail s, dic nulo.
+
+      **Recorrido de $\mathtt{ushers}$:**
+
+      - $i=0$ u: raíz; nada.
+      - $i=1$ s: s; nada.
+      - $i=2$ h: sh; nada.
+      - $i=3$ e: she; terminan **she** y (dic) **he**.
+      - $i=4$ r: she no tiene hijo r; $\delta(\mathtt{she}, r) = \delta(\mathtt{he}, r) = $ her; nada.
+      - $i=5$ s: hers; termina **hers**.
+
+      Tres ocurrencias: she (inicio 1), he (inicio 2), hers (inicio 2).
+  - level: 6
+    etiqueta: "Predicción 2 · Extremos de ocurrencias · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra que, en la construcción por BFS, $\mathrm{fail}(u) \leftarrow \delta(\mathrm{fail}(v), c)$ es correcto para el hijo $u$ de $v$ por $c$, y que el costo total es $O(\lvert\Sigma\rvert \sum \lvert P_i\rvert)$. ¿Por qué hace falta procesar los nodos en orden BFS y no en DFS?
+    hints:
+      - >-
+        Un sufijo propio de $\mathrm{str}(v)c$ en el trie es $sc$ con $s$ sufijo propio de $\mathrm{str}(v)$ en el trie.
+      - >-
+        $\mathrm{fail}(v)$ es menos profundo que $v$. ¿Ya está calculado su $\delta$ cuando se procesa $v$?
+    solution: |-
+      **Corrección.** Inducción en la profundidad. Para profundidad 1, $\mathrm{fail} = \varepsilon$, correcto. Sea $u$ hijo de $v$ por $c$. Un sufijo propio de $\mathrm{str}(u) = \mathrm{str}(v)c$ que es nodo del trie tiene la forma $sc$, con $s$ sufijo propio de $\mathrm{str}(v)$ que también es nodo (todo prefijo de un prefijo es prefijo). Los candidatos $s$ son la cadena $\mathrm{fail}(v), \mathrm{fail}^2(v), \dots, \varepsilon$, en orden de longitud decreciente. $\delta(\mathrm{fail}(v), c)$ devuelve, por hipótesis, el sufijo más largo de $\mathrm{str}(\mathrm{fail}(v))\,c$ en el trie, que es el primero de esa cadena con hijo $c$ (o la raíz). Ése es justamente el sufijo propio más largo de $\mathrm{str}(u)$ en el trie.
+
+      **Costo.** Cada nodo (a lo más $1 + \sum\lvert P_i\rvert$) se desencola una vez y hace $\lvert\Sigma\rvert$ asignaciones $O(1)$.
+
+      **Por qué BFS.** La regla usa $\delta(\mathrm{fail}(v), \cdot)$, y $\mathrm{fail}(v)$ es menos profundo que $v$ pero puede estar en **otra rama**. En DFS esa rama podría no haberse procesado todavía; en BFS todo nodo menos profundo ya está listo.
+  - level: 5
+    etiqueta: "Predicción 2 · Extremos de ocurrencias · (c) Diseño (2 pts)"
+    statement: >-
+      Para cada patrón se pide la **primera y la última** posición de inicio de sus ocurrencias en $T$ ($-1$ si no aparece), en $O(\lvert T\rvert + \sum\lvert P_i\rvert)$. Diseña el procedimiento y aplícalo a $\{\mathtt a, \mathtt{aa}, \mathtt{aba}\}$ con $T = \mathtt{aabaaba}$.
+    hints:
+      - >-
+        Igual que el conteo, pero cada nodo guarda $(\text{izq}, \text{der})$ = la menor y la mayor posición final en que el recorrido pasó por él.
+      - >-
+        Combinar en el árbol de fail es tomar mínimo y máximo. La posición de inicio es final $- \lvert P\rvert + 1$.
+    solution: |-
+      **Procedimiento** (el de `black-order-712 (2).cpp`): en el recorrido, en la posición $i$, se actualiza $(\text{izq}, \text{der})$ del estado $v_i$ con $i$. Luego, en orden inverso de BFS, se combina cada nodo con su fail: $\text{izq}[\mathrm{fail}(u)] \leftarrow \min$, $\text{der}[\mathrm{fail}(u)] \leftarrow \max$. Para un patrón de nodo $x$ y longitud $h$: primera $= \text{izq}[x] - h + 1$, última $= \text{der}[x] - h + 1$. Mínimo y máximo son asociativos y conmutativos, así que el orden de combinación no importa: $O(\lvert T\rvert + \sum\lvert P_i\rvert)$.
+
+      **Aplicación.** Estados en las posiciones 0..6: a, aa, ab, aba, aa, ab, aba.
+
+      - Directo: a: (0, 0); aa: (1, 4); ab: (2, 5); aba: (3, 6).
+      - Propagar aba → a: a pasa a (0, 6); aa → a: sigue (0, 6).
+
+      Respuestas: $\mathtt a$: primera 0, última 6. $\mathtt{aa}$ (finales 1 y 4): primera 0, última 3. $\mathtt{aba}$ (finales 3 y 6): primera 1, última 4.
+  - level: 4
+    etiqueta: "Predicción 2 · Extremos de ocurrencias · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone calcular $\mathrm{fail}(u)$ como el **padre** de $u$ en el trie cuando $u$ no tiene un sufijo mejor, y en otro caso buscar en el trie el sufijo propio más largo desde la raíz, letra por letra, para cada nodo. ¿Es correcto? ¿Cuánto cuesta en el peor caso con un patrón $\mathtt a^m$? Compáralo con la construcción por BFS.
+    hints:
+      - >-
+        Para cada nodo de profundidad $d$ hay que probar hasta $d$ sufijos, cada uno de longitud hasta $d$.
+      - >-
+        $\sum_{d=1}^{m} d^2 = \Theta(m^3)$.
+    solution: |-
+      **Primera parte, incorrecta.** El padre de $u$ es un **prefijo** de $\mathrm{str}(u)$, no un sufijo: para $\mathtt{ab}$ el padre es $\mathtt a$, pero $\mathtt a$ no es sufijo de $\mathtt{ab}$. La regla de Chris inventa coincidencias.
+
+      **Segunda parte, correcta pero lenta.** Probar cada sufijo propio de $\mathrm{str}(u)$, del más largo al más corto, bajando desde la raíz, sí da el fail. Con el patrón $\mathtt a^m$, el nodo de profundidad $d$ prueba hasta $d - 1$ sufijos de longitud hasta $d-1$: $\Theta(d^2)$ en el peor caso de la búsqueda, y $\sum_d d^2 = \Theta(m^3)$ en total.
+
+      **BFS** reutiliza $\delta(\mathrm{fail}(v), c)$, calculado en $O(1)$ para el nodo anterior: $O(\lvert\Sigma\rvert m)$. La diferencia es la misma que entre la búsqueda ingenua y la función prefijo de KMP: no se vuelve a leer lo que ya se sabe.
+---
+
+import Visualization from '../../src/components/Visualization.astro';
+
+## Qué es probable que pregunten y por qué
+
+- **Construir el autómata y recorrer un texto** (fail, dic, estados, patrones reportados). Es la parte (a) del Problema 5 del simulacro y el ejercicio 24 de la lista: casi seguro vale 3 puntos.
+- **Demostrar la construcción por BFS y su costo** $O(\lvert\Sigma\rvert \sum\lvert P_i\rvert)$, por inducción en la profundidad. Es literalmente la parte (b) del simulacro.
+- **Diseño sobre la cadena dic**: patrón más largo que termina en cada posición (simulacro c), contar ocurrencias o dar primera y última (los tres `black-order-712*.cpp` de la semana 13 resuelven presencia, conteo y extremos con el árbol de fail).
+- **Profundidad: una variante de Chris que rompe fail** (reiniciar en la raíz, simulacro d) o que lo calcula caro. La conexión con KMP ($\pi$ es fail para un solo patrón, ejercicios 22–23) es la pieza que justifica.
+
+## Teoría desde cero
+
+### El problema
+
+Se tiene un diccionario de patrones $P_1, \dots, P_k$ y un texto $T$. Se quiere reportar **todas** las ocurrencias de todos los patrones. Correr KMP una vez por patrón cuesta $O(k\lvert T\rvert + \sum\lvert P_i\rvert)$: se lee el texto $k$ veces. Aho–Corasick lee el texto **una** sola vez: $O(\lvert T\rvert + \sum \lvert P_i\rvert + \mathrm{occ})$.
+
+### Las cuatro piezas
+
+| Pieza | Qué es | Por qué hace falta |
+| --- | --- | --- |
+| trie | un nodo por cada prefijo de algún patrón; $\mathrm{str}(v)$ es la cadena del nodo | representa "lo que llevo coincidido" con todos los patrones a la vez |
+| terminal | nodo cuya cadena es un patrón | allí termina una ocurrencia |
+| $\mathrm{fail}(v)$ | nodo del **sufijo propio más largo** de $\mathrm{str}(v)$ que está en el trie | al fallar, conserva el mayor progreso posible (como $\pi$ en KMP) |
+| $\mathrm{dic}(v)$ | primer terminal en la cadena $\mathrm{fail}(v), \mathrm{fail}^2(v), \dots$ | salta directo a los patrones que también terminan aquí |
+| $\delta(v, c)$ | transición del autómata: hijo $c$ si existe, si no $\delta(\mathrm{fail}(v), c)$ | quita el bucle de fallos de la búsqueda: $O(1)$ por letra |
+
+El invariante que lo explica todo: **tras leer $T[0..i]$, el estado es el sufijo más largo de $T[0..i]$ que es prefijo de algún patrón.** Todo patrón que termina en $i$ es sufijo de ese estado, y los sufijos del estado que están en el trie son exactamente su cadena de fail.
+
+### Ejemplo trabajado: aab, ab, bab (ejercicio 24)
+
+Primero el trie. Cada nodo es un prefijo; los terminales (aab, ab, bab) van en carmesí.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El trie de los tres patrones. Cada camino desde la raíz deletrea un prefijo; los nodos carmesí son los patrones completos.",
+      nodes: [
+        { id: "r", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "r" },
+        { id: "aa", value: "aa", parent: "a" },
+        { id: "aab", value: "aab", parent: "aa", state: "answer" },
+        { id: "ab", value: "ab", parent: "a", state: "answer" },
+        { id: "b", value: "b", parent: "r" },
+        { id: "ba", value: "ba", parent: "b" },
+        { id: "bab", value: "bab", parent: "ba", state: "answer" },
+      ],
+      caption: "Terminales: aab, ab, bab.",
+    },
+    {
+      note: "Profundidad 1: los hijos de la raíz fallan a la raíz, porque su único sufijo propio es la cadena vacía.",
+      nodes: [
+        { id: "r", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "r", state: "active" },
+        { id: "aa", value: "aa", parent: "a" },
+        { id: "aab", value: "aab", parent: "aa", state: "answer" },
+        { id: "ab", value: "ab", parent: "a", state: "answer" },
+        { id: "b", value: "b", parent: "r", state: "active" },
+        { id: "ba", value: "ba", parent: "b" },
+        { id: "bab", value: "bab", parent: "ba", state: "answer" },
+      ],
+      links: [
+        { from: "a", to: "r", kind: "pointer", dash: true, label: "fail" },
+        { from: "b", to: "r", kind: "pointer", dash: true, label: "fail" },
+      ],
+      caption: "fail(a) = fail(b) = ε.",
+    },
+    {
+      note: "Profundidad 2: fail(aa) = δ(fail(a), a) = δ(ε, a) = a; fail(ab) = δ(ε, b) = b; fail(ba) = δ(fail(b), a) = a. Cada fail cae en un nodo menos profundo ya resuelto.",
+      nodes: [
+        { id: "r", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "r" },
+        { id: "aa", value: "aa", parent: "a", state: "active" },
+        { id: "aab", value: "aab", parent: "aa", state: "answer" },
+        { id: "ab", value: "ab", parent: "a", state: "active" },
+        { id: "b", value: "b", parent: "r" },
+        { id: "ba", value: "ba", parent: "b", state: "active" },
+        { id: "bab", value: "bab", parent: "ba", state: "answer" },
+      ],
+      links: [
+        { from: "aa", to: "a", kind: "pointer", dash: true, label: "fail" },
+        { from: "ab", to: "b", kind: "pointer", dash: true, label: "fail" },
+        { from: "ba", to: "a", kind: "pointer", dash: true, label: "fail" },
+      ],
+      caption: "fail(aa) = a, fail(ab) = b, fail(ba) = a.",
+    },
+    {
+      note: "Profundidad 3: fail(aab) = δ(fail(aa), b) = δ(a, b) = ab, y fail(bab) = δ(fail(ba), b) = δ(a, b) = ab. Ambos caen en un terminal: dic = ab.",
+      nodes: [
+        { id: "r", value: "ε", parent: null },
+        { id: "a", value: "a", parent: "r" },
+        { id: "aa", value: "aa", parent: "a" },
+        { id: "aab", value: "aab", parent: "aa", state: "active" },
+        { id: "ab", value: "ab", parent: "a", state: "marked" },
+        { id: "b", value: "b", parent: "r" },
+        { id: "ba", value: "ba", parent: "b" },
+        { id: "bab", value: "bab", parent: "ba", state: "active" },
+      ],
+      links: [
+        { from: "aab", to: "ab", kind: "pointer", dash: true, label: "fail·dic" },
+        { from: "bab", to: "ab", kind: "pointer", dash: true, label: "fail·dic" },
+      ],
+      caption: "dic(aab) = dic(bab) = ab. Los demás nodos tienen dic nulo.",
+    },
+  ],
+}} />
+
+Ahora la búsqueda sobre $T = \mathtt{aabab}$. El estado avanza por $\delta$; en cada posición se reporta el estado si es terminal y luego la cadena dic.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "i = 0, se lee a: el estado pasa de ε a a. a no es terminal y su dic es nulo: nada termina aquí.",
+      rows: [
+        { id: "t", label: "T", cells: [{ value: "a", tag: "0", state: "active" }, { value: "a", tag: "1" }, { value: "b", tag: "2" }, { value: "a", tag: "3" }, { value: "b", tag: "4" }] },
+        { id: "q", label: "estado", cells: [{ value: "a", state: "active" }, { value: "" }, { value: "" }, { value: "" }, { value: "" }] },
+      ],
+      caption: "Reportes: ninguno.",
+    },
+    {
+      note: "i = 1, se lee a: a tiene hijo a, el estado es aa. Sigue sin haber patrón.",
+      rows: [
+        { id: "t", label: "T", cells: [{ value: "a", tag: "0" }, { value: "a", tag: "1", state: "active" }, { value: "b", tag: "2" }, { value: "a", tag: "3" }, { value: "b", tag: "4" }] },
+        { id: "q", label: "estado", cells: [{ value: "a" }, { value: "aa", state: "active" }, { value: "" }, { value: "" }, { value: "" }] },
+      ],
+      caption: "Reportes: ninguno.",
+    },
+    {
+      note: "i = 2, se lee b: estado aab, terminal. Se reporta aab y, siguiendo dic, ab: dos patrones terminan en la misma posición.",
+      rows: [
+        { id: "t", label: "T", cells: [{ value: "a", tag: "0" }, { value: "a", tag: "1" }, { value: "b", tag: "2", state: "active" }, { value: "a", tag: "3" }, { value: "b", tag: "4" }] },
+        { id: "q", label: "estado", cells: [{ value: "a" }, { value: "aa" }, { value: "aab", state: "answer" }, { value: "" }, { value: "" }] },
+      ],
+      spans: [{ id: "o1", row: "t", from: 0, to: 2, label: "aab" }, { id: "o2", row: "t", from: 1, to: 2, label: "ab" }],
+      caption: "Reportes: aab (inicio 0), ab (inicio 1).",
+    },
+    {
+      note: "i = 3, se lee a: aab no tiene hijo a. δ(aab, a) = δ(ab, a) = δ(b, a) = ba. El autómata ya precalculó esa cadena de fallos: un solo paso.",
+      rows: [
+        { id: "t", label: "T", cells: [{ value: "a", tag: "0" }, { value: "a", tag: "1" }, { value: "b", tag: "2" }, { value: "a", tag: "3", state: "active" }, { value: "b", tag: "4" }] },
+        { id: "q", label: "estado", cells: [{ value: "a" }, { value: "aa" }, { value: "aab" }, { value: "ba", state: "active" }, { value: "" }] },
+      ],
+      caption: "Reportes: ninguno (ba no es terminal y su dic es nulo).",
+    },
+    {
+      note: "i = 4, se lee b: estado bab, terminal. Se reporta bab y por dic ab. Cada ocurrencia se encontró sin volver a leer el texto.",
+      rows: [
+        { id: "t", label: "T", cells: [{ value: "a", tag: "0" }, { value: "a", tag: "1" }, { value: "b", tag: "2" }, { value: "a", tag: "3" }, { value: "b", tag: "4", state: "active" }] },
+        { id: "q", label: "estado", cells: [{ value: "a" }, { value: "aa" }, { value: "aab" }, { value: "ba" }, { value: "bab", state: "answer" }] },
+      ],
+      spans: [{ id: "o3", row: "t", from: 2, to: 4, label: "bab" }, { id: "o4", row: "t", from: 3, to: 4, label: "ab" }],
+      caption: "Total: aab, ab, bab, ab. Cuatro ocurrencias en una sola pasada.",
+    },
+  ],
+}} />
+
+### Construcción por BFS, paso a paso
+
+1. Para cada letra $c$: si la raíz tiene hijo $u$ por $c$, $\mathrm{fail}(u) = \varepsilon$, $\delta(\varepsilon, c) = u$ y se encola $u$; si no, $\delta(\varepsilon, c) = \varepsilon$.
+2. Mientras la cola no esté vacía, se desencola $v$ y, para cada letra $c$:
+   - si $v$ tiene hijo $u$ por $c$: $\mathrm{fail}(u) = \delta(\mathrm{fail}(v), c)$, $\delta(v, c) = u$, se encola $u$;
+   - si no: $\delta(v, c) = \delta(\mathrm{fail}(v), c)$.
+3. $\mathrm{dic}(u)$ es $\mathrm{fail}(u)$ si éste es terminal, y si no $\mathrm{dic}(\mathrm{fail}(u))$: también se calcula en el mismo BFS en $O(1)$ por nodo.
+
+**Por qué es correcto** (inducción en la profundidad): un sufijo propio de $\mathrm{str}(v)c$ en el trie es $sc$ con $s$ sufijo propio de $\mathrm{str}(v)$ en el trie; los $s$ posibles son la cadena de fail de $v$, y $\delta(\mathrm{fail}(v), c)$ ya resume esa cadena porque $\mathrm{fail}(v)$ es menos profundo y BFS lo procesó antes.
+
+### Búsqueda y costo
+
+Estado inicial $\varepsilon$. Para cada $i$: $v \leftarrow \delta(v, T[i])$; si $v$ es terminal se reporta; después se recorre $x = \mathrm{dic}(v), \mathrm{dic}(x), \dots$ reportando cada uno.
+
+$$
+\underbrace{O(\lvert\Sigma\rvert \textstyle\sum_i \lvert P_i\rvert)}_{\text{construir }\delta,\ \mathrm{fail},\ \mathrm{dic}}
+\;+\;
+\underbrace{O(\lvert T\rvert)}_{\text{un } \delta \text{ por letra}}
+\;+\;
+\underbrace{O(\mathrm{occ})}_{\text{un paso de dic por reporte}}
+$$
+
+- El primer término: un nodo por letra del diccionario, $\lvert\Sigma\rvert$ transiciones por nodo.
+- El segundo: $\delta$ está completa, no hay bucle de fallos al buscar.
+- El tercero: dic sólo visita terminales, así que cada paso es una ocurrencia real.
+
+### Contar en vez de enumerar: el árbol de fail
+
+Si sólo se pide **cuántas** veces aparece cada patrón (o si aparece, o su primera y última posición), no hace falta pagar $\mathrm{occ}$. Los enlaces fail forman un árbol con raíz $\varepsilon$; un patrón $x$ termina en $i$ si y sólo si $x$ es ancestro (en ese árbol) del estado $v_i$. Se acumula una marca por posición en $v_i$ y se suma de abajo hacia arriba en orden inverso de BFS: $O(\lvert T\rvert + \sum\lvert P_i\rvert)$. Es exactamente lo que hacen las variantes `black-order-712` de la semana 13 (presencia, conteo, extremos).
+
+## Errores típicos
+
+- **Confundir fail con el padre del trie.** El padre es un prefijo; fail es un **sufijo** propio.
+- **Olvidar dic** y reportar sólo el estado: en $\mathtt{aabab}$ se perderían las dos ocurrencias de $\mathtt{ab}$.
+- **Recorrer fail en vez de dic** al reportar: correcto pero $\Theta(\lvert T\rvert L)$ en el peor caso.
+- **Calcular fail en DFS**: $\mathrm{fail}(v)$ puede estar en otra rama todavía no procesada.
+- **Reiniciar en la raíz** al fallar (Chris en el simulacro): pierde ocurrencias que empiezan dentro de lo ya leído.
+- **Patrón que es prefijo de otro** ($\mathtt{ab}$ y $\mathtt{abca}$): un terminal puede ser nodo interno; se reporta igual al pasar por él.
+
+## Qué memorizar
+
+- $\mathrm{fail}(u) = \delta(\mathrm{fail}(v), c)$ para el hijo $u$ de $v$ por $c$; hijos de la raíz fallan a la raíz.
+- $\delta(v, c) = $ hijo si existe, si no $\delta(\mathrm{fail}(v), c)$; con $\delta$ completa la búsqueda es $O(1)$ por letra.
+- $\mathrm{dic}(v)$ = primer terminal en la cadena de fail **sin contar** $v$.
+- Invariante del estado: sufijo más largo del texto leído que es prefijo de un patrón.
+- Costos: construir $O(\lvert\Sigma\rvert\sum\lvert P_i\rvert)$; buscar $O(\lvert T\rvert + \mathrm{occ})$; contar con el árbol de fail $O(\lvert T\rvert + \sum\lvert P_i\rvert)$.
+- Para un solo patrón, fail es la función prefijo $\pi$ de KMP ([KMP](/structures/knuth-morris-pratt)). Teoría del curso: [Aho–Corasick](/structures/aho-corasick), [Trie](/structures/trie).

@@ -1,0 +1,196 @@
+---
+title: "Cotas de Wilber"
+summary: "Wilber-1 (alternancias en un árbol de referencia fijo) y Wilber-2 (alternancias de los puntos visibles): definiciones, cálculo a mano, por qué son cotas inferiores de OPT y qué dicen de la bit-reversal."
+order: 1
+prioridad: "tema del examen"
+lista: ["L3", "L4", "L5", "S1a", "S1b", "S1c", "S1d"]
+items:
+  - level: 2
+    etiqueta: "Predicción 1 · Wilber-1 y Wilber-2 sobre la misma secuencia · (a) Conocimientos (3 pts)"
+    statement: >-
+      Sea $P$ el BST perfecto de llaves $1, \dots, 7$ (raíz 4; hijos 2 y 6; hojas 1, 3, 5, 7) y la secuencia $X = 2, 6, 1, 5, 3, 7, 4$. (i) Calcula $W_1(y)$ para cada nodo de $P$ y $W_1$. (ii) Calcula Wilber-2: para cada acceso $p$, los accesos anteriores visibles desde $p$ (rectángulo con $p$ sin otro acceso dentro), en orden de tiempo decreciente, su signo (izquierda − / derecha +) y las alternancias; da el total.
+    hints:
+      - >-
+        Para Wilber-1 sólo aportan 4, 2 y 6. El 4 ve los accesos 2, 6, 1, 5, 3, 7.
+      - >-
+        Un acceso anterior $q$ es visible desde $p$ si ningún acceso entre ellos en el tiempo tiene llave entre $q$ y $p$.
+    solution: |-
+      **(i) Wilber-1.** Nodo 4: 2 (L), 6 (R), 1 (L), 5 (R), 3 (L), 7 (R) dan L R L R L R: **5**. Nodo 2: accesos 1, 3: L R, **1**. Nodo 6: 5, 7: L R, **1**. $W_1 = 7$.
+
+      **(ii) Wilber-2.** Tiempos 1 a 7:
+
+      - $t=1$, 2: sin anteriores: 0.
+      - $t=2$, 6: visible 2 (−): 0.
+      - $t=3$, 1: visibles 6 (+), 2 (+): 0.
+      - $t=4$, 5: visibles 1 (−), 6 (+), 2 (−): **2**.
+      - $t=5$, 3: visibles 5 (+), 1 (−), 2 (−). El 6 queda oculto por el 5: **1**.
+      - $t=6$, 7: visibles 3 (−), 5 (−), 6 (−): 0.
+      - $t=7$, 4: visibles 7 (+), 3 (−), 5 (+); los demás quedan ocultos: **2**.
+
+      Wilber-2 $= 2 + 1 + 2 = 5$.
+  - level: 6
+    etiqueta: "Predicción 1 · Wilber-1 y Wilber-2 sobre la misma secuencia · (b) Análisis (3 pts)"
+    statement: >-
+      Para $n = 2^k - 1$ y $P$ perfecto, la permutación bit-reversal visita las llaves de modo que dentro de cada subárbol los accesos alternan izquierda y derecha. Demuestra que $W_1(y) = \mathrm{tam}(y) - 2$ para todo nodo interno $y$, que $W_1 = (k - \tfrac52)2^k + 3 = \Theta(n \lg n)$, y concluye con $\mathrm{OPT} \ge W_1/2 - n$ que todo BST paga $\Omega(\lg n)$ por acceso. Verifica la fórmula con $k = 4$ (bit-reversal de $1..15$: $8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15$).
+    hints:
+      - >-
+        Si los accesos del subárbol de $y$ (sin $y$) alternan perfectamente, ¿cuántas alternancias tiene una sucesión de $m$ letras que alternan?
+      - >-
+        En la profundidad $d$ hay $2^d$ nodos de tamaño $2^{k-d} - 1$; los internos son los de $d \le k - 2$.
+    solution: |-
+      **Por nodo.** El subárbol de $y$ tiene $\mathrm{tam}(y)$ llaves; sin $y$ quedan $\mathrm{tam}(y) - 1$ accesos, que alternan L R L R…: una sucesión alternante de $m$ letras tiene $m - 1$ alternancias, así que $W_1(y) = \mathrm{tam}(y) - 2$.
+
+      **Suma.** En la profundidad $d \le k-2$ hay $2^d$ nodos de tamaño $2^{k-d} - 1$:
+      $$W_1 = \sum_{d=0}^{k-2} 2^d\,(2^{k-d} - 3) = (k-1)2^k - 3(2^{k-1} - 1) = \left(k - \tfrac52\right)2^k + 3.$$
+      Con $n = 2^k - 1$ es $\Theta(n \lg n)$.
+
+      **Verificación ($k = 4$).** Raíz: 13; nodos 4 y 12: 5 cada uno; nodos 2, 6, 10, 14: 1 cada uno. $13 + 10 + 4 = 27 = (4 - 2.5)\cdot 16 + 3$. (Comprobado con un script.)
+
+      **Conclusión.** $\mathrm{OPT} \ge W_1/2 - n = \Theta(n \lg n)$ sobre $n$ accesos: $\Omega(\lg n)$ por acceso para **cualquier** BST, incluso uno que conozca la secuencia. Repetir la permutación da $\Omega(m \lg n)$ para $m \ge n$ accesos.
+  - level: 5
+    etiqueta: "Predicción 1 · Wilber-1 y Wilber-2 sobre la misma secuencia · (c) Diseño (2 pts)"
+    statement: >-
+      Para el acceso secuencial $1, 2, \dots, 7$ calcula $W_1$ con $P$ perfecto y Wilber-2, y compáralos con el costo de Greedy ($2n - 1$, ejercicio 2 de la lista). ¿Qué dicen las cotas sobre OPT en esta secuencia? Propón una secuencia de 7 accesos en la que Wilber-2 sea mayor que Wilber-1 (con $P$ perfecto).
+    hints:
+      - >-
+        En el secuencial cada acceso sólo ve al anterior.
+      - >-
+        Prueba con $1, 3, 5, 7, 2, 6, 4$.
+    solution: |-
+      **Secuencial.** $W_1$: nodo 4 ve L L L R R R (1), nodo 2 ve L R (1), nodo 6 ve L R (1): $W_1 = 3$. Wilber-2: desde cada acceso $t$ sólo es visible $t - 1$ (todos los anteriores quedan tapados por él), un solo signo: 0. Greedy cuesta $2 \cdot 7 - 1 = 13$.
+
+      Las cotas dan $\mathrm{OPT} \ge 3/2 - 7 < 0$ y lo trivial $\mathrm{OPT} \ge m = 7$: no dicen nada más fuerte, y es correcto, porque el secuencial cuesta $\Theta(1)$ por acceso (Greedy y splay lo logran). Una cota inferior pequeña no es un error: refleja que la secuencia es fácil.
+
+      **Wilber-2 > Wilber-1.** Con $X = 1, 3, 5, 7, 2, 6, 4$: $W_1$: nodo 4 ve L L R R L R (3), nodos 2 y 6 ven L R (1 + 1): $W_1 = 5$. Wilber-2 $= 6$: los cuatro primeros accesos ven sólo al anterior (0); el 2 ve 7, 5, 3 (+) y 1 (−): 1; el 6 ve 2 (−), 7 (+), 5 (−): 2; el 4 ve 6 (+), 2 (−), 5 (+), 3 (−): 3. Total $1 + 2 + 3 = 6$ (verificado con script). Ninguna cota domina a la otra: se usa la mayor.
+  - level: 4
+    etiqueta: "Predicción 1 · Wilber-1 y Wilber-2 sobre la misma secuencia · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris afirma: "Wilber-2 siempre es al menos Wilber-1, porque no depende de un árbol de referencia y por eso ve más alternancias". Da un contraejemplo con $P$ perfecto de 7 llaves. Explica por qué ambas son cotas inferiores válidas de OPT, por qué Wilber-1 depende de $P$ y Wilber-2 no, y qué se conjetura sobre Wilber-2.
+    hints:
+      - >-
+        Ya tienes una secuencia con $W_1 = 7$ y Wilber-2 $= 5$.
+      - >-
+        Wilber-1 cuenta alternancias en los nodos de $P$; Wilber-2 mira la geometría de los puntos.
+    solution: |-
+      **Contraejemplo.** $X = 2, 6, 1, 5, 3, 7, 4$ tiene $W_1 = 7$ con $P$ perfecto y Wilber-2 $= 5$ (inciso (a)). La afirmación es falsa. Y al revés, $1, 3, 5, 7, 2, 6, 4$ tiene $W_1 = 5 <$ Wilber-2 $= 6$: ninguna domina.
+
+      **Ambas son cotas.** Cada alternancia de Wilber-1 en un nodo $y$, y cada alternancia de los visibles en Wilber-2, da un rectángulo de una familia de **rectángulos independientes**, y el costo de cualquier BST está acotado por abajo por esa familia. Para Wilber-1 la lista lo da explícito: $\mathrm{OPT} \ge W_1/2 - n$; para Wilber-2 la clase lo enuncia como cota inferior de OPT, sin constantes.
+
+      **Dependencia de $P$.** Wilber-1 se calcula sobre un árbol fijo: con $P$ un camino puede valer 0 (simulacro S1d). Wilber-2 sólo usa los puntos (llave, tiempo) de la secuencia. Se conjetura que $\text{Wilber-2} = \Theta(\mathrm{OPT})$ (problema abierto), mientras que para Wilber-1 hay secuencias en que es asintóticamente menor que OPT para el $P$ elegido.
+---
+
+import Visualization from '../../src/components/Visualization.astro';
+
+## Qué es probable que pregunten y por qué
+
+- **Calcular Wilber-1 a mano** con un BST perfecto de 7 o 15 llaves: ejercicio 3 de la lista y simulacro S1c. Es la parte (a) más probable.
+- **Wilber-2** (puntos visibles y signos): el profesor lo dio con la vista geométrica; es natural que el (a) pida ambas cotas sobre la misma secuencia.
+- **Bit-reversal y $\Omega(\lg n)$**: ejercicio 3(c) y 5(e); la cuenta $W_1(y) = \mathrm{tam}(y) - 2$ es una demostración corta ideal para (b).
+- **Elección del árbol de referencia** y comparación entre cotas (simulacro S1d): candidato a (d).
+
+## Teoría desde cero
+
+### El marco
+
+Un algoritmo BST atiende accesos $x_1, \dots, x_m$ en un BST con rotaciones; su costo es el número de nodos tocados. $\mathrm{OPT}(X)$ es el mínimo costo de cualquier BST para la secuencia $X$. Una **cota inferior** es una cantidad calculable que acota OPT por debajo; sirve para demostrar competitividad (Tango usa Wilber-1). Ver [optimalidad dinámica](/structures/dynamic-optimality).
+
+### Wilber-1
+
+Se fija un **árbol de referencia** $P$ (un BST con las mismas llaves, típicamente perfecto). Para cada nodo $y$ de $P$ se mira la sucesión de accesos que caen en su subárbol, **ignorando** los accesos a $y$, y se marca L o R según el lado. $W_1(y)$ = número de alternancias L↔R; $W_1 = \sum_y W_1(y)$.
+
+**Teorema:** $\mathrm{OPT}(X) \ge W_1(X)/2 - n$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "P perfecto de 1..7 y la secuencia X = 2, 6, 1, 5, 3, 7, 4. Para la raíz 4 los accesos 2, 1, 3 van a la izquierda y 6, 5, 7 a la derecha; el acceso a 4 se ignora.",
+      nodes: [
+        { id: "4", value: "4", tag: "LRLRLR", parent: null, state: "active" },
+        { id: "2", value: "2", parent: "4" },
+        { id: "6", value: "6", parent: "4" },
+        { id: "1", value: "1", parent: "2" },
+        { id: "3", value: "3", parent: "2" },
+        { id: "5", value: "5", parent: "6" },
+        { id: "7", value: "7", parent: "6" },
+      ],
+      caption: "W1(4) = 5 alternancias.",
+    },
+    {
+      note: "El nodo 2 sólo ve los accesos 1 y 3 (L, R): 1 alternancia. El 6 ve 5 y 7: 1. Las hojas no tienen dos lados. Total W1 = 5 + 1 + 1 = 7.",
+      nodes: [
+        { id: "4", value: "4", tag: "5", parent: null },
+        { id: "2", value: "2", tag: "LR", parent: "4", state: "active" },
+        { id: "6", value: "6", tag: "LR", parent: "4", state: "active" },
+        { id: "1", value: "1", parent: "2", state: "muted" },
+        { id: "3", value: "3", parent: "2", state: "muted" },
+        { id: "5", value: "5", parent: "6", state: "muted" },
+        { id: "7", value: "7", parent: "6", state: "muted" },
+      ],
+      caption: "W1 = 7 ⇒ OPT ≥ 7/2 − 7 (trivial aquí; la cota pesa en secuencias largas).",
+    },
+  ],
+}} />
+
+**Por qué es cota (idea).** Cada alternancia en $y$ obliga a que el camino de acceso pase de un lado de $y$ al otro: el BST debe tocar el "ancestro común" del lado anterior cada vez; esas alternancias dan rectángulos independientes en la vista geométrica, y toda familia de rectángulos independientes cuesta al menos la mitad a cualquier BST ([rectángulos independientes](/structures/independent-rectangles-bound)).
+
+### Wilber-2
+
+En la vista geométrica (llave × tiempo), para cada acceso $p = (x_i, i)$ se miran los accesos anteriores **visibles** desde $p$: aquellos cuyo rectángulo con $p$ no contiene ningún otro acceso. Se recorren en orden de tiempo decreciente y se cuentan los cambios de signo (izquierda / derecha de $x_i$). Wilber-2 es la suma sobre todos los accesos. No depende de ningún árbol. El ejemplo de clase, $3, 1, 4, 2$:
+
+<Visualization viz={{
+  type: "geometric",
+  steps: [
+    {
+      note: "Desde p = (2, 4) se miran los accesos anteriores. (4, 3) está a la derecha y su rectángulo con p está vacío: visible, signo +.",
+      points: [
+        { id: "a", x: 3, t: 1 }, { id: "b", x: 1, t: 2 }, { id: "c", x: 4, t: 3, label: "+", state: "answer" },
+        { id: "p", x: 2, t: 4, label: "p", state: "active" },
+      ],
+      rects: [{ id: "r3", a: "p", b: "c", state: "answer", fill: true }],
+    },
+    {
+      note: "(1, 2) a la izquierda, rectángulo vacío: visible, signo −. Primer cambio de signo.",
+      points: [
+        { id: "a", x: 3, t: 1 }, { id: "b", x: 1, t: 2, label: "−", state: "answer" }, { id: "c", x: 4, t: 3 },
+        { id: "p", x: 2, t: 4, label: "p", state: "active" },
+      ],
+      rects: [{ id: "r2", a: "p", b: "b", state: "answer", fill: true }],
+    },
+    {
+      note: "(3, 1) a la derecha, visible: signo +, segundo cambio. Signos + − +: 2 alternancias para este acceso. Los demás aportan 0: Wilber-2 = 2.",
+      points: [
+        { id: "a", x: 3, t: 1, label: "+", state: "answer" }, { id: "b", x: 1, t: 2 }, { id: "c", x: 4, t: 3 },
+        { id: "p", x: 2, t: 4, label: "p", state: "active" },
+      ],
+      rects: [{ id: "r1", a: "p", b: "a", state: "answer", fill: true }],
+    },
+  ],
+}} />
+
+**Teorema (lámina 37):** Wilber-2 es una cota inferior de OPT: cada alternancia da un rectángulo independiente más. Conjetura abierta: $\text{Wilber-2} = \Theta(\mathrm{OPT})$. Ver [Wilber-1](/structures/wilber-1-bound) y [Wilber-2](/structures/wilber-2-bound).
+
+### La cuenta de la bit-reversal
+
+Con $P$ perfecto de $n = 2^k - 1$ llaves, los accesos de cada subárbol alternan perfectamente:
+
+$$
+W_1 \;=\; \sum_{d=0}^{k-2} \underbrace{2^d}_{\text{nodos en la prof. } d} \cdot \underbrace{\big(2^{k-d} - 3\big)}_{\mathrm{tam} - 2} \;=\; \left(k - \tfrac52\right)2^k + 3 \;=\; \Theta(n \lg n).
+$$
+
+## Errores típicos
+
+- **Contar el acceso al propio $y$** en su sucesión: se ignora.
+- **Contar letras en vez de alternancias**: L R L tiene 2, no 3.
+- **Incluir accesos fuera del subárbol** de $y$.
+- **En Wilber-2, contar puntos ocultos**: primero se descartan los no visibles, después se cuentan los cambios de signo.
+- **Creer que una cota baja es un error**: el secuencial tiene cotas pequeñas porque es fácil.
+- **Olvidar el $-n$** en $\mathrm{OPT} \ge W_1/2 - n$ (el estado inicial del árbol de referencia).
+
+## Qué memorizar
+
+- $W_1(y)$ = alternancias L/R de los accesos al subárbol de $y$ sin contar $y$; $W_1 = \sum_y W_1(y)$; depende de $P$.
+- Wilber-2: puntos visibles desde cada acceso, en tiempo decreciente, cambios de signo; no depende de $P$.
+- Wilber-1: $\mathrm{OPT} \ge W_1/2 - n$. Wilber-2: cota inferior de OPT (vía rectángulos independientes). Conjetura: Wilber-2 $= \Theta(\mathrm{OPT})$.
+- Bit-reversal: $W_1(y) = \mathrm{tam}(y) - 2$, $W_1 = \Theta(n \lg n)$ ⇒ $\Omega(\lg n)$ por acceso.
+- Tango: costo $O((W_1 + m + n)\lg\lg n)$ con $P$ perfecto ([Tango](/structures/tango-tree)).

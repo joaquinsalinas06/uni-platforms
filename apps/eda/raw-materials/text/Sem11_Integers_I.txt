@@ -1,0 +1,1439 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Enteros I
+Semana 11
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+21 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Precisar los modelos de cómputo en los que trabajan las estructuras de
+   enteros
+ ▶ Plantear el problema del predecesor y entender por qué Ω(lg n) no es
+   una barrera cuando las llaves son enteros
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Precisar los modelos de cómputo en los que trabajan las estructuras de
+   enteros
+ ▶ Plantear el problema del predecesor y entender por qué Ω(lg n) no es
+   una barrera cuando las llaves son enteros
+ ▶ Construir la estructura de van Emde Boas: Sucesor, Predecesor,
+   Insertar y Eliminar en O(lg lg u)
+ ▶ Usarla para ordenar y relacionar ordenamiento con colas de prioridad
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Una tabla de rutas
+Un router guarda n prefijos de direcciones IP de 32 bits y, para cada paquete,
+busca el mayor prefijo menor o igual que su dirección: un predecesor.
+
+¿Los árboles de búsqueda son lo mejor que podemos hacer?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Una tabla de rutas
+Un router guarda n prefijos de direcciones IP de 32 bits y, para cada paquete,
+busca el mayor prefijo menor o igual que su dirección: un predecesor.
+
+¿Los árboles de búsqueda son lo mejor que podemos hacer?
+
+Solo si lo único que sabemos hacer con una llave es compararla
+Ω(lg n) es una cota del modelo de comparación. Pero una dirección IP es
+un entero de 32 bits: se puede sumar, dividir en mitades, usar como índice
+de un arreglo. ¿Qué cambia entonces?
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 39
+Modelos de cómputo
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Palabras de w bits
+
+
+
+El universo
+Las llaves son enteros de w bits: U = {0, 1, . . . , u − 1} con u = 2w . Una
+palabra es una celda de memoria de w bits.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    5 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Palabras de w bits
+
+
+
+El universo
+Las llaves son enteros de w bits: U = {0, 1, . . . , u − 1} con u = 2w . Una
+palabra es una celda de memoria de w bits.
+
+Ejemplos
+Direcciones IPv4: w = 32, u ≈ 4 · 109 . Enteros de máquina: w = 64,
+u ≈ 1,8 · 1019 .
+
+Con n llaves y S celdas de memoria, ¿cuánto tiene que valer w ?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    5 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Palabras de w bits
+
+
+
+El universo
+Las llaves son enteros de w bits: U = {0, 1, . . . , u − 1} con u = 2w . Una
+palabra es una celda de memoria de w bits.
+
+Ejemplos
+Direcciones IPv4: w = 32, u ≈ 4 · 109 . Enteros de máquina: w = 64,
+u ≈ 1,8 · 1019 .
+
+Con n llaves y S celdas de memoria, ¿cuánto tiene que valer w ?
+
+   Al menos lg S: si no, una palabra no podría guardar una dirección de memoria.
+                                 Entonces w ≥ lg n.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          5 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Transdichotomous RAM y word RAM
+
+
+
+Transdichotomous RAM
+La memoria es un arreglo de S celdas de w bits, con w ≥ lg S. Cada operación
+toca O(1) celdas y las palabras sirven como punteros: se puede acceder a
+cualquier celda.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    6 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Transdichotomous RAM y word RAM
+
+
+
+Transdichotomous RAM
+La memoria es un arreglo de S celdas de w bits, con w ≥ lg S. Cada operación
+toca O(1) celdas y las palabras sirven como punteros: se puede acceder a
+cualquier celda.
+
+Word RAM
+Una transdichotomous RAM con las operaciones de un lenguaje como C,
+todas en O(1):
+
+                  +, −, ×, ÷, %, &, |, ⊕, ∼, ≪, ≫, <, >
+
+Es el modelo de esta unidad: el que mejor describe un computador real.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     6 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cell probe, pointer machine y BST
+
+
+Cell probe
+Solo se cuentan las lecturas y escrituras de celdas; el cómputo es gratis. Sirve
+para demostrar cotas inferiores.
+
+Pointer machine y BST
+Pointer machine: solo se siguen punteros. BST: solo se comparan llaves.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        7 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cell probe, pointer machine y BST
+
+
+Cell probe
+Solo se cuentan las lecturas y escrituras de celdas; el cómputo es gratis. Sirve
+para demostrar cotas inferiores.
+
+Pointer machine y BST
+Pointer machine: solo se siguen punteros. BST: solo se comparan llaves.
+                            pointer                      transdichotomous   cell probe
+             BST                           word RAM
+                            machine                           RAM
+
+       más débil                                                                más fuerte
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                       7 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cell probe, pointer machine y BST
+
+
+Cell probe
+Solo se cuentan las lecturas y escrituras de celdas; el cómputo es gratis. Sirve
+para demostrar cotas inferiores.
+
+Pointer machine y BST
+Pointer machine: solo se siguen punteros. BST: solo se comparan llaves.
+                            pointer                      transdichotomous   cell probe
+             BST                           word RAM
+                            machine                           RAM
+
+       más débil                                                                más fuerte
+
+
+
+¿Para qué ordenar los modelos?
+Una cota superior en un modelo débil vale en los fuertes, y una cota inferior
+en un modelo fuerte vale en los débiles: por eso se prueban en cell probe y
+se diseñan en word RAM.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                       7 / 39
+El problema del predecesor
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Predecesor y sucesor
+
+
+
+
+Mantener un conjunto S ⊆ U de n palabras
+ ▶ Insertar(x) y Eliminar(x).
+ ▶ Predecesor(x) = máx{y ∈ S | y < x}.
+ ▶ Sucesor(x) = mı́n{y ∈ S | y > x}.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Predecesor y sucesor
+
+
+
+
+Mantener un conjunto S ⊆ U de n palabras
+ ▶ Insertar(x) y Eliminar(x).
+ ▶ Predecesor(x) = máx{y ∈ S | y < x}.
+ ▶ Sucesor(x) = mı́n{y ∈ S | y > x}.
+
+ x no tiene que estar en S. Es el problema de la tabla de rutas, y el de “cuál es la
+                   siguiente llave” en cualquier índice ordenado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             9 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los dos extremos
+
+
+
+Una tabla con todas las respuestas
+Un arreglo de tamaño u con el predecesor de cada x ∈ U: consulta en O(1),
+pero Θ(u) de espacio y de tiempo por actualización.
+
+Un árbol de búsqueda balanceado
+Θ(n) de espacio y Θ(lg n) por operación, óptimo en el modelo de comparación.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los dos extremos
+
+
+
+Una tabla con todas las respuestas
+Un arreglo de tamaño u con el predecesor de cada x ∈ U: consulta en O(1),
+pero Θ(u) de espacio y de tiempo por actualización.
+
+Un árbol de búsqueda balanceado
+Θ(n) de espacio y Θ(lg n) por operación, óptimo en el modelo de comparación.
+
+¿Hay algo en el medio, con tiempo mucho menor que lg n?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los dos extremos
+
+
+
+Una tabla con todas las respuestas
+Un arreglo de tamaño u con el predecesor de cada x ∈ U: consulta en O(1),
+pero Θ(u) de espacio y de tiempo por actualización.
+
+Un árbol de búsqueda balanceado
+Θ(n) de espacio y Θ(lg n) por operación, óptimo en el modelo de comparación.
+
+¿Hay algo en el medio, con tiempo mucho menor que lg n?
+
+ Con n = 109 y w = 64: lg n ≈ 30, pero lg w = 6 y lg lg u = lg w = 6. Hoy vemos
+                        una estructura con ese tiempo.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       10 / 39
+Árboles de van Emde Boas
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Partir las palabras a la mitad
+
+
+
+
+Coordenadas jerárquicas
+Un entero x de w bits se parte en sus w /2 bits altos y sus w /2 bits bajos:
+                                                             √
+       x = ⟨c, i⟩,    c = alto(x), i = bajo(x), x = c · u + i.
+
+                 c = 112 i==
+                           3 012 = 1
+
+                    1 1 0 1            x = 13 = 3 · 4 + 1, con w = 4, u = 16
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           12 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Partir las palabras a la mitad
+
+
+
+
+Coordenadas jerárquicas
+Un entero x de w bits se parte en sus w /2 bits altos y sus w /2 bits bajos:
+                                                             √
+       x = ⟨c, i⟩,    c = alto(x), i = bajo(x), x = c · u + i.
+
+                 c = 112 i==
+                           3 012 = 1
+
+                    1 1 0 1            x = 13 = 3 · 4 + 1, con w = 4, u = 16
+
+
+
+c dice en qué cluster cae x, e i en qué posición dentro
+    √                                          √
+Hay u clusters, cada uno con universo de tamaño u. Suponemos que w
+es potencia de 2.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           12 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La recurrencia que buscamos
+
+
+
+
+Si cada operación
+           √      hiciera una sola llamada recursiva sobre un universo
+de tamaño u, ¿cuánto costaría?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   13 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La recurrencia que buscamos
+
+
+
+
+Si cada operación
+           √      hiciera una sola llamada recursiva sobre un universo
+de tamaño u, ¿cuánto costaría?
+
+           √
+T (u) = T ( u) + O(1)
+               √
+Con m = lg u: u = 2m/2 , así que S(m) = T (2m ) cumple S(m) = S(m/2)+
+O(1), es decir S(m) = O(lg m).
+
+T (u) = O(lg lg u) = O(lg w )
+Cada llamada divide por dos la cantidad de bits: tras lg w llamadas queda
+una palabra de 1 bit.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   13 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+     La estructura
+
+
+
+Una vEB V de tamaño u guarda
+      √              √                                       √
+ ▶                    u: V .cluster [0], . . . , V .cluster [ u − 1].
+          u vEB de tamaño
+                                  √
+ ▶ una vEB V .summary de tamaño u con los índices c de los clusters
+   no vacíos.
+ ▶ V .min, el menor elemento de V (o nulo).
+ ▶ V .max, el mayor elemento de V (o nulo).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+     La estructura
+
+
+
+Una vEB V de tamaño u guarda
+      √              √                                       √
+ ▶                    u: V .cluster [0], . . . , V .cluster [ u − 1].
+          u vEB de tamaño
+                                  √
+ ▶ una vEB V .summary de tamaño u con los índices c de los clusters
+   no vacíos.
+ ▶ V .min, el menor elemento de V (o nulo).
+ ▶ V .max, el mayor elemento de V (o nulo).
+
+¿Qué sale caro de esta definición?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+     La estructura
+
+
+
+Una vEB V de tamaño u guarda
+      √              √                                       √
+ ▶                    u: V .cluster [0], . . . , V .cluster [ u − 1].
+          u vEB de tamaño
+                                  √
+ ▶ una vEB V .summary de tamaño u con los índices c de los clusters
+   no vacíos.
+ ▶ V .min, el menor elemento de V (o nulo).
+ ▶ V .max, el mayor elemento de V (o nulo).
+
+¿Qué sale caro de esta definición?
+
+                                            √
+Hay una vEB por cada uno de los                 u + 1 componentes
+                                                           √
+Cada una repite la misma construcción con u ′ =                u hasta llegar a u = 2,
+donde solo quedan min y max.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                14 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: u = 16 y S = {2, 3, 4, 5, 7, 14, 15}
+
+
+
+
+                                                  0       1   2   3
+
+             min = 2                summary                                 min 0, max 3             max = 15
+
+
+
+                  cluster [0]               cluster [1]               cluster [2]              cluster [3]
+
+
+              0     1    2      3       0     1    2      3       0     1     2     3      0     1    2      3
+               min 3, max 3             min 0, max 3                     vacío             min 2, max 3
+
+
+
+Los clusters tienen tamaño 4. El mínimo 2 no aparece en ningún cluster: se guarda
+solo en V .min. El resto sí: 3 = ⟨0, 3⟩, 4 = ⟨1, 0⟩, 5 = ⟨1, 1⟩, 7 = ⟨1, 3⟩, 14 = ⟨3, 2⟩,
+                                      15 = ⟨3, 3⟩.
+
+
+
+Víctor Racsó Galván Oyola              Universidad de Ingeniería y Tecnología                                    15 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor: un primer intento
+
+
+
+Para Sucesor(x = ⟨c, i⟩)
+  1. Buscar el sucesor de i dentro de V .cluster [c].
+  2. Si no hay, buscar el siguiente cluster no vacío c ′ : el sucesor de c en
+     V .summary .
+  3. Devolver el mínimo de V .cluster [c ′ ].
+
+¿Cuántas llamadas recursivas hace? ¿Qué recurrencia sale?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            16 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor: un primer intento
+
+
+
+Para Sucesor(x = ⟨c, i⟩)
+  1. Buscar el sucesor de i dentro de V .cluster [c].
+  2. Si no hay, buscar el siguiente cluster no vacío c ′ : el sucesor de c en
+     V .summary .
+  3. Devolver el mínimo de V .cluster [c ′ ].
+
+¿Cuántas llamadas recursivas hace? ¿Qué recurrencia sale?
+
+                 √
+Dos: T (u) = 2T ( u) + O(1), que da O(lg u) = O(w )
+Con m = lg u: S(m) = 2S(m/2) + O(1) = O(m). No mejora nada respecto
+de mirar los w bits uno por uno.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            16 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor: una sola llamada
+
+
+
+
+¿Cómo saber, sin recursión, si el sucesor de x está en su propio cluster?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor: una sola llamada
+
+
+
+
+¿Cómo saber, sin recursión, si el sucesor de x está en su propio cluster?
+
+Guardando el máximo de cada cluster
+El sucesor de i existe dentro de V .cluster [c] exactamente cuando
+i < V .cluster [c].max. Eso se decide en O(1).
+
+Entonces solo se recorre una de las dos ramas
+Si i < V .cluster [c].max: recursión en el cluster. Si no: recursión en
+V .summary , y el mínimo de ese cluster se lee en O(1).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor
+
+
+
+Algoritmo 1: Sucesor(V , x) — menor elemento de V mayor que x
+si V .min ̸= nulo y x < V .min entonces devolver V .min
+si V .max = nulo o x ≥ V .max entonces devolver nulo
+si u = 2 entonces devolver V .max
+⟨c, i⟩ ← x
+si V .cluster [c].max ̸= nulo y i < V .cluster [c].max entonces
+     devolver ⟨c, Sucesor(V .cluster [c], i)⟩
+en otro caso
+     c ′ ← Sucesor(V .summary , c)
+     devolver ⟨c ′ , V .cluster [c ′ ].min⟩
+
+
+ En el caso base (u = 2) ya sabemos que V .min ≤ x < V .max, así que x = 0 y el
+                              sucesor es V .max = 1.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       18 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de sucesor: Sucesor(5)
+
+
+
+                                                  0       1   2   3
+
+             min = 2                summary                                 min 0, max 3             max = 15
+
+
+
+                  cluster [0]               cluster [1]               cluster [2]              cluster [3]
+
+
+              0     1    2      3       0     1    2      3       0     1     2     3      0     1    2      3
+               min 3, max 3             min 0, max 3                     vacío             min 2, max 3
+
+
+
+
+  ▶ x = 5 = ⟨1, 1⟩: 5 ≥ V .min = 2 y 5 < V .max = 15.
+
+
+
+
+Víctor Racsó Galván Oyola              Universidad de Ingeniería y Tecnología                                    19 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de sucesor: Sucesor(5)
+
+
+
+                                                  0       1   2   3
+
+             min = 2                summary                                 min 0, max 3             max = 15
+
+
+
+                  cluster [0]               cluster [1]               cluster [2]              cluster [3]
+
+
+              0     1    2      3       0     1    2      3       0     1     2     3      0     1    2      3
+               min 3, max 3             min 0, max 3                     vacío             min 2, max 3
+
+
+
+
+  ▶ x = 5 = ⟨1, 1⟩: 5 ≥ V .min = 2 y 5 < V .max = 15.
+  ▶ V .cluster [1].max = 3 > 1: el sucesor está en el cluster 1. Se busca el sucesor
+    de i = 1 en ese cluster.
+
+
+Víctor Racsó Galván Oyola              Universidad de Ingeniería y Tecnología                                    19 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de sucesor: Sucesor(5)
+
+
+
+
+Dentro del cluster 1: {0, 1, 3} con u = 4
+Esta vEB tiene min = 0 (que no está en sus subclusters), max = 3, dos
+subclusters de tamaño 2 y su propio resumen:
+
+      subcluster 0 = {1},          subcluster 1 = {3},           resumen = {0, 1}.
+
+  ▶ i = 1 = ⟨0, 1⟩: el max del subcluster 0 es 1, y 1 < 1 es falso. Se pregunta al
+    resumen por el sucesor de 0: es 1.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                 20 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de sucesor: Sucesor(5)
+
+
+
+
+Dentro del cluster 1: {0, 1, 3} con u = 4
+Esta vEB tiene min = 0 (que no está en sus subclusters), max = 3, dos
+subclusters de tamaño 2 y su propio resumen:
+
+      subcluster 0 = {1},          subcluster 1 = {3},           resumen = {0, 1}.
+
+  ▶ i = 1 = ⟨0, 1⟩: el max del subcluster 0 es 1, y 1 < 1 es falso. Se pregunta al
+    resumen por el sucesor de 0: es 1.
+  ▶ Se devuelve ⟨1, min del subcluster 1⟩ = ⟨1, 1⟩ = 3. Afuera,
+    ⟨1, 3⟩ = 1 · 4 + 3 = 7: el sucesor de 5 es 7.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                 20 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de sucesor: Sucesor(9)
+
+
+
+                                                  0       1   2   3
+
+             min = 2                summary                                 min 0, max 3             max = 15
+
+
+
+                  cluster [0]               cluster [1]               cluster [2]              cluster [3]
+
+
+              0     1    2      3       0     1    2      3       0     1     2     3      0     1    2      3
+               min 3, max 3             min 0, max 3                     vacío             min 2, max 3
+
+
+
+
+  ▶ 9 = ⟨2, 1⟩. El cluster 2 está vacío: no hay max contra el que comparar.
+    Recursión en el resumen: el sucesor de c = 2 es c ′ = 3.
+
+
+
+
+Víctor Racsó Galván Oyola              Universidad de Ingeniería y Tecnología                                    21 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de sucesor: Sucesor(9)
+
+
+
+                                                  0       1   2   3
+
+             min = 2                summary                                 min 0, max 3             max = 15
+
+
+
+                  cluster [0]               cluster [1]               cluster [2]              cluster [3]
+
+
+              0     1    2      3       0     1    2      3       0     1     2     3      0     1    2      3
+               min 3, max 3             min 0, max 3                     vacío             min 2, max 3
+
+
+
+
+  ▶ 9 = ⟨2, 1⟩. El cluster 2 está vacío: no hay max contra el que comparar.
+    Recursión en el resumen: el sucesor de c = 2 es c ′ = 3.
+  ▶ Se devuelve ⟨3, V .cluster [3].min⟩ = ⟨3, 2⟩ = 14.
+
+
+Víctor Racsó Galván Oyola              Universidad de Ingeniería y Tecnología                                    21 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Predecesor
+
+
+Algoritmo 2: Predecesor(V , x) — mayor elemento de V menor que x
+si V .max ̸= nulo y x > V .max entonces devolver V .max
+si V .min = nulo o x ≤ V .min entonces devolver nulo
+si u = 2 entonces devolver V .min
+⟨c, i⟩ ← x
+si V .cluster [c].min ̸= nulo y i > V .cluster [c].min entonces
+     devolver ⟨c, Predecesor(V .cluster [c], i)⟩
+en otro caso
+     c ′ ← Predecesor(V .summary , c)
+     si c ′ = nulo entonces devolver V .min
+     devolver ⟨c ′ , V .cluster [c ′ ].max⟩
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   22 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Predecesor
+
+
+Algoritmo 3: Predecesor(V , x) — mayor elemento de V menor que x
+si V .max ̸= nulo y x > V .max entonces devolver V .max
+si V .min = nulo o x ≤ V .min entonces devolver nulo
+si u = 2 entonces devolver V .min
+⟨c, i⟩ ← x
+si V .cluster [c].min ̸= nulo y i > V .cluster [c].min entonces
+     devolver ⟨c, Predecesor(V .cluster [c], i)⟩
+en otro caso
+     c ′ ← Predecesor(V .summary , c)
+     si c ′ = nulo entonces devolver V .min
+     devolver ⟨c ′ , V .cluster [c ′ ].max⟩
+
+
+   ¿Por qué “si c ′ = nulo, devolver V .min”? Porque el mínimo no está en ningún
+    cluster. Ej.: Predecesor(3): el cluster 0 tiene min = 3 y 3 > 3 es falso; el
+                 resumen no tiene c ′ < 0; la respuesta es V .min = 2.
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología        22 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar: dos problemas
+
+
+
+Para Insertar(x = ⟨c, i⟩)
+Insertar i en V .cluster [c] y, si estaba vacío, también c en V .summary .
+
+¿Cuántas llamadas recursivas hay si el cluster estaba vacío?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         23 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar: dos problemas
+
+
+
+Para Insertar(x = ⟨c, i⟩)
+Insertar i en V .cluster [c] y, si estaba vacío, también c en V .summary .
+
+¿Cuántas llamadas recursivas hay si el cluster estaba vacío?
+
+Dos, pero una es trivial
+Insertar en una vEB vacía solo asigna min y max: O(1). Queda una sola
+llamada costosa.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         23 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar: dos problemas
+
+
+
+Para Insertar(x = ⟨c, i⟩)
+Insertar i en V .cluster [c] y, si estaba vacío, también c en V .summary .
+
+¿Cuántas llamadas recursivas hay si el cluster estaba vacío?
+
+Dos, pero una es trivial
+Insertar en una vEB vacía solo asigna min y max: O(1). Queda una sola
+llamada costosa.
+
+El mínimo no se guarda recursivamente
+Si llega x < V .min, se intercambian y el mínimo anterior baja a los clusters.
+Así el primer elemento de un cluster es su min.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         23 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar
+
+
+
+Algoritmo 4: Insertar(V , x)
+si V .min = nulo entonces V .min ← V .max ← x, devolver
+si x = V .min o x = V .max entonces devolver
+si x < V .min entonces intercambiar x ↔ V .min
+si u > 2 entonces
+     ⟨c, i⟩ ← x
+     si V .cluster [c].min = nulo entonces
+          Insertar(V .summary , c)
+          V .cluster [c].min ← V .cluster [c].max ← i // O(1): estaba vacío
+     en otro caso
+          Insertar(V .cluster [c], i)
+
+si x > V .max entonces V .max ← x
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      24 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de inserción
+
+
+
+
+Insertar 9 en S = {2, 3, 4, 5, 7, 14, 15}
+9 = ⟨2, 1⟩ y 9 > V .min = 2: no hay intercambio. El cluster 2 está vacío: In-
+sertar(V .summary , 2) pasa el resumen a {0, 1, 2, 3} (aquí sí hay recursión) y
+V .cluster [2].min ← V .cluster [2].max ← 1, sin recursión. Como 9 ≤ V .max = 15,
+no hay más que hacer.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        25 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de inserción
+
+
+
+
+Insertar 9 en S = {2, 3, 4, 5, 7, 14, 15}
+9 = ⟨2, 1⟩ y 9 > V .min = 2: no hay intercambio. El cluster 2 está vacío: In-
+sertar(V .summary , 2) pasa el resumen a {0, 1, 2, 3} (aquí sí hay recursión) y
+V .cluster [2].min ← V .cluster [2].max ← 1, sin recursión. Como 9 ≤ V .max = 15,
+no hay más que hacer.
+
+Insertar 0 a continuación
+0 < V .min = 2: se intercambian, V .min = 0 y ahora se inserta el 2 viejo: ⟨0, 2⟩
+entra al cluster 0, que ya tiene {3}, con una llamada recursiva.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           25 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Eliminar
+
+
+
+
+Si borramos V .min, ¿cuál es el nuevo mínimo, y dónde estaba
+guardado?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Eliminar
+
+
+
+
+Si borramos V .min, ¿cuál es el nuevo mínimo, y dónde estaba
+guardado?
+
+Es el mínimo del primer cluster no vacío, y estaba en ese cluster
+Con c = V .summary .min, el nuevo mínimo es ⟨c, V .cluster [c].min⟩. Pasa a
+ser V .min y se elimina de su cluster, para no repetirlo.
+
+Después, como en Insertar, una sola llamada costosa
+Se elimina i de V .cluster [c]. Si el cluster queda vacío, esa eliminación fue O(1)
+(era un solo elemento) y entonces se elimina c del resumen. Falta recalcular
+V .max.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          26 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Eliminar
+
+
+Algoritmo 5: Eliminar(V , x) — con x ∈ V
+si V .min = V .max entonces V .min ← V .max ← nulo, devolver
+si u = 2 entonces V .min ← V .max ← 1 − x, devolver
+si x = V .min entonces
+     c ← V .summary .min, x ← ⟨c, V .cluster [c].min⟩, V .min ← x
+⟨c, i⟩ ← x, Eliminar(V .cluster [c], i)
+si V .cluster [c].min = nulo entonces
+     Eliminar(V .summary , c)
+     si x = V .max entonces
+          si V .summary .min = nulo entonces
+               V .max ← V .min
+          en otro caso
+               c ′ ← V .summary .max, V .max ← ⟨c ′ , V .cluster [c ′ ].max⟩
+
+en otro caso
+    si x = V .max entonces V .max ← ⟨c, V .cluster [c].max⟩
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología          27 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de eliminación
+
+
+
+
+Eliminar 2 (el mínimo) de S = {2, 3, 4, 5, 7, 14, 15}
+c = V .summary .min = 0 y V .cluster [0].min = 3: el nuevo mínimo es ⟨0, 3⟩ = 3.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         28 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de eliminación
+
+
+
+
+Eliminar 2 (el mínimo) de S = {2, 3, 4, 5, 7, 14, 15}
+c = V .summary .min = 0 y V .cluster [0].min = 3: el nuevo mínimo es ⟨0, 3⟩ = 3.
+
+  ▶ Hay que sacar el 3 de su cluster. Ese cluster tiene un solo elemento, así que
+    su min y max pasan a nulo en O(1).
+  ▶ El cluster quedó vacío: Eliminar(V .summary , 0), y el resumen pasa de
+    {0, 1, 3} a {1, 3}. Como x = 3 ̸= V .max = 15, no hay que tocar V .max.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          28 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo de eliminación
+
+
+
+
+Eliminar 2 (el mínimo) de S = {2, 3, 4, 5, 7, 14, 15}
+c = V .summary .min = 0 y V .cluster [0].min = 3: el nuevo mínimo es ⟨0, 3⟩ = 3.
+
+  ▶ Hay que sacar el 3 de su cluster. Ese cluster tiene un solo elemento, así que
+    su min y max pasan a nulo en O(1).
+  ▶ El cluster quedó vacío: Eliminar(V .summary , 0), y el resumen pasa de
+    {0, 1, 3} a {1, 3}. Como x = 3 ̸= V .max = 15, no hay que tocar V .max.
+
+Resultado
+S = {3, 4, 5, 7, 14, 15}, con V .min = 3 y ningún elemento en el cluster 0.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          28 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cuánto cuestan las operaciones
+
+
+
+Teorema
+Sucesor, Predecesor, Insertar y Eliminar cuestan O(lg lg u) =
+O(lg w ).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cuánto cuestan las operaciones
+
+
+
+Teorema
+Sucesor, Predecesor, Insertar y Eliminar cuestan O(lg lg u) =
+O(lg w ).
+
+En cada llamada, a lo más una subllamada no trivial
+ ▶ Sucesor/Predecesor: o el cluster o el resumen, nunca ambos.
+ ▶ Insertar: si el cluster está vacío, esa inserción es O(1) y queda solo el
+   resumen; si no, solo el cluster.
+ ▶ Eliminar: si el cluster queda vacío, su eliminación fue O(1) (un solo
+    elemento) y queda solo el resumen.
+                    √
+Entonces T (u) ≤ T ( u) + O(1), que da O(lg lg u).
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y el espacio?
+
+
+
+
+¿Cuánta memoria ocupa una vEB de tamaño u?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y el espacio?
+
+
+
+
+¿Cuánta memoria ocupa una vEB de tamaño u?
+
+        √         √
+S(u) = ( u + 1) S( u) + O(1)
+     √                                            √
+Hay u clusters y un resumen, todos de tamaño u, y se reservan aunque
+estén vacíos. Si S(2) = a y el término constante es a, por inducción S(u) ≤
+            √          √                        √
+2a u − 3a: ( u + 1)(2a u − 3a) + a = 2a u − a u − 2a ≤ 2a u − 3a.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y el espacio?
+
+
+
+
+¿Cuánta memoria ocupa una vEB de tamaño u?
+
+        √         √
+S(u) = ( u + 1) S( u) + O(1)
+     √                                            √
+Hay u clusters y un resumen, todos de tamaño u, y se reservan aunque
+estén vacíos. Si S(2) = a y el término constante es a, por inducción S(u) ≤
+            √          √                        √
+2a u − 3a: ( u + 1)(2a u − 3a) + a = 2a u − a u − 2a ≤ 2a u − 3a.
+
+S(u) = Θ(u)
+Con w = 32: u ≈ 4 · 109 palabras, aunque S tenga 10 elementos. Con
+w = 64 ni siquiera cabe en memoria.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y el espacio?
+
+
+
+
+¿Se puede tener el mismo tiempo O(lg w ) con Θ(n) de espacio?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y el espacio?
+
+
+
+
+¿Se puede tener el mismo tiempo O(lg w ) con Θ(n) de espacio?
+
+Es el tema de la próxima clase
+La memoria de una vEB crece con el universo, no con n.
+
+Y en la pointer machine, O(lg lg u) por operación es lo mejor posible, también con
+                                 Ω(u) de espacio.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         31 / 39
+Ordenar con enteros
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar con una vEB
+
+
+Algoritmo 6: Ordenar-vEB(A[1..n])
+V ← vEB vacía de tamaño u
+para j ← 1 a n hacer Insertar(V , A[j])
+x ← V .min
+mientras x ̸= nulo hacer
+   imprimir x, x ← Sucesor(V , x)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar con una vEB
+
+
+Algoritmo 7: Ordenar-vEB(A[1..n])
+V ← vEB vacía de tamaño u
+para j ← 1 a n hacer Insertar(V , A[j])
+x ← V .min
+mientras x ̸= nulo hacer
+   imprimir x, x ← Sucesor(V , x)
+
+
+O(n lg w ), con Θ(u) de espacio
+n inserciones y n sucesores. Con w = 64, lg w = 6: contra lg n ≈ 30 de un
+ordenamiento por comparaciones.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar con una vEB
+
+
+Algoritmo 8: Ordenar-vEB(A[1..n])
+V ← vEB vacía de tamaño u
+para j ← 1 a n hacer Insertar(V , A[j])
+x ← V .min
+mientras x ̸= nulo hacer
+   imprimir x, x ← Sucesor(V , x)
+
+
+O(n lg w ), con Θ(u) de espacio
+n inserciones y n sucesores. Con w = 64, lg w = 6: contra lg n ≈ 30 de un
+ordenamiento por comparaciones.
+
+Otros ordenamientos de enteros
+Counting sort: O(n + u). Radix sort con dígitos de lg n bits: O(n w / lg n),
+lineal si w = O(lg n). La vEB cubre w = lgO(1) n con O(n lg lg n).
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar y cola de prioridad son lo mismo
+
+
+
+De cola de prioridad a ordenar
+Con una cola de prioridad que haga Insertar y Extraer-Mínimo en
+O(f (n, w )): insertar los n elementos y extraerlos uno a uno ordena en
+O(n f (n, w )).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   34 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar y cola de prioridad son lo mismo
+
+
+
+De cola de prioridad a ordenar
+Con una cola de prioridad que haga Insertar y Extraer-Mínimo en
+O(f (n, w )): insertar los n elementos y extraerlos uno a uno ordena en
+O(n f (n, w )).
+
+De ordenar a cola de prioridad (Thorup)
+Si se pueden ordenar n enteros de w bits en O(n S(n, w )), existe una cola de
+prioridad con Insertar, Eliminar y Mínimo en O(S(n, w )).
+
+Una cola de prioridad de tiempo constante exigiría ordenar en O(n)
+Es un problema abierto para w arbitrario.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    34 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Las estructuras de enteros viven en la word RAM: palabras de w bits y
+   operaciones de C en O(1). Las cotas inferiores se prueban en cell probe.
+ ▶ El problema del predecesor admite O(lg w ), mucho menos que lg n,
+   porque las llaves son palabras y no cajas negras.
+ ▶ vEB: se parten los bits en mitades, se guarda min aparte y max en cada
+   nivel, y así toda operación hace una sola llamada costosa:
+                √
+   T (u) = T ( u) + O(1).
+ ▶ El espacio es Θ(u). Ordenar con vEB cuesta O(n lg w ), y ordenar y
+   cola de prioridad son equivalentes.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   35 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   36 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos distinguir word RAM, cell probe y pointer machine, y qué
+   cotas se transfieren entre ellos
+ ▶ Sabemos plantear el problema del predecesor y sus extremos triviales
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   36 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos distinguir word RAM, cell probe y pointer machine, y qué
+   cotas se transfieren entre ellos
+ ▶ Sabemos plantear el problema del predecesor y sus extremos triviales
+ ▶ Sabemos implementar y analizar las cuatro operaciones de una vEB, y
+   por qué cada una hace una sola llamada costosa
+ ▶ Sabemos ordenar con una vEB y relacionarlo con colas de prioridad
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   36 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   37 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ van Emde Boas, P. (1975). Preserving order in a forest in less than
+   logarithmic time. Proceedings of FOCS’75, 75–84.
+ ▶ Thorup, M. (2007). Equivalence between priority queues and sorting.
+   Journal of the ACM, 54(6).
+ ▶ Demaine, Erik (2012). 6.851: Advanced Data Structures (Spring’12),
+   Lecture 11. https://courses.csail.mit.edu/6.851/spring12/.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     38 / 39
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 39
+

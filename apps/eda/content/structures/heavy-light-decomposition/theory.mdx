@@ -1,0 +1,170 @@
+---
+kind: "theory"
+title: "Descomposición Heavy-Light"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Motivación
+
+Con los tiempos de entrada y salida de un recorrido en profundidad, un **subárbol** es un intervalo $[\mathrm{in}(v), \mathrm{out}(v))$ de un arreglo, y un [segment tree](/structures/segment-tree) responde sumas o máximos sobre él. Pero un **camino** $u \leadsto v$ no es un intervalo, y recorrerlo nodo a nodo cuesta $O(n)$: en una cadena de $10^5$ nodos, $10^5$ consultas de "máximo en el camino" son $10^{10}$ pasos. Heavy-Light parte el árbol en **cadenas** de modo que todo camino sea la unión de $O(\lg n)$ intervalos contiguos.
+
+## Intuición dibujada
+
+Cada nodo elige como **hijo pesado** al hijo de subárbol más grande; las demás aristas son **livianas**. Las aristas pesadas forman cadenas. La clave: bajar por una arista liviana al menos **parte a la mitad** el tamaño, así que un camino a la raíz cruza pocas cadenas.
+
+El ejemplo de la clase tiene 11 nodos (aristas $1\text{-}2, 1\text{-}3, 1\text{-}4, 2\text{-}5, 2\text{-}6, 3\text{-}7, 5\text{-}8, 5\text{-}9, 6\text{-}10, 7\text{-}11$); la etiqueta de cada nodo es su tamaño.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Tamaños de subárbol (primer recorrido). En cada nodo el hijo pesado es el de mayor tamaño: 2 para 1 (6 frente a 3 y 1), 5 para 2 (3 frente a 2), 8 para 5 (empate 1–1).",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null },
+        { id: "2", value: "2", tag: "6", parent: "1" },
+        { id: "3", value: "3", tag: "3", parent: "1" },
+        { id: "4", value: "4", tag: "1", parent: "1" },
+        { id: "5", value: "5", tag: "3", parent: "2" },
+        { id: "6", value: "6", tag: "2", parent: "2" },
+        { id: "7", value: "7", tag: "2", parent: "3" },
+        { id: "8", value: "8", tag: "1", parent: "5" },
+        { id: "9", value: "9", tag: "1", parent: "5" },
+        { id: "10", value: "10", tag: "1", parent: "6" },
+        { id: "11", value: "11", tag: "1", parent: "7" },
+      ],
+      caption: "tam[1] = 11, tam[2] = 6, tam[3] = 3, tam[5] = 3, tam[6] = 2, tam[7] = 2.",
+    },
+    {
+      note: "La cadena pesada principal 1–2–5–8 (activa). Las otras cadenas: [3, 7, 11], [6, 10], [9] y [4]. Las aristas livianas son 1–3, 1–4, 2–6 y 5–9.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null, state: "active" },
+        { id: "2", value: "2", tag: "6", parent: "1", state: "active" },
+        { id: "3", value: "3", tag: "3", parent: "1", state: "marked" },
+        { id: "4", value: "4", tag: "1", parent: "1", state: "marked" },
+        { id: "5", value: "5", tag: "3", parent: "2", state: "active" },
+        { id: "6", value: "6", tag: "2", parent: "2", state: "marked" },
+        { id: "7", value: "7", tag: "2", parent: "3", state: "marked" },
+        { id: "8", value: "8", tag: "1", parent: "5", state: "active" },
+        { id: "9", value: "9", tag: "1", parent: "5", state: "marked" },
+        { id: "10", value: "10", tag: "1", parent: "6", state: "marked" },
+        { id: "11", value: "11", tag: "1", parent: "7", state: "marked" },
+      ],
+      caption: "Cadenas: [1, 2, 5, 8], [9], [6, 10], [3, 7, 11], [4]. En azul la cadena principal; en ámbar las demás cadenas.",
+    },
+    {
+      note: "Camino de 9 a la raíz: 9 → 5 es liviana (se cambia de cadena) y 5 → 2 → 1 va por la cadena principal. Una arista liviana, dos cadenas: con n = 11 hay a lo más 3 livianas.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null, state: "answer" },
+        { id: "2", value: "2", tag: "6", parent: "1", state: "answer" },
+        { id: "3", value: "3", tag: "3", parent: "1", state: "muted" },
+        { id: "4", value: "4", tag: "1", parent: "1", state: "muted" },
+        { id: "5", value: "5", tag: "3", parent: "2", state: "answer" },
+        { id: "6", value: "6", tag: "2", parent: "2", state: "muted" },
+        { id: "7", value: "7", tag: "2", parent: "3", state: "muted" },
+        { id: "8", value: "8", tag: "1", parent: "5", state: "muted" },
+        { id: "9", value: "9", tag: "1", parent: "5", state: "active" },
+        { id: "10", value: "10", tag: "1", parent: "6", state: "muted" },
+        { id: "11", value: "11", tag: "1", parent: "7", state: "muted" },
+      ],
+      caption: "⌊lg 11⌋ = 3 aristas livianas como máximo en cualquier camino a la raíz.",
+    },
+  ],
+}} />
+
+## Definición y notación
+
+**Arista pesada.** Sea $v$ hijo de $u$. La arista $(u, v)$ es pesada si $\mathrm{tam}[v] \ge \mathrm{tam}[w]$ para todo otro hijo $w$ de $u$ (se desempata de forma arbitraria). Las demás son livianas. Todo nodo interno tiene exactamente un hijo pesado. (Con la definición alternativa $2\,\mathrm{tam}[v] > \mathrm{tam}[u]$ puede no haber ninguno, y la cota vale igual.)
+
+| Símbolo | Qué es | Para qué |
+| --- | --- | --- |
+| $\mathrm{tam}[v]$ | tamaño del subárbol de $v$ | decide el hijo pesado |
+| $\mathrm{pes}[v]$ | hijo pesado de $v$ | se visita primero |
+| $\mathrm{pos}[v]$ | posición de $v$ en el arreglo (recorrido pesado primero) | cada cadena queda contigua |
+| $\mathrm{tope}[v]$ | cabeza de la cadena de $v$ | salto en $O(1)$ al final de la cadena |
+| $\mathrm{sal}[v]$ | primera posición después del subárbol de $v$ | subárbol = $[\mathrm{pos}[v], \mathrm{sal}[v])$ |
+
+**Proposición.** Si $(u, v)$ es liviana, $\mathrm{tam}[v] \le \mathrm{tam}[u]/2$. *Demostración:* con $w$ el hijo pesado, $2\,\mathrm{tam}[v] \le \mathrm{tam}[v] + \mathrm{tam}[w] \le \mathrm{tam}[u] - 1$.
+
+**Consecuencia.** Cada arista liviana que se sube al menos duplica el tamaño, que nunca supera $n$: un camino a la raíz tiene a lo más $\lfloor \lg n\rfloor$ livianas y cruza a lo más $\lfloor \lg n\rfloor + 1$ cadenas.
+
+## Operaciones paso a paso
+
+### Descomponer (dos recorridos)
+
+1. Un DFS calcula $\mathrm{tam}[v]$ y $\mathrm{pes}[v]$.
+2. Descomponer(v, h): $\mathrm{tope}[v] \leftarrow h$, $\mathrm{pos}[v] \leftarrow t$, $t \leftarrow t + 1$; si $v$ tiene hijo pesado, Descomponer($\mathrm{pes}[v]$, h); para cada otro hijo $u$, Descomponer(u, u); $\mathrm{sal}[v] \leftarrow t$.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Orden del segundo recorrido: la cadena principal primero (1, 2, 5, 8), luego lo que cuelga de ella de abajo hacia arriba en la recursión. Cada cadena ocupa posiciones contiguas.",
+      rows: [
+        { id: "n", label: "nodo", cells: [{ value: 1, tag: "0" }, { value: 2, tag: "1" }, { value: 5, tag: "2" }, { value: 8, tag: "3" }, { value: 9, tag: "4" }, { value: 6, tag: "5" }, { value: 10, tag: "6" }, { value: 3, tag: "7" }, { value: 7, tag: "8" }, { value: 11, tag: "9" }, { value: 4, tag: "10" }] },
+        { id: "t", label: "tope", cells: [{ value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 9 }, { value: 6 }, { value: 6 }, { value: 3 }, { value: 3 }, { value: 3 }, { value: 4 }] },
+      ],
+      spans: [
+        { id: "c1", row: "n", from: 0, to: 3, label: "cadena 1" }, { id: "c9", row: "n", from: 4, to: 4, label: "9" },
+        { id: "c6", row: "n", from: 5, to: 6, label: "cadena 6" }, { id: "c3", row: "n", from: 7, to: 9, label: "cadena 3" },
+        { id: "c4", row: "n", from: 10, to: 10, label: "4" },
+      ],
+      caption: "pos = índice de la celda. Cadena hasta x: [pos[tope[x]], pos[x]].",
+    },
+    {
+      note: "El subárbol de 2 es {2, 5, 8, 9, 6, 10}: las posiciones [1, 7). Como el recorrido es en profundidad, todo subárbol sigue siendo un intervalo: el mismo arreglo sirve para caminos y para subárboles.",
+      rows: [
+        { id: "n", label: "nodo", cells: [{ value: 1, tag: "0" }, { value: 2, tag: "1", state: "active" }, { value: 5, tag: "2", state: "active" }, { value: 8, tag: "3", state: "active" }, { value: 9, tag: "4", state: "active" }, { value: 6, tag: "5", state: "active" }, { value: 10, tag: "6", state: "active" }, { value: 3, tag: "7" }, { value: 7, tag: "8" }, { value: 11, tag: "9" }, { value: 4, tag: "10" }] },
+        { id: "t", label: "tope", cells: [{ value: 1 }, { value: 1 }, { value: 1 }, { value: 1 }, { value: 9 }, { value: 6 }, { value: 6 }, { value: 3 }, { value: 3 }, { value: 3 }, { value: 4 }] },
+      ],
+      spans: [{ id: "s2", row: "n", from: 1, to: 6, label: "subárbol de 2 = [pos, sal)" }],
+      caption: "sal[2] = 7.",
+    },
+  ],
+}} />
+
+### Consultar un camino
+
+Mientras $\mathrm{tope}[u] \ne \mathrm{tope}[v]$: se mueve el extremo cuya cadena empieza **más abajo** (mayor profundidad de su tope), se consulta su tramo $[\mathrm{pos}[\mathrm{tope}[x]], \mathrm{pos}[x]]$ y se salta a $\mathrm{padre}[\mathrm{tope}[x]]$. Al quedar en la misma cadena se consulta el tramo entre ambos. Quedan a lo más $2(\lg n + 1)$ saltos.
+
+Trazas de la clase:
+
+- **$8 \leadsto 11$:** $\mathrm{tope}[8] = 1$ (prof. 0), $\mathrm{tope}[11] = 3$ (prof. 1): se mueve 11, rango $[7, 9]$, $v \leftarrow 1$. Misma cadena: rango $[0, 3]$. **2 rangos**, 7 nodos.
+- **$10 \leadsto 9$:** se mueve 9: $[4, 4]$, $v \leftarrow 5$; se mueve 10: $[5, 6]$, $u \leftarrow 2$; misma cadena: $[1, 2]$. **3 rangos** que cubren 9, 6, 10, 2, 5.
+
+**Actualizar un camino** es lo mismo cambiando la consulta por la operación sobre el rango (por ejemplo, suma con propagación perezosa). **LCA:** el mismo bucle sin consultar; al terminar, el de menor profundidad. $O(\lg n)$ por consulta (más lento que [Euler + RMQ](/structures/lca-euler-tour), que es $O(1)$).
+
+## De dónde sale la cota
+
+$$
+\text{camino} \;=\; \underbrace{O(\lg n)}_{\text{rangos: } \le 2(\lfloor\lg n\rfloor + 1)} \;\times\; \underbrace{O(\lg n)}_{\text{segment tree por rango}} \;=\; O(\lg^2 n),
+\qquad
+\text{subárbol} \;=\; \underbrace{1}_{[\mathrm{pos}, \mathrm{sal})} \times O(\lg n).
+$$
+
+- El primer factor: cada salto cruza una arista liviana, y cada una duplica el tamaño.
+- El segundo: una consulta o actualización de rango en el segment tree.
+- Preprocesar: dos recorridos, $O(n)$ tiempo y memoria.
+
+| Operación | Tiempo | Memoria |
+| --- | --- | --- |
+| preprocesar (dos recorridos) | $O(n)$ | $O(n)$ |
+| LCA | $O(\lg n)$ | $O(n)$ |
+| consulta / actualización de camino con segment tree | $O(\lg^2 n)$ | $O(n)$ |
+| consulta / actualización de subárbol | $O(\lg n)$ | $O(n)$ |
+
+Se puede bajar a $O(\lg n)$ guardando cada cadena en un árbol de búsqueda sesgado por tamaño (el nodo pesa $1 +$ el tamaño de sus subárboles livianos): es la idea que reaparece en los [link-cut trees](/structures/link-cut-tree).
+
+## Errores típicos y casos límite
+
+- **Mover el extremo equivocado**: se mueve el de **tope más profundo**, no el nodo más profundo.
+- **Valores en aristas**: se guarda el peso de $(\mathrm{padre}(v), v)$ en $\mathrm{pos}[v]$ y, en la última cadena, se excluye la posición del LCA.
+- **Visitar livianos antes que el pesado**: la cadena deja de ser contigua.
+- **Árbol que cambia**: una arista nueva cambia los tamaños y hay que rehacer todo; para eso están los link-cut trees.
+- **Camino (cadena)**: una sola cadena, un solo rango.
+
+## Conexión
+
+- Antes: [segment tree](/structures/segment-tree), [LCA con Euler](/structures/lca-euler-tour).
+- Al lado: [descomposición por centroides](/structures/centroid-decomposition) (distancias entre pares).
+- Después: [link-cut trees](/structures/link-cut-tree) usan Heavy-Light como herramienta de análisis.

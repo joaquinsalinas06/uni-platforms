@@ -1,0 +1,206 @@
+                                                                                                    18 de
+                           CS3014 - Estructuras de Datos Avanzadas                           noviembre de
+                                                                                                     2026
+
+
+
+
+                          Lista de ejercicios - Examen Final
+                                   Prof. Vı́ctor Racsó Galván Oyola
+
+
+   Esta lista no será evaluada, su único objetivo es permitir a los estudiantes del curso practicar
+para el examen final.
+
+
+Optimalidad dinámica
+1. Greedy. En la fila t, Greedy agrega el punto (xt , t) y, para cada llave y ̸= xt que ya haya
+   aparecido, el punto (y, t) si el rectángulo de esquinas (xt , t) y (y, t′ ), con t′ la última fila en
+   que apareció y, no contiene ningún otro punto (el borde cuenta). El costo es el número total de
+   puntos. (a) Ejecuta Greedy sobre los accesos 3, 1, 4, 2, 5, 3 (llaves 1 a 5): da los puntos de cada
+   fila y el costo. (b) ¿Por qué el conjunto resultante es arboralmente satisfecho?
+
+2. Greedy en acceso secuencial. Ejecuta Greedy (con la misma definición del ejercicio anterior)
+   sobre los accesos 1, 2, 3, . . . , 8. (a) Da los puntos de cada fila y el costo total. (b) Generaliza el
+   costo a n accesos secuenciales y compáralo con lg n por acceso de un BST balanceado estático.
+
+3. Cota de Wilber-1. Sea P el BST perfecto de llaves 1, . . . , 7 (raı́z 4, hijos 2 y 6, hojas 1, 3, 5, 7).
+   Para un nodo y de P , mira la sucesión de accesos que caen en el subárbol de y, ignorando los
+   accesos a y mismo: cada acceso es una L (va al subárbol izquierdo)∑︁o una R (derecho). W1 (y) es
+   el número de veces que la sucesión alterna entre L y R, y W1 = y W1 (y). (a) Calcula W1 (y)
+   para cada y y W1 con los accesos X = 1, 5, 3, 7, 2, 6, 4. (b) Calcula W1 para X = 1, 2, 3, 4, 5, 6, 7.
+   (c) Para n = 2k − 1 la permutación bit-reversal da W1 = Θ(n lg n). Usando OP T ≥ W1 /2 − n,
+   ¿qué concluyes sobre el costo de cualquier BST en esa secuencia?
+
+4. Tango Trees. El árbol de referencia es un BST perfecto con n = 220 − 1 llaves. (a) ¿Cuántos
+   niveles tiene y cuántos nodos tiene, a lo más, un árbol auxiliar (un camino preferido)? (b)
+   ¿Cuántas comparaciones aproximadas cuesta buscar en un árbol auxiliar? (c) Si una secuencia
+   de accesos produce k cambios de hijo preferido, ¿cuál es el costo de Tango frente a OP T ≥ k/2−n
+   y cuál es el factor de competitividad aproximado para este n? Compáralo con lg n.
+
+5. Verdadero o falso (conjetura de optimalidad dinámica). Justifica en una lı́nea cada
+   una. (a) Se ha demostrado que los splay trees son O(1)-competitivos. (b) Los Tango Trees son
+   O(lg lg n)-competitivos. (c) Greedy es O(1)-competitivo (demostrado). (d) Un BST balanceado
+   estático es O(lg n)-competitivo. (e) Existen secuencias de m ≥ n accesos en las que todo BST
+   paga Ω(m lg n).
+ Jerarquı́a de memoria
+ 6. Modelo de memoria externa. Se tienen N = 232 claves y bloques de B = 28 claves. (a)
+    ¿Cuántas transferencias cuesta recorrer todas las claves? (b) Un BST balanceado cuyos nodos
+    están en bloques distintos, ¿cuántas transferencias cuesta una búsqueda? (c) ¿Y en un B-Tree
+    con B claves por nodo? Da el orden y el valor aproximado.
+
+ 7. Layout vEB. Un BST perfecto con llaves 1, . . . , 15 se guarda en memoria con bloques de B = 3
+    nodos. Escribe el arreglo del layout vEB (la parte superior de altura 2 seguida de las 4 partes
+    inferiores) y el del layout por niveles (BFS). Para buscar la llave 5, ¿cuántos bloques se leen con
+    cada uno?
+
+ 8. Mergesort externo. Se ordenan N = 228 claves con memoria M = 220 y bloques B = 28 . (a) Se
+    forman runs ordenados del tamaño de la memoria: ¿cuántos runs hay y cuántas transferencias
+    cuesta formarlos (leer y escribir todo)? (b) Se mezclan con un merge de k vı́as, k ≈ M/B:
+    ¿cuántas pasadas hacen falta y cuántas transferencias en total? (c) ¿Y si se mezclara de 2 en 2?
+    Compara.
+
+ 9. Búsqueda: BFS, vEB y B-Tree. Un BST perfecto con N = 220 − 1 llaves se guarda con
+    bloques de B = 24 nodos. (a) ¿Cuántas transferencias aproximadas cuesta una búsqueda con el
+    layout por niveles (BFS)? (b) ¿Y con el layout vEB? Da el orden y el valor aproximado. (c) ¿Por
+    qué el layout vEB logra eso sin que el algoritmo conozca B?
+
+10. B-Tree frente a BST. Se guardan N = 109 llaves en un B-Tree con B = 1000 llaves por nodo
+    (un nodo = un bloque). (a) ¿Cuántas transferencias cuesta una búsqueda, y cuántas un BST
+    balanceado con un nodo por bloque? (b) Se piden las K = 105 llaves consecutivas desde una
+    dada: ¿cuántas transferencias aproximadas hacen falta? Da la forma O(·) y el valor.
+
+
+ Estructuras para enteros
+11. vEB: Sucesor. Sea u = 16 y S = {0, 3, 5, 8, 12, 15} en un árbol de van Emde Boas. (a) Escribe
+    el contenido de cada cluster y del resumen. (b) Ejecuta Sucesor(6) indicando qué llamadas se
+    hacen. (c) ¿Por qué solo se hace una llamada recursiva costosa?
+
+12. vEB: Predecesor. Con el mismo árbol del ejercicio anterior (u = 16, S = {0, 3, 5, 8, 12, 15})
+    ejecuta Predecesor(10), Predecesor(4), Predecesor(2) y Predecesor(0). En cada caso
+    indica si la respuesta se encuentra dentro del cluster o hay que consultar el resumen.
+
+13. X-fast tries. Las llaves son de w = 4 bits y S = {1, 5, 6, 12}. (a) Escribe, por nivel, los
+    prefijos que guarda la tabla hash y cuántas entradas tiene en total (incluida la raı́z). (b) Ejecuta
+    Sucesor(8): indica los prefijos que se consultan en la búsqueda binaria sobre los niveles y cómo
+    se usa el puntero a descendiente. (c) Ejecuta Sucesor(7) y Predecesor(7).
+
+14. Y-fast tries. Un Y-fast trie guarda n = 216 llaves de w = 32 bits en grupos de entre w/2 y 2w
+    llaves. (a) ¿Entre qué valores está el número de grupos? (b) ¿Cuántas entradas de hash tiene, a
+
+
+                                                    2
+    lo más, el X-fast trie de representantes, y cuántas tendrı́a un X-fast trie con todas las llaves? (c)
+    Da el costo aproximado de Sucesor.
+
+15. Fusion trees. Las llaves de 6 bits son 9, 13, 26, 42. (a) Escribe sus representaciones binarias y
+    dibuja el trie. (b) ¿Qué bits distinguen a las llaves (los de ramificación)? (c) Calcula el sketch
+    perfecto de cada llave con esos bits y verifica que conserva el orden.
+
+
+ Static Trees
+16. Árbol cartesiano. Construye el árbol cartesiano (con el mı́nimo en la raı́z) de A = [4, 2, 7, 1, 5, 3, 6]
+    (posiciones 1 a 7). Usa el árbol para responder RMQ(3, 5) y RMQ(5, 7): indica el nodo que es
+    el LCA y el valor del mı́nimo.
+
+17. Sparse Table. Sea A = [5, 2, 4, 7, 6, 3, 1, 8] (posiciones 1 a 8). (a) Escribe la tabla M [j][i] con el
+    mı́nimo de las 2j posiciones que empiezan en i, para todo j válido. (b) Responde RMQ(2, 7) y
+    RMQ(3, 5) combinando dos entradas de la tabla. (c) ¿Por qué funciona con mı́n pero no con la
+    suma? ¿Cuánto cuestan la construcción y la consulta?
+
+18. LCA con el recorrido de Euler. El árbol tiene raı́z 1, hijos 2, 3 de 1; 4, 5 hijos de 2; 6 hijo de
+    3; 7 hijo de 5 (los hijos se visitan en orden creciente). (a) Escribe el recorrido de Euler (el nodo se
+    escribe al entrar y cada vez que se regresa a él), el arreglo de profundidades y la primera aparición
+    de cada nodo. (b) Calcula LCA(4, 7), LCA(7, 6) y LCA(7, 5) con una consulta de mı́nimo sobre
+    las profundidades. (c) ¿Cuál es el tamaño del arreglo? ¿Qué propiedad de las profundidades se
+    explota para lograr O(n) de preprocesamiento y O(1) por consulta?
+
+19. Heavy-Light. El árbol de 13 nodos tiene raı́z 1 y padres p(2) = p(3) = 1, p(4) = p(5) = 2,
+    p(6) = p(7) = 3, p(8) = p(9) = 4, p(10) = 5, p(11) = p(12) = 6, p(13) = 7. El hijo pesado es el de
+    mayor subárbol (en caso de empate, el de menor etiqueta). (a) Calcula los tamaños de subárbol
+    y los caminos pesados. (b) ¿Cuántas aristas livianas hay en la ruta de 12 a la raı́z y de 9 a la
+    raı́z? (c) Demuestra que cualquier ruta a la raı́z tiene a lo más ⌊lg n⌋ aristas livianas.
+
+20. Heavy-Light: consulta de ruta. Con el árbol del ejercicio anterior, numera los nodos 1, . . . , 13
+    según el orden de un DFS que visita primero el hijo pesado (y después los livianos en orden
+    creciente de etiqueta). (a) Escribe el orden. (b) Descompón la ruta de 12 a 9 en intervalos de
+    posiciones contiguas, subiendo por las cabezas de camino. (c) ¿Cuántos intervalos puede haber,
+    a lo más, y cuál es el costo de una consulta de máximo en la ruta con un árbol de segmentos?
+
+21. Level Ancestor. El árbol de 12 nodos tiene raı́z 1 y padres p(2) = p(9) = 1, p(3) = p(6) =
+    2, p(4) = p(12) = 3, p(5) = 4, p(7) = 6, p(8) = 7, p(10) = 9, p(11) = 10. (a) Calcula la
+    descomposición en caminos largos (el hijo de mayor altura; empate: menor etiqueta) y la escalera
+    de cada camino (el camino extendido hacia arriba por su longitud, sin pasar de la raı́z). (b)
+    Responde LA(8, 3), LA(12, 2) y LA(5, 3) (el ancestro a k niveles) indicando el salto 2j y el uso
+    de la escalera.
+
+
+
+
+                                                      3
+ Strings
+22. KMP: tabla de fallo. Calcula la tabla de fallo π de abaabaab. ¿Cuál es el perı́odo más corto
+    de la cadena? Explica cómo se obtiene a partir de π.
+
+23. KMP: búsqueda. Sea P = aabaa y T = aabaabaaaabaa. (a) Calcula π de P . (b) Recorre T
+    indicando, después de leer cada carácter, cuántos caracteres de P coinciden (el estado), inclu-
+    yendo los retrocesos por π. (c) ¿En qué posiciones de T empiezan las ocurrencias de P ? ¿Qué se
+    hace al completar una coincidencia? (d) ¿Por qué el recorrido es O(|T | + |P |)?
+
+24. Aho-Corasick. Para el diccionario {aab, ab, bab} dibuja el trie, calcula fail y dic de cada nodo
+    y recorre T = aabab indicando, en cada posición, el nodo actual y los patrones que terminan allı́.
+
+25. Suffix Array. Para S = abcab$∑︁calcula el arreglo
+                                                    ∑︁ de sufijos SA, el arreglo LCP (entre sufijos
+    consecutivos del orden) y usa     (n − SA[i]) −    LCP [i] para dar el número de subcadenas
+    distintas de S (contando las que incluyen $).
+
+26. Suffix Array: búsqueda de patrones. Con el SA de S = abcab$ del ejercicio anterior,
+    encuentra todas las ocurrencias de los patrones ab, b, ca y abd: indica el intervalo de SA que
+    cumple y las posiciones. ¿Cuál es el costo de buscar un patrón P con búsqueda binaria sobre
+    SA?
+
+27. Suffix Tree. Sea S = banana$. (a) Dibuja el suffix tree (aristas con etiquetas de subcadenas,
+    hojas con la posición de inicio, que empieza en 0). (b) ¿Cuántas hojas y cuántos nodos internos
+    (sin contar la raı́z) tiene? Suma las longitudes de las etiquetas de todas las aristas: ¿qué cuenta
+    ese número? (c) Usa el árbol para decir cuántas veces ocurren ana y nan en S y en qué posiciones.
+
+
+ Dynamic Graphs
+28. Link-cut trees (Access). El árbol tiene raı́z 1, hijos 2 y 3 de 1, 4 hijo de 2, 5 hijo de 3.
+    Inicialmente los hijos preferidos son 1 → 2, 2 → 4, 3 → 5. Ejecuta Access(5), Access(4),
+    Access(5) y, para cada uno, indica los cambios de hijo preferido. Después explica por qué un
+    Access cambia el hijo preferido por una arista liviana a lo más ⌊lg n⌋ veces.
+
+29. Access: aristas livianas y pesadas. El árbol tiene raı́z 1, hijos 2, 3 de 1, hijos 4, 5 de 2 y 6
+    hijo de 3. Inicialmente ningún nodo tiene hijo preferido. (a) Calcula los tamaños de subárbol y
+    las aristas pesadas (empate: menor etiqueta). (b) Ejecuta Access(4), Access(5), Access(6) y
+    Access(4). Para cada uno da los cambios de hijo preferido (un nodo que pasa de no tener hijo
+    preferido a tener uno también cuenta) y di cuáles de ellos hacen preferida una arista liviana. (c)
+    Verifica que cada Access cumple la cota de ⌊lg n⌋ livianas.
+
+30. Link-cut trees (Cortar). Un árbol es la cadena 1–2–3–4–5 enraizada en 1 (cada nodo es
+    hijo del anterior) y al inicio ningún nodo tiene hijo preferido. Ejecuta Access(5), Access(2) y
+    Cortar(3) (separar 3 de su padre). Después de cada operación escribe los caminos preferidos y,
+    al final, los árboles resultantes y cómo queda conectado el camino que contiene a 4 y 5.
+
+
+                                                    4
+31. Bosque dinámico: Enlazar, Cortar, Raı́z. Se tienen 6 nodos aislados. Enlazar(v, w) (con
+    v raı́z de su árbol) cuelga v como hijo de w; Cortar(v) separa v de su padre; Raı́z(v) devuelve
+    la raı́z del árbol de v. (a) Ejecuta Enlazar(2, 1), Enlazar(3, 2), Enlazar(5, 4) y responde
+    Raı́z(3) y si 3 y 5 están conectados. (b) Ejecuta Enlazar(4, 3) y responde Raı́z(5). Después
+    Cortar(2) y responde Raı́z(5) y si 5 y 1 están conectados. Da los árboles finales. (c) Explica
+    cómo se implementa Raı́z(v) con Access y el splay tree del camino.
+
+32. Costo amortizado de los cambios de hijo preferido. Demuestra que en una secuencia de
+    m operaciones Access sobre un árbol de n nodos el número total de cambios de hijo preferido
+    es O(n + m lg n). Pista: clasifica los cambios según la arista que se vuelve preferida (pesada o
+    liviana). ¿Cuántas aristas livianas se vuelven preferidas en cada Access? Una arista pesada solo
+    puede volverse preferida si antes dejó de serlo: ¿cuándo deja de serlo?
+
+
+
+
+                                                  5
+

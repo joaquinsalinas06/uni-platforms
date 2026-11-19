@@ -1,0 +1,935 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Strings II
+Semana 13
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+3 de noviembre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Definir el suffix array y buscar patrones con él
+ ▶ Construirlo en O(n lg n) con duplicación de prefijos
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Definir el suffix array y buscar patrones con él
+ ▶ Construirlo en O(n lg n) con duplicación de prefijos
+ ▶ Calcular el arreglo LCP con Kasai
+ ▶ Resolver los problemas clásicos de subcadenas y conocer cómo se
+   construye en O(n) (DC3)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Ahora el texto se conoce primero
+KMP y Aho–Corasick preprocesan los patrones. Si el texto T es fijo y llegan
+muchos patrones P distintos, cada búsqueda en O(|T |) es demasiado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Ahora el texto se conoce primero
+KMP y Aho–Corasick preprocesan los patrones. Si el texto T es fijo y llegan
+muchos patrones P distintos, cada búsqueda en O(|T |) es demasiado.
+
+Indexar el texto
+Todo patrón que ocurre en T es un prefijo de algún sufijo de T . Si los
+sufijos están ordenados, los que empiezan con P forman un intervalo
+contiguo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 41
+Suffix array
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Convención y definición
+
+
+
+
+Sentinela
+Todo texto termina con $, menor que cualquier carácter y único. Así ningún
+sufijo es prefijo de otro y la comparación es siempre decidible.
+
+Suffix array
+Para una cadena S de longitud n (con $), SA es la permutación de
+0, . . . , n − 1 tal que
+
+               S[SA[0]..] ≺ S[SA[1]..] ≺ · · · ≺ S[SA[n − 1]..]
+
+Solo n enteros: mucho menos memoria que un árbol.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   5 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo: S = banana$
+
+
+
+
+                                  k   SA[k]     sufijo
+                                  0       6     $
+                                  1       5     a$
+                                  2       3     ana$
+                                  3       1     anana$
+                                  4       0     banana$
+                                  5       4     na$
+                                  6       2     nana$
+
+Los sufijos que empiezan con ana son k = 2, 3: un intervalo. Hay 2 ocurrencias, en
+                              las posiciones 3 y 1.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          6 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Búsqueda con búsqueda binaria
+
+
+
+
+Buscar P
+Dos búsquedas binarias sobre SA comparando P con el sufijo S[SA[k]..]: el
+menor k con sufijo ⪰ P y el menor con sufijo que no empieza con P y es
+≻ P. Entre ambos están todas las ocurrencias.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Búsqueda con búsqueda binaria
+
+
+
+
+Buscar P
+Dos búsquedas binarias sobre SA comparando P con el sufijo S[SA[k]..]: el
+menor k con sufijo ⪰ P y el menor con sufijo que no empieza con P y es
+≻ P. Entre ambos están todas las ocurrencias.
+
+Costo
+Cada comparación cuesta O(|P|) y hay O(lg n): O(|P| lg n). Contar
+ocurrencias es la longitud del intervalo; listarlas cuesta O(ocurrencias) más.
+
+                   Con información de LCP se baja a O(|P| + lg n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       7 / 41
+Duplicación de prefijos
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo construirlo?
+
+
+
+
+Ordenar los sufijos tal cual
+Es una ordenación con comparador. Cada comparación de dos sufijos cuesta
+hasta O(n): O(n2 lg n) en total. Para n = 106 es inviable.
+
+Lo que cuesta es comparar
+Si pudiéramos comparar dos sufijos en O(1), serían O(n lg n). ¿Cómo
+comparar en O(1) sin mirar caracteres?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea de Manber y Myers
+
+
+
+
+Ordenar por los primeros 2k caracteres
+Sea rankk (i) la posición de S[i..i + 2k − 1] cuando se ordenan todas las
+subcadenas de longitud 2k (con empates iguales). Entonces
+
+          S[i..i + 2k+1 − 1] ≺ S[j..j + 2k+1 − 1]
+           ⇐⇒ rankk (i), rankk (i + 2k ) ≺ rankk (j), rankk (j + 2k )
+                                                                    
+
+
+Cada nivel sabe comparar en O(1)
+Una subcadena de longitud 2k+1 son dos de longitud 2k . Basta comparar el
+par de rangos. Tras ⌈lg n⌉ niveles, las subcadenas de longitud ≥ n son
+sufijos completos.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     10 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo: S = banana$
+
+
+
+
+                                       i    0    1   2    3    4       5   6
+                                    S[i]    b    a   n    a    n       a   $
+                     rank0 (1 carácter)     2    1   3    1    3       1   0
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           11 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo: S = banana$
+
+
+
+
+                                       i    0    1   2    3    4       5   6
+                                    S[i]    b    a   n    a    n       a   $
+                     rank0 (1 carácter)     2    1   3    1    3       1   0
+                   rank1 (2 caracteres)     3    2   4    2    4       1   0
+                   rank2 (4 caracteres)     4    3   6    2    5       1   0
+
+    Los rangos de i = 1 y i = 3 coinciden hasta longitud 2 (an) y se separan en
+      longitud 4 (anan frente a ana$). Cuando todos son distintos, rank es la
+                            permutación inversa de SA.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           11 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una ordenación por conteo por nivel
+
+
+
+
+Clave de dos componentes: radix sort
+Ordenar por la segunda componente y luego, de forma estable, por la primera.
+
+La segunda componente sale gratis
+Si a ya está ordenado por los primeros 2k caracteres, entonces ordenar por
+rankk (i + 2k ) equivale a recorrer a y tomar a[t] − 2k (módulo n): el índice
+a[t] − 2k tiene como segunda componente la clave de a[t].
+
+    Luego un counting sort estable por la primera componente: O(n) por nivel.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       12 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Manber y Myers
+
+
+
+Algoritmo 1: Suffix-Array(S)                 (S termina en $; n = |S|)
+a ← índices ordenados por S[i]; rank ← rangos por S[i]; len ← 1
+mientras len < n y los rangos no son todos distintos hacer
+    para t ← 0 a n − 1 hacer sec[t] ← (a[t] − len + n) mód n
+    ordenar sec de forma estable por rank[·] con counting sort → a
+    nuevo[a[0]] ← 0
+    para t ← 1 a n − 1 hacer
+        x ← (rank[a[t]], rank[(a[t] + len) mód n])
+        y ← (rank[a[t − 1]], rank[(a[t − 1] + len) mód n])
+        nuevo[a[t]] ← nuevo[a[t − 1]] + [ x ̸= y ]
+     rank ← nuevo;     len ← 2 · len
+devolver a
+
+                            O(n lg n) tiempo, O(n) memoria.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     13 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen de la construcción
+
+
+
+
+Complejidad
+               Variante                               Tiempo           Memoria
+               Ordenar sufijos con std::sort         O(n2 lg n)         O(n)
+               Duplicación con ordenación            O(n lg2 n)         O(n)
+               Duplicación con counting sort         O(n lg n)          O(n)
+
+
+Más adelante
+Hay algoritmos de tiempo O(n) (DC3, que veremos al final, y SA-IS, que
+solo mencionaremos). Para casi todo problema de competencia, O(n lg n)
+basta.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             14 / 41
+El arreglo LCP
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    LCP de sufijos adyacentes
+
+
+
+
+Definición
+                                          
+LCP[k] = lcp S[SA[k − 1]..], S[SA[k]..] para k = 1, . . . , n − 1: el prefijo
+común de dos sufijos vecinos en el orden.
+
+Para banana$
+                                 k   0    1    2    3   4    5    6
+                             SA[k]   6    5    3    1   0    4    2
+                            LCP[k]   –    0    1    3   0    0    2
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   16 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué solo los vecinos?
+
+
+
+
+LCP de dos sufijos cualquiera
+Para k < l:
+                                    
+          lcp S[SA[k]..], S[SA[l]..] = mı́n{LCP[k + 1], . . . , LCP[l]}
+
+Demostración
+Los sufijos entre ellos están ordenados, así que todos comparten el prefijo
+común de los extremos: cada uno comparte con el siguiente al menos el
+lcp de los extremos, y en algún par adyacente se pierde justo ese carácter.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      17 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo calcular LCP: Kasai
+
+
+
+
+Observación
+Sea S[j..] el sufijo que va inmediatamente antes de S[i..] en el orden, con
+lcp = h > 0. Quitar el primer carácter (común) conserva el orden y deja
+h − 1 caracteres comunes: S[j + 1..] ≺ S[i + 1..] y comparten h − 1.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo calcular LCP: Kasai
+
+
+
+
+Observación
+Sea S[j..] el sufijo que va inmediatamente antes de S[i..] en el orden, con
+lcp = h > 0. Quitar el primer carácter (común) conserva el orden y deja
+h − 1 caracteres comunes: S[j + 1..] ≺ S[i + 1..] y comparten h − 1.
+
+Consecuencia
+El predecesor de S[i + 1..] está entre S[j + 1..] y S[i + 1..] (o es S[j + 1..]),
+así que comparte con S[i + 1..] al menos h − 1 caracteres. Si procesamos
+las posiciones i = 0, 1, 2, . . . y reutilizamos h, solo baja en 1 de una a la
+siguiente.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        18 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Algoritmo de Kasai
+
+
+Algoritmo 2: Kasai(S, SA)
+para k ← 0 a n − 1 hacer rank[SA[k]] ← k
+h←0
+para i ← 0 a n − 1 hacer
+   si rank[i] > 0 entonces
+        j ← SA[rank[i] − 1]
+        mientras i + h < n y j + h < n y S[i + h] = S[j + h] hacer h ← h + 1
+        LCP[rank[i]] ← h
+        si h > 0 entonces h ← h − 1
+   en otro caso
+        h←0
+devolver LCP
+
+O(n)
+h baja a lo más 1 por iteración y nunca es mayor que n: el while avanza
+≤ 2n veces en total.
+Víctor Racsó Galván Oyola Universidad de Ingeniería y Tecnología       19 / 41
+Aplicaciones
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Subcadenas distintas
+
+
+
+Contar las subcadenas distintas de S
+Toda subcadena es prefijo de algún sufijo; el sufijo SA[k] aporta los prefijos
+que no compartía con el anterior:
+
+                                          n(n + 1) X
+                        #distintas =              −  LCP[k]
+                                             2
+                                                        k
+
+con n = |S| sin contar el sentinela.
+
+Para banana
+ 6·7                                P
+  2 = 21 prefijos de sufijos, menos   LCP = 0 + 1 + 3 + 0 + 0 + 2 = 6: 15
+subcadenas distintas.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     21 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Más aplicaciones
+
+
+
+
+Subcadena repetida más larga
+Es el máxk LCP[k] (dos sufijos que comparten ese prefijo).
+
+Subcadena común de dos cadenas
+Concatenar S # T y calcular SA y LCP. La subcadena común más larga es
+el mayor LCP[k] entre dos sufijos vecinos que vienen de cadenas distintas.
+
+La k-ésima subcadena
+Con LCP, la subcadena número k en orden lexicográfico (sin repetidas) se
+halla recorriendo SA y restando n − SA[k] − LCP[k] nuevos prefijos por
+sufijo.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   22 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ventajas y límites
+
+
+
+
+                   Ventajas    n enteros de memoria; fácil de progra-
+                               mar; con LCP resuelve casi todo lo de
+                               subcadenas
+                   Límites     búsqueda O(|P| lg n) sin ayudas;
+                               construir en O(n) es complejo; el suf-
+                               fix tree resuelve algunas consultas
+                               con más naturalidad
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    23 / 41
+Construcción en tiempo lineal
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La estrategia común
+
+
+
+
+Ordenar poco y deducir mucho
+Los algoritmos lineales siguen el mismo esquema:
+  1. Elegir un subconjunto pequeño de sufijos y ordenarlo recursivamente
+     sobre una cadena más corta.
+  2. Deducir el orden de todos los demás a partir de ese subconjunto, en
+     tiempo lineal.
+
+Recurrencia
+Si la cadena de la recursión tiene ≤ αn caracteres con α < 1 y el resto
+cuesta O(n):
+                       T (n) = T (αn) + O(n) = O(n)
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      25 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Algoritmos históricos
+
+
+
+
+    Autores                               Año    Tiempo        Idea
+    Manber y Myers                        1990   O(n lg n)     duplicación
+    Itoh y Tanaka                         1999   superlineal   ordenamiento inducido
+    Kärkkäinen y Sanders (DC3)            2003   O(n)          mod 3
+    Ko y Aluru                            2003   O(n)          ordenamiento inducido
+    Nong, Zhang y Chan (SA-IS)            2009   O(n)          inducido, simplificado
+
+   Hoy: DC3 (el más fácil de demostrar); SA-IS (el más usado) solo se menciona.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                26 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Partir las posiciones por su residuo
+
+
+
+
+Tres clases
+            Bk = { i : 0 ≤ i < n, i ≡ k         (mód 3) },            k = 0, 1, 2
+Sea C = B1 ∪ B2 : dos tercios de las posiciones.
+
+Teorema (Kärkkäinen, Sanders y Burkhardt)
+Si se conoce el orden de los sufijos de C , se puede deducir el orden de todos
+en O(n).
+
+                 Primero hay que ordenar C : aquí entra la recursión.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                 27 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: ordenar los sufijos de C
+
+
+
+
+Tomar tripletas
+Para cada i ∈ C se toma la tripleta S[i]S[i + 1]S[i + 2] (rellenando con $ si
+se sale). Ordenarlas con radix sort (3 pasadas) y nombrarlas con su rango.
+
+La cadena reducida
+R = R1 · R2 : los nombres de las tripletas de B1 en orden de posición, y luego
+los de B2 . Tiene ≈ 2n
+                     3 caracteres. Un sufijo de C en S es una tripleta
+seguida de otros sufijos de tripletas: queda igual al sufijo de R.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     28 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo: S = mississippi
+
+
+
+
+                R1 = (iss)(iss)(ipp)(i$$),         R2 = (ssi)(ssi)(ppi)
+
+
+Nombres
+i$$→ 0,       ipp→ 1,       iss→ 2,       ppi→ 3,        ssi→ 4.
+
+                                    R = 2210443
+
+ Hay nombres repetidos (2 y 4): se llama recursivamente a DC3 sobre R. Si todos
+      fueran distintos, el rango de cada tripleta daría directamente el orden.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       29 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El resultado de la recursión
+
+
+
+
+Rangos de los sufijos de C
+El suffix array de R = 2210443 da, para cada posición de R, su rango entre
+los sufijos de C :
+                      posición en R       0   1   2   3    4    5      6
+                                  R       2   2   1   0    4    4      3
+                                 rnk      3   2   1   0    6    5      4
+
+De vuelta a S
+La posición 0, 1, 2, 3 de R son las posiciones 1, 4, 7, 10 de S (B1 ) y 4, 5, 6
+son 2, 5, 8 (B2 ). Así el sufijo en 10 tiene rango 0, el de 7 rango 1, etc.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         30 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 3: mezclar
+
+
+
+
+Dos listas ordenadas
+Los sufijos de C (paso 1) y los de B0 (paso 2) se mezclan como en Merge-
+Sort. Falta decidir cómo comparar x ∈ B0 con y ∈ C en O(1).
+
+Las dos comparaciones
+                                                                    
+ ▶ x ∈ B0 , y ∈ B1 : comparar S[x], rnk(x + 1) con S[y ], rnk(y + 1)
+   (x + 1 ∈ B1 , y + 1 ∈ B2 : ambos con rango).
+                                                         
+ ▶ x ∈ B0 , y ∈ B2 : comparar S[x], S[x + 1], rnk(x + 2) con
+    S[y ], S[y + 1], rnk(y + 2) (x + 2 ∈ B2 , y + 2 ∈ B1 ).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    DC3: algoritmo
+
+
+Algoritmo 3: DC3(S, n)
+Bk ← {i : i ≡ k mód 3}; C ← B1 ∪ B2
+ordenar C por la tripleta (S[i], S[i + 1], S[i + 2]) con radix sort
+R ← nombres de las tripletas (B1 y luego B2 )
+si los nombres no son todos distintos entonces
+     SAR ← DC3(R, |R|)
+en otro caso
+     SAR ← orden directo por nombre
+rnk[x] ← posición de x ∈ C en SAR
+ordenar B0 por el par (S[i], rnk[i + 1]) con radix sort
+devolver mezcla de B0 y C con las comparaciones de O(1)
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   32 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    DC3: algoritmo
+
+
+Algoritmo 4: DC3(S, n)
+Bk ← {i : i ≡ k mód 3}; C ← B1 ∪ B2
+ordenar C por la tripleta (S[i], S[i + 1], S[i + 2]) con radix sort
+R ← nombres de las tripletas (B1 y luego B2 )
+si los nombres no son todos distintos entonces
+     SAR ← DC3(R, |R|)
+en otro caso
+     SAR ← orden directo por nombre
+rnk[x] ← posición de x ∈ C en SAR
+ordenar B0 por el par (S[i], rnk[i + 1]) con radix sort
+devolver mezcla de B0 y C con las comparaciones de O(1)
+
+
+T (n) = T ( 2n
+             3
+               ) + O(n) = O(n)
+Todos los demás pasos son radix sorts y una mezcla. La recursión es sobre
+2
+3 n caracteres.
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   32 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    SA-IS: el más rápido en la práctica
+
+
+
+
+Una construcción lineal más
+SA-IS (Nong, Zhang y Chan, 2009) construye el suffix array en O(n) con
+una constante muy baja: es el que usan las bibliotecas y el más rápido en la
+práctica.
+
+Por qué no lo vemos hoy
+Su teoría es muy densa para una sola clase: clasifica los sufijos en tipo S y
+L, ordena los LMS, induce el orden del resto y reduce recursivamente.
+Quien lo necesite puede usar una implementación de biblioteca, sabiendo
+que produce el mismo SA.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      33 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Comparación y elección
+
+
+
+
+                       Tiempo       Recursión      Constante      Uso
+       Duplicación      n lg n           no           baja        concursos, hasta ∼
+                                                                  106
+                                         2
+       DC3                  n            3n            alta       didáctico, demostra-
+                                                                  ción
+                                         1
+       SA-IS                n            2n           baja        bibliotecas, n ≥ 106
+
+
+Después, el LCP
+El LCP se calcula con Kasai en O(n) para cualquiera de los tres. Con SA-IS
++ Kasai + RMQ, todo el índice se construye en tiempo lineal.
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología                  34 / 41
+Práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Práctica
+
+
+
+
+         Problema                                  Idea
+         Library Checker — Suffix Array            implementar duplicación o DC3
+         Library Checker — Number of Substrings    SA + LCP
+         CSES 2104 — Pattern Positions             intervalo en SA + posiciones
+                                                    n(n+1)   P
+         CSES 2105 — Distinct Substrings               2
+                                                           −    LCP
+         CSES 2106 — Repeating Substring           máximo de LCP
+         CSES 2108 — Substring Order I             k-ésima subcadena distinta
+         CSES 2109 — Substring Order II            k-ésima subcadena con repetidas
+         CSES 2110 — Substring Distribution        conteo por longitud con LCP
+         CSES 1113 — String Transform              transformada de Burrows–Wheeler
+         CSES 3225 — Inverse Suffix Array          reconstruir la cadena desde SA
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                 36 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El suffix array ordena los sufijos; las ocurrencias de un patrón son un
+   intervalo y se buscan con búsqueda binaria.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El suffix array ordena los sufijos; las ocurrencias de un patrón son un
+   intervalo y se buscan con búsqueda binaria.
+ ▶ La duplicación de prefijos compara subcadenas de longitud 2k+1 con un
+   par de rangos: O(n lg n) con counting sort.
+ ▶ El arreglo LCP se calcula en O(n) con Kasai; el lcp de dos sufijos es el
+   mínimo de LCP entre sus rangos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El suffix array ordena los sufijos; las ocurrencias de un patrón son un
+   intervalo y se buscan con búsqueda binaria.
+ ▶ La duplicación de prefijos compara subcadenas de longitud 2k+1 con un
+   par de rangos: O(n lg n) con counting sort.
+ ▶ El arreglo LCP se calcula en O(n) con Kasai; el lcp de dos sufijos es el
+   mínimo de LCP entre sus rangos.
+ ▶ Tiempo lineal: DC3 ordena dos tercios por tripletas y mezcla; SA-IS es
+   aún más rápido, pero su teoría es muy densa para esta clase.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir un suffix array por duplicación
+ ▶ Sabemos calcular el LCP con Kasai
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir un suffix array por duplicación
+ ▶ Sabemos calcular el LCP con Kasai
+ ▶ Sabemos buscar, contar y resolver problemas de subcadenas
+ ▶ Sabemos explicar cómo se logra el tiempo lineal con DC3
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Manber, U., & Myers, G. (1993). Suffix arrays: a new method for
+   on-line string searches. SIAM J. Comput., 22(5), 935–948.
+ ▶ Kasai, T., et al. (2001). Linear-time longest-common-prefix
+   computation in suffix arrays and its applications. CPM’01, 181–192.
+ ▶ Kärkkäinen, J., Sanders, P., & Burkhardt, S. (2006). Linear work suffix
+   array construction. J. ACM, 53(6), 918–936.
+ ▶ Nong, G., Zhang, S., & Chan, W. H. (2009). Linear suffix array
+   construction by almost pure induced-sorting. DCC’09, 193–202.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   40 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las notas de clase de Strings del curso
+(Manber–Myers, DC3, Ko–Aluru y SA-IS) y en las clases de Luciano A.
+Romero Calla para este curso.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    41 / 41
+

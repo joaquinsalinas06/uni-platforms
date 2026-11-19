@@ -1,0 +1,6 @@
+raw-materials/
+node_modules/
+.astro/
+dist/
+.turbo/
+.DS_Store

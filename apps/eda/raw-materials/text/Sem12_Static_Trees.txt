@@ -1,0 +1,916 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Árboles estáticos
+Semana 12
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+28 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Resolver RMQ estático con la Sparse Table y con bloques, y medir con
+   el par ⟨P(n), Q(n)⟩
+ ▶ Construir el cartesian tree y reducir RMQ a LCA, y LCA a ±1 RMQ
+   con el Euler tour
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Resolver RMQ estático con la Sparse Table y con bloques, y medir con
+   el par ⟨P(n), Q(n)⟩
+ ▶ Construir el cartesian tree y reducir RMQ a LCA, y LCA a ±1 RMQ
+   con el Euler tour
+ ▶ Llegar a ⟨O(n), O(1)⟩ con el método de los cuatro rusos
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Dos preguntas sobre datos que no cambian
+¿Cuál es el menor valor entre las posiciones i y j (RMQ)? ¿Cuál es el ancestro
+común más bajo de dos nodos (LCA)?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Dos preguntas sobre datos que no cambian
+¿Cuál es el menor valor entre las posiciones i y j (RMQ)? ¿Cuál es el ancestro
+común más bajo de dos nodos (LCA)?
+
+Una sola caja de herramientas
+Las dos se resuelven con preprocesamiento O(n) y consulta O(1), y se
+reducen una a la otra. Son la base de LCP en strings, de consultas sobre
+caminos y de muchos algoritmos que las usan como subrutina.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 42
+Range Minimum Query
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Range Minimum Query
+
+
+Problema
+Dado un arreglo A[0..n − 1] que se preprocesa, responder consultas
+
+      RMQA (i, j) = arg mı́n{A[i], A[i + 1], . . . , A[j]},            0≤i ≤j <n
+
+es decir, el índice k ∈ [i, j] donde está el mínimo.
+
+Dos observaciones
+Devolver el índice es más general que devolver el valor: con k se obtiene
+A[k]. Y el arreglo no cambia (es estático): solo hay consultas.
+
+¿Cómo medimos una solución?
+Con el par ⟨P(n), Q(n)⟩: tiempo de preprocesamiento y tiempo por
+consulta.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               5 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Las primeras soluciones
+
+
+
+Sin preprocesar: ⟨O(1), O(n)⟩
+Recorrer A[i..j] en cada consulta: 1012 operaciones con n = 106 y 106 con-
+sultas.
+
+Tabla completa: ⟨O(n2 ), O(1)⟩
+M[i][j] para todo par, llenada con M[i][j] = el mejor entre M[i][j − 1] y j.
+Pero n2 celdas son inaceptables.
+
+Segment tree: ⟨O(n), O(lg n)⟩
+Estándar, pero como el arreglo es estático pagamos por actualizaciones que
+nunca usamos.
+
+  Buscamos casi n de preprocesamiento y una consulta que no dependa de j − i.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       6 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea: potencias de 2
+
+
+
+
+                                [0, 1]: longitud 21              [4, 7]: longitud 22
+
+                                                 [1, 4]: longitud 4 = 22
+
+                      5     3   8    1     9    4     7    2
+                       0    1   2    3     4    5     6    7
+
+
+
+
+Una tabla solo con intervalos de longitud potencia de 2
+Para cada inicio i y cada k con i + 2k ≤ n guardamos
+
+                    M[k][i] = arg mı́n{A[i], . . . , A[i + 2k − 1]}
+
+                Hay n inicios y ⌊lg n⌋ + 1 longitudes: O(n lg n) celdas.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                 7 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo se llena
+
+
+
+
+Un intervalo de longitud 2k son dos de longitud 2k−1
+         [i, i + 2k − 1] = [i, i + 2k−1 − 1] ∪ [i + 2k−1 , i + 2k − 1]
+y el mínimo del intervalo grande es el mejor de los dos mínimos.
+
+Recurrencia
+
+  M[0][i] = i,        M[k][i] = mejor entre M[k − 1][i] y M[k − 1][i + 2k−1 ]
+
+Cada celda se calcula en O(1) a partir del nivel anterior: el tiempo total es
+O(n lg n).
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       8 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo
+
+
+
+
+                               i   0      1   2   3   4   5   6    7
+                            A[i]   5      3   8   1   9   4   7    2
+                        M[0][i]    0      1   2   3   4   5   6    7
+                        M[1][i]    1      1   3   3   5   5   7
+                        M[2][i]    3      3   3   3   7
+                        M[3][i]    3
+
+    M[1][2] = 3 porque A[3] = 1 < A[2] = 8. M[2][4] = 7 compara M[1][4] = 5
+                       (A = 4) con M[1][6] = 7 (A = 2).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          9 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La consulta
+
+
+
+                                                   [3, 6]
+                                          [1, 4]
+
+                              5    3      8    1   9    4   7   2
+
+                                  consulta [1, 6], longitud 6
+
+
+
+Dos intervalos que se solapan
+Sea k = ⌊lg(j − i + 1)⌋. Entonces 2k ≤ j − i + 1 < 2k+1 y los intervalos
+[i, i + 2k − 1] y [j − 2k + 1, j] cubren [i, j].
+
+El mínimo de la unión
+Es el mejor de los dos mínimos. Que se solapen no importa: el mínimo de un
+conjunto no cambia si un elemento se cuenta dos veces.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Consulta en O(1)
+
+
+Algoritmo 1: RMQ-Sparse(i, j)
+k ← ⌊lg(j − i + 1)⌋
+a ← M[k][i]; b ← M[k][j − 2k + 1]
+si A[a] ≤ A[b] entonces
+    devolver a
+en otro caso
+    devolver b
+
+Detalles
+⌊lg x⌋ se obtiene en O(1) con una tabla precalculada de tamaño n o con
+una instrucción de “contar ceros iniciales”. La consulta hace 2 lecturas de
+tabla y 1 comparación.
+
+Solo funciona con operaciones idempotentes
+mı́n(x, x) = x. Para la suma esta técnica no sirve.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      11 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Partir el arreglo en bloques
+
+
+
+
+                  3             1             2           0        mínimos de bloque
+
+              5   3   8     1   9     4   7   2   6   0   9   3
+
+
+
+Bloques de tamaño b
+Hay n/b bloques. Guardamos el mínimo de cada uno y construimos la Sparse
+Table sobre esos n/b valores.
+
+Memoria de la Sparse Table
+O bn lg bn . Con b = lg n queda O lgnn lg n = O(n).
+                                          
+
+
+
+
+Víctor Racsó Galván Oyola           Universidad de Ingeniería y Tecnología             12 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una consulta atraviesa tres zonas
+
+
+
+                       sufijo         bloques completos           prefijo
+
+
+
+
+Consulta [i, j] en bloques distintos
+  1. Sufijo del bloque de i.
+  2. Bloques completos entre los dos: Sparse Table sobre los mínimos de
+     bloque, O(1).
+  3. Prefijo del bloque de j.
+
+Sufijos y prefijos
+Se resuelven guardando, para cada posición, el mínimo desde el inicio de su
+bloque y hasta su final: O(n) memoria y O(1) por consulta.
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología      13 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Lo que queda abierto
+
+
+
+
+Si i y j están en el mismo bloque
+Ninguna de las tres zonas aplica: i y j son interiores a un bloque de tamaño
+b = lg n.
+
+Tres opciones y ninguna conviene
+Recorrer el bloque cuesta O(lg n). Una Sparse Table por bloque vuelve a
+costar O(n lg lg n). Una tabla completa por bloque cuesta O(n lg n).
+
+    Lo resolvemos más adelante en esta clase, después de ver LCA. Para ello nos
+     conviene conocer la estructura de los problemas dentro de un bloque, y la
+                              herramienta es un árbol.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         14 / 42
+Cartesian Tree y LCA
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cartesian Tree
+
+
+
+
+Definición
+El cartesian tree TA de un arreglo A[0..n − 1] es un árbol binario con n nodos
+(uno por posición) tal que
+ ▶ la raíz es la posición m del mínimo de A;
+ ▶ su subárbol izquierdo es el cartesian tree de A[0..m − 1] y su subárbol
+   derecho el de A[m + 1..n − 1].
+
+Dos propiedades
+Cumple la propiedad de heap (el padre es menor que sus hijos) y el
+recorrido inorden devuelve 0, 1, . . . , n − 1.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     16 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo: A = [7, 8, 2, 6, 9, 4]
+
+
+
+
+                                             2
+
+                                7                         4
+
+                                      8              6
+
+                                                           9
+
+   La raíz es el mínimo (2, posición 2). A la izquierda queda [7, 8] y a la derecha
+                                 [6, 9, 4], con raíz 4.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            17 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    RMQ es un problema de LCA
+
+
+
+
+Teorema
+Sea TA el cartesian tree de A (con empates resueltos por la posición). Enton-
+ces
+                        RMQA (i, j) = LCATA (i, j).
+
+Consecuencia
+Si sabemos resolver LCA, sabemos resolver RMQ. Falta construir TA en
+tiempo lineal.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    18 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Construcción lineal: una pila
+
+
+
+Se construye de izquierda a derecha
+Se mantiene la columna derecha del árbol (de la raíz hacia abajo siguiendo
+hijos derechos) en una pila. Al llegar a A[i]:
+ ▶ se desapilan los nodos v con A[v ] > A[i], y el último desapilado pasa a
+   ser hijo izquierdo de i;
+ ▶ i pasa a ser hijo derecho del nodo que queda en el tope (si hay) y se
+   apila.
+
+¿Por qué es correcto?
+Los nodos desapilados son mayores que A[i], así que quedan debajo de i
+(heap); como i llega a la derecha de todos, sus posiciones son menores:
+forman el subárbol izquierdo de i.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      19 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Construcción: pseudocódigo y costo
+
+
+Algoritmo 2: Árbol-Cartesiano(A, n)
+pila ← vacía; izq[·] ← −1; der [·] ← −1
+para i ← 0 a n − 1 hacer
+     ultimo ← −1
+     mientras pila no vacía y A[tope(pila)] > A[i] hacer
+         ultimo ← desapilar(pila)
+     izq[i] ← ultimo
+     si pila no vacía entonces der [tope(pila)] ← i
+     apilar(pila, i)
+devolver el fondo de la pila                                           // la raíz
+
+O(n)
+Cada posición se apila una vez y se desapila a lo más una vez: el total de
+iteraciones del while es ≤ n.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            20 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Lowest Common Ancestor
+
+
+
+Problema
+Dado un árbol con raíz de n nodos que se preprocesa, responder consultas
+LCA(u, v ): el nodo más profundo que es ancestro de u y de v (un nodo es
+ancestro de sí mismo).
+
+Para qué sirve
+Distancia entre dos nodos, d(u, v ) = d(u) + d(v ) − 2 d(LCA); ¿es u
+ancestro de v ?; el camino entre dos nodos; consultas sobre caminos.
+
+La reducción también va en el otro sentido
+Acabamos de reducir RMQ a LCA. Ahora reducimos LCA a un caso
+particular de RMQ, y ese caso es el que sabremos resolver en tiempo lineal.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Euler tour
+
+
+
+                                               A
+
+
+                                    B                C
+
+
+                              D            E
+
+
+Se anota el nodo cada vez que se pasa por él
+Recorrido en profundidad: se escribe el nodo al entrar y cada vez que se
+regresa a él desde un hijo. Un árbol con n nodos da una lista E de 2n − 1
+entradas.
+
+      E= ABDBEBACA                        D = 0 1 2 1 2 1 0 1 0 (profundidades)
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              22 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    LCA es un mínimo sobre profundidades
+
+
+Teorema
+Sea first[v ] la primera posición de v en E . Si first[u] ≤ first[v ], entonces
+                                                               
+                  LCA(u, v ) = E arg mı́n D[first[u]..first[v ]] .
+
+Demostración
+Sea w = LCA(u, v ). Todo el tramo de E entre first[u] y first[v ] ocurre
+dentro del recorrido de w , así que sus nodos están en el subárbol de w y
+tienen profundidad ≥ d(w ). Además u y v están en subárboles de hijos
+distintos de w (o u = w ): el recorrido tiene que volver a pasar por w entre
+ambos. Luego el mínimo de D en el tramo es d(w ) y lo alcanza w .
+
+  Ejemplo: LCA(D, E ): first[D] = 2, first[E ] = 4, D[2.,4] = 2, 1, 2 con mínimo en
+                                    E [3] = B.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           23 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La propiedad ±1
+
+
+
+Profundidades consecutivas
+En D, dos entradas consecutivas siempre difieren en exactamente 1: en el
+recorrido se pasa de un nodo a su padre o a un hijo.
+
+                       |D[t] − D[t − 1]| = 1           para todo t
+
+±1 RMQ
+Un RMQ sobre un arreglo con esta propiedad se llama ±1 RMQ. Es un caso
+particular de RMQ: tiene mucha estructura.
+
+Una pista
+Un bloque de b entradas de un ±1 RMQ tiene solo 2b−1 formas posibles.
+                   √
+Con b = 21 lg n son n formas.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   24 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ida y vuelta
+
+
+
+
+            RMQ         cartesian tree                    Euler tour
+                                            LCA                         ±1 RMQ
+           general
+
+
+Conclusión
+Si resolvemos ±1 RMQ en ⟨O(n), O(1)⟩, entonces RMQ y LCA también.
+(Con la Sparse Table sobre el Euler tour ya tendríamos ⟨O(n lg n), O(1)⟩.)
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología            25 / 42
+RMQ y LCA en tiempo lineal
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos bloques que son “el mismo”
+
+
+
+
+                                bloque 1                  bloque 2
+                            3    4   3     2   = +4   7    8   7     6
+
+
+
+Misma forma, mismas respuestas
+Los dos bloques difieren en una constante (+4): para todo rango [l, r ], el
+índice del mínimo es el mismo en ambos.
+
+Lo que importa es el patrón de pasos
+Restando el primer elemento, un bloque de un ±1 RMQ queda determinado
+por su secuencia de pasos: +, −, − en el ejemplo. Con b elementos hay
+b − 1 pasos y 2b−1 patrones.
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   27 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuántos patrones distintos hay?
+
+
+
+
+Elegimos b = 12 lg n
+                                             1         √
+                                 2b−1 ≤ 2 2 lg n =         n
+                 √
+Hay a lo más n patrones distintos, sin importar n ni los valores, aunque
+          √
+haya bn ≫ n bloques.
+
+Entonces
+Muchísimos bloques comparten patrón. Basta una tabla de respuestas por
+patrón, no por bloque.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La tabla por patrón
+
+
+
+
+Para cada patrón p y cada par (l, r ) con 0 ≤ l ≤ r < b
+
+T [p][l][r ] = posición del mínimo en el rango [l, r ] de un bloque con patrón p
+
+Tamaño y tiempo
+         √
+             n patrones, b2 + b ≤ b 2 pares:
+                             
+Hay ≤
+                   √           √                √
+                     n · b 2 = n · 41 lg2 n = O( n lg2 n) = o(n)
+
+Cada tabla se llena en O(b 2 ) recorriendo r y manteniendo el mínimo; en
+total o(n).
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       29 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Preprocesamiento de ±1 RMQ
+
+
+
+
+Algoritmo 3: Preprocesar-PM1(D, n)
+b ← máx(1, ⌊lg n/2⌋); nb ← ⌈n/b⌉
+para cada bloque t = 0, . . . , nb − 1 hacer
+    bmin[t] ← valor mínimo del bloque; bidx[t] ← su posición
+    pat[t] ← patrón de pasos del bloque (entero de b − 1 bits)
+construir la Sparse Table sobre bmin[0..nb − 1]
+para cada patrón p que aparece hacer
+    llenar T [p][l][r ] para todo 0 ≤ l ≤ r < b
+
+
+Costo total
+O(n) (bloques) + O( bn lg bn ) = O(n) (macro) + o(n) (tablas): O(n).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Consulta de ±1 RMQ
+
+
+
+
+Algoritmo 4: RMQ-PM1(i, j)
+s ← ⌊i/b⌋; t ← ⌊j/b⌋
+si s = t entonces devolver s · b + T [pat[s]][i mód b][j mód b]
+a ← s · b + T [pat[s]][i mód b][b − 1]                                  // sufijo
+c ← t · b + T [pat[t]][0][j mód b]                                     // prefijo
+m ← mı́n por valor entre a y c
+si t − s > 1 entonces
+     u ← bidx[RMQ-Sparse(s + 1, t − 1)]                                  // macro
+     m ← mı́n por valor entre m y u
+devolver m
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología           31 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una consulta, paso a paso
+
+
+
+             D = [ 2, 3, 2, 1 | 2, 3, 4, 3 ],   b = 4,    consulta (i, j) = (1, 6)
+
+
+Bloques
+Bloque 0: patrón +, −, −. Bloque 1: patrón +, +, −.
+
+Las dos partes micro
+Sufijo del bloque 0 desde 1: T [+ − −][1][3] = 3, valor D[3] = 1. Prefijo del
+bloque 1 hasta j mód 4 = 2: T [+ + −][0][2] = 0, es decir la posición 4,
+valor 2.
+
+Respuesta
+No hay bloques intermedios. mı́n(1, 2) = 1 en la posición 3.
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología              32 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El método de los cuatro rusos
+
+
+
+
+La técnica
+Cuando el problema se divide en subproblemas tan pequeños que solo hay
+pocos tipos distintos, se precalculan todas las respuestas posibles y se con-
+sultan por índice.
+
+Aquí
+                                                                         √
+Un “subproblema” es un bloque de tamaño 12 lg n. Su tipo es su patrón: n
+tipos. Las respuestas se precalculan una vez por tipo, no una vez por bloque.
+
+  El nombre viene de Arlazarov, Dinic, Kronrod y Faradžev (1970), que la usaron
+                      para multiplicar matrices booleanas.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        33 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Teorema: ±1 RMQ en ⟨O(n), O(1)⟩
+
+
+
+
+Resumen del algoritmo
+ ▶ Macro: Sparse Table sobre los mínimos de bloque, O(n).
+ ▶ Micro: una tabla por patrón de bloque, o(n).
+ ▶ Consulta: a lo más 2 consultas micro y 1 macro, O(1).
+
+Cuentas
+           Componente                           Memoria y tiempo       Consulta
+           Mínimos de bloque + patrones                 O(n)             —
+           Sparse Table macro                   O( bn lg bn ) = O(n)    O(1)
+                                                       √
+           Tablas micro                           O( n lg2 n)           O(1)
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              34 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    LCA y RMQ general en ⟨O(n), O(1)⟩
+
+
+
+
+                    O(n)                    O(n)                       O(n)
+                               árbol                   recorrido
+     arreglo A                                                                ±1 RMQ
+                             cartesiano                de Euler
+
+
+
+La cadena de reducciones
+                                                         
+RMQA (i, j) = LCATA (i, j) = E RMQ-PM1(first[i], first[j]) .
+
+Resultado
+Reducciones lineales y consulta O(1): RMQ y LCA en ⟨O(n), O(1)⟩. Para
+LCA basta el Euler tour (2n − 1 entradas) y RMQ-PM1. (Harel y Tarjan,
+1984; simplificado por Bender y Farach-Colton, 2000.)
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               35 / 42
+Práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Práctica
+
+
+
+
+       Problema                                       Idea
+       CSES 1647 — Static Range Minimum Queries       Sparse Table
+       Library Checker — Static RMQ                   versión lineal con bloques
+       CSES 1688 — Company Queries II                 Euler + RMQ (LCA)
+       CSES 1135 — Distance Queries                   d(u) + d(v ) − 2 d(LCA)
+       CSES 1136 — Counting Paths                     LCA + diferencias sobre el árbol
+       Library Checker — Lowest Common Ancestor       Euler tour + RMQ lineal
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     37 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ La Sparse Table cubre un intervalo con dos de longitud potencia de 2:
+   ⟨n lg n, 1⟩, solo para operaciones idempotentes.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ La Sparse Table cubre un intervalo con dos de longitud potencia de 2:
+   ⟨n lg n, 1⟩, solo para operaciones idempotentes.
+ ▶ El cartesian tree se construye en O(n) con una pila y cumple
+   RMQ = LCA; el Euler tour reduce LCA a ±1 RMQ.
+                                    √
+ ▶ Un bloque de ±1 RMQ tiene ≤ n patrones: tablas por patrón y
+   Sparse Table macro dan ⟨O(n), O(1)⟩.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir y consultar una Sparse Table
+ ▶ Sabemos construir un cartesian tree en tiempo lineal
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir y consultar una Sparse Table
+ ▶ Sabemos construir un cartesian tree en tiempo lineal
+ ▶ Sabemos reducir RMQ a LCA y LCA a ±1 RMQ
+ ▶ Sabemos resolver ±1 RMQ en ⟨O(n), O(1)⟩
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   40 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Bender, M. A., & Farach-Colton, M. (2000). The LCA problem
+   revisited. LATIN’00, 88–94.
+ ▶ Fischer, J., & Heun, V. (2011). Space-efficient preprocessing schemes
+   for range minimum queries on static arrays. SIAM J. Comput., 40(2),
+   465–492.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   41 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   42 / 42
+

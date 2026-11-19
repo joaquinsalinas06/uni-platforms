@@ -1,0 +1,948 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Dynamic Optimality V
+Semana 9
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+9 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Tango Trees: hijo preferido, y su relación con Wilber-1
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Tango Trees: hijo preferido, y su relación con Wilber-1
+ ▶ Cómo se busca, y por qué es O(lg lg n)-competitivo
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Tango Trees: hijo preferido, y su relación con Wilber-1
+ ▶ Cómo se busca, y por qué es O(lg lg n)-competitivo
+ ▶ Signed-Greedy: otra cota inferior, y su comparación con Greedy
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Todo lo que tenemos hasta ahora
+Splay Trees (O(lg n) amortizado, sin saber si son óptimos), la vista geométrica
+y Greedy (conjeturado óptimo, sin probar), y la cota de Wilber-1 (una cota
+inferior demostrada).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       3 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Todo lo que tenemos hasta ahora
+Splay Trees (O(lg n) amortizado, sin saber si son óptimos), la vista geométrica
+y Greedy (conjeturado óptimo, sin probar), y la cota de Wilber-1 (una cota
+inferior demostrada).
+
+¿Existe algún algoritmo concreto que demostrablemente le gane a
+cualquier BST balanceado, aunque no logre optimalidad dinámica
+completa?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       3 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Todo lo que tenemos hasta ahora
+Splay Trees (O(lg n) amortizado, sin saber si son óptimos), la vista geométrica
+y Greedy (conjeturado óptimo, sin probar), y la cota de Wilber-1 (una cota
+inferior demostrada).
+
+¿Existe algún algoritmo concreto que demostrablemente le gane a
+cualquier BST balanceado, aunque no logre optimalidad dinámica
+completa?
+
+Sí: Tango Trees
+O(lg lg n)-competitivo, construido exactamente sobre la cota de Wilber-1
+que acabamos de demostrar.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       3 / 22
+Tango Trees
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea
+
+
+
+
+Definición
+Fijamos un árbol de referencia P, perfectamente balanceado (altura Θ(lg n)),
+sobre las mismas claves. Cada nodo de P tiene un puntero hacia su hijo
+preferido: el hijo por el que pasó el acceso más reciente dentro de su subárbol.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        5 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea
+
+
+
+
+Definición
+Fijamos un árbol de referencia P, perfectamente balanceado (altura Θ(lg n)),
+sobre las mismas claves. Cada nodo de P tiene un puntero hacia su hijo
+preferido: el hijo por el que pasó el acceso más reciente dentro de su subárbol.
+
+Observación
+Como la altura de P es Θ(lg n), los punteros de hijo preferido forman
+caminos disjuntos de a lo más O(lg n) nodos cada uno — particionan todo
+P.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        5 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Hijos preferidos, visualizados
+
+
+
+
+                                               r
+
+
+
+                                   a                       b
+
+
+
+                            c              d       e               f
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología   6 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Hijos preferidos, visualizados
+
+
+
+
+                                               r
+
+
+
+                                   a                       b
+
+
+
+                            c              d       e               f
+
+ Flechas azules gruesas = hijo preferido. Caminos: {r , a, d}, {b, e}, y los caminos
+             triviales {c}, {f } — todos disjuntos, cubriendo todo P.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología           6 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La relación con Wilber-1
+
+
+
+
+Si una búsqueda baja por un hijo que no es el preferido de algún nodo
+y , ¿qué dos cosas pasan a la vez?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La relación con Wilber-1
+
+
+
+
+Si una búsqueda baja por un hijo que no es el preferido de algún nodo
+y , ¿qué dos cosas pasan a la vez?
+
+Respuesta
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La relación con Wilber-1
+
+
+
+
+Si una búsqueda baja por un hijo que no es el preferido de algún nodo
+y , ¿qué dos cosas pasan a la vez?
+
+Respuesta
+ ▶ El hijo por el que se bajó se vuelve el nuevo hijo preferido de y .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     7 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La relación con Wilber-1
+
+
+
+
+Si una búsqueda baja por un hijo que no es el preferido de algún nodo
+y , ¿qué dos cosas pasan a la vez?
+
+Respuesta
+ ▶ El hijo por el que se bajó se vuelve el nuevo hijo preferido de y .
+ ▶ La cota de Wilber-1 (clase pasada) aumenta exactamente en 1 — es la
+   misma alternancia que ya contábamos ahí.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     7 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué O(lg lg n)-competitivo?
+
+
+
+
+La estrategia
+Cada camino preferido se guarda en su propio BBST (árbol auxiliar), de
+tamaño O(lg n) — así que cada operación dentro de uno cuesta O(lg lg n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   8 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué O(lg lg n)-competitivo?
+
+
+
+
+La estrategia
+Cada camino preferido se guarda en su propio BBST (árbol auxiliar), de
+tamaño O(lg n) — así que cada operación dentro de uno cuesta O(lg lg n).
+
+Conectando los árboles auxiliares
+Para poder saltar entre caminos, cada árbol auxiliar guarda, en sus hojas,
+punteros hacia los árboles auxiliares de los caminos vecinos correspondientes.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      8 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo de un acceso
+
+
+
+
+Observación
+Cada vez que cruzamos a un hijo no preferido, salimos del camino actual y
+saltamos a otro — además de actualizar la estructura de los caminos involu-
+crados.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo de un acceso
+
+
+
+
+Observación
+Cada vez que cruzamos a un hijo no preferido, salimos del camino actual y
+saltamos a otro — además de actualizar la estructura de los caminos involu-
+crados.
+
+  Si ese trabajo cuesta O(lg lg n) por cruce, y el número de cruces en un acceso es
+  1+(alternancias de Wilber-1 en ese acceso), entonces la estructura completa es
+                                O(lg lg n)-competitiva.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            9 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El problema al actualizar
+
+
+
+
+Los árboles auxiliares están ordenados por valor (como exige el
+modelo BST), no por profundidad en P — ¿sigue funcionando el truco
+de split/join?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+     El problema al actualizar
+
+
+
+
+Los árboles auxiliares están ordenados por valor (como exige el
+modelo BST), no por profundidad en P — ¿sigue funcionando el truco
+de split/join?
+
+Sí
+Cortar por una profundidad d resulta equivalente a cortar un rango de
+valores — por cómo un camino particiona las claves en subárboles. Usando
+el mínimo y máximo del subárbol en el punto de corte, se simula el split por
+profundidad, en O(lg lg n).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    10 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un último detalle
+
+
+
+
+En el modelo BST solo hay un árbol de punteros — ¿es posible,
+entonces, tener varios BBSTs auxiliares simultáneamente?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un último detalle
+
+
+
+
+En el modelo BST solo hay un árbol de punteros — ¿es posible,
+entonces, tener varios BBSTs auxiliares simultáneamente?
+
+Respuesta
+No literalmente — pero se puede plantear que todos los nodos viven en un
+único árbol grande, y simplemente se guarda información extra en cada
+nodo que indica a qué camino/árbol auxiliar pertenece.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árbol de árboles
+
+
+
+                O(lg lg n)
+                                                    camino raíz
+
+
+
+
+                                          A                            B
+
+
+
+                                                                       C
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       12 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árbol de árboles
+
+
+
+                O(lg lg n)
+                                                    camino raíz
+
+
+
+
+                                          A                            B
+
+
+
+                                                                       C
+
+
+ Cada triángulo es un árbol auxiliar; sus hojas enlazan a las raíces de los caminos
+“hijos”. Buscar x: bajar por estos árboles, saltando de uno a otro cuando el camino
+                               actual no contiene a x.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          12 / 22
+Signed-Greedy
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otra manera de acotar por abajo
+
+
+
+
+Recordando rectángulos independientes
+Ya vimos cotas para conjuntos de puntos satisfechos positivos y negativos
+por separado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otra manera de acotar por abajo
+
+
+
+
+Recordando rectángulos independientes
+Ya vimos cotas para conjuntos de puntos satisfechos positivos y negativos
+por separado.
+
+Definición
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otra manera de acotar por abajo
+
+
+
+
+Recordando rectángulos independientes
+Ya vimos cotas para conjuntos de puntos satisfechos positivos y negativos
+por separado.
+
+Definición
+ ▶ Greedy+ : el algoritmo Greedy (clase de vista geométrica), pero
+   considerando solo rectángulos positivos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otra manera de acotar por abajo
+
+
+
+
+Recordando rectángulos independientes
+Ya vimos cotas para conjuntos de puntos satisfechos positivos y negativos
+por separado.
+
+Definición
+ ▶ Greedy+ : el algoritmo Greedy (clase de vista geométrica), pero
+   considerando solo rectángulos positivos.
+ ▶ Greedy− : análogo, solo con rectángulos negativos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Teorema
+
+
+
+
+Enunciado
+
+máx{Greedy+ , Greedy− } = Θ(mayor cota de rectángulos independientes).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Teorema
+
+
+
+
+Enunciado
+
+máx{Greedy+ , Greedy− } = Θ(mayor cota de rectángulos independientes).
+
+  Es decir: Signed-Greedy (tomar el máximo de los dos) está, salvo constante,
+  tan cerca de la mejor cota de rectángulos independientes como se puede estar.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        15 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                               positivos y negativos
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                               positivos y negativos
+                      ≥             |I| + 21 MIS
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                               positivos y negativos
+                      ≥             |I| + 21 MIS
+                          1                 +         −
+                      ≥   2 máx{Greedy , Greedy }
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                                positivos y negativos
+                      ≥              |I| + 21 MIS
+                          1                  +        −
+                      ≥   2 máx{Greedy , Greedy }
+                              1              +      −
+                      ≥       2 máx{OPT , OPT }
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                                positivos y negativos
+                      ≥              |I| + 21 MIS
+                          1                  +        −
+                      ≥   2 máx{Greedy , Greedy }
+                              1              +      −
+                      ≥       2 máx{OPT , OPT }
+                                1        +        −
+                      ≥         4 (OPT + OPT )
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                                positivos y negativos
+                      ≥              |I| + 21 MIS
+                          1                  +        −
+                      ≥   2 máx{Greedy , Greedy }
+                              1              +      −
+                      ≥       2 máx{OPT , OPT }
+                                1        +        −
+                      ≥         4 (OPT + OPT )
+                                       1       ±
+                      ≥                4 OPT
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba
+
+
+
+
+                OPT ± = menor unión de conjuntos satisfechos
+                                positivos y negativos
+                      ≥              |I| + 21 MIS
+                          1                  +        −
+                      ≥   2 máx{Greedy , Greedy }
+                              1              +      −
+                      ≥       2 máx{OPT , OPT }
+                                1        +        −
+                      ≥         4 (OPT + OPT )
+                                       1       ±
+                      ≥                4 OPT
+
+    Todo queda “emparedado” dentro de un factor 4 — confirmando el teorema.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     16 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Greedy vs. Signed-Greedy
+
+
+
+
+Greedy (clase de vista geométrica)
+Calcula un conjunto que sea satisfecho positivo y negativo a la vez — por
+eso da una cota superior real (un algoritmo de verdad).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Greedy vs. Signed-Greedy
+
+
+
+
+Greedy (clase de vista geométrica)
+Calcula un conjunto que sea satisfecho positivo y negativo a la vez — por
+eso da una cota superior real (un algoritmo de verdad).
+
+Signed-Greedy
+No toma en cuenta la interacción entre rectángulos positivos y negativos —
+por eso solo da una cota inferior, no un algoritmo válido.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Greedy vs. Signed-Greedy
+
+
+
+
+Greedy (clase de vista geométrica)
+Calcula un conjunto que sea satisfecho positivo y negativo a la vez — por
+eso da una cota superior real (un algoritmo de verdad).
+
+Signed-Greedy
+No toma en cuenta la interacción entre rectángulos positivos y negativos —
+por eso solo da una cota inferior, no un algoritmo válido.
+
+Problema abierto
+¿Greedy y Signed-Greedy están a solo un factor constante de
+diferencia?
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+ ▶ Tango Trees: caminos de hijo preferido sobre un árbol de referencia
+   fijo, cada uno guardado en un árbol auxiliar de tamaño O(lg n); cada
+   cruce entre caminos es exactamente una alternancia de Wilber-1.
+ ▶ El truco de las actualizaciones: cortar “por profundidad” es cortar un
+   rango de claves, gracias a cómo un camino particiona el árbol — todo
+   en O(lg lg n) por cruce.
+ ▶ Resultado: Tango Trees son O(lg lg n)-competitivos — el primer avance
+   real más allá de balancear.
+ ▶ Signed-Greedy (máx{Greedy+ , Greedy− }) da otra cota inferior,
+   del mismo orden que la mejor cota de rectángulos independientes —
+   pero no es un algoritmo válido, a diferencia de Greedy.
+ ▶ Sigue abierto si Greedy y Signed-Greedy distan solo un factor
+   constante.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir los caminos de hijo preferido de Tango Trees, y
+   relacionarlos con Wilber-1.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir los caminos de hijo preferido de Tango Trees, y
+   relacionarlos con Wilber-1.
+ ▶ Sabemos explicar por qué Tango Trees son O(lg lg n)-competitivos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir los caminos de hijo preferido de Tango Trees, y
+   relacionarlos con Wilber-1.
+ ▶ Sabemos explicar por qué Tango Trees son O(lg lg n)-competitivos.
+ ▶ Sabemos definir Signed-Greedy y demostrar su relación con la cota
+   de rectángulos independientes.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir los caminos de hijo preferido de Tango Trees, y
+   relacionarlos con Wilber-1.
+ ▶ Sabemos explicar por qué Tango Trees son O(lg lg n)-competitivos.
+ ▶ Sabemos definir Signed-Greedy y demostrar su relación con la cota
+   de rectángulos independientes.
+ ▶ Conocemos la diferencia de fondo entre una cota inferior
+   (Signed-Greedy) y un algoritmo real (Greedy).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   20 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Demaine, E. D., Harmon, D., Iacono, J., & Pătraşcu, M. (2004).
+   Dynamic optimality — almost. Proceedings of FOCS’04, 484–490.
+ ▶ Wilber, R. (1989). Lower bounds for accessing binary search trees with
+   rotations. SIAM Journal on Computing, 18(1), 56–67.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 22
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   22 / 22
+

@@ -1,0 +1,24 @@
+id: link-cut-tree
+title: Link-cut trees
+type: structure
+week: week-15
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- splay-tree
+- heavy-light-decomposition
+placeholder: false
+professorAnalysisStyle: amortized
+complexity:
+  Access:
+    worst: O(lg n)
+    analysis: amortizado
+    reasoning: Cada cambio de hijo preferido es un splay; con Heavy-Light como análisis hay O(n + m lg n)
+      cambios en m accesos, y con el potencial Φ = Σ lg s(x) los splays de un Access suman 3 lg n + k.
+    source: Sem15_Dynamic_Graphs_II.pdf#43-53
+  Link, Cut, FindRoot, MakeRoot y consulta de camino:
+    worst: O(lg n)
+    analysis: amortizado
+    reasoning: Cada una es un Access más trabajo constante (un path-parent, cortar un hijo izquierdo,
+      bajar al nodo más a la izquierda o invertir con una marca perezosa).
+    source: Sem15_Dynamic_Graphs_II.pdf#29-37

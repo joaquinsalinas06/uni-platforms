@@ -1,0 +1,1083 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Dynamic Graphs II
+Semana 15
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+17 de noviembre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Formular el problema de árboles dinámicos: Link, Cut, FindRoot y
+   agregados sobre caminos
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Formular el problema de árboles dinámicos: Link, Cut, FindRoot y
+   agregados sobre caminos
+ ▶ Construir los link-cut trees: caminos preferidos, árboles auxiliares
+   (splay) y la operación Access
+ ▶ Implementar las operaciones, incluida la raíz variable (MakeRoot)
+   con reversión perezosa
+ ▶ Demostrar O(lg n) amortizado usando Heavy-Light como herramienta
+   de análisis
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Una carretera que el rey quiere conservar
+Pensemos en una red de carreteras que forma un árbol de costo mínimo y en
+consultas sobre la carretera más cara del camino entre dos ciudades. Ahora las
+carreteras aparecen, desaparecen y se fuerzan: el árbol cambia con cada
+operación.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Una carretera que el rey quiere conservar
+Pensemos en una red de carreteras que forma un árbol de costo mínimo y en
+consultas sobre la carretera más cara del camino entre dos ciudades. Ahora las
+carreteras aparecen, desaparecen y se fuerzan: el árbol cambia con cada
+operación.
+
+¿Qué estructura aguanta cambios?
+El Heavy-Light Decomposition es estático: una arista nueva cambia los
+tamaños y hay que rehacerla. Necesitamos una estructura que soporte
+enlazar y cortar y siga respondiendo agregados sobre caminos en O(lg n).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 41
+El problema
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árboles dinámicos
+
+
+
+
+Un bosque de árboles con raíz, bajo
+ ▶ Link(v , w ): v es raíz de su árbol; lo cuelga de w .
+ ▶ Cut(v ): separa v de su padre; v pasa a ser raíz.
+ ▶ FindRoot(v ): la raíz del árbol de v .
+ ▶ PathAgg(v ): suma, mínimo o máximo de los valores en el camino
+   v ⇝ raíz (y con él, entre dos nodos).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   5 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árboles dinámicos
+
+
+
+
+Un bosque de árboles con raíz, bajo
+ ▶ Link(v , w ): v es raíz de su árbol; lo cuelga de w .
+ ▶ Cut(v ): separa v de su padre; v pasa a ser raíz.
+ ▶ FindRoot(v ): la raíz del árbol de v .
+ ▶ PathAgg(v ): suma, mínimo o máximo de los valores en el camino
+   v ⇝ raíz (y con él, entre dos nodos).
+
+Meta
+O(lg n) amortizado por operación. Sleator y Tarjan (1983).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   5 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Por qué no sirven las anteriores
+
+
+
+
+          Estructura                          Caminos        Cambios en el árbol
+          Arreglo con padres                   O(n)                 O(1)
+          Euler tour (tiempos de visita)     subárboles         rehacer: O(n)
+          Heavy-Light + segment tree          O(lg2 n)          rehacer: O(n)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               6 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Por qué no sirven las anteriores
+
+
+
+
+          Estructura                          Caminos        Cambios en el árbol
+          Arreglo con padres                   O(n)                 O(1)
+          Euler tour (tiempos de visita)     subárboles         rehacer: O(n)
+          Heavy-Light + segment tree          O(lg2 n)          rehacer: O(n)
+
+  La idea de hoy: una descomposición en caminos que cambia con los accesos, y
+                       que se paga con la propia consulta.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               6 / 41
+Caminos preferidos
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Hijo preferido
+
+
+
+
+Definición
+Para cada nodo v , su hijo preferido es el hijo c tal que el último acceso
+dentro del subárbol de v fue dentro del subárbol de c (si el último acceso fue
+v mismo, no hay hijo preferido).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      8 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Hijo preferido
+
+
+
+
+Definición
+Para cada nodo v , su hijo preferido es el hijo c tal que el último acceso
+dentro del subárbol de v fue dentro del subárbol de c (si el último acceso fue
+v mismo, no hay hijo preferido).
+
+Arista y camino preferidos
+La arista a un hijo preferido es preferida. Un camino preferido es una
+cadena maximal de aristas preferidas: los caminos preferidos parten el árbol
+en caminos disjuntos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      8 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo
+
+
+
+
+                                               1
+
+
+                                   2                       3
+
+
+                            4             5                6
+
+
+  Caminos preferidos: {1, 2, 4}, {3, 6} y {5}. Las aristas grises (normales) son las
+                               que no son preferidas.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología            9 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Frente a Heavy-Light
+
+
+
+
+                                            Heavy-Light       Caminos preferidos
+         ¿Quién elige?                       el tamaño        el último acceso
+         ¿Cambia?                           no (estático)     sí, en cada acceso
+         Cadenas por camino a la raíz           ≤ lg n        O(lg n) amortizado
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               10 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Frente a Heavy-Light
+
+
+
+
+                                            Heavy-Light       Caminos preferidos
+         ¿Quién elige?                       el tamaño        el último acceso
+         ¿Cambia?                           no (estático)     sí, en cada acceso
+         Cadenas por camino a la raíz           ≤ lg n        O(lg n) amortizado
+
+
+Vamos a usar Heavy-Light de otra forma
+No se implementa: es una herramienta de análisis. Servirá para demostrar
+que los cambios de camino preferido son pocos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               10 / 41
+Representación
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árboles auxiliares
+
+
+
+
+Cada camino preferido en un splay tree
+ ▶ Clave: la profundidad en el árbol original.
+ ▶ Izquierda: antecesores (menor profundidad).
+ ▶ Derecha: descendientes (mayor profundidad).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árboles auxiliares
+
+
+
+
+Cada camino preferido en un splay tree
+ ▶ Clave: la profundidad en el árbol original.
+ ▶ Izquierda: antecesores (menor profundidad).
+ ▶ Derecha: descendientes (mayor profundidad).
+
+Enlace de camino (path-parent)
+La raíz de cada árbol auxiliar guarda un puntero al padre (en el árbol
+original) del nodo más alto de su camino. Es el mismo campo padre: se
+distingue porque el padre no tiene a ese nodo como hijo.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los árboles auxiliares del ejemplo
+
+
+
+
+                                   pp
+                         2                       3                     5
+                                                pp
+
+
+                   1           4                      6
+
+
+
+
+ El camino {1, 2, 4} es un splay con raíz 2. Los caminos {3, 6} y {5} apuntan con
+       un path-parent a 1 y a 2 (el padre original de 3 es 1; el de 5 es 2).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         13 / 41
+Access
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La operación fundamental
+
+
+
+Access(v )
+Hace que el camino de la raíz a v sea un único camino preferido, y deja a v
+como raíz del árbol auxiliar que lo representa.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La operación fundamental
+
+
+
+Access(v )
+Hace que el camino de la raíz a v sea un único camino preferido, y deja a v
+como raíz del árbol auxiliar que lo representa.
+
+Pasos
+  1. Splay(v ) en su árbol auxiliar.
+  2. Descartar el hijo derecho de v (los descendientes de v ya no son
+     preferidos): pasa a ser otro camino con path-parent v .
+  3. Subir por el path-parent hasta w , hacer Splay(w ) y poner v (su
+     árbol) como hijo derecho de w .
+  4. Repetir hasta llegar al camino de la raíz.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    15 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Access: pseudocódigo
+
+
+
+
+Algoritmo 1: Access(v )
+ultimo ← nulo; y ← v
+mientras y ̸= nulo hacer
+    Splay(y )
+    der[y ] ← ultimo; Actualizar(y )
+    ultimo ← y ; y ← padre[y ]                                   // el path-parent
+Splay(v )
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             16 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Access: pseudocódigo
+
+
+
+
+Algoritmo 2: Access(v )
+ultimo ← nulo; y ← v
+mientras y ̸= nulo hacer
+    Splay(y )
+    der[y ] ← ultimo; Actualizar(y )
+    ultimo ← y ; y ← padre[y ]                                   // el path-parent
+Splay(v )
+
+Efecto
+Tras Access(v ): v es la raíz de un splay que contiene exactamente el
+camino raíz⇝ v , sin hijo derecho.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             16 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Access(5) en el ejemplo
+
+
+
+Antes
+Caminos {1, 2, 4}, {3, 6}, {5}, con {5} colgando de 2.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Access(5) en el ejemplo
+
+
+
+Antes
+Caminos {1, 2, 4}, {3, 6}, {5}, con {5} colgando de 2.
+
+Paso a paso
+  1. Splay(5) en {5}: ya es raíz; su hijo derecho es vacío; el path-parent es
+     2.
+  2. Splay(2) en {1, 2, 4}: se descarta el hijo derecho (el nodo 4 queda
+     como camino {4} colgando de 2) y el árbol de 5 pasa a ser el hijo
+     derecho de 2.
+  3. 2 es raíz del camino de la raíz: termina. Splay(5) deja a 5 arriba.
+Camino preferido: {1, 2, 5}. Quedan {4} y {3, 6}.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       17 / 41
+Operaciones
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Con raíz fija
+
+
+
+
+Todo sale de Access
+ ▶ FindRoot(v ): Access(v ) y bajar por la izquierda hasta el nodo más
+   a la izquierda (la raíz); hacerle Splay.
+ ▶ PathAgg(v ): Access(v ); el agregado guardado en la raíz del splay
+   es el del camino.
+ ▶ Cut(v ): Access(v ); separar el hijo izquierdo (los antecesores) de v .
+ ▶ Link(v , w ): Access(v ) (v es raíz, su splay es solo v ); poner
+   padre[v ] ← w como path-parent.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cut y Link, con cuidado
+
+
+
+
+Cut(v )
+Tras Access(v ), el hijo izquierdo a de v es el splay de sus antecesores. Se
+hace padre[a] ← nulo y izq[v ] ← nulo, y se actualiza v .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   20 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cut y Link, con cuidado
+
+
+
+
+Cut(v )
+Tras Access(v ), el hijo izquierdo a de v es el splay de sus antecesores. Se
+hace padre[a] ← nulo y izq[v ] ← nulo, y se actualiza v .
+
+Link(v , w )
+No hace falta tocar w : el puntero padre[v ] ← w es un path-parent. El
+camino de v queda colgando de w sin hijo preferido. Un Access posterior
+lo integrará si hace falta.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   20 / 41
+Raíz variable
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árboles sin raíz fija
+
+
+
+
+MakeRoot(v ) (evert)
+Cambiar la raíz del árbol de v a v invierte el camino que va de la raíz antigua
+a v . Se logra con Access(v ) y una marca de reversión perezosa en el splay
+de v .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      22 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Árboles sin raíz fija
+
+
+
+
+MakeRoot(v ) (evert)
+Cambiar la raíz del árbol de v a v invierte el camino que va de la raíz antigua
+a v . Se logra con Access(v ) y una marca de reversión perezosa en el splay
+de v .
+
+La marca
+rev[v ] indica que el subárbol del splay debe intercambiar izquierda y
+derecha. Se aplica (Empujar) antes de usar los hijos de v y se traspasa a
+los hijos. Invertir el orden por profundidad = intercambiar hijos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      22 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Operaciones con MakeRoot
+
+
+
+Árboles no enraizados
+ ▶ Link(u, v ): MakeRoot(u); padre[u] ← v .
+ ▶ Cut(u, v ): MakeRoot(u); Access(v ); entonces u es el hijo
+   izquierdo de v : separarlos.
+ ▶ Conectados(u, v ): FindRoot(u) = FindRoot(v ).
+ ▶ Camino(u, v ): MakeRoot(u); Access(v ); el agregado de la raíz
+   del splay de v .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Operaciones con MakeRoot
+
+
+
+Árboles no enraizados
+ ▶ Link(u, v ): MakeRoot(u); padre[u] ← v .
+ ▶ Cut(u, v ): MakeRoot(u); Access(v ); entonces u es el hijo
+   izquierdo de v : separarlos.
+ ▶ Conectados(u, v ): FindRoot(u) = FindRoot(v ).
+ ▶ Camino(u, v ): MakeRoot(u); Access(v ); el agregado de la raíz
+   del splay de v .
+
+LCA dinámico (con raíz fija)
+Access(u) y luego Access(v ): el último nodo donde se hace un salto de
+path-parent es el LCA(u, v ).
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Rotación y splay con reversión
+
+
+Algoritmo 3: Splay(x)
+Empujar desde la raíz del splay hasta x (de arriba hacia abajo)
+mientras x no es raíz de su splay hacer
+    p ← padre[x]
+    si p no es raíz de su splay entonces
+         si x y p son hijos del mismo lado entonces
+              Rotar(p)
+         en otro caso
+              Rotar(x)
+                                                                // zig-zig o zig-zag
+     Rotar(x)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              24 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Rotación y splay con reversión
+
+
+Algoritmo 4: Splay(x)
+Empujar desde la raíz del splay hasta x (de arriba hacia abajo)
+mientras x no es raíz de su splay hacer
+    p ← padre[x]
+    si p no es raíz de su splay entonces
+         si x y p son hijos del mismo lado entonces
+              Rotar(p)
+         en otro caso
+              Rotar(x)
+                                                                // zig-zig o zig-zag
+     Rotar(x)
+
+
+“Es raíz de su splay”
+x es raíz si padre[x] es nulo o si x no es hijo izquierdo ni derecho de
+padre[x] (entonces es un path-parent).
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              24 / 41
+Valores en aristas
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Aristas con peso
+
+
+
+
+Convertir la arista en un nodo
+Para (u, v ) con peso w : crear un nodo e con valor w y hacer Link(u, e) y
+Link(e, v ). Los nodos originales valen −∞ (o el neutro).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Aristas con peso
+
+
+
+
+Convertir la arista en un nodo
+Para (u, v ) con peso w : crear un nodo e con valor w y hacer Link(u, e) y
+Link(e, v ). Los nodos originales valen −∞ (o el neutro).
+
+MST dinámico
+Para agregar (u, v ) con peso w a un bosque que es un MST: si no están
+conectados, enlazar; si lo están, consultar el máximo del camino u ⇝ v . Si
+es mayor que w , cortar esa arista y enlazar la nueva. O(lg n) amortizado
+por arista.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    26 / 41
+Análisis
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Qué hay que acotar
+
+
+
+
+Costo de Access
+Cada vuelta del while cambia el hijo preferido de un nodo: un splay y un
+salto. Si hay k cambios, el costo es k splays.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Qué hay que acotar
+
+
+
+
+Costo de Access
+Cada vuelta del while cambia el hijo preferido de un nodo: un splay y un
+salto. Si hay k cambios, el costo es k splays.
+
+Dos preguntas
+  1. ¿Cuántos cambios de hijo preferido hay en total?
+  2. ¿Cuánto cuestan los splays, sabiendo que hay muchos árboles
+     auxiliares?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Heavy-Light como análisis
+
+
+
+
+Sobre el árbol representado
+Una arista (u, v ) es pesada si tam(v ) > tam(u)/2 y liviana si no. Cualquier
+camino de un nodo a la raíz tiene a lo más lg n aristas livianas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    29 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Heavy-Light como análisis
+
+
+
+
+Sobre el árbol representado
+Una arista (u, v ) es pesada si tam(v ) > tam(u)/2 y liviana si no. Cualquier
+camino de un nodo a la raíz tiene a lo más lg n aristas livianas.
+
+Clasificar los cambios
+Un Access(v ) hace preferida cada arista del camino raíz⇝ v . Los cambios
+son de dos tipos:
+ ▶ una arista liviana pasa a preferida: a lo más lg n por acceso;
+ ▶ una arista pesada pasa a preferida.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    29 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cambios pesados: a crédito
+
+
+
+
+Una arista pesada solo se vuelve preferida si dejó de serlo
+Una arista pesada deja de ser preferida solo si su hermana liviana se vuelve
+preferida (≤ lg n veces por acceso) o si el acceso termina en su padre (una
+vez por acceso). Al inicio, a lo más n aristas pesadas no son preferidas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cambios pesados: a crédito
+
+
+
+
+Una arista pesada solo se vuelve preferida si dejó de serlo
+Una arista pesada deja de ser preferida solo si su hermana liviana se vuelve
+preferida (≤ lg n veces por acceso) o si el acceso termina en su padre (una
+vez por acceso). Al inicio, a lo más n aristas pesadas no son preferidas.
+
+Total para m accesos
+                      #cambios pesados ≤ n + m(lg n + 1)
+Luego el número total de cambios es O(n + m lg n): O(lg n) cambios
+amortizados por acceso.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo de los splays
+
+
+
+
+Un potencial en el árbol de árboles
+Sea s(x) el tamaño del subárbol de x contando
+                                        P     también los árboles auxi-
+liares colgados por path-parent, y Φ = x lg s(x).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo de los splays
+
+
+
+
+Un potencial en el árbol de árboles
+Sea s(x) el tamaño del subárbol de x contando
+                                        P     también los árboles auxi-
+liares colgados por path-parent, y Φ = x lg s(x).
+
+Cada splay
+                                                                   
+El costo amortizado de Splay(x) es ≤ 3 r (raíz virtual) − r (x) + 1. Al
+terminar un splay, su nodo xi queda con el tamaño virtual que tenía la raíz
+de ese árbol, que es justo el r (xi+1 ) del siguiente splay: la suma sobre un
+Access telescopa y queda ≤ 3 lg n + k.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      31 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resultado
+
+
+
+
+Teorema (Sleator y Tarjan, 1983)
+Los link-cut trees soportan Access, Link, Cut, FindRoot, MakeRoot
+y consultas de camino en O(lg n) amortizado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resultado
+
+
+
+
+Teorema (Sleator y Tarjan, 1983)
+Los link-cut trees soportan Access, Link, Cut, FindRoot, MakeRoot
+y consultas de camino en O(lg n) amortizado.
+
+Esbozo y límites
+Link y Cut cambian los tamaños y pueden cambiar el carácter pesado o
+liviano de O(lg n) aristas, lo que se absorbe en la cota. La demostración
+completa está en el artículo. La cota es amortizada: una operación suelta
+puede costar Θ(n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 41
+Comparación y práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen de operaciones
+
+
+
+
+          Operación           Costo       Mecanismo
+          Access(v )         O(lg n)      subir por path-parents con splay
+          Link(v , w )       O(lg n)      Access + path-parent
+          Cut(v )            O(lg n)      Access + quitar el izquierdo
+          FindRoot(v )       O(lg n)      Access + el más a la izquierda
+          Camino(u, v )      O(lg n)      MakeRoot + Access + agregado
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         34 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Frente a Heavy-Light
+
+
+
+
+                              Heavy-Light                    Link-Cut
+        Árbol                    estático                 dinámico
+        Camino                   O(lg2 n)            O(lg n) amortizado
+        Subárbol             sí, con rangos    no directo (información virtual)
+        Implementación            corta        más delicada (splay + reversión)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              35 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Frente a Heavy-Light
+
+
+
+
+                              Heavy-Light                    Link-Cut
+        Árbol                    estático                 dinámico
+        Camino                   O(lg2 n)            O(lg n) amortizado
+        Subárbol             sí, con rangos    no directo (información virtual)
+        Implementación            corta        más delicada (splay + reversión)
+
+
+Cuándo usar uno u otro
+Árbol fijo: Heavy-Light. Árbol que cambia, o con aristas que se cortan y
+enlazan: link-cut.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              35 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dónde se usa
+
+
+
+
+Aplicaciones clásicas
+ ▶ Árbol de expansión mínimo bajo inserciones y eliminaciones (offline).
+ ▶ Flujo máximo con caminos de aumento: Dinic con árboles dinámicos en
+   O(nm lg n).
+ ▶ Conectividad en bosques y LCA dinámico.
+ ▶ Detección de ciclos al agregar aristas con pesos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   36 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El problema: Link, Cut, FindRoot y agregados de camino, en
+   O(lg n) amortizado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El problema: Link, Cut, FindRoot y agregados de camino, en
+   O(lg n) amortizado.
+ ▶ Caminos preferidos por último acceso, cada uno en un splay por
+   profundidad, enlazados con path-parents.
+ ▶ Access lo hace todo; MakeRoot con reversión perezosa permite
+   árboles sin raíz fija.
+ ▶ Heavy-Light se usa para analizar: lg n cambios livianos por acceso y los
+   pesados se pagan con ellos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos explicar caminos preferidos y árboles auxiliares
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos explicar caminos preferidos y árboles auxiliares
+ ▶ Sabemos implementar Access, Link y Cut
+ ▶ Sabemos usar MakeRoot para caminos entre nodos cualquiera
+ ▶ Sabemos justificar el O(lg n) amortizado
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Sleator, D. D., & Tarjan, R. E. (1983). A data structure for dynamic
+   trees. Journal of Computer and System Sciences, 26(3), 362–391.
+ ▶ Sleator, D. D., & Tarjan, R. E. (1985). Self-adjusting binary search
+   trees. Journal of the ACM, 32(3), 652–686.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      40 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   41 / 41
+

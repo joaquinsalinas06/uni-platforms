@@ -1,0 +1,349 @@
+ CS3014 Estructuras de Datos Avanzadas — Simulacro de Examen Final
+                                    13 de noviembre de 2026
+                                      Duración: 100 minutos
+
+
+
+
+   Nombre y apellidos:
+   Código:
+
+   Instrucciones
+         Examen individual, a libro cerrado: no se permite el uso de apuntes, celulares, ni
+         uso de IA o referencias de Internet en la parte escrita. En la parte de implementación
+         solo está permitido código previamente hecho por los estudiantes publicado en un
+         repositorio público de Github.
+
+         Todas las respuestas deben estar justificadas: un resultado sin sustento no recibe
+         puntaje, aunque sea correcto.
+
+         Escribe con letra clara. Si te equivocas, tacha en vez de borrar, y sigue con la
+         siguiente parte.
+
+         Duración: 100 minutos. No se dará tiempo adicional. Los primeros 60 minutos son
+         escritos y los últimos 40 son en computadora.
+
+
+
+                      Pregunta      Puntaje máx.       Puntaje obtenido
+                           1               4
+                           2               4
+                           3               4
+                           4               4
+                           5               4
+                           Total           20
+
+Nota: si alguna pregunta se responde en computadora (aparte de este documento), su puntaje se anota
+                                        igual en esta rúbrica.
+CS3014 Estructuras de Datos Avanzadas                                  Simulacro de Examen Final
+
+
+
+   Problema 1                                                                    (10 puntos)
+   Optimalidad dinámica
+
+   Contexto. Un Tango Tree usa un árbol de referencia P perfecto de llaves 1, . . . , 15 (raíz
+   8 a profundidad 0; hijos 4 y 12; nietos 2, 6, 10, 14; las hojas impares a profundidad 3). El
+   hijo preferido de un nodo es el hijo por el que pasó el acceso más reciente dentro de su
+   subárbol (accesar al propio nodo no lo cambia); inicialmente todo nodo interno prefiere
+   a su hijo izquierdo. Cada camino preferido vive en un árbol auxiliar ordenado por llave.
+   Wilber-1 con P cuenta, para cada nodo y de P , las alternancias entre los accesos a su
+   subárbol izquierdo y a su derecho (ignorando los accesos a y y los que están fuera de su
+   subárbol) y suma sobre todos los nodos.
+  (a) Conocimientos (3 pts). Los accesos son 3 y después 11. Un Tango Tree busca con
+          procedimiento Tango-Buscar(x)
+             A ← el árbol auxiliar que contiene a la raíz de P
+             v ← raíz de A
+             mientras v.clave ̸= x hacer
+                 v ← el hijo de v del lado de x
+                 si v está marcado entonces
+                      B ← el árbol auxiliar con raíz v
+                      d ← v.minProf − 1
+                      Cortar(A, d); Unir(A, B)
+                      v ← raíz de A
+
+              devolver v
+
+      donde Cortar(A, d) separa de A las claves de A con profundidad > d (desde la
+      menor clave l hasta la mayor r de ellas) y Unir(A, B) las reemplaza por B en A.
+      Escribe los caminos preferidos (los árboles auxiliares) tras los accesos a 3 y 11. Luego
+      ejecuta Tango-Buscar(6): para cada cruce indica el nodo v al que se entra, d, las
+      claves que quita Cortar (con l y r) y los caminos resultantes, y cuántos cruces tuvo
+      la búsqueda.
+  (b) Análisis (3 pts). Supón que P tiene profundidad d (no necesariamente Θ(lg n)), de
+      modo que cada árbol auxiliar tiene a lo más d + 1 nodos y Cortar y Unir hacen
+      un número constante de splits y concatenaciones. Demuestra que una búsqueda con k
+      cruces cuesta O((k + 1)(1 + lg d)) y que m accesos cuestan O((W + m + n)(1 + lg d)),
+      con W el valor de Wilber-1 para P y n por los cambios de hijo preferido iniciales.
+      Evalúa el factor 1 + lg d cuando d = Θ(lg n) y cuando P es un camino de n nodos, y
+      explica qué significa cada uno sobre la competitividad de la estructura.
+  (c) Diseño (2 pts). Para la secuencia de accesos 3, 11, 6, 14 sobre P (con la regla inicial:
+      todo nodo prefiere a su hijo izquierdo): (i) calcula Wilber-1 (el aporte de cada nodo
+      con aporte no nulo y el total); (ii) para cada acceso indica los nodos que cambian de
+      hijo preferido (de cuál a cuál) y el número total de cambios, que es el número total
+      de cruces de Tango-Buscar; (iii) explica la diferencia entre ambos valores.
+  (d) Profundidad (2 pts). Chris propone usar como árbol de referencia el camino P2
+      en que cada nodo i es hijo derecho de i − 1 (1 → 2 → 3 → 4 → 5) en vez del árbol P1
+      de raíz 3, hijos 1 y 5, con 2 hijo derecho de 1 y 4 hijo izquierdo de 5. Para los accesos
+      2, 4, 5, 1, 3 calcula Wilber-1 con P1 y con P2 . ¿Son ambos valores cotas inferiores
+      válidas de OP T ? ¿Cuál es más útil y por qué? ¿Qué implica para elegir P en un
+      Tango Tree?
+
+
+
+
+Víctor Racsó Galván Oyola              13 de noviembre de 2026                       Página 2 de 7
+CS3014 Estructuras de Datos Avanzadas                                       Simulacro de Examen Final
+
+
+
+   Problema 2                                                                          (10 puntos)
+   Jerarquía de memoria
+
+   Contexto. Un Packed-Memory Array (PMA) guarda N claves ordenadas en un arreglo
+   con espacios vacíos, dividido en trozos de c = Θ(lg N ) celdas; sobre los trozos hay un
+   árbol binario completo de altura h = Θ(lg N ) (hojas a profundidad h) y un intervalo a
+   profundidad d debe tener densidad 12 − 14 · hd ≤ densidad ≤ 34 + 41 · hd . Insertar: se inserta
+   el elemento en el trozo de su predecesor (o en el primero si no tiene predecesor) y se
+   reescribe ese trozo con sus elementos empaquetados a la izquierda; si el trozo (contando
+   el nuevo elemento) cumple su umbral, se termina; si no, se sube hasta el primer ancestro
+   que, contando el nuevo elemento, cumple el suyo y se reparten sus elementos de forma
+   pareja (el j-ésimo, con j = 0, 1, . . ., va a la celda ⌊j · c′ /k⌋ del intervalo, con c′ celdas y k
+   elementos).
+  (a) Conocimientos (3 pts). Un PMA de 16 celdas con trozos de 4 celdas (h = 2) tiene
+      el arreglo
+                      10 20 30 40 _ _ _ _ 60 70 _ _ 80 _ 90 _
+       Inserta 35, 36, 37, 38, 39 en ese orden. Después de cada inserción indica el intervalo
+       que se redistribuyó (o “ninguno”) y el arreglo resultante.
+  (b) Análisis (3 pts). Demuestra que, justo después de redistribuir un intervalo de s cel-
+      das a profundidad d, cada uno de sus hijos queda con densidad igual a la del intervalo
+                                                1
+      y por tanto a una distancia de al menos 4h  de su umbral superior; concluye que hacen
+      falta Ω(s/h) inserciones dentro de ese intervalo antes de volver a redistribuirlo, y que
+      el costo amortizado de una inserción es O(lg2 N ) movimientos (con h = Θ(lg N )).
+  (c) Diseño (2 pts). Se mantiene una lista ordenada de N = 220 claves, con inserciones
+      y consultas que recorren k = 215 claves consecutivas, en un sistema con bloques de
+      B = 210 claves. Compara un arreglo compacto (sin espacios) y un PMA: para cada
+      uno da el número de transferencias de un recorrido de k claves y de una inserción (en
+      el peor caso para el arreglo y amortizada para el PMA, con lg N = 20 y suponiendo
+      que redistribuir s celdas cuesta O(s/B +1) transferencias), y decide cuál usarías según
+      la proporción de inserciones.
+  (d) Profundidad (2 pts). Un Packed-Memory Array de N celdas, con trozos de c celdas
+      (N = c · 2h , c múltiplo de 4), usa el mismo umbral superior 3/4 en todos los niveles
+      (se redistribuye el primer ancestro, contando el nuevo elemento, con densidad ≤ 3/4).
+      Construye una secuencia de operaciones de inserción y eliminación en la que cada
+      par (eliminar, insertar) cuesta Θ(N ) movimientos. Explica por qué los umbrales de
+      la clase (más estrictos arriba) evitan este problema.
+
+   Problema 3                                                                          (10 puntos)
+   Enteros
+   Contexto. En un Fusion Tree, un nodo guarda llaves de w bits. Los exponentes c0 <
+   c1 < · · · son los bits donde ramifica el trie de las llaves∑︁(el bit más significativo en que
+   difieren llaves consecutivas) y el sketch de x es sk (x) = j xcj 2j (conserva el orden entre
+   las llaves, pero no para consultas arbitrarias). Las llaves de 8 bits del nodo son 00101101,
+   00110010, 01001000, 01001111, 10010100, 11100011.
+  (a) Conocimientos           (3     pts).     Para      encontrar     el    predecesor      de     q:
+
+
+
+
+Víctor Racsó Galván Oyola              13 de noviembre de 2026                             Página 3 de 7
+CS3014 Estructuras de Datos Avanzadas                                       Simulacro de Examen Final
+
+
+
+          procedimiento Predecesor-Nodo(q) (índice de la mayor llave ≤ q)
+             i ← (cantidad de llaves con sk ≤ sk (q)) − 1
+             y ← la de xi , xi+1 que minimiza q ⊕ y
+             si y = q entonces devolver el índice de y
+             j ← msb(q ⊕ y), β ← el bit j de q
+             si β = 1 entonces
+                  e ← (q ≫ (j + 1)) ≪ (j + 1) | (2j − 1)
+                  devolver (cantidad de llaves con sk ≤ sk (e)) − 1
+             en otro caso
+                  e ← (q ≫ (j + 1)) ≪ (j + 1) | 2j
+                  devolver (cantidad de llaves con sk < sk (e)) − 1
+
+
+      Halla los exponentes y el sketch de cada llave. Luego ejecuta Predecesor-Nodo
+      para q = 01100000 y para q = 11000000, indicando i, y, j, β, e y sk (e).
+  (b) Análisis (3 pts). Un nodo de un Fusion Tree guarda k = w1/5 llaves y responde un
+      predecesor entre ellas en O(1) con operaciones sobre palabras de w bits. Demuestra
+      que el predecesor en un árbol de n llaves cuesta O(logw n). Con n = 260 y w = 215
+      calcula k, la profundidad del árbol y compáralas con un BST balanceado (lg n) y con
+      una vEB (lg w); comenta el factor constante que aparece.
+  (c) Diseño (2 pts). Los sketches de las llaves del contexto son 0001, 0010, 0100, 0101,
+      1011, 1100 (r = 4 bits). El nodo los guarda en una sola palabra, cada uno en un bloque
+      de r + 1 = 5 bits con un centinela 1 al frente. Para q = 01100000, con sk (q) = 0100:
+      escribe la palabra del nodo W (30 bits), la palabra con sk (q) + 1 replicado en los 6
+      bloques, el resultado de la resta y los centinelas que sobreviven; muestra cómo una
+      multiplicación por 0 · · · 01 0 · · · 01 · · · (un 1 al final de cada bloque) los suma, y deduce
+      cuántas llaves tienen sk ≤ sk (q). Explica por qué no hay préstamos entre bloques.
+  (d) Profundidad (2 pts). Chris propone saltarse la corrección con el prefijo común más
+      largo: devolver siempre la llave xi con i = (cantidad de llaves con sk ≤ sk (q))−1.
+      Para las llaves del contexto, ¿qué devuelve para q = 01100000 y para q = 11000000?
+      ¿Cuál es el predecesor real de cada una? Explica por qué el sketch es correcto para las
+      llaves y no para consultas arbitrarias, y qué información adicional usa la corrección.
+
+   Problema 4                                                                          (10 puntos)
+   Static Trees
+   Contexto. LA(v, k) es el ancestro k niveles arriba de v. El árbol de trabajo tie-
+   ne raíz 1 e hijos (en este orden) 1 : [2], 2 : [3, 10], 3 : [4], 4 : [5, 11], 5 : [6],
+   6 : [7, 12], 7 : [8], 8 : [9, 13], 10 : [14], 12 : [15], 14 : [16]. Sea h(v) el núme-
+   ro de nodos del camino descendente más largo desde v; el hijo largo es el de ma-
+   yor h (empate: el de menor etiqueta) y el árbol se descompone en caminos largos.
+   El ladder de un camino de ℓ nodos es ese camino prolongado hacia arriba con hasta
+   ℓ ancestros de su tope. Con up[i][v] el ancestro 2i niveles arriba de v, la consulta es
+      procedimiento LA-Saltos-Ladder(v, k)
+         si k = 0 entonces devolver v
+         i ← ⌊lg k⌋; u ← up[i][v]
+         r ← k − 2i
+         devolver el nodo r posiciones por encima de u en el ladder de u
+
+  (a) Conocimientos (3 pts). Escribe los caminos largos y sus ladders, los punteros
+      up[i][9] y up[i][16] (i = 0, 1, 2, 3) y ejecuta LA-Saltos-Ladder para (9, 5), (15, 6) y
+      (16, 3) indicando i, u y r.
+
+
+
+Víctor Racsó Galván Oyola              13 de noviembre de 2026                             Página 4 de 7
+CS3014 Estructuras de Datos Avanzadas                                   Simulacro de Examen Final
+
+
+
+  (b) Análisis (3 pts). Demuestra que LA-Saltos-Ladder devuelve el ancestro correcto
+      en O(1): con i = ⌊lg k⌋, un salto de 2i niveles lleva a un nodo u con h(u) ≥ 2i + 1,
+      cuyo camino largo tiene al menos 2i + 1 nodos, de modo que su ladder sube al menos
+      2i más y alcanza los k − 2i < 2i niveles restantes. Da el espacio y el tiempo de
+      preprocesamiento de los jump pointers y de los ladders.
+  (c) Diseño (2 pts). Se quiere calcular LCA(u, v) usando solo consultas LA: con du y
+      dv las profundidades de u y v (raíz a profundidad 0), se hace una búsqueda binaria
+      sobre la profundidad δ ∈ [0, mı́n(du , dv )] del mayor δ para el que los ancestros de u
+      y de v a profundidad δ coinciden. Describe el procedimiento y su costo, y aplícalo
+      al árbol del contexto para LCA(9, 16), indicando cada δ probado y los dos ancestros
+      comparados.
+  (d) Profundidad (2 pts). Chris propone responder LA(v, k) solo con la descomposición
+      en caminos largos, sin ladders ni jump pointers: se sube por el camino de v y, al
+      llegar a su tope, se salta a su padre, repitiendo hasta cubrir k niveles. Demuestra
+                                         √
+      que una consulta visita a lo más O( n) caminos (¿cómo crecen las longitudes de los
+      caminos visitados?) y explica qué aportan los ladders y los jump pointers para bajar
+      el costo.
+
+   Problema 5                                                                   (10 puntos)
+   Strings
+
+   Contexto. Aho-Corasick sobre Σ = {a, b, c} con los patrones {ab, bca, abca, cb}:
+   el autómata tiene el trie de los patrones, fail(v) (el nodo del sufijo propio más lar-
+   go de la cadena de v que es prefijo de algún patrón), la transición δ y dic(v)
+   (el primer nodo terminal en la cadena fail(v), fail(fail(v)), . . .). Se construye con
+      procedimiento Construir-AC
+         cola ← vacía
+         para c ∈ Σ hacer
+             si la raíz tiene hijo u con etiqueta c entonces
+                  fail(u) ← raíz; δ(raíz, c) ← u; encolar u
+             en otro caso
+                  δ(raíz, c) ← raíz
+
+          mientras cola no vacía hacer
+             v ← desencolar
+             para c ∈ Σ hacer
+                 si v tiene hijo u con etiqueta c entonces
+                      fail(u) ← δ(fail(v), c); δ(v, c) ← u; encolar u
+                 en otro caso
+                      δ(v, c) ← δ(fail(v), c)
+
+
+   y se busca recorriendo δ y, en cada posición, el nodo y la cadena dic.
+  (a) Conocimientos (3 pts). Construye el trie de los patrones y da, para cada nodo,
+      fail y dic. Luego ejecuta la búsqueda sobre T = abcabcbab: en cada posición i da el
+      estado y los patrones que terminan en i (recorriendo v y la cadena dic).
+  (b) Análisis (3 pts). Demuestra que Construir-AC calcula correctamente fail(u) (el
+      nodo del trie que corresponde al sufijo propio más largo             ∑︁ de u que es un
+                                                               ∑︁de la cadena
+      prefijo de algún patrón) y δ, y que su costo es O(|Σ| · i |Pi |) (O( i |Pi |) si solo se
+      calculan los fail). Sugerencia: induce sobre la profundidad de los nodos.
+  (c) Diseño (2 pts). Se quiere indicar, para cada posición de un texto, el patrón más
+      largo que termina allí (para filtrar un diccionario). Diseña el procedimiento con el
+
+
+Víctor Racsó Galván Oyola              13 de noviembre de 2026                      Página 5 de 7
+CS3014 Estructuras de Datos Avanzadas                                 Simulacro de Examen Final
+
+
+
+      autómata del contexto (qué se lee en cada estado) y su costo en función de |T |, y
+      aplícalo a T = bcabcab.
+  (d) Profundidad (2 pts). Chris propone no calcular fail: cuando el nodo actual no tiene
+      el hijo c, reiniciar en la raíz y procesar de nuevo el mismo carácter c. Con el único
+      patrón aab y el texto T = aaab, ¿qué ocurre con la variante? ¿Cuál es el resultado
+      correcto? ¿Qué información de fail se pierde?
+
+   Problema 6                                                                   (10 puntos)
+   Dynamic Graphs
+
+   Contexto. Heavy-Light Decomposition (HLD) permite descomponer un árbol en cadenas
+   de modo que cualquier camino entre dos vértices puede representarse mediante O(log n)
+   intervalos disjuntos. Para cada vértice v, se define s(v) como el tamaño de su subárbol y
+   se considera como hijo pesado al hijo con mayor subárbol (en caso de empate, se elige el de
+   menor índice). Los demás hijos son ligeros. Los vértices se numeran mediante un recorrido
+   DFS que visita primero al hijo pesado, permitiendo representar cada cadena mediante un
+   intervalo contiguo. Se utiliza un segment tree sobre este orden para responder consultas
+   de máximo en caminos y actualizar pesos de aristas.
+  (a) Conocimientos (3 pts). Considera el siguiente árbol ponderado, inicialmente en-
+      raizado en el vértice 1:
+                                  (1, 2, 4), (1, 3, 8),
+                                        (2, 4, 6),   (2, 5, 3),
+                                        (3, 6, 7),   (6, 7, 5).
+      Cada tupla representa una arista (u, v, w) de peso w. Construye su Heavy-Light De-
+      composition indicando:
+            El tamaño del subárbol de cada vértice.
+            Las aristas pesadas y ligeras.
+            Las cadenas obtenidas.
+            La posición asignada a cada vértice en el arreglo linealizado.
+      Finalmente, determina el máximo peso de arista en los caminos entre 4 y 7, y entre
+      4 y 5.
+  (b) Análisis (3 pts). Demuestra que, para cualquier vértice v, si u es un hijo ligero de v,
+      entonces s(u) < s(v)/2. Utiliza este resultado para demostrar que cualquier camino
+      entre dos vértices se descompone en O(log n) intervalos de cadenas. Si cada consulta
+      de máximo sobre un intervalo se resuelve con un segment tree en O(log n), demuestra
+      que:
+            Una consulta de máximo en un camino cuesta O(log2 n).
+            Una actualización del peso de una arista cuesta O(log n).
+  (c) Diseño (2 pts). Se mantiene un árbol con pesos en sus aristas mediante Heavy-Light
+      Decomposition y un segment tree. Se reciben las siguientes operaciones:
+            Actualizar(u, v, w): modifica el peso de la arista (u, v) a w.
+            Maximo(u, v): devuelve el máximo peso de una arista en el camino entre u y v.
+
+
+
+
+Víctor Racsó Galván Oyola            13 de noviembre de 2026                        Página 6 de 7
+CS3014 Estructuras de Datos Avanzadas                                 Simulacro de Examen Final
+
+
+
+      Inicialmente, el árbol es el del primer subproblema. Procesa las siguientes operaciones
+      en orden:
+                                        Actualizar(3, 6, 10),
+                                        Maximo(4, 7),
+                                        Actualizar(2, 5, 9),
+                                        Maximo(4, 5).
+      Indica el resultado de cada consulta y explica cómo se representa cada actualización
+      y consulta mediante operaciones sobre el segment tree.
+  (d) Profundidad (2 pts). Chris propone resolver Maximo(u, v) recorriendo explícita-
+      mente todas las aristas del camino entre u y v, sin utilizar Heavy-Light Decompo-
+      sition. ¿Cuál es su complejidad en el peor caso? Construye una familia de árboles
+      y una secuencia de consultas para la cual cada operación cueste Θ(n). Compara es-
+      ta implementación con la solución basada en Heavy-Light Decomposition y segment
+      tree.
+
+
+
+                            Puntaje total del examen: 60 puntos
+
+
+
+
+Víctor Racsó Galván Oyola           13 de noviembre de 2026                        Página 7 de 7
+

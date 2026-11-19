@@ -1,0 +1,149 @@
+---
+kind: "theory"
+title: "Descomposición por centroides"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Motivación
+
+Heavy-Light responde bien preguntas sobre **valores** en caminos, pero hay preguntas sobre **distancias entre pares** que no encajan: contar los pares de nodos a distancia exactamente $k$, o la distancia de un nodo al nodo marcado más cercano mientras se marcan nodos. Probar todos los pares es $\Theta(n^2)$. La descomposición por centroides parte el árbol de forma que todo camino pase por un nodo "separador" de un árbol de profundidad $O(\lg n)$.
+
+## Intuición dibujada
+
+Un **centroide** es un nodo que, al quitarlo, deja componentes de a lo más la mitad del árbol. Se quita, se recurre en cada componente, y los centroides forman un nuevo árbol: el **árbol de centroides**. Como cada nivel parte a la mitad, tiene profundidad $\lfloor \lg n\rfloor$.
+
+El ejemplo de la clase: el árbol de 11 nodos (aristas $1\text{-}2, 1\text{-}3, 1\text{-}4, 2\text{-}5, 2\text{-}6, 3\text{-}7, 5\text{-}8, 5\text{-}9, 6\text{-}10, 7\text{-}11$). La etiqueta de cada nodo es su tamaño con raíz 1.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Centroide(1): n = 11. El hijo 2 tiene tam 6 > 5,5, así que quitar 1 dejaría una componente demasiado grande: se baja a 2.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null },
+        { id: "2", value: "2", tag: "6", parent: "1", state: "active" },
+        { id: "3", value: "3", tag: "3", parent: "1" },
+        { id: "4", value: "4", tag: "1", parent: "1" },
+        { id: "5", value: "5", tag: "3", parent: "2" },
+        { id: "6", value: "6", tag: "2", parent: "2" },
+        { id: "7", value: "7", tag: "2", parent: "3" },
+        { id: "8", value: "8", tag: "1", parent: "5" },
+        { id: "9", value: "9", tag: "1", parent: "5" },
+        { id: "10", value: "10", tag: "1", parent: "6" },
+        { id: "11", value: "11", tag: "1", parent: "7" },
+      ],
+      caption: "Desde 2, los hijos 5 (3) y 6 (2) no superan 5,5.",
+    },
+    {
+      note: "2 es el centroide: quedan {5, 8, 9} (3), {6, 10} (2) y {1, 3, 4, 7, 11} (5). Todas miden a lo más ⌊11/2⌋ = 5.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null, state: "marked" },
+        { id: "2", value: "2", tag: "6", parent: "1", state: "answer" },
+        { id: "3", value: "3", tag: "3", parent: "1", state: "marked" },
+        { id: "4", value: "4", tag: "1", parent: "1", state: "marked" },
+        { id: "5", value: "5", tag: "3", parent: "2" },
+        { id: "6", value: "6", tag: "2", parent: "2" },
+        { id: "7", value: "7", tag: "2", parent: "3", state: "marked" },
+        { id: "8", value: "8", tag: "1", parent: "5" },
+        { id: "9", value: "9", tag: "1", parent: "5" },
+        { id: "10", value: "10", tag: "1", parent: "6" },
+        { id: "11", value: "11", tag: "1", parent: "7", state: "marked" },
+      ],
+      caption: "Componente de arriba (ámbar): 11 − 6 = 5 nodos.",
+    },
+  ],
+}} />
+
+## Definición y notación
+
+Un nodo $c$ de un árbol con $n$ nodos es **centroide** si al eliminarlo cada componente conexa tiene a lo más $\lfloor n/2\rfloor$ nodos.
+
+**Teorema (Jordan, 1869).** Todo árbol tiene al menos un centroide, y a lo más dos (adyacentes). *Demostración:* se enraíza en $r$ y se baja mientras algún hijo tenga $\mathrm{tam} > n/2$; al final, los hijos miden $\le n/2$ y la componente de arriba mide $n - \mathrm{tam}[v] < n/2$.
+
+| Símbolo | Qué es |
+| --- | --- |
+| $\mathrm{elim}[v]$ | $v$ ya fue elegido centroide (no se cruza) |
+| $\mathrm{cpadre}[c]$ | centroide de la componente de la que salió la de $c$ |
+| $\mathrm{nivel}[c]$ | profundidad de $c$ en el árbol de centroides |
+| $\mathrm{LCA}_c(u, v)$ | ancestro común más profundo en el árbol de centroides |
+
+## Operaciones paso a paso
+
+**Centroide(r):** calcular $\mathrm{tam}$ en la componente con un recorrido desde $r$; $n \leftarrow \mathrm{tam}[r]$; $v \leftarrow r$; mientras exista un hijo $u$ no eliminado de $v$ (distinto de quien vino) con $\mathrm{tam}[u] > n/2$, bajar a $u$. Costo $O(n)$.
+
+**Descomponer(r, padreC, d):** $c \leftarrow$ Centroide(r); $\mathrm{elim}[c] \leftarrow$ verdadero; $\mathrm{cpadre}[c] \leftarrow$ padreC; $\mathrm{nivel}[c] \leftarrow d$; para cada vecino $u$ no eliminado de $c$: Descomponer(u, c, d + 1).
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Nivel 0: 2. Nivel 1: los centroides de {5,8,9}, {6,10} y {1,3,4,7,11} son 5, 6 y 3 (desde 1, tam[3] = 3 > 2,5).",
+      nodes: [
+        { id: "c2", value: "2", tag: "nivel 0", parent: null, state: "answer" },
+        { id: "c5", value: "5", parent: "c2", state: "active" },
+        { id: "c6", value: "6", parent: "c2", state: "active" },
+        { id: "c3", value: "3", parent: "c2", state: "active" },
+      ],
+      caption: "Árbol de centroides en construcción.",
+    },
+    {
+      note: "Nivel 2: 8 y 9 bajo 5; 10 bajo 6; bajo 3 quedan {7, 11} y {1, 4}, con centroides 7 y 1. Nivel 3: 11 y 4. Profundidad 3 = ⌊lg 11⌋.",
+      nodes: [
+        { id: "c2", value: "2", tag: "nivel 0", parent: null },
+        { id: "c5", value: "5", parent: "c2" },
+        { id: "c6", value: "6", parent: "c2" },
+        { id: "c3", value: "3", parent: "c2" },
+        { id: "c8", value: "8", parent: "c5" },
+        { id: "c9", value: "9", parent: "c5" },
+        { id: "c10", value: "10", parent: "c6" },
+        { id: "c7", value: "7", parent: "c3" },
+        { id: "c1", value: "1", parent: "c3" },
+        { id: "c11", value: "11", parent: "c7", state: "active" },
+        { id: "c4", value: "4", parent: "c1", state: "active" },
+      ],
+      caption: "Niveles: 2 | 5, 6, 3 | 8, 9, 10, 7, 1 | 11, 4.",
+    },
+  ],
+}} />
+
+### La propiedad clave
+
+Sea $\ell = \mathrm{LCA}_c(u, v)$. Entonces el camino $u \leadsto v$ del árbol original **pasa por $\ell$**: $u$ y $v$ están en la componente de $\ell$ y en subcomponentes distintas al quitarlo. Por eso $d(u, v) = d(u, \ell) + d(\ell, v)$, y cada nodo sólo tiene $\le \lfloor \lg n\rfloor + 1$ centroides ancestros: hay $O(n \lg n)$ pares (nodo, centroide ancestro).
+
+### Aplicaciones de la clase
+
+- **Caminos de longitud exactamente $k$** (CSES 2080). En cada centroide $c$: $\mathrm{cnt}[0] \leftarrow 1$; por cada vecino $u$ no eliminado, se calculan las profundidades $D$ de su subárbol; para cada $d \in D$ se suma $\mathrm{cnt}[k - d]$ y **después** se hace $\mathrm{cnt}[d] \mathrel{+}= 1$; se limpia $\mathrm{cnt}$. Total $O(n \lg n)$.
+- **Marcado más cercano** (Codeforces 342E). $\mathrm{mejor}[c]$ = menor distancia de $c$ a un rojo de su componente. $\mathrm{respuesta}(v) = \min_{a} \mathrm{mejor}[a] + d(v, a)$ sobre los ancestros $a$ de $v$. Pintar y Consultar recorren los ancestros: $O(\lg n)$; distancias $\mathrm{dist}[\mathrm{nivel}[a]][v]$ en $O(n \lg n)$ de memoria.
+- **Asignar niveles** (Codeforces 321C, *Ciel the Commander*, el código `abstracted-order-104.cpp` de la semana): la letra de un nodo es su nivel (A para el nivel 0). Dos nodos con la misma letra tienen su $\mathrm{LCA}_c$, de letra mayor, en el camino. 26 letras bastan para $n < 2^{26}$.
+
+## De dónde sale la cota
+
+$$
+\underbrace{O(n)}_{\text{por nivel: componentes disjuntas}} \;\times\; \underbrace{\lfloor \lg n\rfloor + 1}_{\text{niveles: cada uno parte a la mitad}} \;=\; O(n \lg n).
+$$
+
+- Por nivel: cada componente se recorre una vez para sus tamaños y su descenso, y las de un mismo nivel no se solapan.
+- Niveles: una componente de nivel $d$ tiene $\le n/2^d$ nodos y al menos 1, así que $d \le \lfloor \lg n\rfloor$.
+
+| | Heavy-Light | Centroides |
+| --- | --- | --- |
+| se basa en | tamaño de subárbol | componente balanceada |
+| estructura | cadenas + arreglo | árbol de centroides |
+| camino $u \leadsto v$ | $O(\lg n)$ rangos | pasa por $\mathrm{LCA}_c(u,v)$ |
+| actualizaciones | rangos con segment tree | puntuales, $O(\lg n)$ |
+| memoria | $O(n)$ | $O(n)$ a $O(n \lg n)$ |
+
+## Errores típicos y casos límite
+
+- **Calcular tamaños sin ignorar los eliminados**: el centroide sale del árbol entero, no de la componente.
+- **Contar pares del mismo subárbol** en Contar(c): consultar todo $D$ antes de insertarlo.
+- **Olvidar al propio centroide** ($\mathrm{cnt}[0] = 1$).
+- **Un nodo**: es su propio centroide, nivel máximo.
+- **Dos centroides** (por ejemplo, un camino de 4 nodos): cualquiera sirve; el algoritmo elige uno según desde dónde se llamó.
+- **Recursión profunda**: en un camino de $10^5$ nodos los recorridos recursivos pueden desbordar la pila; conviene hacerlos iterativos.
+
+## Conexión
+
+- Al lado: [Heavy-Light](/structures/heavy-light-decomposition) (valores en caminos y subárboles).
+- Preparación del examen: [descomposición por centroides en el final](/final/centroid-decomposition), con problemas resueltos.

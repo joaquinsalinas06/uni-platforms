@@ -1,0 +1,29 @@
+id: suffix-tree
+title: Suffix tree
+type: structure
+week: week-13
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- trie
+- suffix-array
+- kasai-lcp
+usedBy:
+- ukkonen
+placeholder: false
+complexity:
+  Espacio:
+    worst: O(n)
+    reasoning: Hay n+1 hojas y cada nodo interno no raíz tiene al menos dos hijos, así que hay a lo más
+      2n+1 nodos; cada arista guarda un par de índices [l, r) sobre S en lugar de la subcadena.
+    source: Sem13_Strings_III.pdf#13-14
+  Búsqueda de un patrón P:
+    worst: O(|P|)
+    reasoning: Se baja desde la raíz siguiendo la arista que empieza con la letra siguiente de P y se
+      compara letra por letra; cada letra de P se compara una vez, sin depender de n.
+    source: Sem13_Strings_III.pdf#16-17
+  Construcción desde SA y LCP:
+    worst: O(n)
+    reasoning: Las hojas se agregan en el orden del suffix array con una pila de la rama derecha; cada
+      nodo se apila y se desapila una sola vez.
+    source: Sem13_Strings_III.pdf#20-22

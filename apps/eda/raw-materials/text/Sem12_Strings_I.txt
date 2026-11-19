@@ -1,0 +1,983 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Strings I
+Semana 12
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+30 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Formular pattern matching y entender bordes y la función prefijo
+ ▶ Buscar un patrón en O(n + m) con KMP
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Formular pattern matching y entender bordes y la función prefijo
+ ▶ Buscar un patrón en O(n + m) con KMP
+ ▶ Presentar el trie
+ ▶ Combinar KMP y trie: Aho–Corasick busca muchos patrones a la vez
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Buscar un texto dentro de otro
+Buscadores, editores, bioinformática, antivirus: todos preguntan si una cadena
+P (el patrón) ocurre en otra, T (el texto), y dónde.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Buscar un texto dentro de otro
+Buscadores, editores, bioinformática, antivirus: todos preguntan si una cadena
+P (el patrón) ocurre en otra, T (el texto), y dónde.
+
+¿Hace falta mirar cada posición desde cero?
+Si buscamos aaab en aaaaaaaaab, cada intento compara casi todo el
+patrón antes de fallar. ¿Qué sabemos ya del texto después de un fallo? Y si
+son miles de patrones, ¿hay que leer el texto una vez por cada uno?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      3 / 42
+Cadenas y pattern matching
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Notación
+
+
+
+
+Cadenas
+Un alfabeto Σ ordenado; una cadena S = S[0]S[1] · · · S[n − 1] tiene longitud
+|S| = n. La cadena vacía es ε.
+
+Partes de una cadena
+ ▶ Subcadena S[i..j], con 0 ≤ i ≤ j < n.
+ ▶ Prefijo S[0..i] y sufijo S[i..n − 1].
+ ▶ Un prefijo (o sufijo) es propio si es distinto de S.
+
+ Comparamos cadenas en orden lexicográfico y lcp(S, T ) es la longitud del prefijo
+                              común más largo.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           5 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Pattern matching
+
+
+
+
+Problema
+Dadas una cadena T de longitud n (texto) y una cadena P de longitud m
+(patrón), ¿ocurre P en T como subcadena? Variante usual: listar todas las
+posiciones i con T [i..i + m − 1] = P.
+
+Dos escenarios
+P se conoce primero: procesamos P y luego llega T (hoy: KMP). T se
+conoce primero: procesamos T y luego llegan muchos P (próximas clases:
+suffix array, suffix tree, autómata de sufijos).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   6 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fuerza bruta
+
+
+
+
+Algoritmo 1: Búsqueda-Ingenua(P, T )
+para i ← 0 a n − m hacer
+   j ←0
+   mientras j < m y T [i + j] = P[j] hacer j ← j + 1
+   si j = m entonces reportar i
+
+
+O(nm) en el peor caso
+Con T = an y P = am−1 b, cada posición compara m − 1 caracteres. Se
+olvida lo ya comparado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 42
+Bordes y función prefijo
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Borde de una cadena
+
+
+
+
+Definición
+Un borde de S es una cadena no vacía que es a la vez prefijo propio y sufijo
+propio de S.
+
+Ejemplos
+abaab: el único borde es ab (a no sirve, pues abaab termina en b). aabaa:
+bordes aa y a.
+
+Un borde de longitud b significa que S[0..b − 1] = S[n − b..n − 1]: S se superpone
+                                  consigo misma.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          9 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Función prefijo
+
+
+
+
+Definición
+π[i] es la longitud del borde más largo de P[0..i] (el prefijo de longitud
+i + 1), o 0 si no tiene.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Función prefijo
+
+
+
+
+Definición
+π[i] es la longitud del borde más largo de P[0..i] (el prefijo de longitud
+i + 1), o 0 si no tiene.
+
+Ejemplo: P = ababaca
+                               i   0      1   2   3   4   5    6
+                            P[i]   a      b   a   b   a   c    a
+                            π[i]   0      0   1   2   3   0    1
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo calcularla
+
+
+
+
+De π[i − 1] a π[i]
+Sea k = π[i − 1]: el prefijo P[0..k − 1] es sufijo de P[0..i − 1].
+ ▶ Si P[i] = P[k], el borde se extiende: π[i] = k + 1.
+ ▶ Si no, se prueba el siguiente borde más corto: k ← π[k − 1], y se repite.
+ ▶ Si k llega a 0 y P[i] ̸= P[0], π[i] = 0.
+
+         En particular π[i] ≤ π[i − 1] + 1: el valor sube a lo más 1 por paso.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             11 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Función prefijo: algoritmo
+
+
+
+Algoritmo 2: Prefijo(P, m)
+π[0] ← 0; k ← 0
+para i ← 1 a m − 1 hacer
+    mientras k > 0 y P[i] ̸= P[k] hacer k ← π[k − 1]
+    si P[i] = P[k] entonces k ← k + 1
+    π[i] ← k
+devolver π
+
+O(m) (análisis agregado)
+k sube a lo más 1 por iteración del for, así que sube ≤ m − 1 veces en total.
+Cada vuelta del while lo baja al menos 1 y k ≥ 0: hay a lo más m − 1
+vueltas del while en total.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    12 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una traza
+
+
+
+
+                                  P = ababaca
+         i   P[i]   k antes → después qué pasa
+         1    b     0→0                     P[1] ̸= P[0]
+         2    a     0→1                     coincide con P[0]
+         3    b     1→2                     coincide con P[1]
+         4    a     2→3                     coincide con P[2]
+         5    c     3→1→0                   falla; baja π[2] = 1, luego π[0] = 0
+         6    a     0→1                     coincide con P[0]
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               13 / 42
+Knuth–Morris–Pratt
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    No retroceder en el texto
+
+
+
+
+La idea
+Si leímos T [i − k..i − 1] = P[0..k − 1] y T [i] ̸= P[k], el siguiente intento
+no debe empezar en T [i − k + 1] con j = 0: ya sabemos que los últimos
+caracteres leídos son un borde de P[0..k − 1].
+
+Entonces
+Se retrocede en el patrón, no en el texto: k ← π[k − 1]. El puntero al texto
+i solo avanza.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     15 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    KMP
+
+
+
+
+Algoritmo 3: KMP(P, T )
+π ← Prefijo(P, m); k ← 0
+para i ← 0 a n − 1 hacer
+   mientras k > 0 y (k = m o T [i] ̸= P[k]) hacer k ← π[k − 1]
+   si T [i] = P[k] entonces k ← k + 1
+   si k = m entonces reportar i − m + 1
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    KMP
+
+
+
+
+Algoritmo 4: KMP(P, T )
+π ← Prefijo(P, m); k ← 0
+para i ← 0 a n − 1 hacer
+   mientras k > 0 y (k = m o T [i] ̸= P[k]) hacer k ← π[k − 1]
+   si T [i] = P[k] entonces k ← k + 1
+   si k = m entonces reportar i − m + 1
+
+
+O(n + m)
+Mismo argumento: k sube a lo más n veces y cada vuelta del while lo baja.
+Con el preprocesamiento de P son O(n + m) comparaciones.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una traza de KMP
+
+
+
+
+                        P = aba, π = [0, 0, 1], T = abababa
+                                  i 0 1 2 3 4 5 6
+                              T [i] a b a b a b a
+                         k tras leer      1   2   3   2    3    2      3
+                      ocurrencia en               0        2           4
+
+ En i = 2, k = m = 3 y se reporta 0; para seguir se usa k ← π[2] = 1 (el borde a),
+             y las ocurrencias que se superponen se encuentran igual.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         17 / 42
+Aplicaciones de π
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Periodos
+
+
+
+
+Periodo
+p es un periodo de S si S[i] = S[i + p] para todo 0 ≤ i < n − p. El periodo
+mínimo es pmı́n = n − π[n − 1].
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Periodos
+
+
+
+
+Periodo
+p es un periodo de S si S[i] = S[i + p] para todo 0 ≤ i < n − p. El periodo
+mínimo es pmı́n = n − π[n − 1].
+
+Por qué
+Un periodo p equivale a un borde de longitud n − p. El periodo menor es el
+del borde mayor: n − π[n − 1].
+
+ S es una potencia de una cadena más corta si y solo si pmı́n divide a n y pmı́n < n.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            19 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ocurrencias de cada prefijo
+
+
+
+
+¿Cuántas veces aparece cada prefijo de S en S?
+Sea cnt[L] el número de ocurrencias del prefijo de longitud L. Cada ocurrencia
+del prefijo de longitud L contiene una ocurrencia de su borde máximo.
+
+Algoritmo 5: Ocurrencias-Prefijos(π, n)
+cnt[L] ← 1 para L = 1, . . . , n
+para L ← n hasta 1 hacer
+    si π[L − 1] > 0 entonces cnt[π[L − 1]] ← cnt[π[L − 1]] + cnt[L]
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     20 / 42
+Trie
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Trie
+
+
+
+
+Definición
+Un trie (árbol de prefijos) de un conjunto de cadenas es un árbol con raíz en
+el que
+ ▶ cada arista está etiquetada con un carácter y los hijos de un nodo
+   tienen etiquetas distintas;
+ ▶ cada nodo representa el prefijo formado por las etiquetas del camino
+   desde la raíz;
+ ▶ un nodo es terminal si su prefijo es una cadena del conjunto.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    22 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo: {he, she, his, hers}
+
+
+
+
+                                                       ε
+                                           h                 s
+
+
+                                 h                                   s
+                             e         i
+                                                                          h
+                         e                     i                     h
+                     r                             s                      e
+
+                         r                     s                     e
+                     s
+
+                         s
+
+
+ 10 nodos (con la raíz) para 12 caracteres: los prefijos comunes (h) se comparten.
+                        Los nodos terminales van en verde.
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología       23 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar y buscar
+
+
+
+
+Algoritmo 6: Insertar(S)
+v ← raíz
+para c ∈ S hacer
+    si v no tiene hijo con etiqueta c entonces crear el hijo
+    v ← hijo de v con etiqueta c
+marcar v como terminal
+
+
+Costo
+Insertar y buscar cuestan O(|S|), sin
+                                  P depender de cuántas cadenas haya. El
+número de nodos es a lo más 1 + |Si |.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   24 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Estado = prefijo más largo que sirve
+
+
+
+
+Invariante
+Después de leer T [0..i], el autómata está en el nodo cuyo prefijo es el sufijo
+más largo de T [0..i] que es prefijo de algún patrón.
+
+Equivalente a KMP
+Con un solo patrón, el trie es una cadena y el estado es exactamente k, la
+longitud del borde actual. Con varios, el estado es un nodo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      25 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Enlace de falla
+
+
+
+
+Definición
+Para un nodo v con prefijo str(v ) ̸= ε, fail(v ) es el nodo del sufijo propio
+más largo de str(v ) que también es nodo del trie (es decir, prefijo de algún
+patrón). fail(raíz) = raíz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     26 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Enlace de falla
+
+
+
+
+Definición
+Para un nodo v con prefijo str(v ) ̸= ε, fail(v ) es el nodo del sufijo propio
+más largo de str(v ) que también es nodo del trie (es decir, prefijo de algún
+patrón). fail(raíz) = raíz.
+
+Ejemplos
+fail(she) = he,       fail(sh) = h,       fail(his) = s,     fail(hers) = s.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           26 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los enlaces sobre el trie
+
+
+
+
+                                               ε
+
+
+                               h                                  s
+
+
+                      e                   i                       h
+
+                      r                   s                       e
+
+
+                      s
+
+
+                      Los enlaces que no se dibujan van a la raíz.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo calcularlos
+
+
+
+Por niveles, de arriba hacia abajo
+Sea u = δ(v , c) un hijo de v . Entonces
+                                                          
+                                fail(u) = δ fail(v ), c
+
+donde δ(w , c) es el nodo al que se llega desde w con c, subiendo por fallas
+hasta encontrar un nodo con hijo c.
+
+Por qué
+El sufijo propio más largo de str(v ) c que es prefijo es de la forma s c con s
+un sufijo propio de str(v ) que es prefijo: el primero que se pueda extender
+con c es el de fail(v ), luego fail(fail(v )), etc.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       28 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El autómata completo
+
+
+
+
+Eliminar el while
+Definimos para todo nodo v y todo carácter c
+                (
+                 hijo de v con etiqueta c si existe
+     δ(v , c) =
+                 δ(fail(v ), c)           si no (con δ(raíz, c) = raíz)
+
+Calculado por niveles, cada δ(v , ·) se obtiene de δ(fail(v ), ·), que está en un
+nivel menor.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        29 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El autómata completo
+
+
+
+
+Eliminar el while
+Definimos para todo nodo v y todo carácter c
+                (
+                 hijo de v con etiqueta c si existe
+     δ(v , c) =
+                 δ(fail(v ), c)           si no (con δ(raíz, c) = raíz)
+
+Calculado por niveles, cada δ(v , ·) se obtiene de δ(fail(v ), ·), que está en un
+nivel menor.
+
+   Costo total: O(N |Σ|) con N nodos. El procesamiento del texto queda en una
+                             transición por carácter.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        29 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Construcción
+
+
+
+Algoritmo 7: Construir-AC
+cola ← vacía
+para c ∈ Σ hacer
+     si la raíz tiene hijo u con etiqueta c entonces
+          fail(u) ← raíz; δ(raíz, c) ← u; encolar u
+     en otro caso
+          δ(raíz, c) ← raíz
+
+mientras cola no vacía hacer
+    v ← desencolar
+    para c ∈ Σ hacer
+        si v tiene hijo u con etiqueta c entonces
+             fail(u) ← δ(fail(v ), c); δ(v , c) ← u;   encolar u
+        en otro caso
+             δ(v , c) ← δ(fail(v ), c)
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Enlaces de diccionario
+
+
+
+
+¿Qué patrones terminan aquí?
+En el estado v terminan todos los patrones que son sufijos de str(v ): los de
+v mismo y los de los nodos de la cadena fail(v ), fail2 (v ), . . .
+
+Enlace de diccionario
+dic(v ) es el primer nodo terminal de la cadena de fallas de v (sin contar a
+v ), o ninguno. Se calcula al crear fail:
+                              (
+                                fail(v )      si es terminal
+                    dic(v ) =
+                                dic(fail(v )) si no
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     31 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Búsqueda
+
+
+
+Algoritmo 8: Buscar-AC(T )
+v ← raíz
+para i ← 0 a n − 1 hacer
+   v ← δ(v , T [i])
+   u ← (v si es terminal, si no dic(v ))
+   mientras u existe hacer
+       reportar los patrones de u que terminan en i
+       u ← dic(u)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Búsqueda
+
+
+
+Algoritmo 9: Buscar-AC(T )
+v ← raíz
+para i ← 0 a n − 1 hacer
+   v ← δ(v , T [i])
+   u ← (v si es terminal, si no dic(v ))
+   mientras u existe hacer
+       reportar los patrones de u que terminan en i
+       u ← dic(u)
+
+
+O(n + z)
+Una transición por carácter y un paso por cada ocurrencia reportada (z en
+total). No depende del número de patrones.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una traza: T = ushers
+
+
+
+
+                                i   0     1   2       3         4        5
+                            T [i]   u     s   h       e         r        s
+                        estado      ε     s   sh     she      her    hers
+                    se reporta                     she, he           hers
+
+ En she terminan she y, por el enlace de falla fail(she) = he, también he. En her
+    se continúa desde he con la r: el estado her sale de δ(she, r) = δ(he, r).
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       33 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contar ocurrencias de cada patrón
+
+
+
+
+Visitas y propagación
+  1. Recorrer T y sumar 1 a vis[v ] en cada estado visitado.
+  2. Recorrer los nodos en orden inverso al de la cola (de más profundo a
+     menos): vis[fail(v )] += vis[v ].
+  3. El número de ocurrencias del patrón P es vis de su nodo.
+
+O(n + N)
+Sin importar cuántas ocurrencias haya: se cuentan sin enumerarlas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   34 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Aho–Corasick = KMP + trie
+
+
+
+
+                                    KMP                   Aho–Corasick
+              Patrones              uno                      muchos
+              Estado        longitud del borde k          nodo del trie
+              Retroceso           π[k − 1]                   fail(v )
+              Reporte              k=m                enlacesP
+                                                             de diccionario
+              Costo              O(n + m)             O(n + |P| |Σ| + z)
+
+
+Es el mismo algoritmo
+Con un solo patrón, el trie es una cadena, fail es π y δ es el autómata de
+KMP.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          35 / 42
+Práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Práctica
+
+
+
+
+         Problema                          Idea
+         CSES 1753 — String Matching       KMP directo
+         CSES 1732 — Finding Borders       cadena de bordes con π
+         CSES 1733 — Finding Periods       periodos = n−bordes
+         Codeforces 126B — Password        prefijo que es borde y aparece en el medio
+         CSES 2102 — Finding Patterns      Aho–Corasick
+         CSES 2103 — Counting Patterns     conteo con el árbol de fallas
+         HDU 2222 — Keywords Search        Aho–Corasick básico
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                    37 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Un borde es un prefijo propio que también es sufijo; KMP no retrocede
+   en el texto y baja por la cadena de bordes: O(n + m).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Un borde es un prefijo propio que también es sufijo; KMP no retrocede
+   en el texto y baja por la cadena de bordes: O(n + m).
+ ▶ Aplicaciones de π: periodos, bordes y ocurrencias de prefijos.
+ ▶ Un trie comparte prefijos y es la base del autómata.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Un borde es un prefijo propio que también es sufijo; KMP no retrocede
+   en el texto y baja por la cadena de bordes: O(n + m).
+ ▶ Aplicaciones de π: periodos, bordes y ocurrencias de prefijos.
+ ▶ Un trie comparte prefijos y es la base del autómata.
+ ▶ Aho–Corasick: el estado es el sufijo más largo del texto que es prefijo
+   de un patrón; fallas por niveles, diccionario para reportar: O(n + z).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    38 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir la función prefijo y justificar su costo
+ ▶ Sabemos buscar un patrón con KMP y calcular periodos
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir la función prefijo y justificar su costo
+ ▶ Sabemos buscar un patrón con KMP y calcular periodos
+ ▶ Sabemos construir un trie
+ ▶ Sabemos buscar muchos patrones y contar ocurrencias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   40 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Knuth, D. E., Morris, J. H., & Pratt, V. R. (1977). Fast pattern
+   matching in strings. SIAM J. Comput., 6(2), 323–350.
+ ▶ Aho, A. V., & Corasick, M. J. (1975). Efficient string matching: an aid
+   to bibliographic search. Commun. ACM, 18(6), 333–340.
+ ▶ Gusfield, D. (1997). Algorithms on Strings, Trees, and Sequences.
+   Cambridge University Press.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   41 / 42
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   42 / 42
+

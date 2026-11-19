@@ -1,0 +1,352 @@
+---
+title: "X-fast y Y-fast tries"
+summary: "Prefijos en tablas hash por nivel, búsqueda binaria sobre los niveles, punteros a descendiente y lista de hojas; Y-fast: grupos de Θ(w) llaves para bajar el espacio a O(n) y las actualizaciones a O(lg w) amortizado."
+order: 3
+prioridad: "tema prioritario"
+lista: ["L13", "L14", "L11", "L12"]
+items:
+  # ───── Predicción 1: X-fast a mano ─────
+  - level: 2
+    etiqueta: "Predicción 1 · X-fast trie a mano · (a) Conocimientos (3 pts)"
+    statement: >-
+      Llaves de $w = 4$ bits, $S = \{2, 3, 9, 14\}$. (a) Escribe los prefijos que guarda la tabla de cada nivel (con el mínimo y el máximo de cada prefijo) y el total de entradas. (b) Ejecuta Sucesor(8), Predecesor(5) y Sucesor(12): indica los niveles consultados en la búsqueda binaria, el prefijo más largo encontrado, qué hijo le falta y qué devuelve el puntero a descendiente. (c) Inserta 11: ¿qué entradas nuevas aparecen y cuáles se actualizan?
+    hints:
+      - >-
+        $2 = 0010$, $3 = 0011$, $9 = 1001$, $14 = 1110$. La búsqueda binaria sobre los niveles $0..4$ prueba primero el nivel 2.
+      - >-
+        Si al prefijo más largo le falta el hijo izquierdo, el sucesor es el mínimo de ese prefijo; si le falta el derecho, el predecesor es su máximo, y el otro vecino sale de la lista de hojas.
+    solution: |-
+      **(a)** Por nivel, prefijo (mín, máx):
+
+      - nivel 0: $\varepsilon$ (2, 14)
+      - nivel 1: `0` (2, 3), `1` (9, 14)
+      - nivel 2: `00` (2, 3), `10` (9, 9), `11` (14, 14)
+      - nivel 3: `001` (2, 3), `100` (9, 9), `111` (14, 14)
+      - nivel 4: `0010`, `0011`, `1001`, `1110`
+
+      Total: $1 + 2 + 3 + 3 + 4 = 13$ entradas. Las hojas forman la lista $2 \leftrightarrow 3 \leftrightarrow 9 \leftrightarrow 14$.
+
+      **(b)**
+
+      - **Sucesor(8)**, $8 = 1000$: nivel 2, `10`, está; nivel 3, `100`, está; nivel 4, `1000`, no. Prefijo más largo `100`. El bit siguiente de 8 es 0 y `100` no tiene hijo `1000`: le falta el **izquierdo**, así que su descendiente es el mínimo de `100`: **9**. (Predecesor: el anterior en la lista, 3.)
+      - **Predecesor(5)**, $5 = 0101$: nivel 2, `01`, no; nivel 1, `0`, está. Prefijo `0`. El bit siguiente es 1 y falta el hijo `01`: le falta el **derecho**, su descendiente es el máximo de `0`: **3**. (Sucesor: el siguiente en la lista, 9.)
+      - **Sucesor(12)**, $12 = 1100$: nivel 2, `11`, está; nivel 3, `110`, no. Prefijo `11`. Bit siguiente 0, falta el izquierdo: mínimo de `11`, **14**.
+
+      **(c)** Insertar $11 = 1011$: los prefijos $\varepsilon$, `1`, `10` ya existen; se crean `101` (11, 11) y `1011`. Se actualizan: `10` pasa a (9, 11); `1` y $\varepsilon$ conservan su mínimo y máximo (11 no es extremo). La hoja 11 se enlaza entre 9 y 14 (su sucesor se halló con una consulta $O(\lg w)$). Total: 15 entradas; se tocaron $w + 1 = 5$ prefijos, costo $\Theta(w)$.
+  - level: 6
+    etiqueta: "Predicción 1 · X-fast trie a mano · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra que la búsqueda binaria sobre los niveles encuentra el prefijo más largo de $x$ presente en la tabla, y que Sucesor y Predecesor cuestan $O(\lg w)$. Demuestra que el espacio es $O(nw)$ y que insertar o borrar cuesta $\Theta(w)$.
+    hints:
+      - >-
+        Propiedad monótona: si el prefijo de longitud $\ell$ de $x$ está en la tabla, también lo están todos los más cortos.
+      - >-
+        Cada llave aporta exactamente $w + 1$ prefijos, compartidos o no.
+    solution: |-
+      **Monotonía.** Si el prefijo $x_{[1..\ell]}$ está en la tabla, es prefijo de alguna llave $y \in S$; entonces todo prefijo más corto de $x$ también es prefijo de $y$ y está en la tabla. El predicado "el prefijo de longitud $\ell$ está" es verdadero hasta cierto $\ell^\ast$ y falso después: la búsqueda binaria sobre $\ell \in [0, w]$ encuentra $\ell^\ast$ con $\lceil \lg(w+1)\rceil$ consultas de hash.
+
+      **Respuesta en $O(1)$.** Sea $v$ el nodo de $x_{[1..\ell^\ast]}$. Si $\ell^\ast = w$, $x \in S$. Si no, a $v$ le falta el hijo del lado de $x$ (si no, $\ell^\ast$ no sería máximo) y tiene el otro, porque es prefijo de alguna llave. Si falta el izquierdo, todas las llaves bajo $v$ son mayores que $x$ y las de fuera de $v$ no están entre ellas: el sucesor es $\min(v)$. Si falta el derecho, el predecesor es $\max(v)$. El otro vecino es el adyacente en la lista doblemente enlazada de hojas. Total $O(\lg w)$ (esperado, por el hash).
+
+      **Espacio.** Cada llave tiene $w + 1$ prefijos: a lo más $n(w+1)$ entradas, $O(nw)$.
+
+      **Actualizaciones.** Insertar crea o actualiza (mín, máx) en los $w + 1$ prefijos de la llave, y borrar los recorre para eliminar los que quedan vacíos o corregir extremos: $\Theta(w)$ cada una, aunque la búsqueda sea $O(\lg w)$.
+  - level: 5
+    etiqueta: "Predicción 1 · X-fast trie a mano · (c) Diseño (2 pts)"
+    statement: >-
+      Se guardan $n = 10^6$ llaves de $w = 64$ bits y llegan $10^8$ consultas de sucesor y $10^6$ inserciones. Compara un BST balanceado, un X-fast trie y un Y-fast trie: costo por consulta, por inserción y espacio (en número de entradas o nodos). ¿Cuál eliges y por qué?
+    hints:
+      - >-
+        $\lg n \approx 20$, $\lg w = 6$.
+      - >-
+        El X-fast cobra $w + 1 = 65$ entradas por llave; el Y-fast sólo guarda en el X-fast a los representantes.
+    solution: |-
+      - **BST balanceado:** consulta $\approx \lg n = 20$, inserción $\approx 20$, espacio $n = 10^6$ nodos.
+      - **X-fast:** consulta $\approx \lg w = 6$ consultas de hash; inserción $\Theta(w) = 65$ prefijos; espacio $\approx n(w+1) = 6.5 \cdot 10^7$ entradas.
+      - **Y-fast:** consulta $O(\lg w)$: $\approx 6$ (X-fast de representantes) $+ \lg(2w) = 7$ (BST del grupo) $\approx 13$; inserción $O(\lg w)$ amortizado; espacio $O(n)$: $n$ nodos de BST más a lo más $\frac{n}{w/2}(w+1) \approx 2n$ entradas de hash.
+
+      Con $10^8$ consultas el término dominante es la consulta. X-fast es el más rápido en consulta pero gasta 65 veces el espacio y paga 65 por inserción. Y-fast mantiene la consulta en $O(\lg w)$ con espacio lineal: es la elección. (El BST pagaría $\approx 2 \cdot 10^9$ pasos en consultas frente a $\approx 1.3 \cdot 10^9$ del Y-fast; con $w$ fijo la ganancia crece con $n$.)
+  - level: 4
+    etiqueta: "Predicción 1 · X-fast trie a mano · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone buscar el prefijo más largo **de arriba hacia abajo** (nivel 0, 1, 2, … hasta que falle) en lugar de por búsqueda binaria, "porque así no hacen falta los punteros a descendiente". ¿Cuánto cuesta? ¿Es verdad que se ahorran los punteros? Otra propuesta suya: guardar sólo las hojas en una tabla hash y responder Sucesor(x) probando $x, x+1, x+2, \dots$. Da el peor caso.
+    hints:
+      - >-
+        La búsqueda descendente consulta un nivel por bit.
+      - >-
+        Encontrar el prefijo más largo no responde la pregunta: falta saber qué llave está debajo.
+    solution: |-
+      **De arriba hacia abajo.** Cuesta $\Theta(w)$ consultas en el peor caso (cuando $x$ comparte un prefijo largo con alguna llave): pierde el $O(\lg w)$, que sale precisamente de la monotonía que permite bisecar. Y **no** ahorra nada: al llegar al prefijo más largo hay que saber cuál es la llave más cercana debajo de él; sin mínimo/máximo (descendiente) habría que bajar por el trie, otros $\Theta(w)$ pasos.
+
+      **Probar $x, x+1, \dots$.** Cada prueba es $O(1)$ esperado, pero el sucesor puede estar a distancia $u = 2^w$: con $S = \{0, 2^w - 1\}$ y $x = 1$ se hacen $2^w - 2$ pruebas. Es $O(u)$, peor incluso que un BST. Los prefijos son lo que permite saltar bloques enteros vacíos del universo.
+  # ───── Predicción 2: Y-fast ─────
+  - level: 2
+    etiqueta: "Predicción 2 · Y-fast trie: grupos y reorganización · (a) Conocimientos (3 pts)"
+    statement: >-
+      Un Y-fast trie con $w = 4$ mantiene grupos de entre $w/2 = 2$ y $2w = 8$ llaves; cada grupo es un BST balanceado y su representante (el mínimo al crearlo) vive en un X-fast trie. Al llegar a $2w + 1$ llaves un grupo se parte en dos de $w$ y $w + 1$. Hay un solo grupo, $G = \{1, 2, 3, 5, 6, 7, 9, 10\}$, de representante 1. (a) Inserta 11 y describe la partición. (b) Con el resultado, ejecuta Sucesor(8) y Predecesor(6) indicando qué se consulta en el X-fast y qué en el BST del grupo. (c) ¿Qué pasa si ahora se borra 1?
+    hints:
+      - >-
+        Tras insertar 11 el grupo tiene 9 llaves: se parte en las 4 menores y las 5 mayores.
+      - >-
+        Para encontrar el grupo de $x$ se busca en el X-fast el **predecesor** de $x$ entre los representantes (o $x$ mismo).
+    solution: |-
+      **(a)** $G$ pasa a 9 llaves $= 2w + 1$: se parte en $\{1, 2, 3, 5\}$ (representante 1) y $\{6, 7, 9, 10, 11\}$ (representante nuevo **6**, que se inserta en el X-fast en $O(w)$). Reconstruir los dos BST cuesta $O(w)$.
+
+      **(b)**
+
+      - **Sucesor(8):** en el X-fast de representantes $\{1, 6\}$, el predecesor de 8 es 6: grupo $\{6,7,9,10,11\}$. En su BST, el sucesor de 8 es **9**. Si el grupo no tuviera nada $> 8$, se tomaría el mínimo del grupo siguiente.
+      - **Predecesor(6):** el representante $\le 6$ es 6; en su grupo no hay llave $< 6$, así que se pasa al grupo anterior (representante 1, el predecesor de 6 en el X-fast) y se toma su máximo: **5**.
+
+      Cada consulta: $O(\lg w)$ en el X-fast más $O(\lg w)$ en un BST de $\le 2w$ llaves.
+
+      **(c)** Borrar 1 lo quita del BST: el grupo $\{2, 3, 5\}$ queda con 3 $\ge w/2 = 2$ llaves, no se reorganiza. El representante **sigue siendo 1** (es un valor fijo, delimita el intervalo $[1, 6)$), aunque ya no sea una llave viva.
+  - level: 6
+    etiqueta: "Predicción 2 · Y-fast trie: grupos y reorganización · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra que el Y-fast trie usa espacio $O(n)$, responde Sucesor en $O(\lg w)$ y hace inserciones y borrados en $O(\lg w)$ amortizado. Para lo último, demuestra que entre dos reorganizaciones de un mismo grupo hay al menos $w/4$ operaciones sobre él.
+    hints:
+      - >-
+        Hay a lo más $n/(w/2)$ grupos, cada uno con $w+1$ entradas en el X-fast.
+      - >-
+        Tras partir $2w+1$ en $w$ y $w+1$, el grupo está lejos de ambos límites $w/2$ y $2w$.
+    solution: |-
+      **Espacio.** Los BST guardan las $n$ llaves: $O(n)$. Hay a lo más $n/(w/2) = 2n/w$ grupos y cada representante cuesta $w + 1$ entradas: $\frac{2n}{w}(w + 1) = O(n)$.
+
+      **Sucesor.** Representante predecesor en el X-fast, $O(\lg w)$; búsqueda en un BST de $\le 2w$ llaves, $O(\lg w)$; a lo más un salto al grupo vecino, $O(\lg w)$.
+
+      **Holgura tras reorganizar.**
+
+      - Tras una partición los grupos miden $w$ y $w + 1$: para llegar a $2w + 1$ hacen falta $\ge w$ inserciones y para bajar de $w/2$, $\ge w/2$ borrados.
+      - Tras una fusión el resultado mide $\ge w - 1$; si supera $1.5w$ se parte en mitades de entre $0.75w$ y $1.25w$. En todos los casos hay $\ge w/4$ de distancia a los límites.
+
+      **Amortización.** Una reorganización cuesta $O(w)$ (reconstruir BST e insertar o borrar un representante en el X-fast). Se reparte entre las $\ge w/4$ operaciones previas sobre el grupo: $O(1)$ por operación. Cada operación paga además $O(\lg w)$ de búsqueda e inserción en el BST: $O(\lg w)$ amortizado (esperado, por el hash).
+  - level: 5
+    etiqueta: "Predicción 2 · Y-fast trie: grupos y reorganización · (c) Diseño (2 pts)"
+    statement: >-
+      Se guardan $n = 2^{20}$ llaves de $w = 64$ bits. (a) ¿Entre qué valores está el número de grupos? (b) ¿Cuántas entradas tiene a lo más el X-fast de representantes y cuántas tendría un X-fast con todas las llaves? (c) Da el número aproximado de pasos de una consulta de sucesor y compáralo con un BST balanceado.
+    hints:
+      - >-
+        Grupos de entre $w/2 = 32$ y $2w = 128$ llaves.
+      - >-
+        $\lg 64 = 6$, $\lg 128 = 7$, $\lg 2^{20} = 20$.
+    solution: |-
+      **(a)** Entre $n/(2w) = 2^{20}/128 = 8192$ y $n/(w/2) = 2^{20}/32 = 32768$ grupos.
+
+      **(b)** Representantes: $\le 32768 \cdot 65 \approx 2.1 \cdot 10^6$ entradas. Con todas las llaves: $2^{20} \cdot 65 \approx 6.8 \cdot 10^7$, unas 32 veces más.
+
+      **(c)** Búsqueda binaria en el X-fast: $\lceil \lg 65 \rceil = 7$ consultas de hash; BST del grupo: $\lg 128 = 7$; total $\approx 14$ pasos. Un BST balanceado: $\lg n = 20$. La ventaja crece con $n$ porque el Y-fast no depende de $n$, sólo de $w$.
+  - level: 4
+    etiqueta: "Predicción 2 · Y-fast trie: grupos y reorganización · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone grupos de tamaño **constante** (entre 2 y 4 llaves) "para que la búsqueda dentro del grupo sea $O(1)$". Otra variante suya: partir un grupo de $2w+1$ en grupos de 1 y $2w$. Analiza ambas propuestas: espacio, costo de la consulta y costo amortizado de las actualizaciones.
+    hints:
+      - >-
+        El espacio del X-fast es (número de grupos) $\times (w+1)$.
+      - >-
+        Una partición desbalanceada deja a un grupo en el borde de su límite.
+    solution: |-
+      **Grupos constantes.** Hay $\Theta(n)$ grupos, así que el X-fast de representantes vuelve a tener $\Theta(nw)$ entradas: se pierde el objetivo del Y-fast. Además casi toda actualización crea o borra un representante en el X-fast, $\Theta(w)$: se pierde también el $O(\lg w)$ amortizado. La consulta sigue en $O(\lg w)$, pero no gana nada frente al X-fast puro.
+
+      **Partición 1 y $2w$.** El grupo de $2w$ queda a **una** inserción de volver a partirse, y el de 1 ya está bajo $w/2$ y debe fusionarse de inmediato. La holgura de $w/4$ operaciones desaparece: una secuencia que inserta siempre en el grupo grande paga $\Theta(w)$ por inserción. El análisis amortizado se apoya exactamente en partir por la mitad.
+---
+
+import Visualization from '../../src/components/Visualization.astro';
+
+## Qué es probable que pregunten y por qué
+
+- **Trazar Sucesor/Predecesor en un X-fast a mano** con prefijos de $w = 4$ bits: es el ejercicio 13 de la lista (prefijos por nivel, búsqueda binaria, puntero a descendiente). Casi seguro es la parte (a).
+- **Cuentas del Y-fast**: número de grupos, entradas de hash, costo de sucesor (ejercicio 14). Encaja como parte (c) de diseño, con números como $n = 2^{16}$ y $w = 32$.
+- **Demostraciones**: monotonía de los prefijos ⇒ $O(\lg w)$; espacio $O(nw)$ frente a $O(n)$; holgura de $w/4$ operaciones ⇒ $O(\lg w)$ amortizado. El simulacro pide siempre un (b) de demostración.
+- **Profundidad**: una variante de Chris que rompe la búsqueda binaria o el tamaño de los grupos. El patrón del simulacro (Fusion Tree sin corrección, PMA con umbral uniforme) es quitar la pieza que hace funcionar la cota.
+
+## Teoría desde cero
+
+### El problema y la meta
+
+Se guardan $n$ llaves enteras de $w$ bits (universo $u = 2^w$) y se quiere **Sucesor(x)** y **Predecesor(x)**. Un BST paga $\Theta(\lg n)$. La meta es pagar $O(\lg w) = O(\lg \lg u)$, como vEB ([van Emde Boas](/structures/van-emde-boas-tree)), pero con espacio cercano a $O(n)$ en lugar de $O(u)$.
+
+### X-fast trie: las tres piezas
+
+| Pieza | Qué guarda | Para qué |
+| --- | --- | --- |
+| tablas hash por nivel | en el nivel $\ell$, todos los prefijos de $\ell$ bits de llaves de $S$ (con su mínimo y máximo) | preguntar "¿algún $y \in S$ empieza así?" en $O(1)$ |
+| puntero a descendiente | en un nodo al que le falta un hijo, el mínimo (si falta el izquierdo) o el máximo (si falta el derecho) | llegar de un prefijo a una llave en $O(1)$ |
+| lista de hojas | las llaves en orden, doblemente enlazadas | pasar del predecesor al sucesor en $O(1)$ |
+
+Ejemplo de trabajo: $w = 4$, $S = \{2, 3, 9, 14\} = \{0010, 0011, 1001, 1110\}$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El trie binario implícito: un nodo por cada prefijo de alguna llave. Las hojas (nivel 4) son las llaves; cada nivel es una tabla hash con los prefijos de esa longitud.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "p0", value: "0", parent: "e", side: "left" },
+        { id: "p1", value: "1", parent: "e", side: "right" },
+        { id: "p00", value: "00", parent: "p0", side: "left" },
+        { id: "p10", value: "10", parent: "p1", side: "left" },
+        { id: "p11", value: "11", parent: "p1", side: "right" },
+        { id: "p001", value: "001", parent: "p00", side: "right" },
+        { id: "p100", value: "100", parent: "p10", side: "left" },
+        { id: "p111", value: "111", parent: "p11", side: "right" },
+        { id: "k2", value: "2", tag: "0010", parent: "p001", side: "left" },
+        { id: "k3", value: "3", tag: "0011", parent: "p001", side: "right" },
+        { id: "k9", value: "9", tag: "1001", parent: "p100", side: "right" },
+        { id: "k14", value: "14", tag: "1110", parent: "p111", side: "left" },
+      ],
+      links: [
+        { from: "k2", to: "k3", kind: "pointer", bidirectional: true },
+        { from: "k3", to: "k9", kind: "pointer", bidirectional: true },
+        { from: "k9", to: "k14", kind: "pointer", bidirectional: true },
+      ],
+      caption: "13 entradas: 1 + 2 + 3 + 3 + 4. Abajo, la lista doblemente enlazada de hojas.",
+    },
+    {
+      note: "Sucesor(8), 8 = 1000. La búsqueda binaria empieza en el nivel 2: ¿está 10? Sí. Entonces el prefijo más largo tiene al menos 2 bits; se prueba más abajo.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "p0", value: "0", parent: "e", side: "left", state: "muted" },
+        { id: "p1", value: "1", parent: "e", side: "right" },
+        { id: "p00", value: "00", parent: "p0", side: "left", state: "muted" },
+        { id: "p10", value: "10", parent: "p1", side: "left", state: "active" },
+        { id: "p11", value: "11", parent: "p1", side: "right", state: "muted" },
+        { id: "p001", value: "001", parent: "p00", side: "right", state: "muted" },
+        { id: "p100", value: "100", parent: "p10", side: "left" },
+        { id: "p111", value: "111", parent: "p11", side: "right", state: "muted" },
+        { id: "k2", value: "2", tag: "0010", parent: "p001", side: "left", state: "muted" },
+        { id: "k3", value: "3", tag: "0011", parent: "p001", side: "right", state: "muted" },
+        { id: "k9", value: "9", tag: "1001", parent: "p100", side: "right" },
+        { id: "k14", value: "14", tag: "1110", parent: "p111", side: "left", state: "muted" },
+      ],
+      caption: "Niveles posibles para el prefijo más largo: [2, 4].",
+    },
+    {
+      note: "Nivel 3: ¿está 100? Sí. Nivel 4: ¿está 1000? No. El prefijo más largo de 8 presente es 100, con dos consultas más. En total ⌈lg 5⌉ = 3 consultas de hash.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "p0", value: "0", parent: "e", side: "left", state: "muted" },
+        { id: "p1", value: "1", parent: "e", side: "right" },
+        { id: "p00", value: "00", parent: "p0", side: "left", state: "muted" },
+        { id: "p10", value: "10", parent: "p1", side: "left" },
+        { id: "p11", value: "11", parent: "p1", side: "right", state: "muted" },
+        { id: "p001", value: "001", parent: "p00", side: "right", state: "muted" },
+        { id: "p100", value: "100", parent: "p10", side: "left", state: "active" },
+        { id: "p111", value: "111", parent: "p11", side: "right", state: "muted" },
+        { id: "k2", value: "2", tag: "0010", parent: "p001", side: "left", state: "muted" },
+        { id: "k3", value: "3", tag: "0011", parent: "p001", side: "right", state: "muted" },
+        { id: "k9", value: "9", tag: "1001", parent: "p100", side: "right" },
+        { id: "k14", value: "14", tag: "1110", parent: "p111", side: "left", state: "muted" },
+      ],
+      caption: "Prefijo más largo: 100. A 100 le falta el hijo izquierdo (1000).",
+    },
+    {
+      note: "El siguiente bit de 8 es 0 y falta el hijo izquierdo: todas las llaves bajo 100 son mayores que 8. El puntero a descendiente (el mínimo de 100) da el sucesor: 9. El predecesor es su vecino en la lista: 3.",
+      nodes: [
+        { id: "e", value: "ε", parent: null },
+        { id: "p0", value: "0", parent: "e", side: "left", state: "muted" },
+        { id: "p1", value: "1", parent: "e", side: "right" },
+        { id: "p00", value: "00", parent: "p0", side: "left", state: "muted" },
+        { id: "p10", value: "10", parent: "p1", side: "left" },
+        { id: "p11", value: "11", parent: "p1", side: "right", state: "muted" },
+        { id: "p001", value: "001", parent: "p00", side: "right", state: "muted" },
+        { id: "p100", value: "100", parent: "p10", side: "left", state: "marked" },
+        { id: "p111", value: "111", parent: "p11", side: "right", state: "muted" },
+        { id: "k2", value: "2", tag: "0010", parent: "p001", side: "left", state: "muted" },
+        { id: "k3", value: "3", tag: "0011", parent: "p001", side: "right" },
+        { id: "k9", value: "9", tag: "1001", parent: "p100", side: "right", state: "answer" },
+        { id: "k14", value: "14", tag: "1110", parent: "p111", side: "left", state: "muted" },
+      ],
+      links: [
+        { from: "p100", to: "k9", kind: "pointer", dash: true, label: "desc", curve: 0.6 },
+        { from: "k3", to: "k9", kind: "pointer", bidirectional: true },
+      ],
+      caption: "Sucesor(8) = 9, Predecesor(8) = 3. Costo O(lg w).",
+    },
+  ],
+}} />
+
+### Por qué se puede bisecar los niveles
+
+Si el prefijo de $\ell$ bits de $x$ está en la tabla, es prefijo de alguna llave, y entonces **todos** sus prefijos más cortos también lo son. La respuesta a "¿está el prefijo de longitud $\ell$?" es sí, sí, …, sí, no, …, no: se busca el último sí con búsqueda binaria sobre $\ell \in [0, w]$.
+
+$$
+\underbrace{\lceil \lg (w+1) \rceil}_{\text{consultas de hash}} \;+\; \underbrace{O(1)}_{\text{descendiente}} \;+\; \underbrace{O(1)}_{\text{vecino en la lista}} \;=\; O(\lg w).
+$$
+
+- $w + 1$: hay un nivel por cada longitud de prefijo, de 0 a $w$.
+- El logaritmo: cada consulta parte el rango de niveles posibles a la mitad.
+- Los dos $O(1)$: el nodo encontrado tiene exactamente un hijo del lado contrario a $x$, y su mínimo o máximo es la llave más cercana a $x$ por ese lado.
+
+### El precio del X-fast
+
+- **Espacio** $O(nw)$: cada llave aporta $w + 1$ prefijos.
+- **Insertar / borrar** $\Theta(w)$: hay que crear, actualizar o borrar los $w + 1$ prefijos de la llave (y sus mínimos y máximos).
+
+### Y-fast trie: indirección
+
+Se parten las llaves ordenadas en **grupos contiguos** de entre $w/2$ y $2w$ llaves. Cada grupo es un BST balanceado. De cada grupo sólo su **representante** (un valor fijo, su mínimo al crearlo) entra al X-fast.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Con w = 4 los grupos tienen entre 2 y 8 llaves. Un solo grupo de 8 llaves con representante 1: el X-fast sólo guarda el 1.",
+      rows: [
+        { id: "k", label: "llaves", cells: [{ value: 1, state: "marked" }, { value: 2 }, { value: 3 }, { value: 5 }, { value: 6 }, { value: 7 }, { value: 9 }, { value: 10 }] },
+      ],
+      spans: [{ id: "g1", row: "k", from: 0, to: 7, label: "grupo rep 1 (8 llaves)" }],
+      caption: "X-fast de representantes: {1}.",
+    },
+    {
+      note: "Se inserta 11: el grupo llega a 9 = 2w + 1 llaves y viola el invariante. Hay que partirlo.",
+      rows: [
+        { id: "k", label: "llaves", cells: [{ value: 1, state: "marked" }, { value: 2 }, { value: 3 }, { value: 5 }, { value: 6 }, { value: 7 }, { value: 9 }, { value: 10 }, { value: 11, state: "active" }] },
+      ],
+      spans: [{ id: "g1", row: "k", from: 0, to: 8, label: "9 llaves > 2w" }],
+      caption: "Reorganización: costo O(w).",
+    },
+    {
+      note: "Se parte por la mitad: {1,2,3,5} y {6,7,9,10,11}. El representante nuevo 6 entra al X-fast (O(w)). Ambos grupos quedan lejos de sus límites 2 y 8.",
+      rows: [
+        { id: "k", label: "llaves", cells: [{ value: 1, state: "marked" }, { value: 2 }, { value: 3 }, { value: 5 }, { value: 6, state: "marked" }, { value: 7 }, { value: 9 }, { value: 10 }, { value: 11 }] },
+      ],
+      spans: [{ id: "g1", row: "k", from: 0, to: 3, label: "rep 1 (4)" }, { id: "g2", row: "k", from: 4, to: 8, label: "rep 6 (5)" }],
+      caption: "X-fast de representantes: {1, 6}.",
+    },
+    {
+      note: "Sucesor(8): el X-fast da el representante predecesor de 8, que es 6; el BST de ese grupo da el sucesor de 8 dentro del grupo: 9. Dos búsquedas O(lg w).",
+      rows: [
+        { id: "k", label: "llaves", cells: [{ value: 1, state: "muted" }, { value: 2, state: "muted" }, { value: 3, state: "muted" }, { value: 5, state: "muted" }, { value: 6, state: "marked" }, { value: 7 }, { value: 9, state: "answer" }, { value: 10 }, { value: 11 }] },
+      ],
+      spans: [{ id: "g2", row: "k", from: 4, to: 8, label: "grupo de 8" }],
+      caption: "Sucesor(8) = 9.",
+    },
+  ],
+}} />
+
+### Cotas del Y-fast y de dónde salen
+
+$$
+\text{espacio} = \underbrace{n}_{\text{BST}} + \underbrace{\tfrac{n}{w/2}}_{\text{grupos}} \cdot \underbrace{(w+1)}_{\text{prefijos}} = O(n),
+\qquad
+\text{sucesor} = \underbrace{O(\lg w)}_{\text{X-fast}} + \underbrace{O(\lg 2w)}_{\text{BST}} = O(\lg w).
+$$
+
+**Actualizaciones** en $O(\lg w)$ amortizado: la búsqueda e inserción en el BST cuestan $O(\lg w)$; partir o fusionar cuesta $O(w)$ pero, gracias a que se parte por la mitad, entre dos reorganizaciones de un grupo hay $\ge w/4$ operaciones sobre él: $O(w)/(w/4) = O(1)$ por operación.
+
+## Errores típicos
+
+- **Representante = llave viva**: no. Es un valor fijo; si se borra esa llave, el representante sigue delimitando el intervalo.
+- **Usar el sucesor del representante** para ubicar el grupo: el grupo de $x$ es el del representante **predecesor** de $x$ (o igual).
+- **Olvidar la lista de hojas**: el descendiente da un solo vecino; el otro sale de la lista.
+- **Decir que insertar en X-fast es $O(\lg w)$**: la búsqueda sí, la inserción es $\Theta(w)$.
+- **Contar entradas sin la raíz**: hay $w + 1$ niveles, del 0 (raíz $\varepsilon$) al $w$.
+- **Búsqueda binaria con extremos mal puestos**: el rango es $[0, w]$ y el nivel 0 siempre está (si $S \ne \emptyset$).
+
+## Qué memorizar
+
+- X-fast: tabla hash por nivel con prefijos; búsqueda binaria sobre niveles por monotonía; descendiente = mín. si falta el hijo izquierdo, máx. si falta el derecho; lista de hojas.
+- X-fast: consulta $O(\lg w)$, actualización $\Theta(w)$, espacio $O(nw)$.
+- Y-fast: grupos de $[w/2, 2w]$ en BST; representantes en un X-fast; espacio $O(n)$; consulta $O(\lg w)$; actualizaciones $O(\lg w)$ amortizado (holgura $\ge w/4$).
+- Números de cabecera: grupos entre $n/(2w)$ y $2n/w$; entradas del X-fast $\le \frac{2n}{w}(w+1)$.
+- Teoría del curso: [X-fast trie](/structures/x-fast-trie), [Y-fast trie](/structures/y-fast-trie), [predecesor entero](/structures/integer-predecessor).

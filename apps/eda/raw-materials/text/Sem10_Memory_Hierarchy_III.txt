@@ -1,0 +1,1487 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Jerarquía de Memoria III
+Semana 10
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+16 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir el layout de van Emde Boas de un árbol binario de búsqueda
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir el layout de van Emde Boas de un árbol binario de búsqueda
+ ▶ Demostrar que una búsqueda sobre ese layout cuesta O(logB N)
+   transferencias para cualquier B
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir el layout de van Emde Boas de un árbol binario de búsqueda
+ ▶ Demostrar que una búsqueda sobre ese layout cuesta O(logB N)
+   transferencias para cualquier B
+ ▶ Volver dinámica la estructura combinándola con un arreglo con huecos
+   (Ordered File Maintenance)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir el layout de van Emde Boas de un árbol binario de búsqueda
+ ▶ Demostrar que una búsqueda sobre ese layout cuesta O(logB N)
+   transferencias para cualquier B
+ ▶ Volver dinámica la estructura combinándola con un arreglo con huecos
+   (Ordered File Maintenance)
+ ▶ Usar indirección para que insertar y eliminar también cuesten O(logB N)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Dónde quedamos
+En el modelo cache-oblivious el algoritmo no conoce B. Un árbol binario guar-
+dado por niveles, en orden o en preorden cuesta Θ(lg(N/B)) por búsqueda,
+lejos del Θ(logB+1 N) del B-Tree.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     3 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Dónde quedamos
+En el modelo cache-oblivious el algoritmo no conoce B. Un árbol binario guar-
+dado por niveles, en orden o en preorden cuesta Θ(lg(N/B)) por búsqueda,
+lejos del Θ(logB+1 N) del B-Tree.
+
+¿Se puede igualar al B-Tree sin saber cuánto vale B?
+
+Hoy: sí, y en dos tiempos
+Primero una estructura estática, que solo busca. Después la volvemos
+dinámica en cuatro pasos, apoyados en una caja negra que abriremos la
+próxima clase.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     3 / 30
+El layout de van Emde Boas
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El layout de van Emde Boas
+
+
+
+
+                                             A
+
+
+                      C1           C2              ···                 Ck
+
+
+
+
+Definición recursiva
+Se corta el árbol, de altura h, a la√mitad de su altura: queda un árbol superior
+A de altura h/2 y, debajo, unos N subárboles C1 , . . . , Ck de altura h/2.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        5 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El layout de van Emde Boas
+
+
+
+
+                                                    A
+
+
+                         C1               C2            ···            Ck
+
+
+
+
+          memoria       A         C1           C2             ···       Ck
+
+
+
+Definición recursiva
+En memoria se guarda primero A y después C1 , C2 , . . . , Ck , uno tras otro.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         5 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El layout de van Emde Boas
+
+
+
+
+                                                    A
+
+
+                         C1               C2            ···            Ck
+
+
+
+
+          memoria       A         C1           C2             ···       Ck
+
+
+
+Definición recursiva
+Y cada pieza se guarda, a su vez, con el mismo criterio: se corta a media
+altura y se repite, hasta llegar a nodos sueltos.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         5 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    En un árbol de 15 nodos
+
+
+
+
+                                               1
+
+                            2                                      3
+
+                 4                   7                  10                    13
+
+            5         6         8         9        11        12          14        15
+
+
+
+
+          Altura 4. Cada nodo muestra la posición de memoria que le toca.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                  6 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    En un árbol de 15 nodos
+
+
+
+
+                                               1
+
+                            2                                      3
+
+                 4                   7                  10                    13
+
+            5         6         8         9        11        12          14        15
+
+
+
+
+     El corte a media altura deja una pieza superior de 3 nodos y cuatro piezas
+                                inferiores de 3 nodos.
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                  6 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    En un árbol de 15 nodos
+
+
+
+
+                                               1
+
+                            2                                      3
+
+                 4                   7                  10                    13
+
+            5         6         8         9        11        12          14        15
+
+
+
+             1   2    3     4   5    6    7    8    9   10   11   12     13   14   15
+
+
+
+
+   En memoria: la pieza superior y luego las cuatro inferiores, cada una en celdas
+                                   consecutivas.
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                  6 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿En qué se diferencia del orden por niveles?
+
+
+
+          Layout              Orden en que se guardan los nodos
+          Por niveles         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+          van Emde Boas       1, 2, 3, 4, 8, 9, 5, 10, 11, 6, 12, 13, 7, 14, 15
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              7 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿En qué se diferencia del orden por niveles?
+
+
+
+          Layout              Orden en que se guardan los nodos
+          Por niveles         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+          van Emde Boas       1, 2, 3, 4, 8, 9, 5, 10, 11, 6, 12, 13, 7, 14, 15
+
+
+Un nodo queda junto a sus hijos, en todas las escalas
+Numerando los nodos por niveles: en ese orden, el nodo 4 está a cuatro celdas
+de sus hijos 8 y 9, y esa distancia se duplica en cada nivel. En el layout de
+van Emde Boas, 4, 8 y 9 son vecinos.
+
+Y el layout no menciona a B
+La recursión baja hasta nodos sueltos. No hay ningún parámetro que elegir:
+es un orden fijo de los nodos del árbol.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              7 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto cuesta una búsqueda?
+
+
+
+
+          altura
+          ≤ lg B
+                                                                       lg N
+
+
+
+
+El análisis sí puede usar B
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          8 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto cuesta una búsqueda?
+
+
+
+
+          altura
+          ≤ lg B
+                                                                       lg N
+
+
+
+
+El análisis sí puede usar B
+Seguimos la recursión del layout hasta el primer nivel en que las piezas tienen
+altura ≤ lg B. En ese nivel, cada pieza tiene altura entre 21 lg B y lg B: entre
+√
+  B y B nodos.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          8 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto cuesta una búsqueda?
+
+
+
+
+          altura
+          ≤ lg B
+                                                                       lg N
+
+
+
+
+El análisis sí puede usar B
+Seguimos la recursión del layout hasta el primer nivel en que las piezas tienen
+altura ≤ lg B. En ese nivel, cada pieza tiene altura entre 21 lg B y lg B: entre
+√
+  B y B nodos.
+
+Una búsqueda es un camino de la raíz a una hoja: atraviesa algunas de esas piezas,
+                             una debajo de otra.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          8 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contando piezas y bloques
+
+
+¿Cuántas piezas atraviesa el camino?
+El camino mide lg N y cada pieza aporta al menos 12 lg B: a lo más 2 logB N
+piezas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contando piezas y bloques
+
+
+¿Cuántas piezas atraviesa el camino?
+El camino mide lg N y cada pieza aporta al menos 12 lg B: a lo más 2 logB N
+piezas.
+                                      bloques de tamaño B
+                              pieza
+
+
+
+¿Cuántos bloques ocupa una pieza?
+Tiene a lo más B nodos consecutivos: cabe en un bloque, salvo que caiga
+partida entre dos. A lo más 2.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contando piezas y bloques
+
+
+¿Cuántas piezas atraviesa el camino?
+El camino mide lg N y cada pieza aporta al menos 12 lg B: a lo más 2 logB N
+piezas.
+                                      bloques de tamaño B
+                              pieza
+
+
+
+¿Cuántos bloques ocupa una pieza?
+Tiene a lo más B nodos consecutivos: cabe en un bloque, salvo que caiga
+partida entre dos. A lo más 2.
+
+Teorema
+Buscar en un árbol con layout de van Emde Boas cuesta a lo más 4 logB N =
+O(logB+1 N) transferencias, para todo B.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El tablero de layouts
+
+
+
+           Estructura                           Transferencias         ¿Conoce B?
+           Nodos dispersos                         Θ(lg N)                No
+           Por niveles, en orden, preorden       Θ(lg(N/B))               No
+           B-Tree                                Θ(logB+1 N)              Sí
+           Layout de van Emde Boas               O(logB+1 N)              No
+
+
+Óptimo en todas las fronteras de la jerarquía a la vez
+El mismo arreglo es eficiente entre caché y RAM y entre RAM y disco: el
+análisis vale para cada B por separado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                10 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El tablero de layouts
+
+
+
+           Estructura                           Transferencias         ¿Conoce B?
+           Nodos dispersos                         Θ(lg N)                No
+           Por niveles, en orden, preorden       Θ(lg(N/B))               No
+           B-Tree                                Θ(logB+1 N)              Sí
+           Layout de van Emde Boas               O(logB+1 N)              No
+
+
+Óptimo en todas las fronteras de la jerarquía a la vez
+El mismo arreglo es eficiente entre caché y RAM y entre RAM y disco: el
+análisis vale para cada B por separado.
+
+Pero es una estructura estática
+El árbol es perfecto y sus nodos tienen una posición fija en un arreglo. No
+sabemos insertar ni eliminar.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                10 / 30
+Volviéndonos dinámicos
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué se rompe al insertar?
+
+
+
+
+Dos problemas distintos
+ ▶ El arreglo no tiene lugar: meter una clave en medio obliga a desplazar
+   todo lo que viene después.
+ ▶ La forma del árbol es rígida: es un árbol perfecto, y su layout depende
+   de esa forma.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué se rompe al insertar?
+
+
+
+
+Dos problemas distintos
+ ▶ El arreglo no tiene lugar: meter una clave en medio obliga a desplazar
+   todo lo que viene después.
+ ▶ La forma del árbol es rígida: es un árbol perfecto, y su layout depende
+   de esa forma.
+
+La estrategia
+Separar las dos cosas. Las claves vivirán en un arreglo con huecos, pensado
+para insertar. El árbol con layout de van Emde Boas quedará encima, como
+índice, y su forma casi nunca cambiará.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordered File Maintenance (OFM)
+
+
+                    arreglo de tamaño O(N), con huecos de tamaño O(1)
+
+          3         7   9        16   21       42        50   58       61   70
+
+
+
+El problema
+ ▶ Guardar N elementos, en un orden dado, en un arreglo de tamaño
+   O(N).
+ ▶ Entre dos elementos consecutivos hay a lo más O(1) celdas vacías:
+   recorrer k elementos sigue costando O(1 + k/B).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             13 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordered File Maintenance (OFM)
+
+
+                    arreglo de tamaño O(N), con huecos de tamaño O(1)
+
+          3         7   9        16   21       42        50   58       61   70
+
+
+
+El problema
+ ▶ Guardar N elementos, en un orden dado, en un arreglo de tamaño
+   O(N).
+ ▶ Entre dos elementos consecutivos hay a lo más O(1) celdas vacías:
+   recorrer k elementos sigue costando O(1 + k/B).
+ ▶ Insert y Delete reacomodan O(lg2 N) celdas consecutivas,
+                       2
+   amortizado: O 1 + lgBN transferencias.
+                         
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             13 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordered File Maintenance (OFM)
+
+
+                    arreglo de tamaño O(N), con huecos de tamaño O(1)
+
+          3         7   9        16   21       42        50   58       61   70
+
+
+
+El problema
+ ▶ Guardar N elementos, en un orden dado, en un arreglo de tamaño
+   O(N).
+ ▶ Entre dos elementos consecutivos hay a lo más O(1) celdas vacías:
+   recorrer k elementos sigue costando O(1 + k/B).
+ ▶ Insert y Delete reacomodan O(lg2 N) celdas consecutivas,
+                       2
+   amortizado: O 1 + lgBN transferencias.
+                         
+
+
+     Por ahora es una caja negra. Cómo se logra es el tema de la próxima clase.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             13 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: un árbol sobre el OFM
+
+
+                                          42
+
+                       9                                      42
+
+              3                  9                  16                   42
+
+          3       −∞        7         9        −∞        16        21         42
+
+
+          3        /        7         9         /        16        21         42   OFM
+
+
+La construcción
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   14 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: un árbol sobre el OFM
+
+
+                                          42
+
+                       9                                      42
+
+              3                  9                  16                   42
+
+          3       −∞        7         9        −∞        16        21         42
+
+
+          3        /        7         9         /        16        21         42   OFM
+
+
+La construcción
+Las celdas del OFM son las hojas de un árbol binario perfecto, guardado con
+layout de van Emde Boas. Cada hoja está enlazada con su celda, en ambos
+sentidos.
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   14 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: un árbol sobre el OFM
+
+
+                                          42
+
+                       9                                      42
+
+              3                  9                  16                   42
+
+          3       −∞        7         9        −∞        16        21         42
+
+
+          3        /        7         9         /        16        21         42   OFM
+
+
+La construcción
+Las celdas del OFM son las hojas de un árbol binario perfecto, guardado con
+layout de van Emde Boas. Cada hoja está enlazada con su celda, en ambos
+sentidos.
+Cada nodo interno guarda el máximo de su subárbol. Un hueco (“/”) cuenta como
+                                   −∞.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   14 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          9        −∞        16        21        42
+
+
+          3        /        7          9        /         16        21        42   OFM
+
+
+
+        Buscar el 16. En cada nodo miramos el máximo de su hijo izquierdo.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   15 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          9        −∞        16        21        42
+
+
+          3        /        7          9        /         16        21        42   OFM
+
+
+
+   El hijo izquierdo de la raíz tiene máximo 9 < 16: el 16 no está ahí. Vamos a la
+                                        derecha.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   15 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          9        −∞        16        21        42
+
+
+          3        /        7          9        /         16        21        42   OFM
+
+
+
+               Ahora el hijo izquierdo tiene máximo 16 ≥ 16: izquierda.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   15 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          9        −∞        16        21        42
+
+
+          3        /        7          9        /         16        21        42   OFM
+
+
+
+El hijo izquierdo es un hueco: derecha. Llegamos a la hoja 16, por un camino de la
+                    raíz a una hoja: O(logB+1 N) transferencias.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   15 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 2: actualizar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          9        −∞        16        21        42
+
+
+          3        /        7          9        /         16        21        42   OFM
+
+
+
+       Insertar el 8. Primero se busca su sucesor, el 9: ya sabemos dónde va.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   16 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 2: actualizar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          9        −∞        16        21        42
+
+
+          3        /        7          8        9         16        21        42   OFM
+
+
+
+  Se inserta en el OFM, que reacomoda un tramo de celdas consecutivas: el 9 se
+                                 corre al hueco.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   16 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 2: actualizar
+
+
+
+
+                                           42
+
+                        9                                      42
+
+               3                  9                  16                  42
+
+          3        −∞       7          8        9         16        21        42
+
+
+          3        /        7          8        9         16        21        42   OFM
+
+
+
+           Las hojas enlazadas con las celdas que cambiaron se actualizan.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   16 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 2: actualizar
+
+
+
+
+                                           42
+
+                        8                                      42
+
+               3                  8                  16                  42
+
+          3        −∞       7          8        9         16        21        42
+
+
+          3        /        7          8        9         16        21        42   OFM
+
+
+
+Y los máximos se recalculan hacia arriba, en postorden: cada nodo después de sus
+                                    dos hijos.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                   16 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y la forma del árbol?
+
+
+
+
+No cambia
+Una inserción cambia los valores del OFM y del árbol, pero no cuántas celdas
+hay ni qué hoja corresponde a cada celda.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y la forma del árbol?
+
+
+
+
+No cambia
+Una inserción cambia los valores del OFM y del árbol, pero no cuántas celdas
+hay ni qué hoja corresponde a cada celda.
+
+Solo cuando el arreglo se queda chico o grande
+Si la cantidad de elementos se duplica (o se reduce a la mitad), se
+reconstruye todo con un arreglo del tamaño adecuado. Como en una tabla
+dinámica, eso cuesta O(1) amortizado por operación.
+
+Estado actual: buscar cuesta O(logB+1 N). Falta saber cuánto cuesta propagar los
+                              cambios por el árbol.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       17 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 3: ¿qué partes del árbol cambian?
+
+
+
+
+                                                                       OFM
+
+                                  O(lg2 N) celdas consecutivas
+
+
+ El OFM tocó un tramo de O(lg2 N) celdas consecutivas. Hay que actualizar todos
+                                sus ancestros.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         18 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 3: ¿qué partes del árbol cambian?
+
+
+
+
+                                                                       capa 1
+
+
+
+                                                                 OFM
+
+                             O(lg2 N) celdas consecutivas
+
+
+  Capa 1: las piezas de tamaño ≤ B de los dos niveles más bajos de la recursión,
+                                sobre el tramo.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            18 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 3: ¿qué partes del árbol cambian?
+
+
+
+
+                                                                       capa 2
+
+
+
+                                                                       capa 1
+
+
+
+                                                                 OFM
+
+                             O(lg2 N) celdas consecutivas
+
+
+  Capa 2: lo que queda entre esas piezas y el ancestro común más bajo de todo el
+                                      tramo.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            18 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 3: ¿qué partes del árbol cambian?
+
+
+
+
+                                                                       capa 3
+
+
+
+                                                                       capa 2
+
+
+
+                                                                       capa 1
+
+
+
+                                                                 OFM
+
+                             O(lg2 N) celdas consecutivas
+
+
+              Capa 3: el camino desde ese ancestro común hasta la raíz.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            18 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Capa 1: las piezas pequeñas
+
+
+
+
+Cada pieza cabe en dos bloques
+Son piezas de a lo más B nodos consecutivos. Sobre un tramo de O(lg2 N)
+                   2
+hojas hay O 1 + lgBN de ellas.
+                     
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   19 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Capa 1: las piezas pequeñas
+
+
+
+
+Cada pieza cabe en dos bloques
+Son piezas de a lo más B nodos consecutivos. Sobre un tramo de O(lg2 N)
+                   2
+hojas hay O 1 + lgBN de ellas.
+                     
+
+
+El postorden las visita de forma ordenada
+Al recorrer en postorden los dos niveles más bajos, el algoritmo alterna entre
+una pieza hija y su pieza padre. Con 4 bloques en memoria (dos por cada
+una) nunca hay que volver a traer una pieza ya visitada.
+                              2
+  Costo de la capa 1: O 1 + lgBN transferencias, lo mismo que costó modificar el
+                                
+
+                        OFM. Solo usamos que M ≥ 4B.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        19 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Capas 2 y 3: hacia la raíz
+
+
+Capa 2: hasta el ancestro común más bajo
+                          2
+Un árbol binario con O lgBN nodos. Podemos pagar una transferencia por
+                             
+
+cada nodo sin superar lo ya gastado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   20 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Capas 2 y 3: hacia la raíz
+
+
+Capa 2: hasta el ancestro común más bajo
+                          2
+Un árbol binario con O lgBN nodos. Podemos pagar una transferencia por
+                             
+
+cada nodo sin superar lo ya gastado.
+
+Capa 3: del ancestro común a la raíz
+Es un tramo de un camino hacia la raíz. Por el mismo argumento que en la
+búsqueda, cuesta O(logB+1 N).
+
+Estado actual
+Insertar y eliminar cuestan
+                                            lg2 N 
+                                O logB+1 N +
+                                               B
+transferencias amortizadas.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   20 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Es suficiente?
+
+
+
+Queremos O(logB+1 N), como el B-Tree
+               2
+El término lgBN sobra. ¿Cuándo molesta?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Es suficiente?
+
+
+
+Queremos O(logB+1 N), como el B-Tree
+               2
+El término lgBN sobra. ¿Cuándo molesta?
+
+Comparando los dos términos
+ lg2 N lg N
+   B ≤ lg B equivale a B ≥ lg N · lg B. Con bloques grandes no hay
+problema, pero si B es pequeño comparado con lg N, el segundo término
+domina.
+
+Como no conocemos B, la cota tiene que valer también para bloques
+pequeños. ¿Cómo se le quita un factor lg N al costo de actualizar?
+Haciendo que la estructura cara se actualice solo una de cada lg N veces.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 4: indirección
+
+
+
+
+                                        árbol vEB + OFM
+                                     sobre N/ lg N elementos
+
+
+
+
+              Θ(lg N)       elementos por grupo, en celdas consecutivas
+
+
+
+Dos niveles
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   22 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 4: indirección
+
+
+
+
+                                árbol vEB + OFM
+                             sobre N/ lg N elementos
+
+
+
+
+                                                                       mínimos
+
+         Θ(lg N)    elementos por grupo, en celdas consecutivas
+
+
+
+Dos niveles
+Abajo, los N elementos en grupos de Θ(lg N). Arriba, la estructura de los
+pasos 1 a 3, pero guardando solo un representante por grupo: su mínimo.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             22 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar y actualizar con indirección
+
+
+
+Buscar
+Arriba se ubica el grupo: O(logB+1 N). Abajo se recorre ese grupo: O 1 +
+lg N 
+ B . Total O(logB+1 N).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar y actualizar con indirección
+
+
+
+Buscar
+Arriba se ubica el grupo: O(logB+1 N). Abajo se recorre ese grupo: O 1 +
+lg N 
+ B . Total O(logB+1 N).
+
+
+Insertar o eliminar
+Se reescribe el grupo entero: O 1+ lgBN . La estructura de arriba no se entera,
+                                       
+
+salvo que cambie el mínimo o el grupo cambie de tamaño.
+
+Los grupos se mantienen entre un cuarto llenos y llenos
+Un grupo que se llena se parte en dos; uno que queda muy vacío se fusiona
+con un vecino. Después de partir o fusionar, hacen falta Ω(lg N)
+actualizaciones en ese grupo para que vuelva a ocurrir.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      23 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El costo amortizado
+
+
+
+
+La estructura de arriba se toca una de cada Ω(lg N) veces
+                                                     2
+Cada partición o fusión cuesta arriba O logB+1 N + lgBN , y se reparte entre
+                                                       
+
+las Ω(lg N) actualizaciones que la provocaron.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   24 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El costo amortizado
+
+
+
+
+La estructura de arriba se toca una de cada Ω(lg N) veces
+                                                     2
+Cada partición o fusión cuesta arriba O logB+1 N + lgBN , y se reparte entre
+                                                       
+
+las Ω(lg N) actualizaciones que la provocaron.
+
+Sumando lo de arriba y lo de abajo
+                                          2           !
+                        logB+1 N + lgBN
+                                                                         
+                                          lg N                     lg N
+                   O                    +                 =O
+                             lg N          B                        B
+
+                                  2
+  El término molesto bajó de lgBN a lgBN , que es O(logB+1 N) para todo B. Y de
+        todas formas hay que hacer una búsqueda para saber dónde insertar.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          24 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El resultado
+
+
+Teorema (cache-oblivious B-Tree)
+Existe una estructura que no conoce B ni M y soporta Search, Insert
+y Delete en O(logB+1 N) transferencias (amortizado para las actualizacio-
+nes).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El resultado
+
+
+Teorema (cache-oblivious B-Tree)
+Existe una estructura que no conoce B ni M y soporta Search, Insert
+y Delete en O(logB+1 N) transferencias (amortizado para las actualizacio-
+nes).
+
+       Ingrediente                    Para qué sirve
+       Layout de van Emde Boas        Buscar en O(logB+1 N) sin conocer B
+       Ordered File Maintenance       Insertar manteniendo el orden físico
+       Máximos y postorden            Propagar cambios con localidad
+       Indirección                    Quitar un factor lg N a las actualizaciones
+
+
+Queda una deuda
+Todo se apoya en que el OFM reacomoda solo O(lg2 N) celdas consecutivas
+por actualización. La próxima clase abrimos esa caja.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                25 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Layout de van Emde Boas: cortar el árbol a media altura, guardar la
+   parte superior y luego las inferiores, recursivamente.
+                                                          √
+ ▶ En el nivel de la recursión con piezas de tamaño entre B y B, un
+   camino cruza ≤ 2 logB N piezas de ≤ 2 bloques: buscar cuesta
+   O(logB+1 N).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Layout de van Emde Boas: cortar el árbol a media altura, guardar la
+   parte superior y luego las inferiores, recursivamente.
+                                                          √
+ ▶ En el nivel de la recursión con piezas de tamaño entre B y B, un
+   camino cruza ≤ 2 logB N piezas de ≤ 2 bloques: buscar cuesta
+   O(logB+1 N).
+ ▶ Versión dinámica: las claves en un OFM, y encima un árbol de máximos
+                                                    2
+   con ese layout. Actualizar cuesta O logB+1 N + lgBN .
+                                                      
+
+ ▶ Con indirección (grupos de Θ(lg N) elementos), las actualizaciones
+   bajan a O(logB+1 N).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    26 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos escribir el layout de van Emde Boas de un árbol pequeño
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos escribir el layout de van Emde Boas de un árbol pequeño
+ ▶ Sabemos demostrar la cota 4 logB N de la búsqueda
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos escribir el layout de van Emde Boas de un árbol pequeño
+ ▶ Sabemos demostrar la cota 4 logB N de la búsqueda
+ ▶ Sabemos describir cómo se combinan el árbol y el OFM, y analizar el
+   costo de propagar una actualización
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos escribir el layout de van Emde Boas de un árbol pequeño
+ ▶ Sabemos demostrar la cota 4 logB N de la búsqueda
+ ▶ Sabemos describir cómo se combinan el árbol y el OFM, y analizar el
+   costo de propagar una actualización
+ ▶ Sabemos explicar qué resuelve la indirección y por qué el resultado final
+   es O(logB+1 N)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Prokop, H. (1999). Cache-oblivious algorithms. Tesis de maestría, MIT.
+ ▶ Bender, M. A., Demaine, E. D., & Farach-Colton, M. (2000).
+   Cache-oblivious B-trees. Proceedings of FOCS’00, 399–409.
+ ▶ Bender, M. A., Duan, Z., Iacono, J., & Wu, J. (2002). A
+   locality-preserving cache-oblivious dynamic dictionary. Proceedings of
+   SODA’02, 29–38.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 30
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 30
+

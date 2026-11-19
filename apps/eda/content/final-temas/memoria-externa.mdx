@@ -1,0 +1,311 @@
+---
+title: "Modelo de memoria externa"
+summary: "Las cuentas del modelo: N/B para escanear, log_B N para buscar, la cota de ordenamiento y el mergesort externo, B-Tree frente a BST y el layout vEB que logra log_B N sin conocer B."
+order: 2
+prioridad: "tema prioritario (respaldo 2)"
+lista: ["L6", "L7", "L8", "L9", "L10", "S2a", "S2b", "S2c", "S2d"]
+items:
+  # ───── Predicción 1: las cuentas del modelo ─────
+  - level: 2
+    etiqueta: "Predicción 1 · Las cuentas del modelo · (a) Conocimientos (3 pts)"
+    statement: >-
+      Un disco guarda $N = 2^{30}$ claves; los bloques tienen $B = 2^{12}$ claves y la memoria $M = 2^{24}$ claves. Da, con el orden y el valor numérico: (a) el costo de recorrer todas las claves; (b) una búsqueda en un BST balanceado con un nodo por bloque, una búsqueda binaria sobre el arreglo ordenado y una búsqueda en un B-Tree de $B$ claves por nodo; (c) pedir las $K = 2^{20}$ claves consecutivas desde una dada en el B-Tree; (d) ordenar con mergesort externo (runs del tamaño de la memoria y mezcla de $M/B$ vías): número de runs, pasadas y transferencias.
+    hints:
+      - >-
+        $\lg N = 30$, $\lg B = 12$, $\lg(N/B) = 18$, $M/B = 2^{12}$.
+      - >-
+        Cada pasada completa del mergesort lee y escribe todo: $2N/B$.
+    solution: |-
+      **(a) Escaneo:** $N/B = 2^{18} = 262\,144$ transferencias, $\Theta(N/B)$.
+
+      **(b) Búsquedas:**
+
+      - BST balanceado, un nodo por bloque: $\lg N = 30$ transferencias, $\Theta(\lg N)$.
+      - Búsqueda binaria sobre el arreglo: los últimos $\lg B = 12$ pasos caen en el mismo bloque, así que cuesta $\lg(N/B) = 18$ transferencias, $\Theta(\lg (N/B))$.
+      - B-Tree: altura $\lceil \log_B N\rceil = \lceil 30/12 \rceil = 3$ transferencias, $\Theta(\log_B N)$.
+
+      **(c) Rango:** $O(\log_B N + K/B)$: 3 para llegar más $2^{20}/2^{12} = 256$ hojas consecutivas, unas **259** transferencias.
+
+      **(d) Mergesort externo:**
+
+      - Runs: $N/M = 2^6 = 64$; formarlos lee y escribe todo: $2N/B = 2^{19}$.
+      - Mezcla de $M/B = 2^{12} \ge 64$ vías: **una** pasada, otras $2N/B = 2^{19}$.
+      - Total $2 \cdot 2^{19} = 2^{20} \approx 1.05 \cdot 10^6$ transferencias, que es $\Theta\!\left(\frac{N}{B}\log_{M/B}\frac{N}{B}\right)$ con $\log_{2^{12}} 2^{18} = 1.5$.
+  - level: 6
+    etiqueta: "Predicción 1 · Las cuentas del modelo · (b) Análisis (3 pts)"
+    statement: >-
+      (i) Demuestra que cualquier algoritmo de búsqueda por comparaciones en el modelo de memoria externa necesita $\Omega(\log_{B+1} N)$ transferencias, y que el B-Tree la alcanza. (ii) Demuestra que el mergesort externo con runs de tamaño $M$ y mezcla de $M/B$ vías cuesta $O\!\left(\frac{N}{B}\log_{M/B}\frac{N}{B}\right)$ transferencias.
+    hints:
+      - >-
+        Al traer un bloque con $B$ claves, la posición de la consulta respecto de ellas tiene a lo más $B+1$ resultados posibles.
+      - >-
+        Cada pasada de mezcla divide el número de runs por $M/B$ y cuesta $2N/B$.
+    solution: |-
+      **(i) Cota inferior.** Lo que hay que averiguar es en cuál de los $N + 1$ huecos entre claves cae la consulta. Un bloque nuevo trae $B$ claves y la consulta sólo puede quedar en uno de $B + 1$ intervalos respecto de ellas: cada transferencia multiplica la información obtenida por a lo más $B + 1$. Tras $t$ transferencias se distinguen a lo más $(B+1)^t$ respuestas, así que $(B+1)^t \ge N + 1$ y $t \ge \log_{B+1}(N+1) = \Omega(\log_{B+1} N)$. El B-Tree con $\Theta(B)$ claves por nodo tiene altura $\Theta(\log_B N)$ y lee un bloque por nivel: es óptimo.
+
+      **(ii) Mergesort.** Formar runs: se lee un trozo de $M$ claves, se ordena en memoria (gratis en el modelo) y se escribe: $2N/B$ transferencias, $N/M$ runs. Una pasada de mezcla con $k = M/B - 1 \approx M/B$ vías guarda un bloque de cada run en memoria (de ahí el límite $M/B$): lee y escribe todo una vez, $2N/B$, y divide el número de runs por $k$. Hacen falta $\lceil \log_{M/B}(N/M)\rceil$ pasadas. Total:
+
+      $$\frac{2N}{B}\left(1 + \left\lceil \log_{M/B}\frac{N}{M}\right\rceil\right) = O\!\left(\frac{N}{B}\log_{M/B}\frac{N}{B}\right),$$
+
+      porque $1 + \log_{M/B}(N/M) = \log_{M/B}(N/B)$ (ya que $\frac{N}{M}\cdot\frac{M}{B} = \frac{N}{B}$).
+  - level: 5
+    etiqueta: "Predicción 1 · Las cuentas del modelo · (c) Diseño (2 pts)"
+    statement: >-
+      Sobre el archivo ordenado de $N = 2^{30}$ claves (con $B = 2^{12}$, $M = 2^{24}$) llega un lote de $Q$ consultas de pertenencia, todas conocidas de antemano. Opción 1: un B-Tree y una búsqueda por consulta. Opción 2: ordenar las consultas y recorrer archivo y consultas a la vez, como en una mezcla. Da el costo de cada opción para $Q = 2^{20}$ y el valor de $Q$ a partir del cual conviene la opción 2.
+    hints:
+      - >-
+        $2^{20}$ consultas caben en memoria: ordenarlas cuesta leerlas.
+      - >-
+        La mezcla lee el archivo completo una vez.
+    solution: |-
+      **Opción 1.** $Q \cdot \lceil \log_B N\rceil = 3Q$ transferencias: con $Q = 2^{20}$, $\approx 3.1 \cdot 10^6$.
+
+      **Opción 2.** Ordenar las consultas: $Q = 2^{20} \le M$, así que se leen ($Q/B = 256$ transferencias) y se ordenan en memoria. Luego un recorrido simultáneo: $N/B = 2^{18}$ del archivo. Total $\approx 2^{18} + 2^8 \approx 2.6 \cdot 10^5$, **12 veces menos**. (Si $Q > M$, ordenarlas cuesta $\mathrm{sort}(Q)$, que sigue siendo $O(\frac QB \log_{M/B}\frac QB)$.)
+
+      **Umbral.** La opción 2 gana cuando $3Q > N/B$, es decir $Q > 2^{18}/3 \approx 87\,000$ consultas. En general: cuando $Q \log_B N > N/B$, recorrer todo es más barato que buscar una por una.
+  - level: 4
+    etiqueta: "Predicción 1 · Las cuentas del modelo · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone (i) reemplazar el B-Tree por búsqueda binaria sobre el arreglo ordenado "porque ambos son logarítmicos", y (ii) acelerar el mergesort mezclando con $2M/B$ vías "para tener la mitad de pasadas". Evalúa ambas propuestas con $N = 2^{30}$, $B = 2^{12}$, $M = 2^{24}$.
+    hints:
+      - >-
+        La base del logaritmo importa: $\lg(N/B)$ frente a $\log_B N$.
+      - >-
+        Una mezcla de $k$ vías necesita un bloque de cada run en memoria a la vez.
+    solution: |-
+      **(i)** Búsqueda binaria: $\lg(N/B) = 18$ transferencias; B-Tree: $\log_B N \approx 3$. Son 6 veces más. En general $\lg(N/B) = \lg N - \lg B$ frente a $\lg N / \lg B$: la binaria sólo ahorra los últimos $\lg B$ pasos, el B-Tree **divide** por $\lg B$. "Logarítmico" no basta: en este modelo la base es lo que importa.
+
+      **(ii)** Con $k$ vías hace falta un búfer de un bloque por run más uno de salida: $(k+1)B \le M$, así que $k \le M/B - 1$. Con $2M/B$ vías los búferes no caben: o se descartan bloques y se vuelven a leer (cada lectura de una clave puede costar una transferencia, $\Theta(N)$ en lugar de $\Theta(N/B)$ por pasada), o la mezcla no se puede hacer. Además, con $N/M = 64$ runs ya basta una pasada: no hay nada que ahorrar.
+  # ───── Predicción 2: layouts y el árbol estático ─────
+  - level: 2
+    etiqueta: "Predicción 2 · Layouts de un árbol estático · (a) Conocimientos (3 pts)"
+    statement: >-
+      El BST perfecto de llaves $1, \dots, 15$ se guarda con bloques de $B = 4$ nodos (los bloques empiezan en la posición 0 del arreglo). (a) Escribe el layout vEB y el BFS divididos en bloques. (b) Para buscar 5, 7 y 13, ¿cuántos bloques se leen con cada layout? (c) ¿Por qué con vEB una búsqueda puede leer 3 bloques si cada pieza tiene 3 nodos y $B = 4$?
+    hints:
+      - >-
+        vEB: arriba 8, 4, 12; abajo, cada pieza raíz–izquierdo–derecho: 2 1 3, 6 5 7, 10 9 11, 14 13 15.
+      - >-
+        Una pieza de 3 nodos puede quedar repartida entre dos bloques.
+    solution: |-
+      **(a)**
+
+      - vEB: `8 4 12 2 | 1 3 6 5 | 7 10 9 11 | 14 13 15`
+      - BFS: `8 4 12 2 | 6 10 14 1 | 3 5 7 9 | 11 13 15`
+
+      **(b)** Caminos: 5 recorre 8, 4, 6, 5; 7 recorre 8, 4, 6, 7; 13 recorre 8, 12, 14, 13.
+
+      - vEB: buscar 5 lee los bloques 0 (8, 4) y 1 (6, 5): **2**. Buscar 7: 0, 1 (6) y 2 (7): **3**. Buscar 13: 0 (8, 12) y 3 (14, 13): **2**.
+      - BFS: buscar 5: 0, 1 (6), 2 (5): **3**. Buscar 7: 0, 1, 2: **3**. Buscar 13: 0, 1 (14), 3 (13): **3**.
+
+      **(c)** Con $B = 4$ las piezas de 3 nodos no están alineadas con los bloques: la pieza `6 5 7` ocupa las posiciones 6, 7 y 8, y cruza el borde entre los bloques 1 y 2. La garantía del análisis es que cada pieza cabe en **a lo más 2** bloques, no en uno. Por eso la cota es $4\log_B N$ y no $2\log_B N$.
+  - level: 6
+    etiqueta: "Predicción 2 · Layouts de un árbol estático · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra que una búsqueda en un BST perfecto de $N$ nodos con el layout vEB cuesta a lo más $4\log_B N$ transferencias, para todo $B$, aunque el layout no conozca $B$. Demuestra que con el layout BFS cuesta $\Theta(\lg N - \lg B)$.
+    hints:
+      - >-
+        Mira la escala de la recursión en la que las piezas tienen altura entre $\tfrac12\lg B$ y $\lg B$.
+      - >-
+        En BFS los niveles de profundidad $\ge \lg B$ tienen más de $B$ nodos: dos nodos consecutivos del camino caen en bloques distintos.
+    solution: |-
+      **vEB.** El layout parte el árbol por la mitad de su altura y guarda contigua la parte de arriba y luego cada parte de abajo, recursivamente. Se detiene la recursión (sólo en el análisis) en la escala en que las piezas tienen altura $h$ con $\tfrac12 \lg B < h \le \lg B$: existe porque cada nivel de recursión divide la altura por 2. Una pieza tiene $2^h - 1 \le B$ nodos y es contigua, así que ocupa a lo más **2** bloques. Un camino raíz–hoja de altura $\lg N$ cruza a lo más $\lg N / (\tfrac12\lg B) = 2\log_B N$ piezas. Total $\le 2 \cdot 2\log_B N = 4 \log_B N$. Nada de esto usa $B$ en el layout: vale para **todos** los $B$ a la vez.
+
+      **BFS.** Los primeros $\approx \lg B$ niveles tienen $< B$ nodos y comparten pocos bloques: $O(1)$ transferencias. Del nivel $\lg B$ en adelante, un nodo de profundidad $d$ y su hijo están a distancia $\approx 2^d > B$ en el arreglo: cada nivel es un bloque nuevo. Hay $\lg N - \lg B$ niveles así: $\Theta(\lg N - \lg B) = \Theta(\lg(N/B))$, igual que la búsqueda binaria.
+  - level: 5
+    etiqueta: "Predicción 2 · Layouts de un árbol estático · (c) Diseño (2 pts)"
+    statement: >-
+      Un índice estático de $N = 2^{20} - 1$ claves se consulta en una máquina con tres niveles: caché L1 con líneas de $B_1 = 2^3$ claves, caché L2 con $B_2 = 2^6$ y disco con $B_3 = 2^{12}$. Compara, por nivel, las transferencias de una búsqueda con (i) un B-Tree con nodos de $B_3$ claves, (ii) un BST con layout vEB y (iii) un BST con layout BFS. ¿Cuál eliges?
+    hints:
+      - >-
+        Para vEB usa $\approx \log_B N$ como orden y $4\log_B N$ como cota.
+      - >-
+        Dentro de un nodo del B-Tree de $2^{12}$ claves se hace búsqueda binaria: ¿cuántas líneas de caché toca?
+    solution: |-
+      Con $\lg N = 20$:
+
+      - **B-Tree ($B_3$):** disco $\lceil 20/12\rceil = 2$ transferencias, óptimo. Pero dentro de cada nodo de $2^{12}$ claves la búsqueda binaria toca $\lg(2^{12}/2^3) = 9$ líneas de L1 y $\lg(2^{12}/2^6) = 6$ de L2: por los 2 nodos, $\approx 18$ en L1 y $\approx 12$ en L2.
+      - **vEB:** del orden de $\log_B N$ en cada nivel: L1 $\approx 20/3 \approx 7$ (cota 27), L2 $\approx 20/6 \approx 3.3$ (cota 13), disco $\approx 20/12 \approx 1.7$ (cota 7).
+      - **BFS:** $\lg N - \lg B$: L1 $\approx 17$, L2 $\approx 14$, disco $\approx 8$.
+
+      **Elección:** vEB, porque es casi óptimo **en todos los niveles a la vez** sin ajustar parámetros. El B-Tree sólo es óptimo para el $B$ con que se construyó; BFS no aprovecha ningún nivel más allá de los primeros $\lg B$ niveles del árbol.
+  - level: 4
+    etiqueta: "Predicción 2 · Layouts de un árbol estático · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone un layout recursivo "más simple": guardar la raíz y después, recursivamente, el subárbol izquierdo entero y luego el derecho (preorden). Calcula cuántos bloques lee la búsqueda de la hoja más a la derecha en un BST perfecto de $N$ nodos con bloques de $B$, y compáralo con vEB. ¿Qué tiene vEB que el preorden no tiene?
+    hints:
+      - >-
+        En preorden el hijo izquierdo está al lado del padre; el derecho está después de todo el subárbol izquierdo.
+      - >-
+        Un salto de más de $B$ posiciones es un bloque nuevo.
+    solution: |-
+      **Preorden.** El hijo derecho de un nodo cuyo subárbol mide $s$ está a distancia $\approx s/2$ en el arreglo. Bajando siempre a la derecha, mientras $s/2 > B$ cada paso salta a un bloque nuevo: eso ocurre en los primeros $\lg N - \lg B$ niveles. Costo $\Theta(\lg N - \lg B)$, lo mismo que BFS y que la búsqueda binaria.
+
+      **vEB** parte por la **mitad de la altura**, no por un nivel: así cada pieza es un árbol completo pequeño y contiguo, y la recursión produce piezas de todos los tamaños $2^{2^i}$. Hay una escala con piezas de entre $\sqrt B$ y $B$ nodos, cada una en $\le 2$ bloques, y el camino pasa por $O(\log_B N)$ de ellas. El preorden sólo separa un nivel por vez: sus "piezas" (subárboles) son enormes y no contiguas a lo largo de un camino.
+---
+
+import Visualization from '../../src/components/Visualization.astro';
+
+## Qué es probable que pregunten y por qué
+
+- **Cuentas con potencias de 2**: $N/B$, $\lg N$ frente a $\log_B N$, rango $\log_B N + K/B$, runs y pasadas del mergesort. Son los ejercicios 6, 8, 9 y 10 de la lista; el profesor avisó que memoria vendrá más complicado, así que espera que combine varias en un mismo problema (parte (a) con 4–5 cuentas).
+- **El layout vEB a mano** (ejercicio 7) y su cota $4\log_B N$ con la escala entre $\sqrt B$ y $B$ (ejercicio 9c): candidatos a (a) y a (b).
+- **Demostraciones del modelo**: cota inferior $\Omega(\log_{B+1}N)$ de la búsqueda (las láminas de memoria I la desarrollan, "de dónde sale el factor $B+1$") y el costo del mergesort externo.
+- **Diseño con números**: elegir entre estructuras según la proporción de operaciones, como el problema 2(c) del simulacro (arreglo frente a PMA). El PMA es secundario: está resuelto en el simulacro (S2a–S2d).
+
+## Teoría desde cero
+
+### El modelo
+
+| Símbolo | Qué mide |
+| --- | --- |
+| $N$ | número de elementos del problema |
+| $M$ | capacidad de la memoria rápida (en elementos) |
+| $B$ | tamaño de un bloque: lo que trae **una** transferencia |
+| costo | número de **transferencias** de bloques entre disco y memoria; el cómputo en memoria es gratis |
+
+Se supone $1 \le B \le M < N$. Todo lo demás (comparaciones, aritmética) no se cuenta.
+
+### Escanear: $\Theta(N/B)$
+
+Recorrer $N$ elementos contiguos trae cada bloque una vez: $\lceil N/B\rceil$ transferencias (más una si el arreglo no empieza alineado).
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "N = 12 claves contiguas en el disco, bloques de B = 4. Un escaneo trae el bloque 0 completo: la primera transferencia sirve para cuatro claves.",
+      rows: [
+        { id: "d", label: "disco", cells: [
+          { value: 3, tag: "0", state: "active" }, { value: 7, tag: "1", state: "active" }, { value: 9, tag: "2", state: "active" }, { value: 12, tag: "3", state: "active" },
+          { value: 15, tag: "4" }, { value: 18, tag: "5" }, { value: 21, tag: "6" }, { value: 30, tag: "7" },
+          { value: 33, tag: "8" }, { value: 40, tag: "9" }, { value: 41, tag: "10" }, { value: 50, tag: "11" },
+        ]},
+      ],
+      spans: [{ id: "b0", row: "d", from: 0, to: 3, label: "bloque 0" }, { id: "b1", row: "d", from: 4, to: 7, label: "bloque 1" }, { id: "b2", row: "d", from: 8, to: 11, label: "bloque 2" }],
+      caption: "Transferencias: 1.",
+    },
+    {
+      note: "El escaneo termina tras traer los tres bloques. Costo ⌈N/B⌉ = 3, no N = 12: en este modelo leer contiguo es B veces más barato que leer saltando.",
+      rows: [
+        { id: "d", label: "disco", cells: [
+          { value: 3, tag: "0", state: "shared" }, { value: 7, tag: "1", state: "shared" }, { value: 9, tag: "2", state: "shared" }, { value: 12, tag: "3", state: "shared" },
+          { value: 15, tag: "4", state: "shared" }, { value: 18, tag: "5", state: "shared" }, { value: 21, tag: "6", state: "shared" }, { value: 30, tag: "7", state: "shared" },
+          { value: 33, tag: "8", state: "active" }, { value: 40, tag: "9", state: "active" }, { value: 41, tag: "10", state: "active" }, { value: 50, tag: "11", state: "active" },
+        ]},
+      ],
+      spans: [{ id: "b0", row: "d", from: 0, to: 3, label: "bloque 0" }, { id: "b1", row: "d", from: 4, to: 7, label: "bloque 1" }, { id: "b2", row: "d", from: 8, to: 11, label: "bloque 2" }],
+      caption: "Transferencias: 3 = ⌈12/4⌉.",
+    },
+  ],
+}} />
+
+### Buscar: $\Theta(\log_{B+1} N)$, y por qué el B-Tree es óptimo
+
+- **Cota inferior.** Un bloque con $B$ claves sólo deja $B + 1$ posibilidades para la consulta; hay $N+1$ respuestas posibles, así que hacen falta $\log_{B+1}(N+1)$ transferencias.
+- **B-Tree**: nodos de $\Theta(B)$ claves, uno por bloque, altura $\Theta(\log_B N)$: alcanza la cota.
+- **BST balanceado**: $\Theta(\lg N)$, un bloque por nodo. **Búsqueda binaria** sobre arreglo: $\Theta(\lg(N/B))$, sólo los últimos $\lg B$ pasos comparten bloque.
+- **Rango de $K$ claves** en el B-Tree: $O(\log_B N + K/B)$.
+
+$$
+\underbrace{\lg N}_{\text{BST}} \;>\; \underbrace{\lg N - \lg B}_{\text{binaria / BFS}} \;>\; \underbrace{\frac{\lg N}{\lg B}}_{\text{B-Tree / vEB}}
+$$
+
+Con $N = 2^{30}$, $B = 2^{12}$: 30, 18 y 3. El primer salto resta $\lg B$; el segundo **divide** por $\lg B$.
+
+### Ordenar: $\Theta\!\left(\frac NB \log_{M/B}\frac NB\right)$ con mergesort externo
+
+1. **Runs**: se leen trozos de $M$ claves, se ordenan en memoria y se escriben: $N/M$ runs, $2N/B$ transferencias.
+2. **Mezcla de $k \approx M/B$ vías**: un bloque de búfer por run más uno de salida en memoria; cada pasada lee y escribe todo ($2N/B$) y divide el número de runs por $M/B$.
+3. **Pasadas**: $\lceil \log_{M/B} (N/M)\rceil$.
+
+$$
+\underbrace{\frac{2N}{B}}_{\text{una pasada}} \cdot \Big(\underbrace{1}_{\text{runs}} + \underbrace{\big\lceil \log_{M/B} \tfrac NM \big\rceil}_{\text{pasadas de mezcla}}\Big) = O\!\left(\frac NB \log_{M/B} \frac NB\right).
+$$
+
+Mezclar de 2 en 2 cambia la base a 2: $\lceil \lg(N/M) \rceil$ pasadas (ejercicio 8: 8 pasadas en lugar de 1).
+
+### Layout vEB: $\log_B N$ sin conocer $B$
+
+Se parte el árbol por la **mitad de la altura**: la parte de arriba (altura $h/2$) se guarda primero y después cada una de las $\approx \sqrt N$ partes de abajo, todas con el mismo layout recursivo. El ejercicio 7 con $B = 3$:
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "Layout vEB del BST perfecto 1..15: la parte de arriba (8, 4, 12) y luego las cuatro partes de abajo, cada una raíz, izquierdo, derecho. Con B = 3 cada pieza es exactamente un bloque.",
+      rows: [
+        { id: "v", label: "vEB", cells: [
+          { value: 8, tag: "0" }, { value: 4, tag: "1" }, { value: 12, tag: "2" },
+          { value: 2, tag: "3" }, { value: 1, tag: "4" }, { value: 3, tag: "5" },
+          { value: 6, tag: "6" }, { value: 5, tag: "7" }, { value: 7, tag: "8" },
+          { value: 10, tag: "9" }, { value: 9, tag: "10" }, { value: 11, tag: "11" },
+          { value: 14, tag: "12" }, { value: 13, tag: "13" }, { value: 15, tag: "14" },
+        ]},
+      ],
+      spans: [
+        { id: "s0", row: "v", from: 0, to: 2, label: "arriba" }, { id: "s1", row: "v", from: 3, to: 5, label: "abajo 1" },
+        { id: "s2", row: "v", from: 6, to: 8, label: "abajo 2" }, { id: "s3", row: "v", from: 9, to: 11, label: "abajo 3" },
+        { id: "s4", row: "v", from: 12, to: 14, label: "abajo 4" },
+      ],
+      caption: "5 piezas contiguas de 3 nodos.",
+    },
+    {
+      note: "Buscar 5 recorre 8, 4 (pieza de arriba) y 6, 5 (pieza abajo 2). Sólo se leen 2 bloques: cada pieza aporta lg B niveles del camino de una sola vez.",
+      rows: [
+        { id: "v", label: "vEB", cells: [
+          { value: 8, tag: "0", state: "active" }, { value: 4, tag: "1", state: "active" }, { value: 12, tag: "2" },
+          { value: 2, tag: "3", state: "muted" }, { value: 1, tag: "4", state: "muted" }, { value: 3, tag: "5", state: "muted" },
+          { value: 6, tag: "6", state: "active" }, { value: 5, tag: "7", state: "answer" }, { value: 7, tag: "8" },
+          { value: 10, tag: "9", state: "muted" }, { value: 9, tag: "10", state: "muted" }, { value: 11, tag: "11", state: "muted" },
+          { value: 14, tag: "12", state: "muted" }, { value: 13, tag: "13", state: "muted" }, { value: 15, tag: "14", state: "muted" },
+        ]},
+      ],
+      spans: [{ id: "s0", row: "v", from: 0, to: 2, label: "bloque leído" }, { id: "s2", row: "v", from: 6, to: 8, label: "bloque leído" }],
+      caption: "vEB: 2 bloques. BFS (8 4 12 | 2 6 10 | 14 1 3 | 5 7 9 | …): 3 bloques.",
+    },
+    {
+      note: "Mismo arreglo con B = 4 (bloques desalineados con las piezas). Buscar 7 recorre 8, 4, 6, 7: la pieza 6 5 7 cruza el borde entre dos bloques y la búsqueda lee 3. Por eso el análisis permite 2 bloques por pieza.",
+      rows: [
+        { id: "v", label: "vEB", cells: [
+          { value: 8, tag: "0", state: "active" }, { value: 4, tag: "1", state: "active" }, { value: 12, tag: "2" },
+          { value: 2, tag: "3" }, { value: 1, tag: "4" }, { value: 3, tag: "5" },
+          { value: 6, tag: "6", state: "active" }, { value: 5, tag: "7" }, { value: 7, tag: "8", state: "answer" },
+          { value: 10, tag: "9" }, { value: 9, tag: "10" }, { value: 11, tag: "11" },
+          { value: 14, tag: "12" }, { value: 13, tag: "13" }, { value: 15, tag: "14" },
+        ]},
+      ],
+      spans: [{ id: "c0", row: "v", from: 0, to: 3, label: "bloque 0" }, { id: "c1", row: "v", from: 4, to: 7, label: "bloque 1" }, { id: "c2", row: "v", from: 8, to: 11, label: "bloque 2" }, { id: "c3", row: "v", from: 12, to: 14, label: "bloque 3" }],
+      caption: "Cada pieza contigua de ≤ B nodos cae en a lo más 2 bloques.",
+    },
+  ],
+}} />
+
+**La cota.** En la escala de la recursión donde las piezas tienen altura entre $\tfrac12\lg B$ y $\lg B$, cada pieza ocupa $\le 2$ bloques y el camino cruza $\le \lg N / (\tfrac12\lg B) = 2\log_B N$ piezas:
+
+$$
+\text{transferencias} \;\le\; \underbrace{2}_{\text{bloques por pieza}} \cdot \underbrace{2\log_B N}_{\text{piezas en el camino}} \;=\; 4\log_B N.
+$$
+
+El layout no menciona $B$: la cota vale para todos los niveles de la jerarquía a la vez (*cache-oblivious*).
+
+### Secundario: PMA
+
+Para mantener un arreglo ordenado con inserciones y recorridos de $O(k/B)$, el PMA deja huecos con umbrales de densidad por nivel y cuesta $O(\lg^2 N)$ movimientos amortizados por inserción. Está resuelto en el simulacro: S2a (inserciones a mano), S2b (amortización), S2c (arreglo frente a PMA), S2d (umbral uniforme). Teoría: [PMA](/structures/packed-memory-array).
+
+## Errores típicos
+
+- **Contar comparaciones** en vez de transferencias.
+- **Decir $O(\lg N)$ para la búsqueda binaria**: en este modelo es $\Theta(\lg(N/B))$.
+- **Usar $\log_2$ en el mergesort** con $M/B$ vías: la base es $M/B$.
+- **Olvidar la formación de runs** (la primera pasada de $2N/B$).
+- **Pensar que vEB lee 1 bloque por pieza**: son hasta 2 si la pieza no está alineada.
+- **Rango sin el $+K/B$**, o con $+K$ (eso sería un BST).
+
+## Qué memorizar
+
+- Escanear $\Theta(N/B)$. Buscar $\Theta(\log_{B+1}N)$, B-Tree óptimo; BST $\lg N$; binaria y BFS $\lg(N/B)$; vEB $\le 4\log_B N$.
+- Rango en B-Tree $O(\log_B N + K/B)$.
+- Ordenar $\Theta(\frac NB\log_{M/B}\frac NB)$; mergesort: $\frac{2N}{B}(1 + \lceil\log_{M/B}\frac NM\rceil)$; con 2 vías, $\frac{2N}B(1 + \lceil\lg \frac NM\rceil)$.
+- Mezcla de $k$ vías: $k \le M/B - 1$ (un búfer por run).
+- vEB: partir por la mitad de la altura; escala $\sqrt B$–$B$; 2 bloques por pieza; $2\log_B N$ piezas.
+- Teoría del curso: [modelo de memoria externa](/structures/external-memory-model), [mergesort externo](/structures/external-merge-sort), [B-Tree](/structures/b-tree), [layout vEB](/structures/cache-oblivious-veb-layout).

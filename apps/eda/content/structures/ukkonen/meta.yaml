@@ -1,0 +1,16 @@
+id: ukkonen
+title: Construcción de Ukkonen
+type: algorithm
+week: week-13
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- suffix-tree
+placeholder: false
+complexity:
+  Construcción del suffix tree:
+    worst: O(n)
+    reasoning: Hay a lo más n reglas 2 (cada una crea una hoja que no desaparece) y a lo más una regla
+      3 por fase; con aristas abiertas la regla 1 no cuesta, y la profundidad del nodo activo sube a lo
+      más uno por fase y baja con cada suffix link, así que skip/count suma O(n).
+    source: Sem13_Strings_III.pdf#72-74

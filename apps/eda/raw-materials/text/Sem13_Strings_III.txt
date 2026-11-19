@@ -1,0 +1,1880 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Strings III
+Semana 13
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+6 de noviembre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender qué es un suffix tree y por qué se obtiene comprimiendo el
+   trie de los sufijos
+ ▶ Definir los suffix links y ver por qué existen
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     2 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender qué es un suffix tree y por qué se obtiene comprimiendo el
+   trie de los sufijos
+ ▶ Definir los suffix links y ver por qué existen
+ ▶ Usarlo: buscar patrones en O(|P|), subcadena repetida, subcadenas
+   distintas y subcadena común
+ ▶ Construirlo leyendo el texto de izquierda a derecha con el algoritmo de
+   Ukkonen, paso a paso
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     2 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+El suffix array es un índice plano
+Para buscar P usamos búsqueda binaria: O(|P| lg n). Para preguntas estruc-
+turales (¿qué subcadenas se repiten?, ¿cuál es la más larga?) hay que inter-
+pretar intervalos de SA y de LCP.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    3 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+El suffix array es un índice plano
+Para buscar P usamos búsqueda binaria: O(|P| lg n). Para preguntas estruc-
+turales (¿qué subcadenas se repiten?, ¿cuál es la más larga?) hay que inter-
+pretar intervalos de SA y de LCP.
+
+Un índice con forma de árbol
+Un árbol donde cada camino desde la raíz es una subcadena de S y cada
+subcadena repetida es un nodo interno. Las preguntas estructurales pasan
+a ser preguntas sobre el árbol.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    3 / 52
+El suffix tree
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: el trie de los sufijos
+
+
+Un camino por cada sufijo
+Para S = abab$ escribimos cada sufijo en un trie, un carácter por arista. El
+$ final es un carácter menor que todos que impide que un sufijo sea prefijo
+de otro.
+
+                                     a             b            $
+                                                                          4
+                                                   a    $
+                         b
+                                                            3
+                     a       $
+                                               b
+                                 2
+                 b                             $
+                                              1
+                 $
+                 0
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología       5 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: el trie de los sufijos
+
+
+Un camino por cada sufijo
+Para S = abab$ escribimos cada sufijo en un trie, un carácter por arista. El
+$ final es un carácter menor que todos que impide que un sufijo sea prefijo
+de otro.
+
+                                     a             b            $
+                                                                          4
+                                                   a    $
+                         b
+                                                            3
+                     a       $
+                                               b
+                                 2
+                 b                             $
+                                              1
+                 $
+                 0
+
+
+
+     Los nodos naranjas tienen un solo hijo: son tramos de cadena sin ninguna
+              bifurcación. El número en la hoja es el inicio del sufijo.
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología         5 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 1: el trie de los sufijos
+
+
+
+
+Demasiado grande
+Para S = an b el trie tiene Θ(n2 ) nodos: los sufijos ak b no comparten nada
+salvo el prefijo ak , y cada uno es una cadena larga sin bifurcaciones.
+
+La observación
+Casi todo el tamaño del trie son esos tramos sin bifurcación. Si los
+representamos con una sola arista, queda un árbol con pocos nodos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      6 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 2: comprimir los tramos sin bifurcación
+
+
+Suffix tree
+Cada tramo de nodos con un solo hijo se reemplaza por una arista etiquetada
+con una subcadena. Para abab$:
+
+
+                                    ab              b             $
+
+                        ab                              b
+                                                                         4
+
+                 ab         $                   $
+                                               ab        $
+                   $
+
+             0                  2          1                  3
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       7 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Paso 2: comprimir los tramos sin bifurcación
+
+
+Suffix tree
+Cada tramo de nodos con un solo hijo se reemplaza por una arista etiquetada
+con una subcadena. Para abab$:
+
+
+                 [0, 2)                          [1, 2)                 $    [4, 5)
+                                     ab                     b
+
+                            ab                                  b
+                                                                                      4
+
+                 ab         $                        ab         $
+                   $                                    $
+   [2, 5)                            [4, 5) [2, 5)                          [4, 5)
+
+             0                   2              1                   3
+
+
+
+
+   Cada arista guarda solo un par [l, r ) de índices sobre S, no la subcadena: O(1)
+                                palabras por arista.
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología                   7 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Definición y propiedades
+
+
+Suffix tree de S $
+Árbol con raíz tal que: (1) cada arista tiene una subcadena no vacía de S $;
+(2) las aristas que salen de un nodo empiezan con caracteres distintos; (3)
+cada nodo interno (no raíz) tiene ≥ 2 hijos; (4) las etiquetas de los caminos
+raíz–hoja son exactamente los sufijos de S $.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     8 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Definición y propiedades
+
+
+Suffix tree de S $
+Árbol con raíz tal que: (1) cada arista tiene una subcadena no vacía de S $;
+(2) las aristas que salen de un nodo empiezan con caracteres distintos; (3)
+cada nodo interno (no raíz) tiene ≥ 2 hijos; (4) las etiquetas de los caminos
+raíz–hoja son exactamente los sufijos de S $.
+
+Consecuencias
+ ▶ n + 1 hojas, una por sufijo (el $ lo asegura).
+ ▶ Cada nodo interno bifurca: a lo más n internos.
+ ▶ Total ≤ 2n + 1 nodos: espacio O(n).
+
+Etiqueta de un nodo
+La etiqueta de camino de un nodo es la concatenación de las aristas desde
+la raíz. Es una subcadena que se repite: lo usaremos mucho.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     8 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo más grande: banana$
+
+
+
+
+                                               na$
+                                  a                    na        $
+                                          ban
+                                              a
+                                           0                                    6
+
+               $           na                                           $
+                                                            $        na
+
+          5                                             4                   2
+
+                            $    na
+                                  $
+                       3              1
+
+
+
+
+      4 nodos internos (contando la raíz) y 7 hojas. Los nodos internos son las
+                       subcadenas que se repiten: a, ana, na.
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología              9 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar un patrón
+
+
+Bajar desde la raíz
+Se sigue la arista cuya primera letra es P[0], se compara a lo largo de la arista
+y se continúa. Si P se agota, está en S.
+                                                $
+                                           na          na        $
+                                   a         na
+                                           ba
+                                           0                                   6
+                            na                                       na
+                $                                           $          $
+           5                                           4                   2
+                            $     na
+                                   $
+                        3              1
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología            10 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar un patrón
+
+
+Bajar desde la raíz
+Se sigue la arista cuya primera letra es P[0], se compara a lo largo de la arista
+y se continúa. Si P se agota, está en S.
+                                                 $
+                                           P = ana
+                                             na        na        $
+                                   a           na
+                                            ba
+                                             0                                 6
+                            na                                       na
+                $                                           $          $
+           5                                           4                   2
+                            $     na
+                                   $
+                        3              1
+
+
+
+
+Costo O(|P|), sin depender de n
+Cada carácter de P se compara una vez. Las ocurrencias son las hojas del
+subárbol: ana ocurre en 1 y en 3.
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología            10 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Qué se puede resolver
+
+
+
+
+     Subcadena repetida más larga         nodo interno de mayor profundidad de ca-
+                                          dena (suma de longitudes de aristas desde
+                                          la raíz)
+     Subcadenas distintas                 suma de longitudes de todas las aristas
+                                          (restando las n + 1 que incluyen $)
+     Orden lexicográfico                  DFS con hijos ordenados: da el suffix array
+
+
+En banana
+El nodo interno más profundo es ana (profundidad 3): es la subcadena
+repetida más larga. Las aristas suman 22; restando 7 quedan 15 subcadenas
+distintas.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                11 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Subcadena común de varias cadenas
+
+
+
+
+Árbol de sufijos generalizado
+Para S y T se construye el suffix tree de S # T $ y se marca cada hoja con
+la cadena de origen según su posición.
+
+La subcadena común más larga
+Es el nodo interno más profundo cuyo subárbol contiene hojas de S y de
+T . Un recorrido calcula, para cada nodo, de cuáles cadenas hay hojas
+debajo: O(n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 52
+De suffix array a suffix tree
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos índices, la misma información
+
+
+
+Suffix array + LCP ⇐⇒ suffix tree
+Las hojas del árbol, de izquierda a derecha, son SA. El nodo interno que
+separa dos hojas vecinas está a profundidad LCP[k].
+
+Construcción en O(n) desde SA y LCP
+Se insertan los sufijos en el orden de SA, manteniendo en una pila la rama
+derecha del árbol. Para el sufijo k con ℓ = LCP[k]:
+  1. desapilar mientras la profundidad del tope sea > ℓ;
+  2. si la profundidad del tope es < ℓ, partir la arista y crear un nodo
+     interno a profundidad ℓ;
+  3. agregar la hoja como hijo del tope y apilarla.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       14 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    En banana$
+
+
+
+
+                 SA = [6, 5, 3, 1, 0, 4, 2],     LCP = [0, 0, 1, 3, 0, 0, 2]
+           k    ℓ   qué ocurre
+         0–1    0   hojas 6 y 5 cuelgan de la raíz
+           2    1   se parte la hoja 5: nace el nodo a; la hoja 3 cuelga de él
+           3    3   se parte la hoja 3: nace ana; la hoja 1 cuelga de él
+           4    0   se desapila hasta la raíz; la hoja 0
+           5    0   la hoja 4
+           6    2   se parte la hoja 4: nace na; la hoja 2 cuelga de él
+
+Esta es una forma de construirlo si ya tenemos el suffix array. Ahora, una forma de
+                      hacerlo leyendo el texto una sola vez.
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología            15 / 52
+Suffix links
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Suffix links
+
+
+Definición
+Si un nodo interno tiene etiqueta xα (x un carácter, α una cadena, posible-
+mente vacía), su suffix link apunta al nodo con etiqueta α.
+
+
+
+                                    ab                b           $
+
+                        ab                                b
+                                                                         4
+
+                 ab         $                  ab         $
+                    $                             $
+
+             0                  2          1                  3
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       17 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Suffix links
+
+
+Definición
+Si un nodo interno tiene etiqueta xα (x un carácter, α una cadena, posible-
+mente vacía), su suffix link apunta al nodo con etiqueta α.
+
+
+
+                                    ab                b           $
+
+                        ab                                b
+                                                                         4
+
+                 ab         $                  ab         $
+                    $                             $
+
+             0                  2          1                  3
+
+
+
+
+        ab = xα con x = a y α = b. Luego b: x = b y α = ε, que es la raíz.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       17 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Suffix links
+
+
+
+Es quitar la primera letra
+Un suffix link borra el primer carácter de la etiqueta. Encadenados recorren
+los sufijos cada vez más cortos: ana → na → a → raíz en banana$.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Suffix links
+
+
+
+Es quitar la primera letra
+Un suffix link borra el primer carácter de la etiqueta. Encadenados recorren
+los sufijos cada vez más cortos: ana → na → a → raíz en banana$.
+
+¿Por qué existe siempre?
+Si xα es interno, hay dos extensiones distintas xαc1 y xαc2 en S. Entonces
+αc1 y αc2 también ocurren: α se bifurca, y por eso es un nodo interno.
+
+Para qué sirven
+Permiten pasar del lugar donde acabamos de trabajar con el sufijo xα al
+lugar donde hay que trabajar con α, sin volver a bajar desde la raíz. Es el
+ingrediente que hace lineal a Ukkonen.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 52
+Algoritmo de Ukkonen
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Construir mientras se lee
+
+
+
+La idea en una frase
+Leer S de izquierda a derecha y mantener el árbol de Pref(S, i) después de
+cada carácter. Al llegar el carácter c = S[i], hay que pasar de Pref(S, i − 1)
+a Pref(S, i).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     20 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Construir mientras se lee
+
+
+
+La idea en una frase
+Leer S de izquierda a derecha y mantener el árbol de Pref(S, i) después de
+cada carácter. Al llegar el carácter c = S[i], hay que pasar de Pref(S, i − 1)
+a Pref(S, i).
+
+¿Qué cambia al agregar c?
+Todos los sufijos de Pref(S, i − 1) se alargan con c, y además aparece un
+sufijo nuevo, el de longitud 1 (solo c).
+
+Intento ingenuo: O(n2 )
+Para cada sufijo Suff(Pref(S, i − 1), j), bajar desde la raíz y agregarle c:
+O(i) por sufijo, O(n2 ) pasos por fase. Ukkonen lo reduce a O(1) amortizado.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     20 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primero, un árbol sin el sentinela
+
+
+Árbol implícito
+Es el suffix tree de Pref(S, i) sin el $. Algunos sufijos no terminan en una
+hoja: quedan en medio de una arista o en un nodo interno, porque son prefijo
+de otro sufijo. Para Pref(S, 4) = abcab:
+
+
+
+
+                                               bcab
+                            b                                     ca
+                          ca                                        b
+                        ab
+                    0                          1                         2
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       21 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primero, un árbol sin el sentinela
+
+
+Árbol implícito
+Es el suffix tree de Pref(S, i) sin el $. Algunos sufijos no terminan en una
+hoja: quedan en medio de una arista o en un nodo interno, porque son prefijo
+de otro sufijo. Para Pref(S, 4) = abcab:
+
+
+                                            b
+                                ab
+
+                                                bcab
+                            b                                     ca
+                          ca                                        b
+                        ab
+                    0                           1                        2
+
+
+
+
+Los sufijos ab y b están en el árbol (puntos rojos), pero no son hojas. Al final, con
+                               el $, todos serán hojas.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología          21 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase i: ¿qué sufijos hay que alargar?
+
+
+Los sufijos de abcab, de largo a corto
+Llega c = x. Hay que dejar el árbol de abcabx.
+
+                Sufijo      Dónde termina               Qué hace falta
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología    22 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase i: ¿qué sufijos hay que alargar?
+
+
+Los sufijos de abcab, de largo a corto
+Llega c = x. Hay que dejar el árbol de abcabx.
+
+                Sufijo      Dónde termina               Qué hace falta
+                abcab       en una hoja                 alargarlo con x
+                bcab        en una hoja                 alargarlo con x
+                cab         en una hoja                 alargarlo con x
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología     22 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase i: ¿qué sufijos hay que alargar?
+
+
+Los sufijos de abcab, de largo a corto
+Llega c = x. Hay que dejar el árbol de abcabx.
+
+                Sufijo      Dónde termina                Qué hace falta
+                abcab       en una hoja                  alargarlo con x
+                bcab        en una hoja                  alargarlo con x
+                cab         en una hoja                  alargarlo con x
+                ab          en medio de una arista       ver si le sigue x
+                b           en medio de una arista       ver si le sigue x
+                ε           en la raíz                   ver si hay un hijo x
+
+Hay dos tipos de trabajo
+Alargar las hojas es mecánico; lo difícil es decidir qué pasa con los sufijos
+que terminan dentro del árbol.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología          22 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 1: el sufijo termina en una hoja
+
+
+Alargar la hoja con c
+Pero hacerlo una por una costaría O(n) por fase.
+
+
+
+
+                                                                        abcabx
+                                           llega x
+
+                       abcab
+                       0                                                0
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología            23 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 1: el sufijo termina en una hoja
+
+
+Alargar la hoja con c
+Pero hacerlo una por una costaría O(n) por fase.
+
+
+
+
+                                                                        abcabx
+                                           llega x
+
+                       abcab
+                       0                                                0
+
+
+
+
+Truco: aristas abiertas
+La arista de una hoja guarda su fin como ∞: “hasta el final actual de S”.
+Cuando i avanza, todas las hojas se alargan solas, gratis.
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología            23 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 2: no hay continuación con c
+
+
+
+
+Caso (a): el sufijo termina en un nodo
+Si el nodo no tiene arista que empiece con c, se crea una hoja nueva.
+
+                            ab
+
+                     x
+                  cab                     ab termina en el nodo; no hay arista x
+
+                 0
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología            24 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 2: no hay continuación con c
+
+
+
+
+Caso (a): el sufijo termina en un nodo
+Si el nodo no tiene arista que empiece con c, se crea una hoja nueva.
+
+                            ab
+
+                     x
+                  cab       x                 nace una hoja nueva x
+
+                 0               3
+
+
+
+
+Víctor Racsó Galván Oyola            Universidad de Ingeniería y Tecnología   24 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 2: no hay continuación con c
+
+
+
+
+Caso (b): el sufijo termina en medio de una arista
+Si el siguiente carácter de la arista es distinto de c, se parte la arista: aparece
+un nodo interno nuevo y de él cuelga una hoja nueva.
+
+
+
+                                            el sufijo ab termina en medio de la arista;
+                                            el siguiente carácter es c, no x
+                      abcab
+                      0
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                      25 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 2: no hay continuación con c
+
+
+
+
+Caso (b): el sufijo termina en medio de una arista
+Si el siguiente carácter de la arista es distinto de c, se parte la arista: aparece
+un nodo interno nuevo y de él cuelga una hoja nueva.
+
+
+                          ab
+                               ab
+                                                      nodo nuevo ab y hoja nueva x
+                     bx        x
+                 ca
+
+                 0                  3
+
+
+
+
+Víctor Racsó Galván Oyola               Universidad de Ingeniería y Tecnología       25 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 3: ya hay una continuación con c
+
+
+El sufijo con c ya está en el árbol
+Si el carácter que sigue en el árbol es c, el sufijo ya existe: no se hace nada
+y termina la fase.
+
+
+                                                  sufijo a, llega b: la arista sigue con b
+
+
+                                            abc
+                                            0
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                         26 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Regla 3: ya hay una continuación con c
+
+
+El sufijo con c ya está en el árbol
+Si el carácter que sigue en el árbol es c, el sufijo ya existe: no se hace nada
+y termina la fase.
+
+
+                                                   coincide: solo avanza el punto
+
+
+                                             abc
+                                             0
+
+
+
+
+¿Por qué podemos parar?
+Todos los sufijos más cortos son sufijo de este: si este ya continúa con c,
+ellos también. No hay nada más que insertar en la fase.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                26 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El contador resto
+
+
+
+Sufijos pendientes
+Tras una regla 3 terminamos la fase, pero algunos sufijos no quedaron in-
+sertados explícitamente: están “pendientes”. resto cuenta cuántos son.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El contador resto
+
+
+
+Sufijos pendientes
+Tras una regla 3 terminamos la fase, pero algunos sufijos no quedaron in-
+sertados explícitamente: están “pendientes”. resto cuenta cuántos son.
+
+Se reintentan en la fase siguiente
+En cada fase, resto aumenta en 1 (el sufijo nuevo), y cada vez que se inserta
+un sufijo con regla 2, disminuye en 1. La fase termina al llegar a 0 o con una
+regla 3.
+
+Cuidado con los nombres
+resto cuenta sufijos pendientes; no es una posición en S. Los pendientes son
+siempre los resto sufijos más cortos de Pref(S, i); los más largos ya son
+hojas.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     27 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El punto activo
+
+
+¿Dónde se retoma el sufijo pendiente más largo?
+Guardamos el lugar del árbol donde termina, para no bajar desde la raíz:
+ ▶ nodo activo: el nodo desde el que se baja,
+ ▶ arista activa: la arista (por su primer carácter),
+ ▶ longitud activa: cuántos caracteres hemos avanzado por esa arista.
+
+                        punto activo =
+                            (raíz, a, 2)
+
+                                                  bcab
+                              ab                                     cab
+                          abc
+                    0                             1                         2
+
+
+
+
+Víctor Racsó Galván Oyola          Universidad de Ingeniería y Tecnología       28 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El punto activo
+
+
+¿Dónde se retoma el sufijo pendiente más largo?
+Guardamos el lugar del árbol donde termina, para no bajar desde la raíz:
+ ▶ nodo activo: el nodo desde el que se baja,
+ ▶ arista activa: la arista (por su primer carácter),
+ ▶ longitud activa: cuántos caracteres hemos avanzado por esa arista.
+
+                        punto activo =
+                            (raíz, a, 2)
+
+                                                  bcab
+                              ab                                     cab
+                          abc
+                    0                             1                         2
+
+
+
+    Es el lugar del sufijo pendiente más largo, ab: desde la raíz, por la arista que
+                               empieza con a, dos pasos.
+
+Víctor Racsó Galván Oyola          Universidad de Ingeniería y Tecnología         28 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Pasar al siguiente sufijo pendiente
+
+
+
+
+Tras una regla 2 con el sufijo xα
+El siguiente pendiente es α, el mismo sin su primera letra. ¿Cómo llegamos
+rápido a él?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Pasar al siguiente sufijo pendiente
+
+
+
+
+Tras una regla 2 con el sufijo xα
+El siguiente pendiente es α, el mismo sin su primera letra. ¿Cómo llegamos
+rápido a él?
+
+Con el suffix link del nodo activo
+Si el nodo activo es interno, seguimos su suffix link: pasamos de xα a α en
+O(1), sin bajar desde la raíz.
+
+Si el nodo activo es la raíz
+No hay suffix link. Se resta 1 a la longitud activa y la arista activa pasa a la
+del siguiente sufijo (empieza un carácter más a la derecha).
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        29 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dónde nacen los suffix links
+
+
+Cada nodo interno nuevo se enlaza con el siguiente que se cree
+Cuando una regla 2 crea el nodo xα, el siguiente sufijo (α) también termina
+en un nodo (existente o nuevo). El primero se enlaza con el segundo.
+
+
+
+                              abc     suffix link               bc
+
+                                                    el siguiente sufijo
+                     recién creado                     termina aquí
+
+
+
+Si α ya era un nodo
+Tras la regla 3 o al llegar a un nodo existente, el nodo pendiente se enlaza
+con ese nodo.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      30 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Bajar por aristas con skip/count
+
+
+La longitud activa puede superar la arista
+Si la longitud activa es igual o mayor que la arista activa, se pasa al nodo
+siguiente y se descuenta la longitud de la arista.
+
+
+                                         punto activo = (raíz, a, 2)
+                       ab
+                                         longitud 2 = largo de la arista ab
+                            ab
+                  x
+                ca          x
+                   b
+            0                    3
+
+
+
+Se comparan números, no caracteres
+Basta comparar longitudes; por eso bajar k aristas cuesta O(k) y no el
+número de caracteres que contienen.
+Víctor Racsó Galván Oyola            Universidad de Ingeniería y Tecnología   31 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Bajar por aristas con skip/count
+
+
+La longitud activa puede superar la arista
+Si la longitud activa es igual o mayor que la arista activa, se pasa al nodo
+siguiente y se descuenta la longitud de la arista.
+
+
+                       ab                nuevo punto activo = (ab, –, 0)
+                            ab
+                  x
+                ca          x
+                   b
+            0                    3
+
+
+
+Se comparan números, no caracteres
+Basta comparar longitudes; por eso bajar k aristas cuesta O(k) y no el
+número de caracteres que contienen.
+Víctor Racsó Galván Oyola            Universidad de Ingeniería y Tecnología   31 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Esquema de Ukkonen
+
+
+
+Algoritmo 1: Ukkonen(S)
+resto ← 0; punto activo ← (raíz, —, 0)
+para i ← 0 a n − 1 hacer
+     resto ← resto + 1; ultimoNuevo ← nada
+     mientras resto > 0 hacer
+          si existe continuación con S[i] en el punto activo entonces
+               enlazar ultimoNuevo al nodo activo; avanzar la longitud activa; salir
+                 del while                                                    // regla 3
+          en otro caso
+               crear la hoja (partiendo la arista si hace falta); enlazar ultimoNuevo
+                 con el nodo nuevo                                            // regla 2
+               resto ← resto − 1; mover el punto activo (suffix link o raíz)
+
+
+
+       Las hojas abiertas (regla 1) no aparecen en el código: se alargan solas.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                  32 / 52
+Una traza completa
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una traza completa: S = abcabxabcd$
+
+
+
+Cómo leer las figuras
+Cuadro verde: carácter ya leído. Cuadro rojo: carácter actual (fase i). Ele-
+mentos rojos: lo que se creó en ese paso. Líneas rojas punteadas: suffix links.
+
+       a    b   c    a      b   x   a     b   c    d    $
+       0    1   2    3      4   5   6     7   8    9   10
+
+
+
+
+Lo que veremos
+Las fases 0 a 4 solo agregan hojas o aplican la regla 3; en la fase 5 y en la 9
+pasan muchas cosas (tres sufijos pendientes y cuatro, respectivamente). La
+fase 10 cierra con el $.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología    34 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fases 0 a 2: tres hojas
+
+
+
+
+                                                raíz
+
+
+                abc                 bc                     c
+
+                0                   1                      2
+
+
+
+
+       a    b       c   a   b   x       a   b   c      d       $
+       0    1       2   3   4   5       6   7   8      9       10
+
+
+
+ Cada carácter no tiene continuación: regla 2 desde la raíz, una hoja cada vez. Las
+               hojas anteriores se alargan solas (regla 1). resto = 0.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología        35 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fases 3 y 4: a y b, regla 3
+
+
+
+
+                                                raíz
+
+
+                                    bca                    ca
+                abca
+                0                   1                      2
+
+
+
+
+       a    b       c   a   b   x       a   b   c      d        $
+       0    1       2   3   4   5       6   7   8      9       10
+
+
+
+   Fase 3 (c = a): el sufijo a ya está (la arista abc empieza con a). Regla 3: se
+                         avanza el punto y termina la fase.
+                       resto= 1, punto activo = (raíz, a, 1).
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología         36 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fases 3 y 4: a y b, regla 3
+
+
+
+
+                                                raíz
+
+
+                                    bcab                   cab
+                abcab
+                0                   1                      2
+
+
+
+
+       a    b       c   a   b   x       a   b   c      d         $
+       0    1       2   3   4   5       6   7   8      9       10
+
+
+
+           Fase 4 (c = b): llega b; el sufijo ab ya está. Regla 3 otra vez.
+                       resto= 2, punto activo = (raíz, a, 2).
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología        36 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 5: llega x, tres pendientes
+
+
+
+
+                                                    raíz
+
+
+                                        bcabx                  cabx
+                  ab
+                       ab
+                                        1                      2
+
+           cab         x
+              x
+
+           0               3
+
+
+       a    b     c         a   b   x       a   b   c      d          $
+       0    1     2         3   4   5       6   7   8      9       10
+
+
+
+resto= 3: pendientes abx, bx, x. Primero abx: tras ab sigue c, no x. Regla 2b: se
+           parte la arista y nace el nodo ab con una hoja x. resto= 2.
+
+
+Víctor Racsó Galván Oyola           Universidad de Ingeniería y Tecnología   37 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 5: llega x, tres pendientes
+
+
+
+
+                                                             raíz
+
+                                             b                          cabx
+                   ab
+                        ab                       b
+                                                                        2
+
+               x                         x
+           cab          x            cab         x
+
+           0                3        1               4
+
+
+       a    b      c         a   b       x   a           b   c      d          $
+       0    1      2         3   4       5   6           7   8      9       10
+
+
+
+  Siguiente: bx. El punto activo pasa a (raíz, b, 1). Tras b sigue c: otra regla 2b.
+           Nace el nodo b; el suffix link ab99Kb se crea ahora. resto= 1.
+
+
+Víctor Racsó Galván Oyola                Universidad de Ingeniería y Tecnología    37 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 5: llega x, tres pendientes
+
+
+
+
+                                                            raíz
+
+                                            b                          cabx       x
+                  ab
+                       ab                       b
+                                                                       2          5
+
+           cab         x            cab         x
+              x                         x
+
+           0               3        1               4
+
+
+       a    b     c         a   b       x   a           b   c      d          $
+       0    1     2         3   4       5   6           7   8      9       10
+
+
+
+  Último: x, desde la raíz no hay arista x: regla 2a, hoja nueva. El suffix link del
+                         nodo b apunta a la raíz. resto= 0.
+
+
+Víctor Racsó Galván Oyola               Universidad de Ingeniería y Tecnología        37 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 5: llega x, tres pendientes
+
+
+
+
+                                                             raíz
+
+                                             b                          cabx       x
+                   ab
+                        ab                       b
+                                                                        2          5
+
+               x                         x
+           cab          x            cab         x
+
+           0                3        1               4
+
+
+       a    b      c         a   b       x   a           b   c      d          $
+       0    1      2         3   4       5   6           7   8      9       10
+
+
+
+ Así queda el árbol de abcabx (hojas con sufijos 0 a 5). Dos nodos internos y sus
+                                   suffix links.
+
+
+Víctor Racsó Galván Oyola                Universidad de Ingeniería y Tecnología        37 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fases 6 a 8: a, b, c (tres reglas 3)
+
+
+
+
+                                                              raíz
+
+
+                                                                         cabxa       xa
+                                             b
+                   ab
+                        ab                        b
+                                                                         2           5
+
+           cab
+                                         a
+                        xa           cab         xa
+              xa                         x
+           0                 3       1                4
+
+
+       a    b      c         a   b       x   a            b   c      d           $
+       0    1      2         3   4       5   6            7   8      9       10
+
+
+
+    Fase 6 (c = a): a ya existe. Regla 3. resto= 1, punto activo = (raíz, a, 1).
+
+
+
+Víctor Racsó Galván Oyola                Universidad de Ingeniería y Tecnología           38 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fases 6 a 8: a, b, c (tres reglas 3)
+
+
+
+
+                                                                  raíz
+
+
+                                                                             cabxab       xab
+                                                  b
+                     ab
+                           ab                         b
+                                                                             2            5
+               xab                          xab
+           cab            xab           cab       xab
+
+           0                    3       1                 4
+
+
+       a    b        c          a   b       x     a           b   c      d            $
+       0    1        2          3   4       5     6           7   8      9       10
+
+
+
+Fase 7 (c = b): ab ya existe. Regla 3. resto= 2, punto activo = (raíz, a, 2): justo
+                              el final de la arista ab.
+
+
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología              38 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fases 6 a 8: a, b, c (tres reglas 3)
+
+
+
+
+                                                              raíz
+
+
+                                                                         cabxabc       xabc
+                                              b
+                    ab
+                         ab                       b
+                                                                         2             5
+                c                         c
+            xab                        xab
+                     xab                      xab
+           cab           c            cab         c
+           0                 3        1               4
+
+
+       a    b       c         a   b       x   a           b   c      d             $
+       0    1       2         3   4       5   6           7   8      9        10
+
+
+
+Fase 8 (c = c): la longitud activa (2) iguala la arista: se baja al nodo ab (longitud
+       0). Desde ahí sigue c: regla 3. resto= 3, punto activo = (ab, c, 1).
+
+
+Víctor Racsó Galván Oyola                 Universidad de Ingeniería y Tecnología              38 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 9: llega d, cuatro pendientes
+
+
+
+                                                                     raíz
+
+
+                                                                                cabxabcd   xabcd
+                                                       b
+                        ab
+                                ab                          b
+                                                                                2          5
+                                               xab
+                c              bc
+                                  d               cd   xab
+                            xa                cab           cd
+                    abc
+                                  3            1             4
+         abc
+            d       d
+        abx
+         0              6
+
+
+
+         a      b       c         a       b        x   a         b   c      d          $
+         0      1           2         3   4        5    6        7   8      9        10
+
+
+
+  resto= 4: abcd, bcd, cd, d. Desde (ab, c, 1): tras abc sigue a, no d. Regla 2b:
+                           nace el nodo abc. resto= 3.
+Víctor Racsó Galván Oyola                          Universidad de Ingeniería y Tecnología          39 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 9: llega d, cuatro pendientes
+
+
+
+                                                                            raíz
+
+
+                                                                                       cabxabcd   xabcd
+                                                          b
+                         ab
+                                 ab                               b
+                                                                                       2          5
+
+                 c              bc
+                                   d
+                                                     c        xab
+                             xa                                   cd
+                     abc                                 bc
+                                   3                                4
+             d                                 bcd
+        abx                                           d
+           abc
+                     d                     abx
+                                              a
+         0               6                 1              7
+
+
+
+         a       b       c         a           b     x        a         b   c      d          $
+         0       1           2         3       4     5        6         7   8      9        10
+
+
+
+ Se sigue el suffix link de ab: el punto activo pasa a (b, c, 1). Otra regla 2b: nace
+                              bc, y abc99Kbc. resto= 2.
+Víctor Racsó Galván Oyola                            Universidad de Ingeniería y Tecnología               39 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 9: llega d, cuatro pendientes
+
+
+
+                                                                            raíz
+
+                                                                                                      xabcd
+                                                          b                               c
+                        ab
+                                ab                                b                           c
+                                                                                                      5
+                                                                                   abc
+                c              bc
+                                  d
+                                                     c        xab                     d       d
+                            xa                                    cd            abx
+                    abc                                  bc
+                                  3                                 4           2                 8
+         abc                              abx
+            d       d                        abc      d
+        abx                                      d
+         0              6                  1              7
+
+
+
+         a      b       c         a            b     x        a         b   c       d     $
+         0      1           2         3        4     5        6         7   8       9     10
+
+
+
+  El suffix link de b va a la raíz: punto activo (raíz, c, 1). Otra regla 2b: nace c, y
+                                    bc99Kc. resto= 1.
+Víctor Racsó Galván Oyola                            Universidad de Ingeniería y Tecnología                   39 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 9: llega d, cuatro pendientes
+
+
+
+                                                                           raíz
+
+                                                                                                     xabcd
+                                                         b                               c                   d
+                         ab
+                                 ab                              b                           c
+                                                                                                     5       9
+                                                                                     d
+                                                             xab
+                             xa
+                                b                                                 abc
+                 c                                  c                                        d
+                                 cd                              cd            abx
+                     abc                                bc
+                                    3                              4           2                 8
+             d                                bcd
+         abc
+                     d                    abx        d
+        abx                                  a
+         0               6                1              7
+
+
+
+         a       b       c          a         b     x        a         b   c       d     $
+         0       1           2        3       4     5        6         7   8       9     10
+
+
+
+Falta d: la raíz no tiene arista d, regla 2a. El suffix link de c va a la raíz. resto= 0.
+
+Víctor Racsó Galván Oyola                           Universidad de Ingeniería y Tecnología                       39 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Fase 10: el sentinela $
+
+
+                                                                       raíz
+
+
+                                                                                               xabcd$   d$
+                                                      b                               c                       $
+                          ab
+                               ab                            b                             c
+                                                                                               5        9    10
+                                                                                 d$
+                                d$                      xab                 abc
+                 c           bc                 c                                         d$
+                           xa                                cd$           abx
+                      abc                           bc
+             $                  3                             4             2              8
+                                          cd$
+          bcd
+                     d$              abx         d$
+        abx                              ab
+           a
+         0            6               1             7
+
+
+
+         a       b        c      a        b     x        a         b   c         d    $
+         0       1        2      3        4     5        6         7   8         9    10
+
+
+  Llega $: queda un solo pendiente ($), la raíz no tiene arista $: regla 2a, hoja 10.
+ Como ningún sufijo continúa con $, las aristas abiertas se cierran y obtenemos el
+          suffix tree completo de S $: 11 hojas, 5 nodos internos y la raíz.
+Víctor Racsó Galván Oyola                       Universidad de Ingeniería y Tecnología                            40 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen de la traza
+
+
+
+
+     Fase      c       resto   punto activo    qué pasó
+      0–2    a, b, c    0          raíz        tres hojas (regla 2a)
+        3       a       1      (raíz, a, 1)    regla 3
+        4       b       2      (raíz, a, 2)    regla 3
+        5       x       0          raíz        2 particiones y una hoja
+        6       a       1      (raíz, a, 1)    regla 3
+        7       b       2      (raíz, a, 2)    regla 3
+        8       c       3       (ab, c, 1)     se baja a ab; regla 3
+        9       d       0          raíz        3 particiones con suffix links y una hoja
+       10       $       0          raíz        una hoja; se cierra todo
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología                  41 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué es O(n)?
+
+
+
+
+Tres cantidades acotadas por n
+ ▶ Las reglas 2 crean una hoja y las hojas nunca desaparecen: a lo más
+   n reglas 2 (más ≤ n nodos internos).
+ ▶ Cada fase termina con a lo más una regla 3: ≤ n.
+ ▶ Con las aristas abiertas, la regla 1 no cuesta.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   42 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué es O(n)?
+
+
+
+
+Tres cantidades acotadas por n
+ ▶ Las reglas 2 crean una hoja y las hojas nunca desaparecen: a lo más
+   n reglas 2 (más ≤ n nodos internos).
+ ▶ Cada fase termina con a lo más una regla 3: ≤ n.
+ ▶ Con las aristas abiertas, la regla 1 no cuesta.
+
+El costo de bajar por aristas (skip/count)
+La profundidad del nodo activo crece a lo más 1 por fase y decrece a lo
+más 1 cuando se sigue un suffix link (y no más que lo que se bajó antes): el
+total de pasos por aristas es O(n).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    42 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre del algoritmo
+
+
+
+
+Hacerlo explícito
+Con el sentinela $ al final, ningún sufijo es prefijo de otro y el árbol implícito
+se convierte en el suffix tree completo; las aristas abiertas se cierran en n.
+
+Costo total
+O(n) con un arreglo de hijos por nodo (O(nσ) de memoria) o O(n lg σ) con
+mapas; online: tras cada carácter el árbol es válido.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         43 / 52
+Comparación y práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Suffix array frente a suffix tree
+
+
+
+
+                                    Suffix array + LCP                 Suffix tree
+      Memoria                        ≈ n–3n enteros            ≈ 2n nodos con hijos
+      Búsqueda de P               O(|P| + lg n) con LCP                O(|P|)
+      Construcción                   O(n) con SA-IS             O(n) con Ukkonen
+      Online                                no                           sí
+      Consultas estructurales       RMQ sobre LCP               recorridos del árbol
+
+  En competencias suele ganar el suffix array por su memoria y su código corto; el
+                           suffix tree gana en claridad.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                   45 / 52
+Práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Práctica
+
+
+
+
+      Problema                            Idea
+      CSES 2102 — Finding Patterns        ¿P ocurre? bajar por el árbol
+      CSES 2103 — Counting Patterns       hojas del subárbol
+      CSES 2104 — Pattern Positions       lista de hojas de un subárbol
+      CSES 2105 — Distinct Substrings     suma de longitudes de aristas
+      CSES 2106 — Repeating Substring     nodo interno más profundo
+      CSES 2108 — Substring Order I       recorrido lexicográfico con contadores
+      Codeforces 123D — String            suma sobre nodos de ocurrencias por longitud
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     47 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El suffix tree comprime los tramos sin bifurcación del trie de sufijos:
+   ≤ 2n + 1 nodos, búsqueda en O(|P|).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     48 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El suffix tree comprime los tramos sin bifurcación del trie de sufijos:
+   ≤ 2n + 1 nodos, búsqueda en O(|P|).
+ ▶ Los nodos internos son las subcadenas repetidas, y los suffix links
+   borran la primera letra de su etiqueta.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     48 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ El suffix tree comprime los tramos sin bifurcación del trie de sufijos:
+   ≤ 2n + 1 nodos, búsqueda en O(|P|).
+ ▶ Los nodos internos son las subcadenas repetidas, y los suffix links
+   borran la primera letra de su etiqueta.
+ ▶ Ukkonen lo construye online: árbol implícito, tres reglas, resto, punto
+   activo y suffix links.
+ ▶ Con aristas abiertas y suffix links, cada fase cuesta O(1) amortizado:
+   O(n) en total.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     48 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   49 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir y recorrer un suffix tree
+ ▶ Sabemos definir los suffix links y explicar su utilidad
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   49 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos construir y recorrer un suffix tree
+ ▶ Sabemos definir los suffix links y explicar su utilidad
+ ▶ Sabemos seguir paso a paso una ejecución de Ukkonen
+ ▶ Sabemos explicar y justificar el costo del algoritmo
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   49 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   50 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+Bibliografía citada
+ ▶ Weiner, P. (1973). Linear pattern matching algorithms. SWAT’73,
+   1–11.
+ ▶ McCreight, E. M. (1976). A space-economical suffix tree construction
+   algorithm. J. ACM, 23(2), 262–272.
+ ▶ Ukkonen, E. (1995). On-line construction of suffix trees. Algorithmica,
+   14(3), 249–260.
+ ▶ Gusfield, D. (1997). Algorithms on Strings, Trees, and Sequences.
+   Cambridge University Press.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   51 / 52
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   52 / 52
+

@@ -1,0 +1,62 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+*(Los casos mínimo y límite son derivados aplicando las reglas de la clase; no aparecen en las diapositivas. El caso normal es la traza de la teoría.)*
+
+## Mínimo: ab con centinela
+
+Las tres fases son reglas 2a desde la raíz: a (hoja 0), b (hoja 1), centinela (hoja 2). resto nunca pasa de 1 y el punto activo se queda en la raíz. El resultado es el árbol de tres hojas sin internos.
+
+## Normal: abab con centinela
+
+| Fase | $c$ | qué pasa | resto | punto activo |
+| --- | --- | --- | --- | --- |
+| 0 | a | regla 2a, hoja 0 | 0 | raíz |
+| 1 | b | regla 2a, hoja 1 | 0 | raíz |
+| 2 | a | a ya existe: regla 3 | 1 | (raíz, a, 1) |
+| 3 | b | ab ya existe: regla 3 | 2 | (raíz, a, 2) |
+| 4 | centinela | 3 pendientes: parte ab (hoja 2), parte b (hoja 3) con link ab → b, hoja 4 | 0 | raíz |
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Antes de la fase 4: árbol implícito de abab con dos hojas abiertas. Los pendientes ab y b están escondidos en las aristas. resto = 2, punto activo (raíz, a, 2).",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "l0", value: "abab…", tag: "0", parent: "r", state: "marked" },
+        { id: "l1", value: "bab…", tag: "1", parent: "r" },
+      ],
+      caption: "Pendientes: ab, b (y el centinela que llega).",
+    },
+    {
+      note: "Fase 4: el pendiente más largo (ab seguido del centinela) no continúa: regla 2b, nace el interno ab con la hoja 2. Desde la raíz la longitud activa baja a 1: regla 2b en b, nace el interno b con la hoja 3 y el link ab → b. Por último la hoja 4 desde la raíz.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "ab", value: "ab", parent: "r", state: "active" },
+        { id: "l0", value: "ab$", tag: "0", parent: "ab" },
+        { id: "l2", value: "$", tag: "2", parent: "ab", state: "copied" },
+        { id: "b", value: "b", parent: "r", state: "active" },
+        { id: "l1", value: "ab$", tag: "1", parent: "b" },
+        { id: "l3", value: "$", tag: "3", parent: "b", state: "copied" },
+        { id: "l4", value: "$", tag: "4", parent: "r", state: "copied" },
+      ],
+      links: [{ from: "ab", to: "b", kind: "pointer", dash: true, label: "link" }],
+      caption: "Mismo árbol que el de la teoría del suffix tree.",
+    },
+  ],
+}} />
+
+## Límite: aaa con centinela
+
+Una sola letra repetida acumula pendientes: fases 1 y 2 son reglas 3 y resto llega a 2. En la fase del centinela hay 3 pendientes y salen **dos particiones en cascada** más una hoja:
+
+1. pendiente $\mathtt{aa}$ + centinela: se parte la arista en aa, nace el interno aa con la hoja 1;
+2. desde la raíz, longitud activa 1: se parte en a, nace el interno a con la hoja 2 y el link aa → a;
+3. la raíz no tiene arista con el centinela: hoja 3; el link de a va a la raíz.
+
+Resultado: el camino de internos a → aa con una hoja centinela en cada uno, la hoja 0 bajo aa y la hoja 3 en la raíz.

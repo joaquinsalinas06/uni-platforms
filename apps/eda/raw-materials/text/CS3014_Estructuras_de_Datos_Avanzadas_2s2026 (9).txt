@@ -1,0 +1,1411 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Jerarquía de Memoria II
+Semana 10
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+14 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir la estructura que alcanza la cota de búsqueda en memoria
+   externa: el B-Tree
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir la estructura que alcanza la cota de búsqueda en memoria
+   externa: el B-Tree
+ ▶ Analizar búsqueda, inserción y eliminación en un B-Tree contando
+   transferencias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir la estructura que alcanza la cota de búsqueda en memoria
+   externa: el B-Tree
+ ▶ Analizar búsqueda, inserción y eliminación en un B-Tree contando
+   transferencias
+ ▶ Definir el modelo cache-oblivious: algoritmos que no conocen B ni M
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Construir la estructura que alcanza la cota de búsqueda en memoria
+   externa: el B-Tree
+ ▶ Analizar búsqueda, inserción y eliminación en un B-Tree contando
+   transferencias
+ ▶ Definir el modelo cache-oblivious: algoritmos que no conocen B ni M
+ ▶ Entender por qué el orden en que se guarda un árbol en memoria
+   decide cuántas transferencias cuesta recorrerlo
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Lo que quedó pendiente al estudiar el modelo de memoria externa
+Buscar entre N elementos necesita Ω(logB+1 N) transferencias, pero la bús-
+queda binaria usa lg(N/B).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Lo que quedó pendiente al estudiar el modelo de memoria externa
+Buscar entre N elementos necesita Ω(logB+1 N) transferencias, pero la bús-
+queda binaria usa lg(N/B).
+
+¿Cómo se aprovecha un bloque entero en cada paso de una búsqueda?
+Un bloque trae B elementos. La búsqueda binaria mira uno y descarta la
+mitad; lo ideal sería mirar los B y descartar casi todo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     3 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Lo que quedó pendiente al estudiar el modelo de memoria externa
+Buscar entre N elementos necesita Ω(logB+1 N) transferencias, pero la bús-
+queda binaria usa lg(N/B).
+
+¿Cómo se aprovecha un bloque entero en cada paso de una búsqueda?
+Un bloque trae B elementos. La búsqueda binaria mira uno y descarta la
+mitad; lo ideal sería mirar los B y descartar casi todo.
+
+Hoy, dos respuestas
+Una estructura diseñada sabiendo cuánto vale B, y un modelo en el que se
+nos prohíbe saberlo.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     3 / 29
+B-Trees
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un árbol binario de búsqueda, en disco
+
+
+
+
+Cada nodo donde caiga
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   5 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un árbol binario de búsqueda, en disco
+
+
+
+
+Cada nodo donde caiga
+Si los nodos están repartidos por el disco, cada paso de la búsqueda trae un
+bloque nuevo para leer una clave.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    5 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un árbol binario de búsqueda, en disco
+
+
+
+
+Cada nodo donde caiga
+Si los nodos están repartidos por el disco, cada paso de la búsqueda trae un
+bloque nuevo para leer una clave.
+
+ Un árbol balanceado cuesta Θ(lg N) transferencias por búsqueda: peor aún que la
+                       búsqueda binaria sobre un arreglo.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         5 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea: nodos del tamaño de un bloque
+
+
+
+
+                       un nodo = un bloque: hasta B claves ordenadas
+
+
+                k1          k2           k3               ···             kB
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología        6 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea: nodos del tamaño de un bloque
+
+
+
+                       un nodo = un bloque: hasta B claves ordenadas
+
+
+                k1          k2           k3               ···             kB
+
+
+
+                      hasta B + 1 hijos: uno por cada zona entre claves
+
+
+
+Un nodo con muchas claves
+Traer el nodo cuesta una transferencia. Ubicar la clave buscada entre las B
+del nodo es trabajo en memoria: gratis.
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología        6 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea: nodos del tamaño de un bloque
+
+
+
+                       un nodo = un bloque: hasta B claves ordenadas
+
+
+                k1          k2           k3               ···             kB
+
+
+
+                      hasta B + 1 hijos: uno por cada zona entre claves
+
+
+
+Un nodo con muchas claves
+Traer el nodo cuesta una transferencia. Ubicar la clave buscada entre las B
+del nodo es trabajo en memoria: gratis.
+
+ Una sola transferencia decide entre B + 1 caminos, no entre dos. Es exactamente
+              lo que pedía la cota inferior: lg(B + 1) bits por bloque.
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología        6 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    B-Tree
+
+
+
+
+Definición
+Un árbol de búsqueda en el que:
+ ▶ cada nodo guarda a lo más B claves ordenadas, y un nodo interno con
+   k claves tiene k + 1 hijos;
+ ▶ todo nodo, salvo la raíz, tiene al menos ⌈(B + 1)/2⌉ hijos (o esa
+   cantidad de claves menos uno, si es hoja);
+ ▶ todas las hojas están a la misma profundidad.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    B-Tree
+
+
+
+
+                                          40
+
+
+                 20                                            60 80
+
+
+        10              30 35                      50          70 75     90 95 99
+
+
+                  Un B-Tree con B = 3: entre 2 y 4 hijos por nodo.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología              8 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                          40
+
+
+
+                  20                                         60 80
+
+
+
+         10              30 35                   50          70 75     90 95 99
+
+
+
+Buscar el 75
+Se trae la raíz. 75 > 40: por la derecha.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              9 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                          40
+
+
+
+                  20                                         60 80
+
+
+
+         10              30 35                   50          70 75     90 95 99
+
+
+
+Buscar el 75
+Se trae el nodo [60, 80]. 60 < 75 < 80: por el hijo del medio.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              9 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar
+
+
+
+
+                                          40
+
+
+
+                  20                                         60 80
+
+
+
+         10              30 35                   50          70 75     90 95 99
+
+
+
+Buscar el 75
+Se trae la hoja [70, 75]: encontrado. Tres transferencias, una por nivel.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              9 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué tan alto es un B-Tree?
+
+
+
+
+        lg N
+
+                                                                          logB+1 N
+                 árbol binario                           B-Tree
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología              10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué tan alto es un B-Tree?
+
+
+
+
+        lg N
+
+                                                                          logB+1 N
+                 árbol binario                           B-Tree
+
+
+
+La altura
+Cada nodo tiene al menos ⌈(B + 1)/2⌉ hijos: con N claves la altura es
+O(logB+1 N), unas lg(B + 1) veces menos que la del árbol binario.
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología              10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué tan alto es un B-Tree?
+
+
+
+
+        lg N
+
+                                                                          logB+1 N
+                 árbol binario                           B-Tree
+
+
+
+La altura
+Cada nodo tiene al menos ⌈(B + 1)/2⌉ hijos: con N claves la altura es
+O(logB+1 N), unas lg(B + 1) veces menos que la del árbol binario.
+
+Buscar cuesta Θ(logB+1 N) transferencias: óptimo
+Con N = 109 y B = 103 : 3 o 4 niveles, contra 30 del árbol binario y 20 de la
+búsqueda binaria.
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología              10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar: partir un nodo lleno
+
+
+
+
+                                             30
+
+
+
+                            10 20                          40 50 60
+
+
+
+Insertar el 55, con B = 3
+Se busca la hoja que le corresponde: [40, 50, 60], que ya está llena.
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   11 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar: partir un nodo lleno
+
+
+
+
+                                             30
+
+
+
+                            10 20                        40 50 55 60
+
+
+
+Insertar el 55, con B = 3
+La hoja quedaría con 4 claves: no cabe en un bloque.
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   11 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar: partir un nodo lleno
+
+
+
+
+                                          30 50
+
+
+
+                      10 20                       40                   55 60
+
+
+
+Insertar el 55, con B = 3
+Se parte en dos mitades y la clave del medio, 50, sube al padre. Si el padre
+también se llena, se parte él, y así hacia arriba.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           11 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo crece un B-Tree?
+
+
+                                                                    40
+
+              20 40 60 80
+
+              la raíz se llenó                            20                60 80
+
+                                                         raíz nueva: un nivel más
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología             12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo crece un B-Tree?
+
+
+                                                                    40
+
+              20 40 60 80
+
+              la raíz se llenó                            20                60 80
+
+                                                         raíz nueva: un nivel más
+
+
+Hacia arriba, no hacia abajo
+Un B-Tree solo gana altura cuando se parte la raíz. Por eso todas las hojas
+quedan siempre a la misma profundidad, sin rotaciones.
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología             12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo crece un B-Tree?
+
+
+                                                                    40
+
+              20 40 60 80
+
+              la raíz se llenó                            20                60 80
+
+                                                         raíz nueva: un nivel más
+
+
+Hacia arriba, no hacia abajo
+Un B-Tree solo gana altura cuando se parte la raíz. Por eso todas las hojas
+quedan siempre a la misma profundidad, sin rotaciones.
+
+Eliminar es el proceso inverso
+Si un nodo queda con menos claves que el mínimo, toma una prestada de
+un hermano; si el hermano tampoco tiene de sobra, los dos se fusionan y el
+padre pierde una clave.
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología             12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El costo de las operaciones
+
+
+
+                Operación                                Transferencias
+                Buscar, predecesor, sucesor             Θ(logB+1 N)
+                Insertar, eliminar                      O(logB+1 N)
+                Recorrer k claves consecutivas       O(logB+1 N + k/B)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      13 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El costo de las operaciones
+
+
+
+                Operación                                Transferencias
+                Buscar, predecesor, sucesor             Θ(logB+1 N)
+                Insertar, eliminar                      O(logB+1 N)
+                Recorrer k claves consecutivas       O(logB+1 N + k/B)
+
+
+Insertar y eliminar
+Una búsqueda hacia abajo y, en el peor caso, una partición o fusión por nivel
+hacia arriba: un número constante de bloques por nivel.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      13 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El costo de las operaciones
+
+
+
+                Operación                                Transferencias
+                Buscar, predecesor, sucesor             Θ(logB+1 N)
+                Insertar, eliminar                      O(logB+1 N)
+                Recorrer k claves consecutivas       O(logB+1 N + k/B)
+
+
+Insertar y eliminar
+Una búsqueda hacia abajo y, en el peor caso, una partición o fusión por nivel
+hacia arriba: un número constante de bloques por nivel.
+
+Para buscar, logB+1 N es óptimo. ¿También para insertar?
+No. Si las consultas pueden esperar, hay estructuras (buffer trees) que
+insertan en O B1 logM/B NB amortizado: menos de una transferencia por
+operación.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      13 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y si ordenamos con un B-Tree?
+
+
+
+
+En el modelo RAM funciona
+Insertar los N elementos en un árbol balanceado y recorrerlo en orden es un
+ordenamiento óptimo: Θ(N lg N).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y si ordenamos con un B-Tree?
+
+
+
+
+En el modelo RAM funciona
+Insertar los N elementos en un árbol balanceado y recorrerlo en orden es un
+ordenamiento óptimo: Θ(N lg N).
+
+En memoria externa
+Son N inserciones de logB+1 N transferencias: O(N logB+1 N). El
+ordenamiento por mezcla múltiple cuesta O N B log     N
+                                                  M/B B .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y si ordenamos con un B-Tree?
+
+
+
+
+En el modelo RAM funciona
+Insertar los N elementos en un árbol balanceado y recorrerlo en orden es un
+ordenamiento óptimo: Θ(N lg N).
+
+En memoria externa
+Son N inserciones de logB+1 N transferencias: O(N logB+1 N). El
+ordenamiento por mezcla múltiple cuesta O N B log     N
+                                                  M/B B .
+
+
+ Con N = 1011 , M = 109 y B = 105 : unas 2 · 1011 transferencias contra 2 · 106 . El
+ B-Tree responde cada operación de inmediato, y eso cuesta un factor B frente a
+                           procesar todo por lotes.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           14 / 29
+El modelo cache-oblivious
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuál es el B?
+
+
+                            Caché L1                   líneas de 64 B
+
+                            Caché L2                   líneas de 64 B
+
+                        Memoria principal              páginas de 4 KB
+
+                              Disco                    sectores, bloques de MB
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             16 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuál es el B?
+
+
+                                    Caché L1                   líneas de 64 B
+
+      cada frontera                 Caché L2                   líneas de 64 B
+         tiene su B
+             y su M             Memoria principal              páginas de 4 KB
+
+                                     Disco                     sectores, bloques de MB
+
+
+
+El modelo de memoria externa mira una frontera
+Un B-Tree con nodos del tamaño de una página de disco es óptimo entre
+RAM y disco, pero dentro de la RAM cada nodo son decenas de líneas de
+caché, recorridas sin ningún cuidado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     16 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuál es el B?
+
+
+                                    Caché L1                   líneas de 64 B
+
+      cada frontera                 Caché L2                   líneas de 64 B
+         tiene su B
+             y su M             Memoria principal              páginas de 4 KB
+
+                                     Disco                     sectores, bloques de MB
+
+
+
+El modelo de memoria externa mira una frontera
+Un B-Tree con nodos del tamaño de una página de disco es óptimo entre
+RAM y disco, pero dentro de la RAM cada nodo son decenas de líneas de
+caché, recorridas sin ningún cuidado.
+
+¿Se puede ser eficiente en todas las fronteras a la vez, sin ajustar el
+algoritmo a cada máquina?
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     16 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El modelo cache-oblivious
+
+
+                                                                B=?
+                            M=?
+
+          CPU
+
+
+
+
+Frigo, Leiserson, Prokop y Ramachandran (1999)
+El mismo modelo de dos niveles, con una restricción: el algoritmo no conoce
+B ni M.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El modelo cache-oblivious
+
+
+                                                                B=?
+                            M=?
+
+          CPU
+
+
+
+
+Frigo, Leiserson, Prokop y Ramachandran (1999)
+El mismo modelo de dos niveles, con una restricción: el algoritmo no conoce
+B ni M.
+
+Se escribe como en RAM, se analiza como en memoria externa
+El código no menciona bloques. B y M aparecen solo en el análisis, y la cota
+debe valer para todos sus valores.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Quién decide qué bloque sale de la memoria?
+
+
+
+En memoria externa, el algoritmo
+Sabe qué tiene en memoria y elige qué bloque traer y cuál desalojar. Un
+algoritmo que no conoce B no puede hacerlo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Quién decide qué bloque sale de la memoria?
+
+
+
+En memoria externa, el algoritmo
+Sabe qué tiene en memoria y elige qué bloque traer y cuál desalojar. Un
+algoritmo que no conoce B no puede hacerlo.
+
+En el modelo cache-oblivious, el sistema
+Al acceder a una palabra que no está en memoria, su bloque se trae
+automáticamente. Si la memoria está llena, se desaloja otro bloque.
+Suponemos que esa elección es la óptima.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Quién decide qué bloque sale de la memoria?
+
+
+
+En memoria externa, el algoritmo
+Sabe qué tiene en memoria y elige qué bloque traer y cuál desalojar. Un
+algoritmo que no conoce B no puede hacerlo.
+
+En el modelo cache-oblivious, el sistema
+Al acceder a una palabra que no está en memoria, su bloque se trae
+automáticamente. Si la memoria está llena, se desaloja otro bloque.
+Suponemos que esa elección es la óptima.
+
+¿No es mucho pedir que el sistema adivine el futuro?
+No hace falta: las políticas reales LRU y FIFO, con una memoria del doble
+de tamaño, hacen a lo más el doble de transferencias que el óptimo. Y
+nuestras cotas no cambian al reemplazar M por 2M.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué es tan atractivo?
+
+
+
+                                                                  B1 , M1 : óptimo
+
+                                                                  B2 , M2 : óptimo
+
+                                                                  B3 , M3 : óptimo
+
+
+
+
+Una demostración, todas las fronteras
+Si la cota vale para cualquier B y M, vale en particular para los de cada par
+de niveles vecinos: el algoritmo es bueno en toda la jerarquía a la vez.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                 19 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué es tan atractivo?
+
+
+
+                                                                  B1 , M1 : óptimo
+
+                                                                  B2 , M2 : óptimo
+
+                                                                  B3 , M3 : óptimo
+
+
+
+
+Una demostración, todas las fronteras
+Si la cota vale para cualquier B y M, vale en particular para los de cada par
+de niveles vecinos: el algoritmo es bueno en toda la jerarquía a la vez.
+
+Y además
+No hay parámetros que ajustar al cambiar de máquina, y el algoritmo se
+adapta solo si la memoria disponible cambia mientras corre.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                 19 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué sobrevive del tablero de memoria externa?
+
+
+            Problema        Memoria externa            Cache-oblivious
+            Escanear        Θ(N/B)                     Igual
+
+
+
+
+Escanear
+El algoritmo nunca usó B: recorre el arreglo en orden. B solo apareció al
+contar.
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología   20 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué sobrevive del tablero de memoria externa?
+
+
+            Problema        Memoria externa            Cache-oblivious
+            Escanear        Θ(N/B)                     Igual
+                            Θ N        N
+                                                       Igual, con M = Ω(B 1+ε )
+                                         
+            Ordenar           B logM/B B       
+            Permutar        Θ mı́n{N, ordenar }        El mínimo es imposible
+
+
+
+Escanear
+El algoritmo nunca usó B: recorre el arreglo en orden. B solo apareció al
+contar.
+
+Ordenar y permutar
+La mezcla de M/B corridas necesita conocer M/B, pero hay otro algoritmo
+(funnelsort) que logra la misma cota. Para permutar, en cambio, no se
+puede saber cuál de las dos estrategias conviene.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología            20 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué sobrevive del tablero de memoria externa?
+
+
+            Problema        Memoria externa            Cache-oblivious
+            Escanear        Θ(N/B)                     Igual
+                            Θ N         N
+                                                       Igual, con M = Ω(B 1+ε )
+                                          
+            Ordenar            B logM/B B      
+            Permutar        Θ mı́n{N, ordenar }        El mínimo es imposible
+            Buscar          Θ(logB+1 N)                ¿?
+
+
+Escanear
+El algoritmo nunca usó B: recorre el arreglo en orden. B solo apareció al
+contar.
+
+Ordenar y permutar
+La mezcla de M/B corridas necesita conocer M/B, pero hay otro algoritmo
+(funnelsort) que logra la misma cota. Para permutar, en cambio, no se
+puede saber cuál de las dos estrategias conviene.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología            20 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y buscar?
+
+
+
+El B-Tree no sirve
+Su definición empieza por “cada nodo guarda B claves”. Sin conocer B, no se
+puede ni construir.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y buscar?
+
+
+
+El B-Tree no sirve
+Su definición empieza por “cada nodo guarda B claves”. Sin conocer B, no se
+puede ni construir.
+
+Lo que sí podemos escribir sin conocer B
+Un árbol binario de búsqueda balanceado, guardado en un arreglo. El
+algoritmo de búsqueda es el de siempre.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Y buscar?
+
+
+
+El B-Tree no sirve
+Su definición empieza por “cada nodo guarda B claves”. Sin conocer B, no se
+puede ni construir.
+
+Lo que sí podemos escribir sin conocer B
+Un árbol binario de búsqueda balanceado, guardado en un arreglo. El
+algoritmo de búsqueda es el de siempre.
+
+Lo único que queda por decidir es en qué orden se guardan los nodos
+en el arreglo. ¿Importa?
+Muchísimo: de ese orden depende qué nodos comparten bloque, y por lo
+tanto cuántos bloques toca un camino de la raíz a una hoja.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primer intento: por niveles
+
+
+
+
+                                               1
+
+
+                            2                                      3
+
+
+                 4                   5                   6                    7
+
+
+             8        9         10        11       12        13          14       15
+
+
+
+
+El orden de un heap: 1; 2, 3; 4, 5, 6, 7; . . .
+Los nodos se guardan nivel por nivel, de izquierda a derecha.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                 22 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primer intento: por niveles
+
+
+
+                                                     bloque 1
+
+                                                        1
+
+
+                            2                                                 3
+                                     bloque 2
+
+                  4                     5                            6                 7
+
+
+             8        9         10              11              12       13       14       15
+
+
+
+
+El orden de un heap: 1; 2, 3; 4, 5, 6, 7; . . .
+Con B = 3: la raíz y sus dos hijos comparten bloque. Pero el nivel siguiente
+ya se reparte entre varios.
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                          22 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primer intento: por niveles
+
+
+
+                                                     bloque 1
+
+                                                        1
+
+
+                            2                                                 3
+                                     bloque 2
+
+                  4                     5                            6                 7
+
+
+             8        9         10              11              12       13       14       15
+
+
+
+
+El orden de un heap: 1; 2, 3; 4, 5, 6, 7; . . .
+Los primeros lg B niveles salen casi gratis. Más abajo, un nodo y su hijo
+están a más de B posiciones de distancia: una transferencia por nivel. Total
+Θ(lg N − lg B), lo mismo que la búsqueda binaria.
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                          22 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otros dos órdenes conocidos
+
+
+En orden (el arreglo ordenado)
+La búsqueda sobre este layout es la búsqueda binaria: Θ(lg(N/B)). Los últi-
+mos lg B pasos caen en un mismo bloque, pero los primeros saltan por todo
+el arreglo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otros dos órdenes conocidos
+
+
+En orden (el arreglo ordenado)
+La búsqueda sobre este layout es la búsqueda binaria: Θ(lg(N/B)). Los últi-
+mos lg B pasos caen en un mismo bloque, pero los primeros saltan por todo
+el arreglo.
+
+En preorden
+Bajar a la izquierda es pasar a la celda siguiente: barato. Bajar a la derecha
+salta por encima de todo el subárbol izquierdo. Un camino que siempre va a
+la derecha cuesta otra vez Θ(lg(N/B)).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     23 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Otros dos órdenes conocidos
+
+
+En orden (el arreglo ordenado)
+La búsqueda sobre este layout es la búsqueda binaria: Θ(lg(N/B)). Los últi-
+mos lg B pasos caen en un mismo bloque, pero los primeros saltan por todo
+el arreglo.
+
+En preorden
+Bajar a la izquierda es pasar a la celda siguiente: barato. Bajar a la derecha
+salta por encima de todo el subárbol izquierdo. Un camino que siempre va a
+la derecha cuesta otra vez Θ(lg(N/B)).
+
+Los tres fallan por lo mismo
+Agrupan bien los nodos en una escala (arriba, o abajo, o hacia un lado) y
+mal en las demás. Como no sabemos B, hay que agrupar bien en todas las
+escalas a la vez.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     23 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea que lo resuelve
+
+
+
+              h/2                                          corte a media altura
+                                             arriba
+
+
+              h/2
+                                              ···
+
+
+
+Cortar el árbol a la mitad de su altura, recursivamente
+Guardar primero la parte de arriba y luego cada subárbol de abajo, y hacer lo
+mismo dentro de cada pieza.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              24 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea que lo resuelve
+
+
+
+              h/2                                          corte a media altura
+                                             arriba
+
+
+              h/2
+                                              ···
+
+
+
+Cortar el árbol a la mitad de su altura, recursivamente
+Guardar primero la parte de arriba y luego cada subárbol de abajo, y hacer lo
+mismo dentro de cada pieza.
+
+El layout de van Emde Boas
+En cada nivel de la recursión las piezas son contiguas en memoria. Sea cual
+sea B, algún nivel de la recursión tiene piezas “del tamaño de un bloque”. La
+próxima clase lo construimos y lo analizamos.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              24 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ B-Tree: nodos del tamaño de un bloque, entre ⌈(B + 1)/2⌉ y B + 1
+   hijos, todas las hojas al mismo nivel. Buscar, insertar y eliminar en
+   O(logB+1 N) transferencias; para buscar, eso es óptimo.
+ ▶ Crece partiendo nodos hacia arriba; se achica fusionándolos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ B-Tree: nodos del tamaño de un bloque, entre ⌈(B + 1)/2⌉ y B + 1
+   hijos, todas las hojas al mismo nivel. Buscar, insertar y eliminar en
+   O(logB+1 N) transferencias; para buscar, eso es óptimo.
+ ▶ Crece partiendo nodos hacia arriba; se achica fusionándolos.
+ ▶ Modelo cache-oblivious: el algoritmo no conoce B ni M; el sistema
+   pagina por él. Una cota válida para todo B y M vale en toda la
+   jerarquía.
+ ▶ El orden en que se guarda un árbol en memoria decide su costo. Por
+   niveles, en orden y en preorden cuestan Θ(lg(N/B)).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos buscar, insertar y partir nodos en un B-Tree, y acotar su altura
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos buscar, insertar y partir nodos en un B-Tree, y acotar su altura
+ ▶ Sabemos explicar por qué un B-Tree no es la forma eficiente de ordenar
+   en memoria externa
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos buscar, insertar y partir nodos en un B-Tree, y acotar su altura
+ ▶ Sabemos explicar por qué un B-Tree no es la forma eficiente de ordenar
+   en memoria externa
+ ▶ Sabemos definir el modelo cache-oblivious y justificar el supuesto de
+   paginación óptima
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos buscar, insertar y partir nodos en un B-Tree, y acotar su altura
+ ▶ Sabemos explicar por qué un B-Tree no es la forma eficiente de ordenar
+   en memoria externa
+ ▶ Sabemos definir el modelo cache-oblivious y justificar el supuesto de
+   paginación óptima
+ ▶ Sabemos analizar cuántas transferencias cuesta una búsqueda según el
+   layout del árbol
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Bayer, R., & McCreight, E. (1972). Organization and maintenance of
+   large ordered indexes. Acta Informatica, 1(3), 173–189.
+ ▶ Frigo, M., Leiserson, C. E., Prokop, H., & Ramachandran, S. (1999).
+   Cache-oblivious algorithms. Proceedings of FOCS’99, 285–298.
+ ▶ Sleator, D. D., & Tarjan, R. E. (1985). Amortized efficiency of list
+   update and paging rules. Communications of the ACM, 28(2), 202–208.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 29
+

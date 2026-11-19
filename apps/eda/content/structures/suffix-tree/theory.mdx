@@ -1,0 +1,243 @@
+---
+kind: "theory"
+title: "Suffix tree"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Motivación
+
+El [suffix array](/structures/suffix-array) es un índice **plano**: para buscar un patrón $P$ hace búsqueda binaria, $O(\lvert P\rvert \lg n)$, y para preguntas estructurales (¿qué subcadenas se repiten?, ¿cuál es la más larga?) hay que interpretar intervalos del SA y de la tabla LCP. La clase propone un índice con **forma de árbol**: cada camino desde la raíz es una subcadena de $S$ y cada subcadena repetida es un nodo interno. Buscar $P$ cuesta entonces $O(\lvert P\rvert)$, sin depender de $n$.
+
+## Intuición dibujada
+
+**Paso 1: el trie de los sufijos.** Se inserta cada sufijo de $S\mathdollar$ en un [trie](/structures/trie). El centinela $\mathdollar$, menor que todas las letras, impide que un sufijo sea prefijo de otro: así cada sufijo termina en su propia hoja, rotulada con su posición de inicio.
+
+**Paso 2: comprimir.** Casi todo el trie son tramos sin bifurcación (para $S = a^n b$ el trie tiene $\Theta(n^2)$ nodos). Cada tramo se reemplaza por **una** arista rotulada con la subcadena, guardada como un par $[l, r)$ de índices sobre $S$.
+
+En los diagramas el rótulo de cada nodo es la etiqueta de la **arista que llega a él**; el número encima de una hoja es la posición de inicio de su sufijo.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Trie de los sufijos de $\\mathtt{abab}\\mathdollar$, un carácter por arista. Los nodos con un solo hijo (en ámbar) son tramos sin bifurcación: sobran.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "a", value: "a", parent: "r", state: "marked" },
+        { id: "ab", value: "b", parent: "a" },
+        { id: "aba", value: "a", parent: "ab", state: "marked" },
+        { id: "abab", value: "b", parent: "aba", state: "marked" },
+        { id: "l0", value: "$", tag: "0", parent: "abab" },
+        { id: "l2", value: "$", tag: "2", parent: "ab" },
+        { id: "b", value: "b", parent: "r" },
+        { id: "ba", value: "a", parent: "b", state: "marked" },
+        { id: "bab", value: "b", parent: "ba", state: "marked" },
+        { id: "l1", value: "$", tag: "1", parent: "bab" },
+        { id: "l3", value: "$", tag: "3", parent: "b" },
+        { id: "l4", value: "$", tag: "4", parent: "r" },
+      ],
+      caption: "5 hojas, una por sufijo. El trie tiene 13 nodos; casi todos sobran.",
+    },
+    {
+      note: "Suffix tree: cada tramo sin bifurcación pasa a ser una sola arista. Quedan los nodos internos ab y b (las subcadenas repetidas con continuaciones distintas) y las 5 hojas.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "ab", value: "ab", parent: "r", state: "active" },
+        { id: "l0", value: "ab$", tag: "0", parent: "ab" },
+        { id: "l2", value: "$", tag: "2", parent: "ab" },
+        { id: "b", value: "b", parent: "r", state: "active" },
+        { id: "l1", value: "ab$", tag: "1", parent: "b" },
+        { id: "l3", value: "$", tag: "3", parent: "b" },
+        { id: "l4", value: "$", tag: "4", parent: "r" },
+      ],
+      caption: "Aristas como pares de índices: ab = [0,2), b = [1,2), $\\mathtt{ab}\\mathdollar$ = [2,5), $\\mathdollar$ = [4,5).",
+    },
+  ],
+}} />
+
+## Definición y notación
+
+Un **suffix tree** de $S\mathdollar$ (con $\lvert S\rvert = n$) es un árbol con raíz tal que:
+
+1. cada arista tiene una subcadena **no vacía** de $S\mathdollar$;
+2. las aristas que salen de un nodo empiezan con caracteres **distintos**;
+3. cada nodo interno distinto de la raíz tiene **al menos dos** hijos;
+4. las etiquetas de los caminos raíz–hoja son exactamente los sufijos de $S\mathdollar$.
+
+| Símbolo | Qué es | Qué pasa si crece |
+| --- | --- | --- |
+| $n$ | longitud de $S$ | hay $n+1$ hojas |
+| $[l, r)$ | rótulo de una arista como índices sobre $S$ | $O(1)$ palabras por arista sin importar su largo |
+| etiqueta de camino | concatenación de aristas desde la raíz hasta un nodo | su longitud es la **profundidad de cadena** del nodo |
+| nodo interno | subcadena que aparece al menos dos veces con continuaciones distintas | más repeticiones, más nodos internos |
+| suffix link | de un interno de etiqueta $x\alpha$ al interno de etiqueta $\alpha$ | encadenados recorren sufijos cada vez más cortos |
+
+**Consecuencias.** $n + 1$ hojas; por la propiedad 3, a lo más $n$ internos; en total $\le 2n + 1$ nodos y espacio $O(n)$.
+
+## Operaciones paso a paso
+
+El ejemplo corrido de la clase es $\mathtt{banana}\mathdollar$: 7 hojas y 4 nodos internos contando la raíz. Los internos son las subcadenas que se repiten: $\mathtt a$, $\mathtt{ana}$, $\mathtt{na}$.
+
+### Buscar un patrón: P = ana
+
+Se baja desde la raíz por la arista que empieza con $P[0]$, se compara a lo largo de la arista y se continúa. Si $P$ se agota, está en $S$; sus ocurrencias son las hojas del subárbol donde termina.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El suffix tree de $\\mathtt{banana}\\mathdollar$. Cada nodo muestra la arista que llega a él; las hojas llevan la posición de inicio del sufijo.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "a", value: "a", parent: "r" },
+        { id: "a5", value: "$", tag: "5", parent: "a" },
+        { id: "ana", value: "na", parent: "a" },
+        { id: "a3", value: "$", tag: "3", parent: "ana" },
+        { id: "a1", value: "na$", tag: "1", parent: "ana" },
+        { id: "b0", value: "banana$", tag: "0", parent: "r" },
+        { id: "na", value: "na", parent: "r" },
+        { id: "n4", value: "$", tag: "4", parent: "na" },
+        { id: "n2", value: "na$", tag: "2", parent: "na" },
+        { id: "d6", value: "$", tag: "6", parent: "r" },
+      ],
+      caption: "Internos: a, ana, na (más la raíz). Hojas 0..6.",
+    },
+    {
+      note: "P[0] = a: se toma la arista a desde la raíz. Coincide la primera letra; P sigue con na.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "a", value: "a", parent: "r", state: "active" },
+        { id: "a5", value: "$", tag: "5", parent: "a" },
+        { id: "ana", value: "na", parent: "a" },
+        { id: "a3", value: "$", tag: "3", parent: "ana" },
+        { id: "a1", value: "na$", tag: "1", parent: "ana" },
+        { id: "b0", value: "banana$", tag: "0", parent: "r", state: "muted" },
+        { id: "na", value: "na", parent: "r", state: "muted" },
+        { id: "n4", value: "$", tag: "4", parent: "na", state: "muted" },
+        { id: "n2", value: "na$", tag: "2", parent: "na", state: "muted" },
+        { id: "d6", value: "$", tag: "6", parent: "r", state: "muted" },
+      ],
+      caption: "Leído: a. Falta: na.",
+    },
+    {
+      note: "Desde el nodo a, la arista que empieza con n es na: coinciden las dos letras y P se agota justo en el nodo ana.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "a", value: "a", parent: "r" },
+        { id: "a5", value: "$", tag: "5", parent: "a", state: "muted" },
+        { id: "ana", value: "na", parent: "a", state: "active" },
+        { id: "a3", value: "$", tag: "3", parent: "ana" },
+        { id: "a1", value: "na$", tag: "1", parent: "ana" },
+        { id: "b0", value: "banana$", tag: "0", parent: "r", state: "muted" },
+        { id: "na", value: "na", parent: "r", state: "muted" },
+        { id: "n4", value: "$", tag: "4", parent: "na", state: "muted" },
+        { id: "n2", value: "na$", tag: "2", parent: "na", state: "muted" },
+        { id: "d6", value: "$", tag: "6", parent: "r", state: "muted" },
+      ],
+      caption: "Se compararon |P| = 3 letras, sin importar n.",
+    },
+    {
+      note: "Las ocurrencias son las hojas del subárbol de ana: 3 y 1. P aparece dos veces, empezando en las posiciones 1 y 3.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "a", value: "a", parent: "r" },
+        { id: "a5", value: "$", tag: "5", parent: "a", state: "muted" },
+        { id: "ana", value: "na", parent: "a", state: "marked" },
+        { id: "a3", value: "$", tag: "3", parent: "ana", state: "answer" },
+        { id: "a1", value: "na$", tag: "1", parent: "ana", state: "answer" },
+        { id: "b0", value: "banana$", tag: "0", parent: "r", state: "muted" },
+        { id: "na", value: "na", parent: "r", state: "muted" },
+        { id: "n4", value: "$", tag: "4", parent: "na", state: "muted" },
+        { id: "n2", value: "na$", tag: "2", parent: "na", state: "muted" },
+        { id: "d6", value: "$", tag: "6", parent: "r", state: "muted" },
+      ],
+      caption: "ana ocurre en 1 y 3.",
+    },
+  ],
+}} />
+
+### Qué se puede resolver recorriendo el árbol
+
+| Pregunta | Dónde se lee | En $\mathtt{banana}$ |
+| --- | --- | --- |
+| subcadena repetida más larga | nodo interno de mayor profundidad de cadena | $\mathtt{ana}$ (profundidad 3) |
+| número de subcadenas distintas | suma de las longitudes de todas las aristas, menos las $n+1$ que incluyen $\mathdollar$ | $22 - 7 = 15$ |
+| orden lexicográfico de los sufijos | DFS con los hijos ordenados: las hojas salen en el orden del SA | $6, 5, 3, 1, 0, 4, 2$ |
+| subcadena común más larga de $S$ y $T$ | árbol de $S\#T\mathdollar$: nodo interno más profundo con hojas de ambas | $O(n)$ |
+
+### De suffix array a suffix tree
+
+Suffix array + LCP y suffix tree tienen **la misma información**: las hojas de izquierda a derecha son el SA, y el nodo interno que separa dos hojas vecinas está a profundidad $\mathrm{LCP}[k]$. Se construye en $O(n)$ con una pila de la rama derecha; por cada $k$ con $\ell = \mathrm{LCP}[k]$:
+
+1. se desapila mientras la profundidad del tope sea $> \ell$;
+2. si la profundidad del tope es $< \ell$, se parte la arista y nace un interno a profundidad $\ell$;
+3. se agrega la hoja $SA[k]$ y se apila.
+
+En $\mathtt{banana}\mathdollar$, con $SA = [6, 5, 3, 1, 0, 4, 2]$ y $\mathrm{LCP} = [0, 0, 1, 3, 0, 0, 2]$:
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "k = 0 y 1: LCP 0, las hojas 6 y 5 cuelgan de la raíz. k = 2: LCP 1, se parte la arista de la hoja 5 y nace el interno a (profundidad 1); la hoja 3 cuelga de él.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{ value: 6, tag: "0", state: "shared" }, { value: 5, tag: "1", state: "shared" }, { value: 3, tag: "2", state: "active" }, { value: 1, tag: "3" }, { value: 0, tag: "4" }, { value: 4, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "lcp", label: "LCP", cells: [{ value: 0 }, { value: 0 }, { value: 1, state: "active" }, { value: 3 }, { value: 0 }, { value: 0 }, { value: 2 }] },
+      ],
+      caption: "Nace el interno a.",
+    },
+    {
+      note: "k = 3: LCP 3, más profundo que a: se parte la arista de la hoja 3 y nace ana (profundidad 3); cuelga la hoja 1.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{ value: 6, tag: "0", state: "shared" }, { value: 5, tag: "1", state: "shared" }, { value: 3, tag: "2", state: "shared" }, { value: 1, tag: "3", state: "active" }, { value: 0, tag: "4" }, { value: 4, tag: "5" }, { value: 2, tag: "6" }] },
+        { id: "lcp", label: "LCP", cells: [{ value: 0 }, { value: 0 }, { value: 1 }, { value: 3, state: "active" }, { value: 0 }, { value: 0 }, { value: 2 }] },
+      ],
+      caption: "Nace el interno ana.",
+    },
+    {
+      note: "k = 4 y 5: LCP 0, se desapila hasta la raíz y cuelgan las hojas 0 y 4. k = 6: LCP 2, se parte la arista de la hoja 4 y nace na; cuelga la hoja 2.",
+      rows: [
+        { id: "sa", label: "SA", cells: [{ value: 6, tag: "0", state: "shared" }, { value: 5, tag: "1", state: "shared" }, { value: 3, tag: "2", state: "shared" }, { value: 1, tag: "3", state: "shared" }, { value: 0, tag: "4", state: "shared" }, { value: 4, tag: "5", state: "shared" }, { value: 2, tag: "6", state: "active" }] },
+        { id: "lcp", label: "LCP", cells: [{ value: 0 }, { value: 0 }, { value: 1 }, { value: 3 }, { value: 0 }, { value: 0 }, { value: 2, state: "active" }] },
+      ],
+      caption: "Internos: a, ana, na. El árbol coincide con el de la búsqueda.",
+    },
+  ],
+}} />
+
+### Suffix links
+
+Si un nodo interno tiene etiqueta $x\alpha$ ($x$ un carácter), su **suffix link** apunta al nodo de etiqueta $\alpha$. Existe siempre: si $x\alpha$ se bifurca con $c_1$ y $c_2$, entonces $\alpha c_1$ y $\alpha c_2$ también aparecen en $S$, y $\alpha$ también se bifurca. Un suffix link **borra la primera letra**: en $\mathtt{banana}\mathdollar$, $\mathtt{ana} \to \mathtt{na} \to \mathtt{a} \to$ raíz. Son el ingrediente de la linealidad de [Ukkonen](/structures/ukkonen).
+
+## De dónde sale la cota
+
+$$
+\underbrace{n + 1}_{\text{hojas: una por sufijo de } S\mathdollar} \;+\; \underbrace{\le n}_{\text{internos: } \ge 2 \text{ hijos}} \;=\; \le 2n + 1 \text{ nodos}, \qquad \underbrace{O(1)}_{[l, r)} \text{ por arista} \;\Rightarrow\; O(n) \text{ espacio}.
+$$
+
+- Las hojas: el centinela impide que un sufijo termine dentro de una arista.
+- Los internos: un árbol con $L$ hojas en el que todo interno tiene $\ge 2$ hijos tiene $\le L - 1$ internos.
+- El espacio: sin los pares de índices, las etiquetas sumarían $\Theta(n^2)$ caracteres.
+
+Búsqueda $O(\lvert P\rvert)$ con hijos en arreglo indexado por letra (u $O(\lvert P\rvert \lg \sigma)$ con mapas). Frente al SA:
+
+| | Suffix array + LCP | Suffix tree |
+| --- | --- | --- |
+| memoria | $\approx n$ a $3n$ enteros | $\approx 2n$ nodos con hijos |
+| búsqueda de $P$ | $O(\lvert P\rvert + \lg n)$ con LCP | $O(\lvert P\rvert)$ |
+| construcción | $O(n)$ con SA-IS | $O(n)$ con Ukkonen |
+| en línea | no | sí |
+
+## Errores típicos y casos límite
+
+- **Olvidar el centinela**: sin $\mathdollar$, en $\mathtt{abab}$ el sufijo $\mathtt{ab}$ es prefijo de $\mathtt{abab}$ y no tiene hoja propia.
+- **Contar la raíz como nodo interno** al preguntar por las subcadenas repetidas: la raíz es la cadena vacía.
+- **Sumar aristas sin restar las de $\mathdollar$** al contar subcadenas distintas de $S$.
+- **Guardar la subcadena en la arista**: rompe el $O(n)$ de espacio.
+- **Cadena de una sola letra repetida** ($\mathtt{aaaa}\mathdollar$): un camino de internos $\mathtt a, \mathtt{aa}, \mathtt{aaa}$, cada uno con una hoja $\mathdollar$.
+
+## Conexión
+
+- Antes: [trie](/structures/trie), [suffix array](/structures/suffix-array), [Kasai y LCP](/structures/kasai-lcp).
+- Después: [Ukkonen](/structures/ukkonen) construye el árbol en línea en $O(n)$.

@@ -1,0 +1,307 @@
+---
+title: "Descomposición por centroides"
+summary: "Centroide, teorema de Jordan, árbol de centroides de profundidad ⌊lg n⌋, la propiedad del separador y sus aplicaciones: Ciel the Commander, caminos de longitud k y el marcado más cercano."
+order: 6
+prioridad: "tema prioritario (respaldo 1)"
+lista: ["L19", "L20", "L28", "L29", "L30", "L31", "L32", "S6a", "S6b", "S6c", "S6d"]
+items:
+  # ───── Predicción 1: descomponer y asignar rangos (Ciel the Commander) ─────
+  - level: 2
+    etiqueta: "Predicción 1 · Descomponer y asignar rangos · (a) Conocimientos (3 pts)"
+    statement: >-
+      El árbol de 10 nodos tiene aristas $1\text{-}2$, $1\text{-}3$, $2\text{-}4$, $2\text{-}5$, $4\text{-}6$, $4\text{-}7$, $6\text{-}8$, $6\text{-}9$, $5\text{-}10$. Con el algoritmo de clase (Centroide(r): calcular tam desde $r$ y bajar mientras algún hijo no eliminado tenga $\mathrm{tam} > n/2$; Descomponer llama a Centroide desde el nodo inicial y luego desde cada vecino no eliminado del centroide), empezando en el nodo 1: (a) da los tamaños desde 1 y el primer centroide con el camino que recorre; (b) da los centroides de cada nivel y el árbol de centroides; (c) asigna a cada nodo la letra de su nivel (A en el nivel 0), como en Ciel the Commander, y verifica la condición para dos nodos con la misma letra.
+    hints:
+      - >-
+        Desde 1: $\mathrm{tam}[2] = 8 > 5$, se baja a 2. Desde 2, sus hijos 4 y 5 tienen tamaños 5 y 2.
+      - >-
+        Al quitar 2 quedan las componentes $\{1,3\}$, $\{4,6,7,8,9\}$ y $\{5,10\}$.
+    solution: |-
+      **(a)** Tamaños con raíz 1: $\mathrm{tam}[1] = 10$, $\mathrm{tam}[2] = 8$, $\mathrm{tam}[4] = 5$, $\mathrm{tam}[6] = 3$, $\mathrm{tam}[5] = 2$, hojas 1. Centroide(1): $n = 10$; el hijo 2 tiene $8 > 5$, se baja a 2; los hijos de 2 (sin contar a 1) son 4 (5) y 5 (2), ninguno $> 5$: **centroide 2**. Camino $1 \to 2$. Al quitar 2 las componentes miden 2, 5 y 2, todas $\le \lfloor 10/2\rfloor$.
+
+      **(b)** Niveles:
+
+      - Nivel 0: **2**.
+      - Nivel 1: $\{1,3\}$ desde 1: centroide **1**. $\{4,6,7,8,9\}$ desde 4: $\mathrm{tam}[6] = 3 > 2.5$, se baja a 6: centroide **6**. $\{5,10\}$ desde 5: centroide **5**.
+      - Nivel 2: $\{3\}$: **3**; $\{4,7\}$ desde 4: **4**; $\{8\}$: **8**; $\{9\}$: **9**; $\{10\}$: **10**.
+      - Nivel 3: $\{7\}$: **7**.
+
+      Árbol de centroides: 2 es la raíz con hijos 1, 6, 5; 1 tiene hijo 3; 6 tiene hijos 4, 8, 9; 4 tiene hijo 7; 5 tiene hijo 10. Profundidad 3 $= \lfloor \lg 10\rfloor$.
+
+      **(c)** Letras (nodos 1 a 10): $B, A, C, C, B, B, D, C, C, C$. Condición: si $u$ y $v$ tienen la misma letra, sea $\ell$ su LCA en el árbol de centroides; como están en el mismo nivel y son distintos, $\ell$ está en un nivel menor (letra mayor) y el camino $u \leadsto v$ pasa por $\ell$. Ejemplo: 3 y 4 (C, C): el camino $3\text{-}1\text{-}2\text{-}4$ pasa por 2 (A). 1 y 6 (B, B): pasa por 2. 8 y 9 (C, C): el camino $8\text{-}6\text{-}9$ pasa por 6 (B).
+  - level: 6
+    etiqueta: "Predicción 1 · Descomponer y asignar rangos · (b) Análisis (3 pts)"
+    statement: >-
+      (i) Demuestra que todo árbol tiene un centroide y que el procedimiento Centroide(r) lo encuentra en $O(n)$. (ii) Demuestra que el árbol de centroides tiene profundidad a lo más $\lfloor \lg n\rfloor$ y que la descomposición completa cuesta $O(n \lg n)$. (iii) Concluye que en Ciel the Commander 26 letras bastan para $n < 2^{26}$.
+    hints:
+      - >-
+        Cuando el procedimiento baja de $v$ a $u$ es porque $\mathrm{tam}[u] > n/2$; entonces la parte "de arriba" de $u$ tiene $n - \mathrm{tam}[u] < n/2$.
+      - >-
+        Una componente del nivel $d$ tiene a lo más $n/2^d$ nodos.
+    solution: |-
+      **(i) Existencia y búsqueda.** Se enraíza la componente en $r$ y se baja desde $v = r$ mientras exista un hijo $u$ con $\mathrm{tam}[u] > n/2$ (hay a lo más uno, porque dos sumarían más de $n$). Se termina porque los tamaños decrecen. En el nodo final $c$, cada hijo tiene $\mathrm{tam} \le n/2$; la componente de arriba tiene $n - \mathrm{tam}[c]$ nodos, y si $c \ne r$ se llegó a $c$ porque $\mathrm{tam}[c] > n/2$, así que $n - \mathrm{tam}[c] < n/2$. Todas las componentes al quitar $c$ miden $\le \lfloor n/2\rfloor$: $c$ es centroide. Costo: un recorrido para los tamaños y un descenso, $O(n)$.
+
+      **(ii) Profundidad.** La componente de nivel 0 tiene $n$ nodos y cada componente de nivel $d+1$ es una parte de una de nivel $d$ al quitar su centroide: mide a lo más la mitad. Por inducción una componente de nivel $d$ tiene $\le n/2^d$ nodos; como tiene al menos uno, $2^d \le n$, $d \le \lfloor \lg n\rfloor$. **Costo:** las componentes de un mismo nivel son disjuntas, así que procesarlas todas (tamaños + descenso) cuesta $O(n)$ por nivel, y hay $\lfloor \lg n\rfloor + 1$ niveles: $O(n \lg n)$.
+
+      **(iii)** La letra es el nivel, que va de 0 a $\lfloor \lg n\rfloor$. Con $n < 2^{26}$, $\lfloor \lg n\rfloor \le 25$: letras A a Z. La condición se cumple por la propiedad del separador: dos nodos del mismo nivel tienen su LCA de centroides en un nivel menor y el camino pasa por él.
+  - level: 5
+    etiqueta: "Predicción 1 · Descomponer y asignar rangos · (c) Diseño (2 pts)"
+    statement: >-
+      Se quiere contar los pares de nodos a distancia exactamente $k$ (CSES 2080). Describe el procedimiento con centroides (qué se hace en cada centroide $c$ con el arreglo $\mathrm{cnt}$) y su costo. Aplícalo en el primer centroide (2) del árbol de (a) con $k = 2$: para cada vecino de 2 da las profundidades de su subárbol, cuántos pares aporta y el estado de $\mathrm{cnt}$. El total del árbol es 11: ¿cuántos pares pasan por 2 y dónde están los demás?
+    hints:
+      - >-
+        Un par a distancia $k$ cuyo camino pasa por $c$ con un extremo en el subárbol del vecino $u$ y otro en uno anterior (o en $c$ mismo) se cuenta con $\mathrm{cnt}[k - d]$.
+      - >-
+        Primero se consultan todas las profundidades de un vecino y **después** se agregan: así no se cuentan pares dentro del mismo subárbol.
+    solution: |-
+      **Procedimiento** (Contar(c) de clase): $\mathrm{cnt}[0] \leftarrow 1$ (el propio $c$). Para cada vecino $u$ no eliminado: se calculan las profundidades $D$ (respecto de $c$) de los nodos del subárbol de $u$; para cada $d \in D$ se suma $\mathrm{cnt}[k - d]$ a la respuesta; luego, para cada $d \in D$, $\mathrm{cnt}[d] \mathrel{+}= 1$. Al terminar se limpia $\mathrm{cnt}$ y se recurre en las componentes. Cada par se cuenta exactamente una vez: en el primer centroide que separa a sus extremos (el LCA de centroides), por el que pasa su camino. Costo: $O(\text{tamaño de la componente})$ por centroide, $O(n)$ por nivel, $O(n \lg n)$.
+
+      **En el centroide 2 con $k = 2$:**
+
+      - Vecino 1: $D = [1, 2]$ (nodos 1 y 3). Pares: $\mathrm{cnt}[1] + \mathrm{cnt}[0] = 0 + 1 = 1$ (el par $2\text{-}3$). $\mathrm{cnt}$ queda $\{0{:}1, 1{:}1, 2{:}1\}$.
+      - Vecino 4: $D = [1, 2, 2, 3, 3]$ (4; 6, 7; 8, 9). Pares: $\mathrm{cnt}[1] + 2\,\mathrm{cnt}[0] = 1 + 2 = 3$ (los pares $4\text{-}1$, $2\text{-}6$, $2\text{-}7$). $\mathrm{cnt}$ queda $\{0{:}1, 1{:}2, 2{:}3, 3{:}2\}$.
+      - Vecino 5: $D = [1, 2]$ (5, 10). Pares: $\mathrm{cnt}[1] + \mathrm{cnt}[0] = 2 + 1 = 3$ (los pares $5\text{-}1$, $5\text{-}4$, $2\text{-}10$).
+
+      Pasan por 2: $1 + 3 + 3 = 7$. Los otros $11 - 7 = 4$ están dentro de las componentes: $4\text{-}8$, $4\text{-}9$, $7\text{-}6$, $8\text{-}9$, todos en $\{4,6,7,8,9\}$ y contados al procesar el centroide 6 (o el 4).
+  - level: 4
+    etiqueta: "Predicción 1 · Descomponer y asignar rangos · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone, en lugar del centroide, partir cada componente por su **raíz** (el nodo desde el que se llamó) "porque no hace falta calcular tamaños". Para un camino de $n$ nodos llamado desde un extremo, ¿qué profundidad tiene su árbol de descomposición y cuánto cuesta la descomposición? ¿Qué pasa con Ciel the Commander? ¿Y si parte por un nodo cualquiera de grado máximo?
+    hints:
+      - >-
+        Quitar un extremo de un camino deja un camino de $n - 1$ nodos.
+      - >-
+        Una estrella tiene un nodo de grado máximo que es centroide; un camino tiene todos los grados $\le 2$.
+    solution: |-
+      **Por la raíz.** En el camino $1 - 2 - \cdots - n$ llamado desde 1, se quita 1 y queda $2 - \cdots - n$, que se llama desde 2, y así: profundidad $n - 1$. Cada nivel recorre su componente: $\sum_{i=1}^{n} i = \Theta(n^2)$ en total. En Ciel the Commander harían falta $n$ letras: con $n = 10^5$ no alcanzan las 26, aunque la respuesta con centroides usa $\lfloor\lg 10^5\rfloor + 1 = 17$.
+
+      **Por grado máximo.** En un camino todos los nodos internos tienen grado 2: el criterio empata entre todos ellos y puede elegir siempre el **vecino de un extremo** (grado 2, como cualquier otro). Quitarlo deja una componente de $n - 2$ nodos: la profundidad vuelve a ser $\Theta(n)$. El grado no dice nada sobre el tamaño de las componentes. El centroide es justo lo que garantiza componentes de tamaño $\le n/2$, y eso es lo que da $\lfloor \lg n\rfloor$.
+  # ───── Predicción 2: marcado más cercano (Xenia and Tree) ─────
+  - level: 2
+    etiqueta: "Predicción 2 · Marcado más cercano · (a) Conocimientos (3 pts)"
+    statement: >-
+      Un camino de 8 nodos $1 - 2 - \cdots - 8$. Inicialmente el nodo 1 es rojo. Operaciones: Pintar(v) pinta $v$ de rojo; Consultar(v) devuelve la distancia de $v$ al rojo más cercano. Con la descomposición por centroides (Centroide desde el nodo inicial; en una componente se llama desde el vecino del centroide) y $\mathrm{mejor}[a]$ = menor distancia de $a$ a un rojo de su componente: (a) construye el árbol de centroides empezando en 1; (b) ejecuta Pintar(1) inicial, Consultar(6), Pintar(8), Consultar(5), Consultar(3), indicando los ancestros visitados y los valores de $\mathrm{mejor}$.
+    hints:
+      - >-
+        Desde 1 el descenso llega a 4 ($\mathrm{tam}[5] = 4$ no supera $8/2$). Quedan $\{1,2,3\}$ y $\{5,6,7,8\}$.
+      - >-
+        Pintar(v) actualiza $\mathrm{mejor}[a] \leftarrow \min(\mathrm{mejor}[a], d(v, a))$ para cada ancestro $a$ de $v$; Consultar(v) devuelve $\min_a \mathrm{mejor}[a] + d(v, a)$.
+    solution: |-
+      **(a)** Desde 1: tam$[2] = 7 > 4$, se baja a 2; tam$[3] = 6 > 4$, a 3; tam$[4] = 5 > 4$, a 4; tam$[5] = 4$, no: **centroide 4**. Componente $\{1,2,3\}$ llamada desde 3: tam$[2] = 2 > 1.5$, se baja a 2: centroide **2**, luego 1 y 3. Componente $\{5,6,7,8\}$ desde 5: tam$[6] = 3 > 2$, a 6; tam$[7] = 2$, no: centroide **6**, luego 5 y $\{7,8\}$ con centroide 7, y 8.
+
+      Árbol de centroides: 4 (nivel 0); 2 y 6 (nivel 1); 1, 3, 5, 7 (nivel 2); 8 (nivel 3). Ancestros: de 1: 1, 2, 4; de 3: 3, 2, 4; de 5: 5, 6, 4; de 6: 6, 4; de 8: 8, 7, 6, 4.
+
+      **(b)** Todos los $\mathrm{mejor}$ empiezan en $\infty$; en un camino $d(u, v) = \lvert u - v\rvert$.
+
+      - **Pintar(1):** $\mathrm{mejor}[1] = 0$, $\mathrm{mejor}[2] = 1$, $\mathrm{mejor}[4] = 3$.
+      - **Consultar(6):** ancestros 6 ($\infty$), 4 ($3 + 2 = 5$): **5**.
+      - **Pintar(8):** $\mathrm{mejor}[8] = 0$, $\mathrm{mejor}[7] = 1$, $\mathrm{mejor}[6] = 2$, $\mathrm{mejor}[4] = \min(3, 4) = 3$.
+      - **Consultar(5):** 5 ($\infty$), 6 ($2 + 1 = 3$), 4 ($3 + 1 = 4$): **3** (el rojo 8).
+      - **Consultar(3):** 3 ($\infty$), 2 ($1 + 1 = 2$), 4 ($3 + 1 = 4$): **2** (el rojo 1).
+  - level: 6
+    etiqueta: "Predicción 2 · Marcado más cercano · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra la propiedad clave: si $\ell$ es el LCA de $u$ y $v$ en el árbol de centroides, el camino $u \leadsto v$ del árbol original pasa por $\ell$. Úsala para demostrar que Consultar(v) $= \min_{a} \mathrm{mejor}[a] + d(v, a)$ (sobre los ancestros $a$ de $v$ en el árbol de centroides) es correcto, y que Pintar y Consultar cuestan $O(\lg n)$ con distancias precalculadas.
+    hints:
+      - >-
+        $u$ y $v$ están en la componente de $\ell$; si estuvieran en la misma subcomponente tras quitar $\ell$, su LCA sería más profundo.
+      - >-
+        Cada término $\mathrm{mejor}[a] + d(v,a)$ es la longitud de un paseo real de $v$ a un rojo.
+    solution: |-
+      **Propiedad.** $u$ y $v$ pertenecen a la componente $C$ de la que $\ell$ es centroide (ambos son descendientes de $\ell$ en el árbol de centroides). Si al quitar $\ell$ cayeran en la misma subcomponente, el centroide de esa subcomponente sería un ancestro común más profundo que $\ell$: contradicción. Entonces quedan en subcomponentes distintas (o uno es $\ell$), y como $C$ es conexa y su único camino entre ellos debe atravesar el nodo eliminado, el camino pasa por $\ell$. Así $d(u, v) = d(u, \ell) + d(\ell, v)$.
+
+      **Corrección de Consultar.** (≥) Cada término es $d(v, a) + d(a, r)$ para algún rojo $r$ de la componente de $a$: es la longitud de un paseo de $v$ a $r$, así que $\ge d(v, r) \ge$ respuesta. (≤) Sea $r$ el rojo más cercano y $\ell = \mathrm{LCA}_c(v, r)$, ancestro común de ambos. El camino pasa por $\ell$, $r$ está en la componente de $\ell$ y Pintar(r) dejó $\mathrm{mejor}[\ell] \le d(\ell, r)$: el término de $\ell$ es $\le d(v, \ell) + d(\ell, r) = d(v, r)$.
+
+      **Costo.** Un nodo tiene a lo más $\lfloor \lg n\rfloor + 1$ ancestros de centroides; con $\mathrm{dist}[\mathrm{nivel}[a]][v]$ precalculado (BFS desde cada centroide en su componente, $O(n \lg n)$ tiempo y memoria) cada ancestro cuesta $O(1)$: Pintar y Consultar son $O(\lg n)$.
+  - level: 5
+    etiqueta: "Predicción 2 · Marcado más cercano · (c) Diseño (2 pts)"
+    statement: >-
+      Se quiere mantener, bajo las mismas Pintar(v), la **suma** de las distancias de $v$ a todos los nodos rojos (Consultar(v) devuelve $\sum_{r\ \text{rojo}} d(v, r)$). Diseña qué guarda cada centroide y cómo se actualiza y consulta en $O(\lg n)$, cuidando no contar dos veces los rojos del mismo subárbol.
+    hints:
+      - >-
+        En cada centroide $a$ guarda la cantidad de rojos de su componente y la suma de sus distancias a $a$.
+      - >-
+        Al sumar desde el ancestro $a$, resta lo que ya contó su hijo de centroides $b$ (por el que sube $v$): hace falta una suma de distancias **a $a$** de los rojos del componente de $b$.
+    solution: |-
+      **Qué guarda cada centroide $a$:** $\mathrm{cnt}[a]$ = rojos en su componente; $\mathrm{sum}[a] = \sum d(r, a)$ sobre esos rojos; y $\mathrm{sumP}[a] = \sum d(r, \mathrm{cpadre}(a))$ sobre los mismos rojos (distancias al padre de centroides).
+
+      **Pintar(v):** para cada ancestro $a$ de $v$: $\mathrm{cnt}[a] \mathrel{+}= 1$, $\mathrm{sum}[a] \mathrel{+}= d(v, a)$, $\mathrm{sumP}[a] \mathrel{+}= d(v, \mathrm{cpadre}(a))$.
+
+      **Consultar(v):** se sube por los ancestros $v = a_0, a_1, \dots$. Se empieza con $\mathrm{sum}[a_0]$. En cada $a_j$ ($j \ge 1$), con $b = a_{j-1}$ su hijo en el camino: se suman los rojos de la componente de $a_j$ **que no están** en la de $b$: $(\mathrm{sum}[a_j] - \mathrm{sumP}[b]) + (\mathrm{cnt}[a_j] - \mathrm{cnt}[b]) \cdot d(v, a_j)$. Es correcto porque para esos rojos el camino a $v$ pasa por $a_j$ (propiedad del separador). Costo: $O(\lg n)$ ancestros con distancias precalculadas.
+  - level: 4
+    etiqueta: "Predicción 2 · Marcado más cercano · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris propone responder Consultar(v) con un BFS desde $v$ que se detiene en el primer rojo, y Pintar en $O(1)$. Da el peor caso por operación y una familia de entradas que lo alcance. Compara el costo de $q$ operaciones con la solución por centroides. ¿Cuándo convendría la de Chris?
+    hints:
+      - >-
+        Un camino con un solo rojo en un extremo y consultas en el otro.
+      - >-
+        Centroides: $O(n \lg n)$ de preprocesamiento y $O(\lg n)$ por operación.
+    solution: |-
+      **Peor caso.** BFS visita todos los nodos a distancia menor que la respuesta: $\Theta(n)$ por consulta. Familia: el camino $1 - \cdots - n$ con el único rojo en 1 y $q$ consultas Consultar(n): $\Theta(qn)$.
+
+      **Centroides:** $O(n \lg n)$ de preprocesamiento y $O(\lg n)$ por operación: $O((n + q)\lg n)$. Con $n = q = 10^5$ son $\approx 3.4 \cdot 10^6$ frente a $10^{10}$.
+
+      **Cuándo gana Chris:** si casi todas las operaciones son Pintar, o si los rojos son tan densos que el BFS siempre se detiene a distancia $O(1)$; en el caso general, no.
+---
+
+import Visualization from '../../src/components/Visualization.astro';
+
+## Qué es probable que pregunten y por qué
+
+- **Ejecutar la descomposición a mano** (tamaños, camino de descenso, centroides por nivel, árbol de centroides). Las láminas de la semana 14 lo hacen con el árbol de 11 nodos y el código de la semana (`abstracted-order-104.cpp`, que resuelve *Ciel the Commander*) imprime exactamente el nivel como letra: parte (a) segura.
+- **Demostrar** el teorema de Jordan (existencia del centroide), la profundidad $\le \lfloor \lg n\rfloor$ y el costo $O(n \lg n)$: son las tres demostraciones de la clase y el simulacro siempre pide un (b) de demostración.
+- **Diseño con la propiedad del separador**: contar caminos de longitud $k$ (CSES 2080) o el marcado más cercano (Codeforces 342E), las dos aplicaciones desarrolladas en las láminas.
+- **La lista no trae ejercicios de centroides**: los de grafos dinámicos enlazados al final (19–20, 28–32 y el problema 6 del simulacro) son de Heavy-Light y link-cut, y sirven para practicar el mismo tipo de demostración (aristas livianas, $\lg n$ niveles).
+- **Profundidad**: una variante que no parte por el centroide, o una solución ingenua de Chris contra la que comparar $O(\lg n)$ por operación. El problema 6 del simulacro tiene esa forma con Heavy-Light.
+
+## Teoría desde cero
+
+### Definición y teorema de Jordan
+
+Un nodo $c$ de un árbol con $n$ nodos es **centroide** si al eliminarlo cada componente conexa tiene a lo más $\lfloor n/2\rfloor$ nodos.
+
+**Teorema (Jordan, 1869).** Todo árbol tiene al menos un centroide, y a lo más dos (adyacentes).
+
+**Demostración (y algoritmo).** Se enraíza en $r$ y se calcula $\mathrm{tam}[\cdot]$. Desde $v = r$, mientras algún hijo $u$ tenga $\mathrm{tam}[u] > n/2$, se baja a $u$. Al terminar, todos los hijos miden $\le n/2$ y la componente de arriba mide $n - \mathrm{tam}[v] < n/2$ (se bajó a $v$ porque $\mathrm{tam}[v] > n/2$). Costo $O(n)$.
+
+El ejemplo de la clase: el árbol de 11 nodos con aristas $1\text{-}2, 1\text{-}3, 1\text{-}4, 2\text{-}5, 2\text{-}6, 3\text{-}7, 5\text{-}8, 5\text{-}9, 6\text{-}10, 7\text{-}11$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El árbol de la clase enraizado en 1, con el tamaño de cada subárbol como etiqueta. n = 11, así que se busca un nodo cuyas componentes midan a lo más 5.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null, state: "active" },
+        { id: "2", value: "2", tag: "6", parent: "1" },
+        { id: "3", value: "3", tag: "3", parent: "1" },
+        { id: "4", value: "4", tag: "1", parent: "1" },
+        { id: "5", value: "5", tag: "3", parent: "2" },
+        { id: "6", value: "6", tag: "2", parent: "2" },
+        { id: "7", value: "7", tag: "2", parent: "3" },
+        { id: "8", value: "8", tag: "1", parent: "5" },
+        { id: "9", value: "9", tag: "1", parent: "5" },
+        { id: "10", value: "10", tag: "1", parent: "6" },
+        { id: "11", value: "11", tag: "1", parent: "7" },
+      ],
+      caption: "Centroide(1): ¿algún hijo de 1 tiene tam > 5,5?",
+    },
+    {
+      note: "El hijo 2 tiene tam 6 > 5,5: si se quitara 1, la componente de 2 tendría 6 nodos. Se baja a 2.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null },
+        { id: "2", value: "2", tag: "6", parent: "1", state: "active" },
+        { id: "3", value: "3", tag: "3", parent: "1" },
+        { id: "4", value: "4", tag: "1", parent: "1" },
+        { id: "5", value: "5", tag: "3", parent: "2" },
+        { id: "6", value: "6", tag: "2", parent: "2" },
+        { id: "7", value: "7", tag: "2", parent: "3" },
+        { id: "8", value: "8", tag: "1", parent: "5" },
+        { id: "9", value: "9", tag: "1", parent: "5" },
+        { id: "10", value: "10", tag: "1", parent: "6" },
+        { id: "11", value: "11", tag: "1", parent: "7" },
+      ],
+      caption: "Hijos de 2: 5 (tam 3) y 6 (tam 2). Ninguno supera 5,5.",
+    },
+    {
+      note: "2 es el centroide: al quitarlo quedan las componentes {5,8,9} (3), {6,10} (2) y la de arriba {1,3,4,7,11} con 11 − 6 = 5 nodos. Todas miden a lo más 5.",
+      nodes: [
+        { id: "1", value: "1", tag: "11", parent: null, state: "muted" },
+        { id: "2", value: "2", tag: "6", parent: "1", state: "answer" },
+        { id: "3", value: "3", tag: "3", parent: "1", state: "muted" },
+        { id: "4", value: "4", tag: "1", parent: "1", state: "muted" },
+        { id: "5", value: "5", tag: "3", parent: "2", state: "marked" },
+        { id: "6", value: "6", tag: "2", parent: "2", state: "marked" },
+        { id: "7", value: "7", tag: "2", parent: "3", state: "muted" },
+        { id: "8", value: "8", tag: "1", parent: "5", state: "marked" },
+        { id: "9", value: "9", tag: "1", parent: "5", state: "marked" },
+        { id: "10", value: "10", tag: "1", parent: "6", state: "marked" },
+        { id: "11", value: "11", tag: "1", parent: "7", state: "muted" },
+      ],
+      caption: "Centroide de nivel 0: 2. Tres componentes de tamaños 3, 2 y 5.",
+    },
+  ],
+}} />
+
+### La descomposición y el árbol de centroides
+
+Descomponer(r, padreC, d): $c \leftarrow$ Centroide(r); se marca $c$ como eliminado, $\mathrm{cpadre}[c] \leftarrow$ padreC, $\mathrm{nivel}[c] \leftarrow d$; para cada vecino $u$ no eliminado de $c$ se llama Descomponer(u, c, d + 1). En el árbol de la clase:
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Árbol de centroides del ejemplo de clase. Nivel 0: 2. Nivel 1: los centroides de {5,8,9}, {6,10} y {1,3,4,7,11}: 5, 6 y 3.",
+      nodes: [
+        { id: "c2", value: "2", tag: "A", parent: null, state: "answer" },
+        { id: "c5", value: "5", tag: "B", parent: "c2" },
+        { id: "c6", value: "6", tag: "B", parent: "c2" },
+        { id: "c3", value: "3", tag: "B", parent: "c2" },
+      ],
+      caption: "Nivel 1 ⇒ letra B en Ciel the Commander.",
+    },
+    {
+      note: "Nivel 2: 8 y 9 (bajo 5), 10 (bajo 6), y en la componente de 3 quedan {7,11} y {1,4}: centroides 7 y 1. Nivel 3: 11 y 4. La profundidad es 3 = ⌊lg 11⌋.",
+      nodes: [
+        { id: "c2", value: "2", tag: "A", parent: null },
+        { id: "c5", value: "5", tag: "B", parent: "c2" },
+        { id: "c6", value: "6", tag: "B", parent: "c2" },
+        { id: "c3", value: "3", tag: "B", parent: "c2" },
+        { id: "c8", value: "8", tag: "C", parent: "c5" },
+        { id: "c9", value: "9", tag: "C", parent: "c5" },
+        { id: "c10", value: "10", tag: "C", parent: "c6" },
+        { id: "c7", value: "7", tag: "C", parent: "c3" },
+        { id: "c1", value: "1", tag: "C", parent: "c3" },
+        { id: "c11", value: "11", tag: "D", parent: "c7", state: "active" },
+        { id: "c4", value: "4", tag: "D", parent: "c1", state: "active" },
+      ],
+      caption: "Niveles: 2 | 5, 6, 3 | 8, 9, 10, 7, 1 | 11, 4.",
+    },
+  ],
+}} />
+
+**Profundidad.** Una componente de nivel $d$ mide $\le n/2^d$ (cada nivel la parte a la mitad como mucho), y mide al menos 1: $d \le \lfloor \lg n\rfloor$.
+
+**Costo.** Las componentes de un nivel son disjuntas: $O(n)$ por nivel, $O(n \lg n)$ total. Cada nodo tiene $\le \lfloor \lg n\rfloor + 1$ ancestros de centroides: hay $O(n \lg n)$ pares (nodo, centroide ancestro).
+
+### La propiedad del separador
+
+Si $\ell = \mathrm{LCA}_c(u, v)$ en el árbol de centroides, el camino $u \leadsto v$ del árbol original **pasa por $\ell$**, y
+
+$$
+d(u, v) \;=\; \underbrace{d(u, \ell)}_{\text{precalculada}} \;+\; \underbrace{d(\ell, v)}_{\text{precalculada}}, \qquad \ell \in \underbrace{\{\text{ancestros de } u\}}_{\le \lfloor\lg n\rfloor + 1}.
+$$
+
+Por eso toda pregunta sobre **pares** se reparte entre los $O(\lg n)$ centroides ancestros:
+
+| Aplicación | Qué se hace en cada centroide | Costo |
+| --- | --- | --- |
+| Ciel the Commander (CF 321C) | letra = nivel; dos nodos con la misma letra tienen su LCA de centroides, de letra mayor, en el camino | $O(n \lg n)$ |
+| Caminos de longitud $k$ (CSES 2080) | $\mathrm{cnt}[d]$ de profundidades de los subárboles ya vistos; sumar $\mathrm{cnt}[k-d]$ antes de insertar | $O(n \lg n)$ |
+| Marcado más cercano (CF 342E) | $\mathrm{mejor}[a]$; Pintar y Consultar recorren los ancestros | $O(\lg n)$ por operación |
+
+### Heavy-Light frente a centroides
+
+| | Heavy-Light | Centroides |
+| --- | --- | --- |
+| se basa en | tamaño de subárbol | componente balanceada |
+| camino $u \leadsto v$ | $O(\lg n)$ rangos | pasa por $\mathrm{LCA}_c(u,v)$ |
+| conviene para | valores en nodos o aristas de caminos y subárboles | distancias entre pares |
+
+## Errores típicos
+
+- **Confundir el centroide con la raíz o el nodo de mayor grado**: la garantía es de tamaño, no de grado.
+- **Recalcular tamaños sobre todo el árbol** en cada nivel: hay que ignorar los nodos eliminados, si no el costo sube y el centroide sale mal.
+- **Contar pares dentro del mismo subárbol** en Contar(c): primero se consultan todas las profundidades del vecino y después se insertan.
+- **Olvidar el propio centroide** ($\mathrm{cnt}[0] = 1$).
+- **Usar la profundidad del árbol original** en vez de la distancia al centroide.
+- **Pensar que el árbol de centroides es subárbol del original**: sus aristas no son aristas del árbol.
+
+## Qué memorizar
+
+- Centroide: componentes $\le \lfloor n/2\rfloor$; se encuentra bajando mientras un hijo tenga $\mathrm{tam} > n/2$, $O(n)$.
+- Jordan: existe uno, a lo más dos y adyacentes.
+- Profundidad $\le \lfloor \lg n\rfloor$; construcción $O(n \lg n)$; $\le \lfloor\lg n\rfloor + 1$ ancestros por nodo.
+- Separador: el camino $u \leadsto v$ pasa por $\mathrm{LCA}_c(u,v)$; $d(u,v) = d(u,\ell) + d(\ell, v)$.
+- Ciel: letra = nivel, 26 letras para $n < 2^{26}$.
+- Teoría del curso: [descomposición por centroides](/structures/centroid-decomposition), [Heavy-Light](/structures/heavy-light-decomposition).

@@ -1,0 +1,81 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import ExerciseBlock from '../../components/ExerciseBlock';
+import Visualization from '../../components/Visualization.astro';
+import { ancla } from '../../lib/final';
+
+export async function getStaticPaths() {
+  const temas = await getCollection('finalTemas');
+  return temas.map((doc) => ({ params: { tema: doc.id }, props: { doc } }));
+}
+const { doc } = Astro.props;
+const { Content } = await render(doc);
+const [final] = await getCollection('final');
+const lista = doc.data.lista.map((a) => ({ a, item: final.data.items.find((i) => ancla(i.statement) === a) }));
+// etiqueta = "Predicción 1 · <título> · (a) Conocimientos": se agrupa por los dos primeros segmentos.
+const grupos: { clave: string; items: typeof doc.data.items }[] = [];
+for (const item of doc.data.items) {
+  const clave = item.etiqueta.split(' · ').slice(0, 2).join(' · ');
+  const g = grupos.find((x) => x.clave === clave);
+  if (g) g.items.push(item);
+  else grupos.push({ clave, items: [item] });
+}
+---
+
+<Base title={doc.data.title} crumb="final">
+  <header class="stagger mb-12">
+    <p class="tag"><a href="/final">examen final</a> · {doc.data.prioridad}</p>
+    <h1 class="mt-2 max-w-[22ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      {doc.data.title}
+    </h1>
+    <p class="mt-4 max-w-[62ch] text-[var(--muted)]">{doc.data.summary}</p>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  <div class="prose mb-14 max-w-[72ch]"><Content /></div>
+
+  <div class="space-y-14">
+    {
+      grupos.map((g) => (
+        <section>
+          <div class="mb-5 flex items-baseline gap-4">
+            <h2 class="tag">{g.clave}</h2>
+            <span class="h-px flex-1 bg-[var(--rule)]" />
+          </div>
+          <div class="space-y-6">
+            {g.items.map((item) => (
+              <div>
+                {item.visualization && (
+                  <div class="mb-5" aria-label="Datos gráficos del enunciado">
+                    <Visualization viz={item.visualization} />
+                  </div>
+                )}
+                <ExerciseBlock client:visible exercise={item} label={item.etiqueta} />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+
+  {
+    lista.length > 0 && (
+      <section class="mt-14">
+        <div class="mb-5 flex items-baseline gap-4">
+          <h2 class="tag">ejercicios resueltos de la lista y del simulacro</h2>
+          <span class="h-px flex-1 bg-[var(--rule)]" />
+        </div>
+        <ul class="space-y-2">
+          {lista.map(({ a, item }) => (
+            <li>
+              <a href={`/final#${a}`}>{a}</a>
+              {item && <span class="text-[var(--muted)]"> · {item.etiqueta}</span>}
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+</Base>

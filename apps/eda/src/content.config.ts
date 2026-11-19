@@ -46,6 +46,24 @@ const mastery = z.object({
   canDo: z.array(z.string()).default([]),
 });
 
+const problemset = z.object({
+      title: z.string(),
+      summary: z.string(),
+      items: z
+        .array(
+          z.object({
+            level: z.number().int().min(1).max(6),
+            etiqueta: z.string(),
+            href: z.string().optional(),
+            visualization: visualizationSchema.optional(),
+            statement: z.string(),
+            hints: z.array(z.string()).min(1, 'un ejercicio sin pistas no puede revelar solución'),
+            solution: z.string().optional(),
+          }),
+        )
+        .default([]),
+});
+
 export const collections = {
   // Todo el markdown de una estructura vive bajo content/structures/<id>/.
   // El id de la entrada empieza siempre por el id de la estructura.
@@ -72,22 +90,22 @@ export const collections = {
   // cada una con pistas progresivas y solución — mismo contrato de ejercicio.
   repaso: defineCollection({
     loader: glob({ pattern: 'repaso.md', base: './content' }),
-    schema: z.object({
-      title: z.string(),
-      summary: z.string(),
-      items: z
-        .array(
-          z.object({
-            level: z.number().int().min(1).max(6),
-            etiqueta: z.string(),
-            href: z.string().optional(),
-            visualization: visualizationSchema.optional(),
-            statement: z.string(),
-            hints: z.array(z.string()).min(1, 'un ejercicio sin pistas no puede revelar solución'),
-            solution: z.string().optional(),
-          }),
-        )
-        .default([]),
+    schema: problemset,
+  }),
+  // Lista de ejercicios + simulacro del examen final (semana 15): mismo contrato.
+  final: defineCollection({
+    loader: glob({ pattern: 'final.md', base: './content' }),
+    schema: problemset,
+  }),
+  // Los 6 temas confirmados del examen final: teoría desde cero (MDX con figuras) y
+  // problemas predichos con el formato del simulacro. `lista` = anclas de /final (L3, S5a…).
+  finalTemas: defineCollection({
+    loader: glob({ pattern: '*.mdx', base: './content/final-temas' }),
+    schema: problemset.extend({
+      order: z.number().int(),
+      prioridad: z.string(),
+      lista: z.array(z.string()).default([]),
     }),
   }),
 };
+

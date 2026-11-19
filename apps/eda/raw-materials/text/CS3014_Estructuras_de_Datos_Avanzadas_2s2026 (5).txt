@@ -1,0 +1,1022 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Dynamic Optimality IV
+Semana 9
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+7 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ El modelo geométrico: puntos, y satisfacción arboral
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ El modelo geométrico: puntos, y satisfacción arboral
+ ▶ Cota de los rectángulos independientes, con prueba completa
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ El modelo geométrico: puntos, y satisfacción arboral
+ ▶ Cota de los rectángulos independientes, con prueba completa
+ ▶ Cotas de Wilber: la segunda, y la primera
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Lo que nos falta
+Tenemos la vista geométrica y Greedy — pero Greedy solo nos da un
+algoritmo conjeturado óptimo, sin ninguna cota inferior demostrada contra
+la cual medirlo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Lo que nos falta
+Tenemos la vista geométrica y Greedy — pero Greedy solo nos da un
+algoritmo conjeturado óptimo, sin ninguna cota inferior demostrada contra
+la cual medirlo.
+
+¿Cómo se demuestra, en general, que ningún algoritmo de BST puede
+hacerlo mejor que cierto valor, para una secuencia de accesos dada?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+Lo que nos falta
+Tenemos la vista geométrica y Greedy — pero Greedy solo nos da un
+algoritmo conjeturado óptimo, sin ninguna cota inferior demostrada contra
+la cual medirlo.
+
+¿Cómo se demuestra, en general, que ningún algoritmo de BST puede
+hacerlo mejor que cierto valor, para una secuencia de accesos dada?
+
+La herramienta de hoy
+El método de rectángulos independientes: una técnica geométrica que da
+cotas inferiores demostrables — y de la cual salen dos resultados concretos,
+Wilber-1 y Wilber-2, que usaremos para analizar Tango Trees en la próxima
+clase.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     3 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Recordando la notación
+
+
+
+
+   De la clase pasada: un conjunto de puntos es arboralmente satisfecho si todo
+rectángulo no degenerado inducido por dos de sus puntos contiene un tercer punto
+        (dentro o en el borde) — equivalente a una ejecución BST válida.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        4 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Recordando la notación
+
+
+
+
+   De la clase pasada: un conjunto de puntos es arboralmente satisfecho si todo
+rectángulo no degenerado inducido por dos de sus puntos contiene un tercer punto
+        (dentro o en el borde) — equivalente a una ejecución BST válida.
+
+
+Notación
+Usaremos I para los puntos iniciales (la entrada real: la secuencia de
+accesos).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        4 / 29
+Cota de los rectángulos independientes
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Rectángulos independientes
+
+
+Definición
+Dos rectángulos son independientes si no están arboralmente satisfechos
+entre sí, y ninguna esquina de uno está estrictamente dentro del otro.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   6 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Rectángulos independientes
+
+
+Definición
+Dos rectángulos son independientes si no están arboralmente satisfechos
+entre sí, y ninguna esquina de uno está estrictamente dentro del otro.
+
+    De cualquier par de puntos a, b sale un único rectángulo ab. Solo 2 de sus 4
+      esquinas son puntos reales de la entrada — las otras 2 son “virtuales”.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           6 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Rectángulos independientes
+
+
+Definición
+Dos rectángulos son independientes si no están arboralmente satisfechos
+entre sí, y ninguna esquina de uno está estrictamente dentro del otro.
+
+    De cualquier par de puntos a, b sale un único rectángulo ab. Solo 2 de sus 4
+      esquinas son puntos reales de la entrada — las otras 2 son “virtuales”.
+
+
+Teorema
+                                 OPT ≥ |I| + 12 MIS
+donde MIS es el mayor conjunto de rectángulos independientes que se puede
+formar. Esto implica resolver Maximum-Independent-Set sobre los
+rectángulos — NP-difícil en general, pero sirve como cota inferior, no
+como algoritmo.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           6 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Tres ejemplos
+
+
+
+
+                            Figura: Independientes: separados
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   7 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Tres ejemplos
+
+
+
+
+Figura: Independientes: parcialmente contenidos, sin esquina estrictamente adentro
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          8 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Tres ejemplos
+
+
+
+
+                    Figura: Independientes: comparten una esquina
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   9 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Clasificando los rectángulos
+
+
+Definición
+Según la pendiente entre los dos puntos que lo inducen, un rectángulo es
+positivo o negativo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Clasificando los rectángulos
+
+
+Definición
+Según la pendiente entre los dos puntos que lo inducen, un rectángulo es
+positivo o negativo.
+
+Satisfacibilidad con signo
+Un conjunto es satisfecho positivo si todos sus rectángulos positivos están
+arboralmente satisfechos — y análogamente, satisfecho negativo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Clasificando los rectángulos
+
+
+Definición
+Según la pendiente entre los dos puntos que lo inducen, un rectángulo es
+positivo o negativo.
+
+Satisfacibilidad con signo
+Un conjunto es satisfecho positivo si todos sus rectángulos positivos están
+arboralmente satisfechos — y análogamente, satisfecho negativo.
+
+Notación
+OPT + = el conjunto satisfecho positivo más chico que contiene a I.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Clasificando los rectángulos
+
+
+Definición
+Según la pendiente entre los dos puntos que lo inducen, un rectángulo es
+positivo o negativo.
+
+Satisfacibilidad con signo
+Un conjunto es satisfecho positivo si todos sus rectángulos positivos están
+arboralmente satisfechos — y análogamente, satisfecho negativo.
+
+Notación
+OPT + = el conjunto satisfecho positivo más chico que contiene a I.
+
+Lema
+                                OPT + ≥ |I| + MIS +
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    10 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: primer paso
+
+
+
+
+Asumimos coordenadas x, y distintas (siempre se puede lograr perturbando
+la entrada). Trabajamos con un MIS S de rectángulos positivos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: primer paso
+
+
+
+
+Asumimos coordenadas x, y distintas (siempre se puede lograr perturbando
+la entrada). Trabajamos con un MIS S de rectángulos positivos.
+
+Elegimos un segmento vertical
+Tomamos el rectángulo más ancho de S, y trazamos un segmento vertical
+que lo cruce de borde a borde, sin tocar ningún otro rectángulo de S —
+existe por un argumento de casos sobre cómo los demás rectángulos pueden
+relacionarse con el más ancho.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: segundo paso
+
+
+
+Elegimos p y q
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: segundo paso
+
+
+
+Elegimos p y q
+ ▶ p: el punto de OPT + más a la derecha y arriba, del lado izquierdo del
+   segmento.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: segundo paso
+
+
+
+Elegimos p y q
+ ▶ p: el punto de OPT + más a la derecha y arriba, del lado izquierdo del
+   segmento.
+ ▶ q: el punto de OPT + más a la izquierda y abajo, del lado derecho, y
+   no por debajo de p.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: segundo paso
+
+
+
+Elegimos p y q
+ ▶ p: el punto de OPT + más a la derecha y arriba, del lado izquierdo del
+   segmento.
+ ▶ q: el punto de OPT + más a la izquierda y abajo, del lado derecho, y
+   no por debajo de p.
+
+¿Por qué p y q deben tener la misma coordenada y ?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: segundo paso
+
+
+
+Elegimos p y q
+ ▶ p: el punto de OPT + más a la derecha y arriba, del lado izquierdo del
+   segmento.
+ ▶ q: el punto de OPT + más a la izquierda y abajo, del lado derecho, y
+   no por debajo de p.
+
+¿Por qué p y q deben tener la misma coordenada y ?
+
+Respuesta
+Si no, el rectángulo que forman p y q no estaría arboralmente satisfecho —
+contradicción.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Visualizando p y q
+
+
+
+
+                                                          q
+
+                                     p
+
+
+
+
+                Figura: La línea roja es el segmento vertical del paso 1
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       13 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: tercer paso, la carga
+
+
+
+
+El segmento pq es único
+Cruza el segmento vertical del rectángulo más ancho — que no pertenece a
+ningún otro rectángulo de S — así que pq no vuelve a ser contado por ningún
+otro rectángulo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Prueba: tercer paso, la carga
+
+
+
+
+El segmento pq es único
+Cruza el segmento vertical del rectángulo más ancho — que no pertenece a
+ningún otro rectángulo de S — así que pq no vuelve a ser contado por ningún
+otro rectángulo.
+
+El argumento de conteo
+Si hubiera k segmentos pq consecutivos con la misma coordenada y , a lo
+más uno de los k + 1 puntos involucrados pertenece a I — así que cada
+segmento “agrega” al menos 1 punto nuevo. Sumando sobre todas las líneas
+horizontales: OPT + ≥ |I| + MIS + .
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   14 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo del argumento de conteo
+
+
+
+
+Figura: 3 segmentos horizontales con la misma coordenada y : cada uno agrega al
+menos 1 punto
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        15 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Conclusión
+
+
+
+
+Corolario
+Ya que OPT + ≥ |I| + MIS + , y simétricamente para OPT − :
+
+                         OPT     ≥ máx{OPT + , OPT − }
+                                     1       +        −
+                                 ≥   2 (OPT + OPT )
+                                         1          1
+                                 ≥ |I| + 2 MIS + 2 MIS −
+                                               +
+
+                                 ≥       |I| + 12 MIS
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Conclusión
+
+
+
+
+Corolario
+Ya que OPT + ≥ |I| + MIS + , y simétricamente para OPT − :
+
+                         OPT     ≥ máx{OPT + , OPT − }
+                                     1       +        −
+                                 ≥   2 (OPT + OPT )
+                                         1          1
+                                 ≥ |I| + 2 MIS + 2 MIS −
+                                               +
+
+                                 ≥       |I| + 12 MIS
+
+                Lo cual prueba el teorema inicial: OPT ≥ |I| + 12 MIS.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     16 / 29
+Cotas de Wilber
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2
+
+
+
+
+Idea de análisis
+Para cada punto p: mira los puntos “visibles” hacia abajo (aquellos cuyo
+rectángulo con p no contiene ningún otro punto), ordenados por y decreciente,
+y cuenta las alternancias de signo en yi − p.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    18 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2
+
+
+
+
+Idea de análisis
+Para cada punto p: mira los puntos “visibles” hacia abajo (aquellos cuyo
+rectángulo con p no contiene ningún otro punto), ordenados por y decreciente,
+y cuenta las alternancias de signo en yi − p.
+
+La cota
+La suma de esas alternancias, sobre todos los puntos p de la entrada, es una
+cota inferior de OPT — cada alternancia da un rectángulo independiente
+más.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    18 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2
+
+
+
+
+Idea de análisis
+Para cada punto p: mira los puntos “visibles” hacia abajo (aquellos cuyo
+rectángulo con p no contiene ningún otro punto), ordenados por y decreciente,
+y cuenta las alternancias de signo en yi − p.
+
+La cota
+La suma de esas alternancias, sobre todos los puntos p de la entrada, es una
+cota inferior de OPT — cada alternancia da un rectángulo independiente
+más.
+
+                            Abierto: ¿es OPT = Θ(Wilber-2)?
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   18 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2, visualizado
+
+
+
+
+                tiempo
+                                           p
+
+
+
+
+                                                                       llave
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           19 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2: resultados adicionales
+
+
+
+Conjetura
+Se cree que Wilber-2 es Θ(OPT ).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   20 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2: resultados adicionales
+
+
+
+Conjetura
+Se cree que Wilber-2 es Θ(OPT ).
+
+Optimalidad llave-independiente
+Si las llaves fueran “sin significado” (se podrían permutar al azar), entonces
+OPT = Θ(cota del conjunto de trabajo) — por lo tanto, los Splay Trees
+son óptimos llave-independientes.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      20 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 2: resultados adicionales
+
+
+
+Conjetura
+Se cree que Wilber-2 es Θ(OPT ).
+
+Optimalidad llave-independiente
+Si las llaves fueran “sin significado” (se podrían permutar al azar), entonces
+OPT = Θ(cota del conjunto de trabajo) — por lo tanto, los Splay Trees
+son óptimos llave-independientes.
+
+El porqué (esbozo)
+                              E[Wilber-2(xi )] = Θ(lg ti )
+(el número esperado de cambios de máximo, bajo una permutación
+aleatoria, ya es la cota del conjunto de trabajo).
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      20 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 1: la que usaremos con Tango Trees
+
+
+
+
+Idea de análisis
+Fijamos un árbol de referencia P con la entrada como llaves. Para cada nodo y
+de P: contamos las alternancias en la secuencia de accesos entre el subárbol
+izquierdo y el derecho de y (ignorando accesos a y o fuera de su subárbol).
+Sumamos sobre todos los y .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    21 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Wilber 1: la que usaremos con Tango Trees
+
+
+
+
+Idea de análisis
+Fijamos un árbol de referencia P con la entrada como llaves. Para cada nodo y
+de P: contamos las alternancias en la secuencia de accesos entre el subárbol
+izquierdo y el derecho de y (ignorando accesos a y o fuera de su subárbol).
+Sumamos sobre todos los y .
+
+Por qué es una cota inferior
+Cada alternancia agrega un rectángulo independiente más — y en la
+próxima clase veremos que esto es exactamente lo que hay que contar
+como “cambios de hijo preferido” al analizar Tango Trees.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    21 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un caso extremo: la secuencia bit-reversal
+
+
+
+
+Construcción
+Toma 0, 1, 2, . . . en binario, e invierte los bits de cada uno:
+
+           0, 1, 2, 3, 4, 5, 6, 7 → 000, 100, 010, 110, 001, 101, 011, 111
+
+                                ⇒     0, 4, 2, 6, 1, 5, 3, 7
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         22 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un caso extremo: la secuencia bit-reversal
+
+
+
+
+Construcción
+Toma 0, 1, 2, . . . en binario, e invierte los bits de cada uno:
+
+           0, 1, 2, 3, 4, 5, 6, 7 → 000, 100, 010, 110, 001, 101, 011, 111
+
+                                ⇒     0, 4, 2, 6, 1, 5, 3, 7
+
+   Usando esto como secuencia de accesos sobre un árbol perfecto: el número de
+alternancias en cada nodo y resulta ser exactamente el tamaño del subárbol de y .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         22 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El árbol del ejemplo
+
+
+
+
+                                             3
+
+
+                              1                              5
+
+
+                      0              2               4                 6
+
+                       Figura: BST perfecto con llaves de 0 a 6
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       23 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La consecuencia
+
+
+
+
+Resultado
+                 Wilber-1 = Θ(n lg n)         ⇒      OPT = Θ(n lg n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    24 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La consecuencia
+
+
+
+
+Resultado
+                 Wilber-1 = Θ(n lg n)         ⇒      OPT = Θ(n lg n).
+
+Pregunta abierta
+¿Para toda secuencia de accesos x, existe algún árbol de referencia P tal
+que Wilber-1(x) = Θ(OPT (x))?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    24 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La consecuencia
+
+
+
+
+Resultado
+                 Wilber-1 = Θ(n lg n)         ⇒      OPT = Θ(n lg n).
+
+Pregunta abierta
+¿Para toda secuencia de accesos x, existe algún árbol de referencia P tal
+que Wilber-1(x) = Θ(OPT (x))?
+
+    Adelanto: Tango Trees (próxima clase) fijan P sin conocer la secuencia por
+adelantado (como debe ser, al ser un algoritmo online) — por eso su garantía será
+O(lg lg n)-competitiva, no O(1): Wilber-1 puede quedar Ω(lg lg n) lejos de OPT si
+                           el árbol se fija de antemano.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        24 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+ ▶ Un conjunto de puntos representa una ejecución válida de BST si y
+   solo si es arboralmente satisfecho.
+ ▶ La cota de rectángulos independientes (OPT ≥ |I| + 12 MIS) se
+   demuestra con un argumento de carga sobre segmentos horizontales,
+   separando en rectángulos positivos y negativos.
+ ▶ Wilber-2 cuenta alternancias de signo entre puntos visibles hacia
+   abajo; se conjetura Θ(OPT ), y explica por qué Splay Trees son
+   óptimos llave-independientes.
+ ▶ Wilber-1 cuenta alternancias izquierda/derecha sobre un árbol de
+   referencia fijo — es exactamente lo que Tango Trees usarán, la próxima
+   clase, para lograr O(lg lg n)-competitividad.
+ ▶ Si P se fija sin conocer la secuencia (como debe ser online), Wilber-1
+   puede quedar Ω(lg lg n) lejos de OPT — el límite real de esta técnica.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos demostrar la cota de rectángulos independientes, con su
+   prueba completa.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos demostrar la cota de rectángulos independientes, con su
+   prueba completa.
+ ▶ Sabemos calcular Wilber-2 y Wilber-1 sobre un ejemplo concreto.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos demostrar la cota de rectángulos independientes, con su
+   prueba completa.
+ ▶ Sabemos calcular Wilber-2 y Wilber-1 sobre un ejemplo concreto.
+ ▶ Estamos listos para entender, la próxima clase, por qué Tango Trees son
+   exactamente O(lg lg n)-competitivos, y no mejor, usando esta técnica.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos demostrar la cota de rectángulos independientes, con su
+   prueba completa.
+ ▶ Sabemos calcular Wilber-2 y Wilber-1 sobre un ejemplo concreto.
+ ▶ Estamos listos para entender, la próxima clase, por qué Tango Trees son
+   exactamente O(lg lg n)-competitivos, y no mejor, usando esta técnica.
+ ▶ Conocemos las preguntas abiertas centrales de optimalidad dinámica,
+   tal como están hoy.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   26 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Wilber, R. (1989). Lower bounds for accessing binary search trees with
+   rotations. SIAM Journal on Computing, 18(1), 56–67.
+ ▶ Iacono, J. (2005). Key independent optimality. Algorithmica, 42(1),
+   3–10.
+ ▶ Demaine, E. D., Harmon, D., Iacono, J., & Pătraşcu, M. (2004).
+   Dynamic optimality — almost. Proceedings of FOCS’04, 484–490.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 29
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 29
+

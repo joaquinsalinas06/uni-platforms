@@ -1,0 +1,33 @@
+id: heavy-light-decomposition
+title: Descomposición Heavy-Light
+type: structure
+week: week-14
+hasVisualization: true
+visualizationType: tree
+prerequisites:
+- segment-tree
+- lca-euler-tour
+usedBy:
+- link-cut-tree
+placeholder: false
+complexity:
+  Preprocesar (dos recorridos):
+    worst: O(n)
+    reasoning: Un recorrido calcula tamaños e hijo pesado y otro asigna posiciones y cabezas de cadena;
+      cada uno visita cada nodo una vez.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#17-20
+  LCA:
+    worst: O(lg n)
+    reasoning: Cada salto sube a la cabeza de una cadena por una arista liviana, y un camino a la raíz
+      tiene a lo más lg n aristas livianas.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#29
+  Consulta o actualización de camino:
+    worst: O(lg² n)
+    reasoning: El camino se parte en O(lg n) intervalos de cadena y cada intervalo cuesta O(lg n) en el
+      segment tree.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#31-32
+  Consulta o actualización de subárbol:
+    worst: O(lg n)
+    reasoning: Visitar el hijo pesado primero deja todo subárbol como un único intervalo [pos, sal) del
+      arreglo, que es una sola operación del segment tree.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#30-32

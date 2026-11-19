@@ -112,7 +112,18 @@
         "aho-corasick",
         "suffix-array",
         "kasai-lcp",
-        "dc3"
+        "dc3",
+        "suffix-tree",
+        "ukkonen"
+      ]
+    },
+    {
+      "id": "dynamic-graphs",
+      "title": "Grafos dinámicos",
+      "topics": [
+        "heavy-light-decomposition",
+        "centroid-decomposition",
+        "link-cut-tree"
       ]
     }
   ],
@@ -293,14 +304,38 @@
     },
     {
       "id": "week-13",
-      "title": "Semana 13 — Strings II",
+      "title": "Semana 13 — Strings II y III",
       "sourceFiles": [
-        "raw-materials/new/Sem13_Strings_II.pdf"
+        "raw-materials/sem13/Sem13_Strings_II.pdf",
+        "raw-materials/sem13/Sem13_Strings_III.pdf"
       ],
       "topics": [
         "suffix-array",
         "kasai-lcp",
-        "dc3"
+        "dc3",
+        "suffix-tree",
+        "ukkonen"
+      ]
+    },
+    {
+      "id": "week-14",
+      "title": "Semana 14 — Dynamic Graphs I",
+      "sourceFiles": [
+        "raw-materials/sem14/CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf"
+      ],
+      "topics": [
+        "heavy-light-decomposition",
+        "centroid-decomposition"
+      ]
+    },
+    {
+      "id": "week-15",
+      "title": "Semana 15 — Dynamic Graphs II",
+      "sourceFiles": [
+        "raw-materials/sem15/Sem15_Dynamic_Graphs_II.pdf"
+      ],
+      "topics": [
+        "link-cut-tree"
       ]
     }
   ],
@@ -1718,6 +1753,87 @@
       ],
       "hasVisualization": true,
       "visualizationType": "array"
+    },
+    "suffix-tree": {
+      "type": "structure",
+      "title": "Suffix tree",
+      "week": "week-13",
+      "sourceSlides": [
+        "Sem13_Strings_III.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "trie",
+        "suffix-array",
+        "kasai-lcp"
+      ],
+      "usedBy": [
+        "ukkonen"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "ukkonen": {
+      "type": "algorithm",
+      "title": "Construcción de Ukkonen",
+      "week": "week-13",
+      "sourceSlides": [
+        "Sem13_Strings_III.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "suffix-tree"
+      ],
+      "usedBy": [],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "heavy-light-decomposition": {
+      "type": "structure",
+      "title": "Descomposición Heavy-Light",
+      "week": "week-14",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "segment-tree",
+        "lca-euler-tour"
+      ],
+      "usedBy": [
+        "link-cut-tree"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "centroid-decomposition": {
+      "type": "structure",
+      "title": "Descomposición por centroides",
+      "week": "week-14",
+      "sourceSlides": [
+        "CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [],
+      "usedBy": [],
+      "hasVisualization": true,
+      "visualizationType": "tree"
+    },
+    "link-cut-tree": {
+      "type": "structure",
+      "title": "Link-cut trees",
+      "week": "week-15",
+      "sourceSlides": [
+        "Sem15_Dynamic_Graphs_II.pdf"
+      ],
+      "status": "generated",
+      "prerequisites": [
+        "splay-tree",
+        "heavy-light-decomposition"
+      ],
+      "usedBy": [],
+      "hasVisualization": true,
+      "visualizationType": "tree"
     }
   }
 }

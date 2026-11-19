@@ -9,7 +9,7 @@ const base=option('base','http://localhost:4321');
 const out=option('out','/tmp/eda-visual-audit');
 fs.mkdirSync(out,{recursive:true});
 const map=JSON.parse(fs.readFileSync('content/knowledge-map.json','utf8'));
-const weeks=new Set(['week-04','week-05','week-06','week-09']);
+const weeks=new Set(option('weeks','week-04,week-05,week-06,week-09').split(','));
 const inventory=[];
 for(const [id,topic] of Object.entries(map.topics)){
   if(!weeks.has(topic.week))continue;
@@ -24,6 +24,8 @@ for(const [id,topic] of Object.entries(map.topics)){
   }};walk(dir);
 }
 inventory.push({route:'/repaso',topic:'repaso',week:'week-07'});
+inventory.push({route:'/final',topic:'final',week:'week-15'});
+for(const f of fs.readdirSync('content/final-temas'))inventory.push({route:`/final/${f.replace(/\.mdx$/,'')}`,topic:'final',week:'week-15'});
 const browser=await chromium.launch({headless:true});
 const filter=option('routes','').split(',').filter(Boolean);
 const jobs=inventory.filter(item=>!filter.length||filter.includes(item.route)).flatMap(item=>[390,768,1440].flatMap(width=>['light','dark'].map(theme=>({...item,width,theme}))));

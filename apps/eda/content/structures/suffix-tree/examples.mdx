@@ -1,0 +1,93 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+Los tres casos usan la misma convención que la teoría: cada nodo muestra la arista que llega a él y las hojas llevan la posición de inicio de su sufijo.
+
+## Mínimo: ab con centinela
+
+*(Derivado de la definición; no aparece en las diapositivas.)* No hay ninguna letra repetida: ningún nodo interno salvo la raíz, y cada sufijo es una arista que sale de ella.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Tres sufijos: $\\mathtt{ab}\\mathdollar$, $\\mathtt{b}\\mathdollar$ y $\\mathdollar$. Empiezan con letras distintas, así que cada uno es una arista desde la raíz: 3 hojas y ningún interno.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "l0", value: "ab$", tag: "0", parent: "r" },
+        { id: "l1", value: "b$", tag: "1", parent: "r" },
+        { id: "l2", value: "$", tag: "2", parent: "r" },
+      ],
+      caption: "Subcadenas distintas con centinela: 3 + 2 + 1 = 6; sin él, 6 − 3 = 3 (a, b, ab).",
+    },
+  ],
+}} />
+
+## Normal: abcab con centinela (ejercicio 25 de la lista)
+
+*(Derivado; los datos son del ejercicio 25 de la lista del final.)* Las subcadenas que se repiten con continuaciones distintas son $\mathtt{ab}$ (seguida de c y de $\mathdollar$) y $\mathtt b$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Los internos son ab y b. Las hojas, leídas de izquierda a derecha con los hijos en orden ($\\mathdollar$ primero), dan el suffix array: 5, 3, 0, 4, 1, 2.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "l5", value: "$", tag: "5", parent: "r" },
+        { id: "ab", value: "ab", parent: "r", state: "active" },
+        { id: "l3", value: "$", tag: "3", parent: "ab" },
+        { id: "l0", value: "cab$", tag: "0", parent: "ab" },
+        { id: "b", value: "b", parent: "r", state: "active" },
+        { id: "l4", value: "$", tag: "4", parent: "b" },
+        { id: "l1", value: "cab$", tag: "1", parent: "b" },
+        { id: "l2", value: "cab$", tag: "2", parent: "r" },
+      ],
+      caption: "LCP entre hojas vecinas = profundidad del interno que las separa: 0, 0, 2, 0, 1, 0.",
+    },
+    {
+      note: "Suma de longitudes de aristas: 1 + 2 + 1 + 4 + 1 + 1 + 4 + 4 = 18 subcadenas distintas con centinela; restando las 6 que lo incluyen quedan 12. Coincide con 21 − 3 de la fórmula del SA.",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "l5", value: "$", tag: "5", parent: "r" },
+        { id: "ab", value: "ab", parent: "r", state: "marked" },
+        { id: "l3", value: "$", tag: "3", parent: "ab" },
+        { id: "l0", value: "cab$", tag: "0", parent: "ab" },
+        { id: "b", value: "b", parent: "r" },
+        { id: "l4", value: "$", tag: "4", parent: "b" },
+        { id: "l1", value: "cab$", tag: "1", parent: "b" },
+        { id: "l2", value: "cab$", tag: "2", parent: "r" },
+      ],
+      caption: "Subcadena repetida más larga: ab, el interno más profundo (profundidad 2).",
+    },
+  ],
+}} />
+
+## Límite: aaaa con centinela
+
+*(Derivado.)* Todas las subcadenas $\mathtt a^k$ se repiten: el árbol degenera en un camino de internos, cada uno con una hoja $\mathdollar$. Sigue teniendo $n + 1 = 5$ hojas y $n - 1 = 3$ internos no raíz: la cota $2n + 1$ se respeta.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Cada interno a, aa, aaa se bifurca entre seguir con a o terminar con $\\mathdollar$. La rama más profunda termina en la hoja 0 ($\\mathtt{a}\\mathdollar$ = el sufijo completo $\\mathtt{aaaa}\\mathdollar$).",
+      nodes: [
+        { id: "r", value: "raíz", parent: null },
+        { id: "l4", value: "$", tag: "4", parent: "r" },
+        { id: "a1", value: "a", parent: "r" },
+        { id: "l3", value: "$", tag: "3", parent: "a1" },
+        { id: "a2", value: "a", parent: "a1" },
+        { id: "l2", value: "$", tag: "2", parent: "a2" },
+        { id: "a3", value: "a", parent: "a2", state: "answer" },
+        { id: "l1", value: "$", tag: "1", parent: "a3" },
+        { id: "l0", value: "a$", tag: "0", parent: "a3" },
+      ],
+      caption: "Subcadena repetida más larga: aaa (profundidad 3). Distintas sin centinela: 4 (a, aa, aaa, aaaa).",
+    },
+  ],
+}} />

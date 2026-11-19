@@ -259,6 +259,25 @@ del problemset, agrupadas por nivel, con pistas progresivas y solución propia. 
 pistas y solución con `renderRich` (KaTeX, `código`, y bloques ```cpp```): se puede usar `$...$` y código en cualquier
 `exercises.md`. No existe `week-08` (parcial, sin clases): el mapa salta de la semana 7 a la 9.
 
+## Material incorporado: semanas 13–15 y examen final
+
+Fuente: `raw-materials/sem13..sem15/` (mapa por semana en `raw-materials/canvas-manifest.json`; texto en `raw-materials/text/`).
+
+| Semana | PDF | Temas |
+| --- | --- | --- |
+| 13 | `Sem13_Strings_III.pdf` | `suffix-tree` (trie comprimido, búsqueda, SA→ST, suffix links), `ukkonen` (traza `abcabxabcd$`). SA-IS sólo se nombra; los `.cpp` (sais, manber-myers, dc3, black-order-712*) son fuente conceptual |
+| 14 | `CS3014_…_2s2026 (10).pdf` (*Dynamic Graphs I*) | `heavy-light-decomposition`, `centroid-decomposition` (`abstracted-order-104.cpp` = Ciel the Commander) |
+| 15 | `Sem15_Dynamic_Graphs_II.pdf` | `link-cut-tree` (caminos preferidos, Access, MakeRoot, análisis con Heavy-Light) |
+
+Unidad nueva `dynamic-graphs`. Las cinco estructuras siguen la pasada pizarra (sin código).
+
+**Examen final** (`/final`): `content/final.md` (colección `final`, `src/pages/final/index.astro`) resuelve la lista de 32 ejercicios y el
+simulacro (6 problemas × 4 partes), con anclas `#L3`, `#S5a`… (prefijo `(L3)` del enunciado, ver `src/lib/final.ts`). Los 6 temas
+confirmados del examen tienen página propia en `content/final-temas/*.mdx` (colección `finalTemas`, ruta `/final/<id>`): teoría
+desde cero con figuras, errores típicos, qué memorizar, predicción y problemas (a)–(d) en el formato del simulacro; `lista` enlaza
+los ejercicios resueltos. Level Ancestor y Disjoint Sparse Table no están en las láminas: van marcados como nota de apoyo.
+Las soluciones numéricas se verificaron con scripts desechables (no versionados).
+
 ## Pendiente
 
 - Borrar `demo-bst` y `week-00` cuando entre la primera estructura real.

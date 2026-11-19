@@ -1,0 +1,62 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+*(Los tres casos son ejercicios de la lista del examen final, resueltos aplicando las definiciones de clase; ver [la página del final](/final#L29).)*
+
+## Mínimo: bosque de nodos aislados (ejercicio 31)
+
+Seis nodos aislados. Enlazar(2, 1), Enlazar(3, 2), Enlazar(5, 4) dejan los árboles $1-2-3$, $4-5$ y $6$: Raíz(3) = 1 y 3, 5 no están conectados. Enlazar(4, 3) une todo en $1-2-3-4-5$: Raíz(5) = 1. Cortar(2) deja $\{1\}$, $2-3-4-5$ y $\{6\}$: Raíz(5) = 2. Raíz(v) es Access(v) y el nodo más a la izquierda del splay.
+
+## Normal: cambios de hijo preferido (ejercicio 29)
+
+Árbol $1 \to \{2, 3\}$, $2 \to \{4, 5\}$, $3 \to \{6\}$, sin hijos preferidos al inicio. Pesadas: $(1,2)$, $(2,4)$, $(3,6)$; livianas: $(1,3)$, $(2,5)$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Access(4): el 1 pasa a preferir 2 y el 2 a preferir 4. Dos cambios, ambos por aristas pesadas.",
+      nodes: [
+        { id: "1", value: "1", parent: null, state: "active" },
+        { id: "2", value: "2", parent: "1", state: "active" },
+        { id: "3", value: "3", parent: "1" },
+        { id: "4", value: "4", parent: "2", state: "answer" },
+        { id: "5", value: "5", parent: "2" },
+        { id: "6", value: "6", parent: "3" },
+      ],
+      caption: "Caminos: {1, 2, 4}, {3}, {5}, {6}.",
+    },
+    {
+      note: "Access(5): el 2 cambia de 4 a 5 por la arista liviana (2,5). Un cambio liviano; ⌊lg 6⌋ = 2 lo permite.",
+      nodes: [
+        { id: "1", value: "1", parent: null, state: "active" },
+        { id: "2", value: "2", parent: "1", state: "active" },
+        { id: "3", value: "3", parent: "1" },
+        { id: "4", value: "4", parent: "2", state: "muted" },
+        { id: "5", value: "5", parent: "2", state: "answer" },
+        { id: "6", value: "6", parent: "3" },
+      ],
+      caption: "Caminos: {1, 2, 5}, {4}, {3}, {6}.",
+    },
+    {
+      note: "Access(6): el 1 cambia de 2 a 3 (liviana) y el 3 pasa a preferir 6 (pesada). Access(4) después: el 1 vuelve a 2 y el 2 vuelve a 4, ambos por pesadas.",
+      nodes: [
+        { id: "1", value: "1", parent: null, state: "active" },
+        { id: "2", value: "2", parent: "1" },
+        { id: "3", value: "3", parent: "1", state: "active" },
+        { id: "4", value: "4", parent: "2" },
+        { id: "5", value: "5", parent: "2" },
+        { id: "6", value: "6", parent: "3", state: "answer" },
+      ],
+      caption: "Livianas por acceso: 0, 1, 1, 0. Todos cumplen la cota de ⌊lg n⌋.",
+    },
+  ],
+}} />
+
+## Límite: una cadena (ejercicio 30)
+
+La cadena $1-2-3-4-5$ enraizada en 1. Access(5) deja un único camino preferido $\{1,2,3,4,5\}$. Access(2) lo parte en $\{1,2\}$ y $\{3,4,5\}$ (2 pierde su hijo preferido). Cortar(3) hace Access(3) ($\{1,2,3\}$ y $\{4,5\}$ colgando de 3) y separa el hijo izquierdo del splay de 3: quedan los árboles $1-2$ y $3-4-5$, con $\{4,5\}$ colgando de 3 por path-parent.

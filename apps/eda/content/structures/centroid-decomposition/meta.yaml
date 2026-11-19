@@ -1,0 +1,24 @@
+id: centroid-decomposition
+title: Descomposición por centroides
+type: structure
+week: week-14
+hasVisualization: true
+visualizationType: tree
+prerequisites: []
+placeholder: false
+complexity:
+  Encontrar un centroide:
+    worst: O(n)
+    reasoning: Un recorrido calcula los tamaños de la componente y el descenso baja mientras un hijo
+      tenga más de la mitad de los nodos, sin volver atrás.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#36-39
+  Descomposición completa:
+    worst: O(n lg n)
+    reasoning: Las componentes de un mismo nivel son disjuntas y cuestan O(n) en total; cada nivel parte
+      las componentes a la mitad, así que hay a lo más lg n + 1 niveles.
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#43-47
+  Pintar o consultar el marcado más cercano:
+    worst: O(lg n)
+    reasoning: Cada nodo tiene a lo más lg n + 1 centroides ancestros y, con las distancias precalculadas,
+      cada uno se revisa en O(1).
+    source: CS3014_Estructuras_de_Datos_Avanzadas_2s2026 (10).pdf#56-58

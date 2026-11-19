@@ -1,0 +1,1460 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Jerarquía de Memoria I
+Semana 10
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+13 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué el modelo RAM deja de describir bien a una
+   computadora real cuando los datos son grandes
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué el modelo RAM deja de describir bien a una
+   computadora real cuando los datos son grandes
+ ▶ Definir el modelo de memoria externa de Aggarwal y Vitter y su medida
+   de costo: las transferencias de bloques
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué el modelo RAM deja de describir bien a una
+   computadora real cuando los datos son grandes
+ ▶ Definir el modelo de memoria externa de Aggarwal y Vitter y su medida
+   de costo: las transferencias de bloques
+ ▶ Analizar en ese modelo los problemas básicos: escanear, buscar, ordenar
+   y permutar
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué el modelo RAM deja de describir bien a una
+   computadora real cuando los datos son grandes
+ ▶ Definir el modelo de memoria externa de Aggarwal y Vitter y su medida
+   de costo: las transferencias de bloques
+ ▶ Analizar en ese modelo los problemas básicos: escanear, buscar, ordenar
+   y permutar
+ ▶ Reconocer las dos cotas que organizan todo el tema: N/B y
+   N        N
+   B logM/B B
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+Lo que asumimos hasta ahora
+En el modelo RAM, leer o escribir cualquier celda de memoria cuesta lo mismo:
+una unidad. Leer 10 palabras cuesta 10.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     3 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+Lo que asumimos hasta ahora
+En el modelo RAM, leer o escribir cualquier celda de memoria cuesta lo mismo:
+una unidad. Leer 10 palabras cuesta 10.
+
+             Nivel                  Capacidad típica       Tiempo de acceso
+             Registros del CPU                  100 B                  0,5 ns
+             Caché L1                           64 KB                    1 ns
+             Caché L2                            1 MB                   10 ns
+             Memoria principal                    GBs                  150 ns
+             Disco                                TBs                  10 ms
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            3 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+Lo que asumimos hasta ahora
+En el modelo RAM, leer o escribir cualquier celda de memoria cuesta lo mismo:
+una unidad. Leer 10 palabras cuesta 10.
+
+             Nivel                  Capacidad típica       Tiempo de acceso
+             Registros del CPU                  100 B                  0,5 ns
+             Caché L1                           64 KB                    1 ns
+             Caché L2                            1 MB                   10 ns
+             Memoria principal                    GBs                  150 ns
+             Disco                                TBs                  10 ms
+
+
+¿De verdad todas las celdas cuestan lo mismo?
+Entre un registro y el disco hay un factor de 2 · 107 . Si leer un registro
+tardara un segundo, leer del disco tardaría casi ocho meses.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            3 / 33
+La jerarquía de memoria
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La jerarquía de memoria
+
+
+
+
+              Capacidad                                                Latencia
+
+                  100 B                   Registros                    0,5 ns
+
+                  64 KB                   Caché L1                     1 ns
+
+                   1 MB                   Caché L2                     10 ns
+
+                    GBs               Memoria principal                150 ns
+
+                    TBs                     Disco                      10 ms
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              5 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La jerarquía de memoria
+
+
+
+
+        Capacidad                                               Latencia
+
+             100 B                  Registros                   0,5 ns
+
+            64 KB                   Caché L1                    1 ns
+                                                                           más lento,
+             1 MB                   Caché L2                    10 ns      más grande,
+                                                                           más barato
+
+               GBs              Memoria principal               150 ns
+
+              TBs                     Disco                     10 ms
+
+
+ Cada nivel es más rápido y mucho más pequeño que el de abajo, y solo conversa
+                          directamente con sus vecinos.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     5 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué pasa cuando pedimos una celda?
+
+
+
+
+        nivel rápido
+
+
+
+
+         nivel lento
+                                                  la celda que pedimos
+
+
+
+Los niveles se comunican en bloques
+Pedimos una sola celda al nivel lento.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     6 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué pasa cuando pedimos una celda?
+
+
+
+
+        nivel rápido
+
+
+                                                        viaja el bloque entero
+
+
+         nivel lento
+
+
+
+
+Los niveles se comunican en bloques
+El nivel lento no envía una celda: envía el bloque que la contiene, con todas
+sus vecinas.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             6 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué pasa cuando pedimos una celda?
+
+
+
+
+        nivel rápido
+
+
+                                                        viaja el bloque entero
+
+
+         nivel lento
+
+
+
+
+Los niveles se comunican en bloques
+En un disco, casi todo el tiempo se va en llegar hasta el dato. Una vez ahí,
+leer lo que está al lado es casi gratis: las vecinas viajan sin costo adicional.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             6 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos programas, el mismo Θ(N)
+
+
+
+        recorrer un arreglo
+
+
+
+           seguir una lista
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos programas, el mismo Θ(N)
+
+
+
+        recorrer un arreglo
+
+
+
+           seguir una lista
+
+
+
+
+En el modelo RAM son indistinguibles
+Sumar los N elementos de un arreglo y sumar los N nodos de una lista
+enlazada cuestan Θ(N).
+
+¿Y en la máquina real?
+El arreglo aprovecha cada bloque completo. La lista puede necesitar un
+bloque nuevo por cada nodo. Necesitamos un modelo que vea esa diferencia.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   7 / 33
+El modelo de memoria externa
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El modelo de Aggarwal y Vitter (1988)
+
+
+                                                            disco: tamaño ilimitado
+                     memoria: M palabras
+
+
+          CPU
+
+                            M/B bloques
+
+                                                     B palabras
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                9 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El modelo de Aggarwal y Vitter (1988)
+
+
+                                                            disco: tamaño ilimitado
+                     memoria: M palabras
+
+                                            1 bloque
+          CPU
+                                             costo 1
+
+                            M/B bloques
+
+                                                       B palabras
+
+
+Dos niveles y una sola medida
+Una memoria rápida de M palabras y un disco ilimitado, ambos divididos en
+bloques de B palabras. Mover un bloque entre disco y memoria cuesta 1.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                9 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El modelo de Aggarwal y Vitter (1988)
+
+
+                                                            disco: tamaño ilimitado
+                     memoria: M palabras
+
+                                            1 bloque
+          CPU
+                                             costo 1
+
+                            M/B bloques
+
+                                                       B palabras
+
+
+Dos niveles y una sola medida
+Una memoria rápida de M palabras y un disco ilimitado, ambos divididos en
+bloques de B palabras. Mover un bloque entre disco y memoria cuesta 1.
+
+    Todo lo que se haga con los datos que ya están en memoria es gratis. Solo
+                  contamos transferencias (operaciones de E/S).
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología                9 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los parámetros
+
+
+Tres números
+ ▶ N: el tamaño de la entrada (en palabras).
+ ▶ M: lo que cabe en memoria.
+ ▶ B: el tamaño de un bloque.
+Suponemos 1 ≤ B ≤ M/2 y, para que el problema sea interesante, N > M.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Los parámetros
+
+
+Tres números
+ ▶ N: el tamaño de la entrada (en palabras).
+ ▶ M: lo que cabe en memoria.
+ ▶ B: el tamaño de un bloque.
+Suponemos 1 ≤ B ≤ M/2 y, para que el problema sea interesante, N > M.
+
+¿Qué es “memoria” y qué es “disco”?
+Lo decide la escala del problema. Para una base de datos, la memoria es la
+RAM y el disco es el disco. Para una simulación que cabe en RAM, la
+“memoria” es la caché L2 y el “disco” es la RAM.
+
+  El modelo aproxima el salto más lento de la jerarquía, que es el que domina el
+        tiempo. También se le llama modelo de E/S o Disk Access Model.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         10 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo se relaciona con el modelo RAM?
+
+
+
+Una cota superior gratis
+Un algoritmo que hace T (N) operaciones en el modelo RAM hace a lo más
+T (N) transferencias: en el peor caso, una por operación.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo se relaciona con el modelo RAM?
+
+
+
+Una cota superior gratis
+Un algoritmo que hace T (N) operaciones en el modelo RAM hace a lo más
+T (N) transferencias: en el peor caso, una por operación.
+
+Lo mejor que se puede soñar
+Si cada bloque que entra a memoria se aprovecha completo, las B palabras,
+el costo baja a T (N)/B.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo se relaciona con el modelo RAM?
+
+
+
+Una cota superior gratis
+Un algoritmo que hace T (N) operaciones en el modelo RAM hace a lo más
+T (N) transferencias: en el peor caso, una por operación.
+
+Lo mejor que se puede soñar
+Si cada bloque que entra a memoria se aprovecha completo, las B palabras,
+el costo baja a T (N)/B.
+
+Entre T (N) y T (N)/B puede haber un factor de mil o de un millón.
+¿De qué depende a cuál de los dos extremos se parece un algoritmo?
+De su localidad: de si los datos que usa uno después de otro están también
+uno al lado del otro.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   11 / 33
+Escanear
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Escanear
+
+
+
+
+                               memoria
+
+
+
+
+                            N palabras en ⌈N/B⌉ bloques consecutivos
+
+
+
+Recorrer N elementos consecutivos
+Traemos el primer bloque: una transferencia, y B elementos quedan disponi-
+bles gratis.
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   13 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Escanear
+
+
+
+
+                               memoria
+
+
+
+
+                            N palabras en ⌈N/B⌉ bloques consecutivos
+
+
+
+Recorrer N elementos consecutivos
+Al terminarlo, traemos el siguiente.
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   13 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Escanear
+
+
+
+
+                               memoria
+
+
+
+
+                            N palabras en ⌈N/B⌉ bloques consecutivos
+
+
+
+Recorrer N elementos consecutivos
+Cada transferencia rinde B elementos.
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   13 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Escanear
+
+
+
+
+                               memoria
+
+
+
+
+                            N palabras en ⌈N/B⌉ bloques consecutivos
+
+
+
+Recorrer N elementos consecutivos
+En total, Θ(⌈N/B⌉) transferencias. El techo importa: aunque N sea menor
+que B, se paga al menos una.
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   13 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Varios escaneos a la vez
+
+
+                                                                       memoria
+
+     corrida A
+                                                                       el menor
+
+     corrida C
+
+
+        salida
+
+
+
+Mezclar dos corridas ordenadas
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              14 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Varios escaneos a la vez
+
+
+                                                                       memoria
+
+     corrida A
+                                                                       el menor
+
+     corrida C
+
+
+        salida
+
+
+
+
+Mezclar dos corridas ordenadas
+Tres escaneos que avanzan a la vez: uno por cada entrada y uno por la salida.
+Basta un bloque en memoria para cada uno.
+                            
+   Costo: O ⌈(|A| + |C |)/B⌉ , siempre que M ≥ 3B. Con k entradas a la vez, la
+            mezcla sigue costando un escaneo mientras k + 1 ≤ M/B.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              14 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El otro extremo: saltar
+
+
+
+
+Búsqueda binaria sobre un arreglo ordenado
+En el modelo RAM hace lg N comparaciones. ¿Cuántas transferencias?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El otro extremo: saltar
+
+
+
+                             2      4    3        1
+
+
+
+
+Búsqueda binaria sobre un arreglo ordenado
+Las primeras consultas caen lejos unas de otras: cada una está en un bloque
+distinto.
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología   15 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El otro extremo: saltar
+
+
+
+                              2      4    3         1
+
+
+
+
+                      el resto ya está en memoria
+
+
+
+Búsqueda binaria sobre un arreglo ordenado
+Recién cuando el rango cabe en un bloque,  las últimas lg B consultas salen
+gratis. Total: Θ lg N − lg B = Θ lg N
+                                       
+                                     B   transferencias.
+
+Apenas ahorramos lg B de las lg N. ¿Es eso lo mejor que se puede
+buscar?
+
+Víctor Racsó Galván Oyola         Universidad de Ingeniería y Tecnología   15 / 33
+Buscar
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto cuesta buscar, como mínimo?
+
+
+
+
+Buscar es obtener información
+Para ubicar un elemento entre N ordenados hay N + 1 respuestas posibles:
+hacen falta lg(N + 1) bits de información.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   17 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto cuesta buscar, como mínimo?
+
+
+
+Buscar es obtener información
+Para ubicar un elemento entre N ordenados hay N + 1 respuestas posibles:
+hacen falta lg(N + 1) bits de información.
+
+                      una de B + 1 zonas
+
+
+
+                    los B elementos de un bloque parten el orden en B + 1 zonas
+
+
+
+¿Cuánta información da una transferencia?
+Un bloque trae B elementos. Compararnos con ellos nos dice en cuál de
+B + 1 zonas estamos: a lo más lg(B + 1) bits.
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología             17 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La cota inferior de búsqueda
+
+
+Teorema
+En el modelo de comparaciones, buscar entre N elementos requiere
+                                 
+                        lg(N + 1)                 
+                    Ω               = Ω logB+1 N
+                        lg(B + 1)
+
+transferencias en el peor caso.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La cota inferior de búsqueda
+
+
+Teorema
+En el modelo de comparaciones, buscar entre N elementos requiere
+                                 
+                        lg(N + 1)                 
+                    Ω               = Ω logB+1 N
+                        lg(B + 1)
+
+transferencias en el peor caso.
+
+                Con N = 109 y B = 103          Fórmula      Transferencias
+                Búsqueda binaria              lg(N/B)            ≈ 20
+                La cota inferior              logB+1 N            3
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         18 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La cota inferior de búsqueda
+
+
+Teorema
+En el modelo de comparaciones, buscar entre N elementos requiere
+                                 
+                        lg(N + 1)                 
+                    Ω               = Ω logB+1 N
+                        lg(B + 1)
+
+transferencias en el peor caso.
+
+                Con N = 109 y B = 103          Fórmula      Transferencias
+                Búsqueda binaria              lg(N/B)            ≈ 20
+                La cota inferior              logB+1 N            3
+
+La búsqueda binaria mira uno solo de los B elementos que llegan.
+¿Existe una estructura que alcance la cota?
+Sí: el B-Tree, en la próxima clase.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         18 / 33
+Ordenar
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar con lo que ya tenemos
+
+
+Merge Sort, tal cual
+Mezclar dos corridas es un escaneo: cada nivel de la recursión cuesta O(N/B).
+                                                                       N/B
+         lg N                                                          N/B
+            B
+       niveles                                                         N/B
+                                                                       N/B
+                                              ..
+                                               .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         20 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar con lo que ya tenemos
+
+
+Merge Sort, tal cual
+Mezclar dos corridas es un escaneo: cada nivel de la recursión cuesta O(N/B).
+                                                                       N/B
+         lg N                                                          N/B
+            B
+       niveles                                                         N/B
+                                                                       N/B
+                                              ..
+                                               .
+
+
+Costo
+La recursión se detiene
+                     cuando el subproblema cabe en un bloque: lg(N/B)
+niveles, y O N
+             B lg N
+                  B transferencias.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         20 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar con lo que ya tenemos
+
+
+Merge Sort, tal cual
+Mezclar dos corridas es un escaneo: cada nivel de la recursión cuesta O(N/B).
+                                                                       N/B
+         lg N                                                          N/B
+            B
+       niveles                                                         N/B
+                                                                       N/B
+                                              ..
+                                               .
+
+
+Costo
+La recursión se detiene
+                     cuando el subproblema cabe en un bloque: lg(N/B)
+niveles, y O N
+             B lg N
+                  B transferencias.
+
+Ya ganamos el factor B del escaneo. ¿Se puede atacar también el
+logaritmo?
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         20 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primera mejora: empezar con corridas grandes
+
+
+
+
+      entrada        M             M             M              M      M
+
+
+
+Usar toda la memoria, no un solo bloque
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       21 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primera mejora: empezar con corridas grandes
+
+
+
+      entrada        M                 M              M              M             M
+
+
+                         ordenar           ordenar        ordenar        ordenar       ordenar
+
+
+
+      corridas
+
+
+
+Usar toda la memoria, no un solo bloque
+Leemos M elementos, los ordenamos en memoria (gratis en este modelo) y
+los escribimos. Repetimos hasta agotar la entrada.
+
+
+
+
+Víctor Racsó Galván Oyola          Universidad de Ingeniería y Tecnología                        21 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Primera mejora: empezar con corridas grandes
+
+
+
+      entrada        M                 M              M              M             M
+
+
+                         ordenar           ordenar        ordenar        ordenar       ordenar
+
+
+
+      corridas
+
+
+
+Usar toda la memoria, no un solo bloque
+Leemos M elementos, los ordenamos en memoria (gratis en este modelo) y
+los escribimos. Repetimos hasta agotar la entrada.
+
+  Un solo escaneo, O(N/B), y quedan ⌈N/M⌉ corridas ordenadas de tamaño M.
+         Nos saltamos de golpe los lg(M/B) niveles más bajos del árbol.
+
+
+Víctor Racsó Galván Oyola          Universidad de Ingeniería y Tecnología                        21 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Segunda mejora: mezclar muchas corridas a la vez
+
+
+         k corridas en disco          memoria: M/B bloques
+
+
+
+
+                                                                        una corrida
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología                 22 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Segunda mejora: mezclar muchas corridas a la vez
+
+
+         k corridas en disco          memoria: M/B bloques
+
+
+
+
+                                                                        una corrida
+
+
+
+
+Un bloque en memoria por corrida, y uno para la salida
+En cada paso sale el menor de los k frentes. Cuando un bloque de entrada se
+agota, se trae el siguiente de esa corrida.
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología                 22 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Segunda mejora: mezclar muchas corridas a la vez
+
+
+         k corridas en disco          memoria: M/B bloques
+
+
+
+
+                                                                        una corrida
+
+
+
+
+Un bloque en memoria por corrida, y uno para la salida
+En cada paso sale el menor de los k frentes. Cuando un bloque de entrada se
+agota, se trae el siguiente de esa corrida.
+
+ Cabe mientras k + 1 ≤ M/B: podemos mezclar Θ(M/B) corridas con el costo de
+                                un escaneo.
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología                 22 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenamiento por mezcla múltiple
+
+
+                                                                       N/B por nivel
+
+               N
+       logM/B M
+          niveles                                                      N/B por nivel
+
+
+                                                                       N/M corridas
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                   23 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenamiento por mezcla múltiple
+
+
+                                                                       N/B por nivel
+
+               N
+       logM/B M
+          niveles                                                      N/B por nivel
+
+
+                                                                       N/M corridas
+
+
+Teorema
+Ordenar N elementos en memoria externa cuesta
+                                                   
+                N              N           N        N
+             O      1 + logM/B       =O       logM/B
+                B              M            B        B
+
+transferencias.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                   23 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenamiento por mezcla múltiple
+
+
+                                                                       N/B por nivel
+
+               N
+       logM/B M
+          niveles                                                      N/B por nivel
+
+
+                                                                       N/M corridas
+
+
+Teorema
+Ordenar N elementos en memoria externa cuesta
+                                                   
+                N              N           N        N
+             O      1 + logM/B       =O       logM/B
+                B              M            B        B
+
+transferencias.
+                                                        N
+           El “1” es la formación de corridas, y logM/B M + 1 = logM/B N
+                                                                       B.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                   23 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto se gana, con números?
+
+
+Una entrada que no cabe en memoria
+N = 1011 elementos, M = 109 y B = 105 . Entonces N/B = 106 , N/M =
+100 y M/B = 104 .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   24 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuánto se gana, con números?
+
+
+Una entrada que no cabe en memoria
+N = 1011 elementos, M = 109 y B = 105 . Entonces N/B = 106 , N/M =
+100 y M/B = 104 .
+
+            Algoritmo                          Pasadas           Transferencias
+            Merge Sort binario              lg(N/B) ≈ 20               ≈ 2 · 107
+            Corridas de M, de a dos       1 + lg(N/M) ≈ 8              ≈ 8 · 106
+            Corridas de M, múltiple             1+1                    ≈ 2 · 106
+
+
+Dos pasadas
+Como hay 100 corridas y se pueden mezclar hasta 104 a la vez, una sola
+mezcla termina el trabajo. En la práctica, logM/B N
+                                                  B casi nunca pasa de 2 o
+3: ordenar cuesta “un par de escaneos”.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               24 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Se puede ordenar con menos?
+
+
+
+Teorema (Aggarwal y Vitter)
+En el modelo de comparaciones,
+                             todo algoritmo de ordenamiento en memoria
+externa hace Ω NB log     N
+                      M/B B transferencias en el peor caso.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Se puede ordenar con menos?
+
+
+
+Teorema (Aggarwal y Vitter)
+En el modelo de comparaciones,
+                             todo algoritmo de ordenamiento en memoria
+externa hace Ω NB log     N
+                      M/B B transferencias en el peor caso.
+
+
+La idea, sin los detalles
+Hay N! órdenes posibles: hacen falta lg(N!) ≈ N lg N bits. Cuando entra un
+bloque a memoria, lo único nuevo que se puede aprender es cómo  se
+intercalan sus B elementos con los que ya estaban: a lo más MB
+posibilidades, unos B lg M
+                         B bits.
+
+                                       N lg N
+      Dividiendo, salen del orden de B lg(M/B) =N B logM/B N transferencias. El
+    argumento completo afina el N de adentro del logaritmo a N/B. La mezcla
+                                 múltiple es óptima.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          25 / 33
+Permutar
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Permutar
+
+
+El problema
+N elementos en disco y, para cada uno, la posición donde debe quedar.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    27 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Permutar
+
+
+El problema
+N elementos en disco y, para cada uno, la posición donde debe quedar.
+
+
+
+
+Dos formas de hacerlo
+Moverlos uno por
+               uno, O(N); u ordenarlos por su posición de destino,
+  N         N
+O B logM/B B .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    27 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Permutar
+
+
+El problema
+N elementos en disco y, para cada uno, la posición donde debe quedar.
+
+
+
+
+Dos formas de hacerlo
+Moverlos uno por
+               uno, O(N); u ordenarlos por su posición de destino,
+  N         N
+O B logM/B B .
+
+¿No debería costar un escaneo, N/B?
+No: el óptimo es Θ mı́n{N, N           N
+                                           
+                             B log M/B B }   . Juntar por destino los
+elementos de un bloque es, en esencia, ordenar.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    27 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El tablero de memoria externa
+
+
+
+
+                Problema     Modelo RAM        Memoria externa
+                Escanear     Θ(N)              Θ(N/B)
+                Buscar       Θ(lg N)           Θ(logB+1 N)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El tablero de memoria externa
+
+
+
+
+                Problema     Modelo RAM        Memoria externa
+                Escanear     Θ(N)              Θ(N/B)
+                Buscar       Θ(lg N)           Θ(logB+1 N) 
+                Ordenar      Θ(N lg N)         Θ N         N
+                                                  B logM/B B
+                                               Θ mı́n{N, B logM/B N
+                                                          N
+                                                                    
+                Permutar     Θ(N)                                 B}
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    28 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El tablero de memoria externa
+
+
+
+
+                Problema     Modelo RAM        Memoria externa
+                Escanear     Θ(N)              Θ(N/B)
+                Buscar       Θ(lg N)           Θ(logB+1 N) 
+                Ordenar      Θ(N lg N)         Θ N         N
+                                                  B logM/B B
+                                               Θ mı́n{N, B logM/B N
+                                                          N
+                                                                    
+                Permutar     Θ(N)                                 B}
+
+
+
+Cómo leer la tabla
+Escanear gana un factor B. Buscar cambia la base del logaritmo de 2 a B.
+Ordenar gana las dos cosas: el factor B y una base enorme, M/B. Y
+permutar deja de ser lineal. Todos estos algoritmos necesitan conocer B y
+M: volveremos sobre eso.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    28 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ La memoria real es una jerarquía cuyos niveles se comunican en
+   bloques; el modelo RAM no ve esa diferencia.
+ ▶ Modelo de memoria externa: memoria de M, bloques de B, y se
+   cuentan solo las transferencias.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ La memoria real es una jerarquía cuyos niveles se comunican en
+   bloques; el modelo RAM no ve esa diferencia.
+ ▶ Modelo de memoria externa: memoria de M, bloques de B, y se
+   cuentan solo las transferencias.
+ ▶ Escanear: Θ(N/B). Buscar: Ω(logB+1 N), y la búsqueda binaria no lo
+   alcanza.
+ ▶ Ordenar: corridas de tamaño M y mezcla de Θ(M/B) corridas a la vez
+   dan Θ N           N
+          B logM/B B , que es óptimo.
+ ▶ Permutar cuesta el mínimo entre N y ordenar: no es un escaneo.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos explicar por qué importa la localidad y qué simplifica el
+   modelo de Aggarwal y Vitter
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos explicar por qué importa la localidad y qué simplifica el
+   modelo de Aggarwal y Vitter
+ ▶ Sabemos contar transferencias de un escaneo, de una mezcla y de una
+   búsqueda binaria
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos explicar por qué importa la localidad y qué simplifica el
+   modelo de Aggarwal y Vitter
+ ▶ Sabemos contar transferencias de un escaneo, de una mezcla y de una
+   búsqueda binaria
+ ▶ Sabemos derivar la cota inferior de búsqueda por información
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos explicar por qué importa la localidad y qué simplifica el
+   modelo de Aggarwal y Vitter
+ ▶ Sabemos contar transferencias de un escaneo, de una mezcla y de una
+   búsqueda binaria
+ ▶ Sabemos derivar la cota inferior de búsqueda por información
+ ▶ Sabemos diseñar y analizar el ordenamiento por mezcla múltiple, y
+   explicar por qué permutar no es lineal
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   30 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ Aggarwal, A., & Vitter, J. S. (1988). The input/output complexity of
+   sorting and related problems. Communications of the ACM, 31(9),
+   1116–1127.
+ ▶ Vitter, J. S. (2008). Algorithms and data structures for external
+   memory. Foundations and Trends in Theoretical Computer Science,
+   2(4), 305–474.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 33
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 33
+

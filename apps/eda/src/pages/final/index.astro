@@ -1,0 +1,81 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import ExerciseBlock from '../../components/ExerciseBlock';
+import { ancla } from '../../lib/final';
+import Visualization from '../../components/Visualization.astro';
+
+const [doc] = await getCollection('final');
+const { Content } = await render(doc);
+const items = doc.data.items;
+const temas = (await getCollection('finalTemas')).sort((a, b) => a.data.order - b.data.order);
+// etiqueta = "Lista · <tema> · <subtema>" o "Simulacro · <tema> · <parte>": se agrupa por
+// los dos primeros segmentos, en el orden en que aparecen (ningún item queda fuera).
+const grupos: { clave: string; items: typeof items }[] = [];
+for (const item of items) {
+  const clave = item.etiqueta.split(' · ').slice(0, 2).join(' · ');
+  const g = grupos.find((x) => x.clave === clave);
+  if (g) g.items.push(item);
+  else grupos.push({ clave, items: [item] });
+}
+---
+
+<Base title={doc.data.title} crumb="final">
+  <header class="stagger mb-12">
+    <p class="tag">semana 15</p>
+    <h1 class="mt-2 max-w-[20ch] text-[clamp(2.25rem,4.5vw,3.25rem)] leading-[1.05] font-semibold tracking-[-0.035em]">
+      {doc.data.title}
+    </h1>
+    <hr class="draw mt-6 border-0 border-t-2 border-[var(--ink)]" />
+  </header>
+
+  <section class="mb-14">
+    <div class="mb-5 flex items-baseline gap-4">
+      <h2 class="tag">los 6 problemas del examen · se eligen 2</h2>
+      <span class="h-px flex-1 bg-[var(--rule)]" />
+    </div>
+    <ol class="grid gap-3 sm:grid-cols-2">
+      {temas.map((t) => (
+        <li>
+          <a href={`/final/${t.id}`} class="block rounded-lg border border-[var(--rule)] p-4 no-underline hover:border-[var(--accent)]">
+            <p class="tag">{t.data.prioridad}</p>
+            <p class="mt-1.5 text-[1.0625rem] font-medium">{t.data.title}</p>
+            <p class="mt-1 text-[0.875rem] text-[var(--muted)]">{t.data.summary}</p>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <div class="prose mb-12 max-w-[72ch]"><Content /></div>
+
+  <div class="space-y-14">
+    {
+      grupos.map((g) => (
+        <section>
+          <div class="mb-5 flex items-baseline gap-4">
+            <h2 class="tag">{g.clave}</h2>
+            <span class="h-px flex-1 bg-[var(--rule)]" />
+          </div>
+          <div class="space-y-6">
+            {g.items.map((item) => (
+              <div id={ancla(item.statement)} class="scroll-mt-24">
+                {item.href && (
+                  <p class="tag mb-2">
+                    tema relacionado · <a href={item.href}>{item.href.replace('/structures/', '')}</a>
+                  </p>
+                )}
+                {item.visualization && (
+                  <div class="mb-5" aria-label="Datos gráficos del enunciado">
+                    <Visualization viz={item.visualization} />
+                  </div>
+                )}
+                <ExerciseBlock client:visible exercise={item} label={item.etiqueta} />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))
+    }
+  </div>
+</Base>

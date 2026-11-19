@@ -1,0 +1,207 @@
+---
+title: "Disjoint Sparse Table"
+summary: "Consultas de rango en O(1) para cualquier operación asociativa (suma, producto, composición), construida a partir de la sparse table del curso: niveles, prefijos y sufijos desde el centro de cada bloque, y el nivel de una consulta con el bit más alto de l ⊕ r."
+order: 4
+prioridad: "tema del examen (Static Trees, más profundo)"
+lista: ["L17", "L16", "L18", "S4a", "S4b", "S4c", "S4d"]
+items:
+  - level: 2
+    etiqueta: "Predicción 1 · Sumas de rango en O(1) · (a) Conocimientos (3 pts)"
+    statement: >-
+      Sea $A = [5, 2, 4, 7, 6, 3, 1, 8]$ (posiciones $0..7$) y la operación suma. (i) Construye la Disjoint Sparse Table: para cada nivel $h = 1, 2, 3$ (bloques de $2^h$ posiciones, con su centro), escribe la fila con las sumas de sufijo hacia la izquierda del centro y de prefijo hacia la derecha. (ii) Responde las consultas $(1, 6)$, $(2, 4)$, $(4, 5)$ y $(3, 3)$ indicando el nivel $h = \mathrm{msb}(l \oplus r) + 1$ y las dos entradas que se combinan. (iii) Repite la fila del nivel 3 con la operación mínimo.
+    hints:
+      - >-
+        En el nivel $h$ los bloques miden $2^h$; el centro del bloque que empieza en $s$ es $m = s + 2^{h-1}$. A la izquierda: $T[h][i] = A[i] \oplus \dots \oplus A[m-1]$; a la derecha: $T[h][i] = A[m] \oplus \dots \oplus A[i]$.
+      - >-
+        $1 \oplus 6 = 001 \oplus 110 = 111$: bit más alto 2, nivel 3.
+    solution: |-
+      **(i) Filas (suma):**
+
+      - $h = 1$ (bloques de 2, centro entre $2j$ y $2j+1$): $5, 2, 4, 7, 6, 3, 1, 8$ (cada mitad tiene un solo elemento).
+      - $h = 2$ (bloques $[0,3]$ y $[4,7]$, centros 2 y 6): izquierda del primero $A[0..1] \to 7, 2$; derecha $A[2], A[2..3] \to 4, 11$; segundo: $9, 3$ y $1, 9$. Fila: $7, 2, 4, 11, 9, 3, 1, 9$.
+      - $h = 3$ (un bloque $[0,7]$, centro 4): sufijos $A[0..3], A[1..3], A[2..3], A[3] \to 18, 13, 11, 7$; prefijos $A[4], A[4..5], A[4..6], A[4..7] \to 6, 9, 10, 18$. Fila: $18, 13, 11, 7, 6, 9, 10, 18$.
+
+      **(ii) Consultas:**
+
+      - $(1, 6)$: $1 \oplus 6 = 111$, $h = 3$: $T[3][1] + T[3][6] = 13 + 10 = $ **23**.
+      - $(2, 4)$: $010 \oplus 100 = 110$, $h = 3$: $T[3][2] + T[3][4] = 11 + 6 = $ **17**.
+      - $(4, 5)$: $100 \oplus 101 = 001$, $h = 1$: $T[1][4] + T[1][5] = 6 + 3 = $ **9**.
+      - $(3, 3)$: $l = r$, se devuelve $A[3] = $ **7** (no hay nivel).
+
+      **(iii) Nivel 3 con mínimo:** $2, 2, 4, 7, 6, 3, 1, 1$. Por ejemplo $(1,6)$: $\min(2, 1) = 1$.
+
+      (Todas las respuestas se compararon con un script de fuerza bruta.)
+  - level: 6
+    etiqueta: "Predicción 1 · Sumas de rango en O(1) · (b) Análisis (3 pts)"
+    statement: >-
+      Demuestra que, para $l < r$ y $h = \mathrm{msb}(l \oplus r) + 1$, $l$ y $r$ están en el mismo bloque de nivel $h$ y en mitades distintas, de modo que $T[h][l] \oplus T[h][r]$ es exactamente $A[l] \oplus \dots \oplus A[r]$, para **cualquier** operación asociativa. Da la construcción en $O(n \lg n)$ y la consulta en $O(1)$, y explica por qué la sparse table del curso (dos bloques que se solapan) sólo sirve para operaciones idempotentes.
+    hints:
+      - >-
+        Los bits por encima de $h - 1$ de $l$ y $r$ coinciden (eso es el bloque); el bit $h-1$ es 0 en $l$ y 1 en $r$ (eso es la mitad).
+      - >-
+        El sufijo desde $l$ hasta el centro y el prefijo desde el centro hasta $r$ no se solapan y cubren $[l, r]$.
+    solution: |-
+      **Mismo bloque, mitades distintas.** Sea $j = \mathrm{msb}(l \oplus r) = h - 1$. Los bits de posición $> j$ de $l$ y $r$ coinciden: ambos están en el mismo bloque de tamaño $2^{j+1} = 2^h$ (el bloque queda determinado por esos bits). En el bit $j$ difieren y, como $l < r$, $l$ tiene 0 y $r$ tiene 1: $l$ está en la mitad izquierda y $r$ en la derecha. Con $m$ el centro, $l \le m - 1 < m \le r$.
+
+      **Cobertura exacta.** $T[h][l] = A[l] \oplus \cdots \oplus A[m-1]$ y $T[h][r] = A[m] \oplus \cdots \oplus A[r]$: intervalos **disjuntos** y contiguos cuya unión es $[l, r]$. Por asociatividad, $T[h][l] \oplus T[h][r] = A[l] \oplus \cdots \oplus A[r]$. No hace falta conmutatividad (se combina en orden: izquierda y luego derecha) ni idempotencia ni inverso.
+
+      **Costo.** Hay $\lceil \lg n\rceil$ niveles; en cada uno, cada posición se calcula con una operación desde su vecina hacia el centro: $O(n)$ por nivel, $O(n \lg n)$ tiempo y memoria. La consulta es un XOR, un msb (una instrucción o una tabla) y una operación: $O(1)$.
+
+      **Sparse table.** La del curso cubre $[l, r]$ con $M[k][l]$ y $M[k][r - 2^k + 1]$, dos bloques de $2^k$ que se **solapan**. Con mínimo, contar dos veces una posición no cambia nada ($\min(x, x) = x$); con suma, el solape se cuenta dos veces. La Disjoint Sparse Table evita el solape partiendo por el centro.
+  - level: 5
+    etiqueta: "Predicción 1 · Sumas de rango en O(1) · (c) Diseño (2 pts)"
+    statement: >-
+      Se tiene un arreglo estático de $n = 10^6$ funciones afines $f_i(x) = a_i x + b_i \pmod p$ y llegan $q = 10^7$ consultas: dado $(l, r, x)$, calcular $f_r(\cdots f_{l+1}(f_l(x)))$. Compara sumas de prefijo, un segment tree, la sparse table y la Disjoint Sparse Table (tiempo de construcción, de consulta y memoria) y elige. Aplícalo a mano con $f_0 = 2x + 1$, $f_1 = 3x$, $f_2 = x + 4$, $f_3 = 2x$ (sin módulo) y la consulta $(1, 3, x = 1)$.
+    hints:
+      - >-
+        La composición es asociativa pero no conmutativa, no idempotente y, si algún $a_i = 0$, no invertible.
+      - >-
+        Con $n = 4$, $(1,3)$: $1 \oplus 3 = 10$, nivel 2, centro 2.
+    solution: |-
+      **Por qué no las otras.** Sumas de prefijo necesitan inverso ($F(r) \circ F(l-1)^{-1}$): falla si algún $a_i \equiv 0$. La sparse table necesita idempotencia: $f \circ f \ne f$. El segment tree funciona (asociatividad basta) pero cuesta $O(\lg n) \approx 20$ composiciones por consulta: $2 \cdot 10^8$.
+
+      **DST.** Construcción $O(n \lg n) \approx 2 \cdot 10^7$ composiciones, memoria $n \lceil\lg n\rceil \approx 2 \cdot 10^7$ pares $(a, b)$, consulta $O(1)$: una composición de dos funciones y una evaluación, $\approx 10^7$ en total. Es la elección. (El orden importa: primero el sufijo izquierdo, después el prefijo derecho.)
+
+      **A mano.** Nivel 2, un bloque $[0, 3]$ con centro 2. Izquierda: $T[2][1] = f_1 = 3x$ (el sufijo de la mitad izquierda desde 1). Derecha: $T[2][3] = f_3 \circ f_2 = 2(x + 4) = 2x + 8$. Consulta: $(f_3 \circ f_2) \circ f_1 = 2(3x) + 8 = 6x + 8$; con $x = 1$: **14**. Verificación directa: $f_1(1) = 3$, $f_2(3) = 7$, $f_3(7) = 14$.
+  - level: 4
+    etiqueta: "Predicción 1 · Sumas de rango en O(1) · (d) Profundidad (2 pts)"
+    statement: >-
+      Chris usa la sparse table del curso para sumas: $\mathrm{Suma}(l, r) = M[k][l] + M[k][r - 2^k + 1]$ con $k = \lfloor \lg(r - l + 1)\rfloor$. Con $A$ del inciso (a), ¿qué devuelve para $(1, 6)$ y cuál es el valor correcto? Caracteriza exactamente qué cuenta de más. Después propone "arreglarlo restando el solape con otra consulta": ¿por qué eso no da $O(1)$ en general? ¿Qué ventaja y qué costo tiene la DST frente a la combinación árbol cartesiano + RMQ $\pm 1$ para el mínimo?
+    hints:
+      - >-
+        $(1, 6)$ tiene longitud 6, $k = 2$: bloques $[1, 4]$ y $[3, 6]$.
+      - >-
+        El solape es otro rango, y su suma es otra consulta del mismo problema.
+    solution: |-
+      **Chris.** $k = 2$: $M[2][1] = 2 + 4 + 7 + 6 = 19$ y $M[2][3] = 7 + 6 + 3 + 1 = 17$: devuelve **36**. El correcto es $2 + 4 + 7 + 6 + 3 + 1 = 23$. Cuenta de más exactamente el solape $[r - 2^k + 1, l + 2^k - 1] = [3, 4]$: $7 + 6 = 13$, y $36 - 13 = 23$.
+
+      **Restar el solape.** El solape $[3,4]$ es otro rango cuya suma es el mismo problema: resolverlo con la sparse table vuelve a tener solape (o es una consulta recursiva). Sólo se cierra con inversos (sumas de prefijo), lo que no vale para operaciones no invertibles. La DST resuelve el problema sin solape desde el diseño.
+
+      **DST frente a cartesiano + RMQ ±1 (para el mínimo).** La combinación del curso (árbol cartesiano, Euler, RMQ $\pm 1$ con cuatro rusos) logra $O(n)$ de preprocesamiento y $O(1)$ por consulta, mejor en memoria que los $O(n \lg n)$ de la DST, pero **sólo** para mínimo (usa la estructura del árbol de mínimos). La DST paga $O(n \lg n)$ y a cambio sirve para cualquier operación asociativa.
+---
+
+import Visualization from '../../src/components/Visualization.astro';
+
+> **Nota de apoyo** (no está en las diapositivas): la *Disjoint Sparse Table* no aparece en las láminas de la semana 12. Se construye aquí a partir de la [sparse table](/structures/static-rmq) del curso, que es su punto de partida: misma idea de niveles de tamaño $2^h$, pero sin solapes, para que funcione con operaciones que no son idempotentes.
+
+## Qué es probable que pregunten y por qué
+
+- **Construir la tabla y responder consultas** con un arreglo de 8 posiciones: es la forma del ejercicio 17 de la lista (sparse table de $A = [5,2,4,7,6,3,1,8]$), con el mismo arreglo. Parte (a).
+- **Demostrar la consulta**: por qué $\mathrm{msb}(l \oplus r)$ da el nivel y por qué no hay solape. El ejercicio 17(c) pregunta justo "¿por qué funciona con mín pero no con la suma?": la DST es la respuesta constructiva. Parte (b).
+- **Diseño**: elegir estructura según la operación (asociativa / idempotente / invertible). El profesor avisó que Static Trees vendrá más complicado, así que espera que se combine con árbol cartesiano, Euler y RMQ $\pm1$ (ejercicios 16 y 18, simulacro S4).
+- **Profundidad**: la sparse table usada para sumas (Chris), con la cuenta exacta del error.
+
+## Teoría desde cero
+
+### Punto de partida: la sparse table
+
+$M[k][i] = $ mínimo de $A[i .. i + 2^k - 1]$. Una consulta $[l, r]$ usa $k = \lfloor \lg(r-l+1)\rfloor$ y dos bloques **que se solapan**: $\min(M[k][l], M[k][r-2^k+1])$. Construcción $O(n \lg n)$, consulta $O(1)$, pero sólo para operaciones **idempotentes** ($x \oplus x = x$: mínimo, máximo, gcd).
+
+### La idea: partir por el centro
+
+Para cada nivel $h$ se divide el arreglo en bloques de $2^h$ posiciones. Cada bloque tiene un **centro** $m$ (el inicio de su mitad derecha). En el nivel $h$ se guarda, para cada posición $i$:
+
+$$
+T[h][i] \;=\;
+\begin{cases}
+A[i] \oplus A[i+1] \oplus \cdots \oplus A[m-1] & \text{si } i \text{ está en la mitad izquierda,}\\[2pt]
+A[m] \oplus A[m+1] \oplus \cdots \oplus A[i] & \text{si } i \text{ está en la mitad derecha.}
+\end{cases}
+$$
+
+Una consulta $[l, r]$ con $l$ en la mitad izquierda y $r$ en la derecha del **mismo** bloque se responde con $T[h][l] \oplus T[h][r]$: un sufijo hasta el centro y un prefijo desde el centro, **disjuntos**.
+
+<Visualization viz={{
+  type: "array",
+  steps: [
+    {
+      note: "A = [5, 2, 4, 7, 6, 3, 1, 8]. Nivel 3: un solo bloque de 8 con centro en la posición 4. A la izquierda se acumulan sufijos hacia el centro; a la derecha, prefijos desde el centro.",
+      rows: [
+        { id: "a", label: "A", cells: [
+          { value: 5, tag: "0" }, { value: 2, tag: "1" }, { value: 4, tag: "2" }, { value: 7, tag: "3" },
+          { value: 6, tag: "4" }, { value: 3, tag: "5" }, { value: 1, tag: "6" }, { value: 8, tag: "7" },
+        ]},
+        { id: "t3", label: "T[3]", cells: [
+          { value: 18 }, { value: 13 }, { value: 11 }, { value: 7, state: "marked" },
+          { value: 6, state: "marked" }, { value: 9 }, { value: 10 }, { value: 18 },
+        ]},
+      ],
+      spans: [{ id: "iz", row: "t3", from: 0, to: 3, label: "sufijos ←" }, { id: "de", row: "t3", from: 4, to: 7, label: "prefijos →" }],
+      caption: "T[3][1] = 2 + 4 + 7 = 13; T[3][6] = 6 + 3 + 1 = 10.",
+    },
+    {
+      note: "Consulta (1, 6): 1 ⊕ 6 = 111, bit más alto 2, nivel 3. 1 está a la izquierda del centro y 6 a la derecha. Se combinan T[3][1] y T[3][6]: no hay posición contada dos veces.",
+      rows: [
+        { id: "a", label: "A", cells: [
+          { value: 5, tag: "0", state: "muted" }, { value: 2, tag: "1", state: "active" }, { value: 4, tag: "2", state: "active" }, { value: 7, tag: "3", state: "active" },
+          { value: 6, tag: "4", state: "active" }, { value: 3, tag: "5", state: "active" }, { value: 1, tag: "6", state: "active" }, { value: 8, tag: "7", state: "muted" },
+        ]},
+        { id: "t3", label: "T[3]", cells: [
+          { value: 18 }, { value: 13, state: "answer" }, { value: 11 }, { value: 7 },
+          { value: 6 }, { value: 9 }, { value: 10, state: "answer" }, { value: 18 },
+        ]},
+      ],
+      spans: [{ id: "q1", row: "a", from: 1, to: 3, label: "T[3][1]" }, { id: "q2", row: "a", from: 4, to: 6, label: "T[3][6]" }],
+      caption: "Suma(1, 6) = 13 + 10 = 23.",
+    },
+    {
+      note: "Nivel 2: dos bloques de 4 con centros 2 y 6. Nivel 1: bloques de 2, cada mitad es un elemento. Una consulta dentro de [4, 7] que cruce el centro 6 se responde en el nivel 2.",
+      rows: [
+        { id: "a", label: "A", cells: [
+          { value: 5, tag: "0" }, { value: 2, tag: "1" }, { value: 4, tag: "2" }, { value: 7, tag: "3" },
+          { value: 6, tag: "4" }, { value: 3, tag: "5" }, { value: 1, tag: "6" }, { value: 8, tag: "7" },
+        ]},
+        { id: "t2", label: "T[2]", cells: [
+          { value: 7 }, { value: 2 }, { value: 4 }, { value: 11 },
+          { value: 9 }, { value: 3 }, { value: 1 }, { value: 9 },
+        ]},
+        { id: "t1", label: "T[1]", cells: [
+          { value: 5 }, { value: 2 }, { value: 4 }, { value: 7 },
+          { value: 6 }, { value: 3 }, { value: 1 }, { value: 8 },
+        ]},
+      ],
+      spans: [{ id: "b0", row: "t2", from: 0, to: 3, label: "bloque [0,3]" }, { id: "b1", row: "t2", from: 4, to: 7, label: "bloque [4,7]" }],
+      caption: "Ejemplo: Suma(4, 7) = T[2][4] + T[2][7] = 9 + 9 = 18.",
+    },
+  ],
+}} />
+
+### El nivel de una consulta
+
+Con índices desde 0 y $n$ potencia de 2, el bloque de nivel $h$ que contiene a $i$ lo determinan los bits de $i$ por encima de $h - 1$, y la mitad la determina el bit $h - 1$. Para $l < r$:
+
+$$
+h \;=\; \underbrace{\mathrm{msb}(l \oplus r)}_{\text{primer bit en que difieren}} + 1, \qquad \mathrm{Consulta}(l, r) \;=\; \underbrace{T[h][l]}_{A[l..m-1]} \;\oplus\; \underbrace{T[h][r]}_{A[m..r]}.
+$$
+
+- Por encima del bit $h-1$, $l$ y $r$ coinciden: mismo bloque.
+- En el bit $h - 1$, $l$ tiene 0 y $r$ tiene 1: mitades distintas.
+- Si $l = r$ se devuelve $A[l]$.
+
+### Costos y qué operaciones admite
+
+| Estructura | Construcción | Consulta | Operaciones válidas |
+| --- | --- | --- | --- |
+| sumas de prefijo | $O(n)$ | $O(1)$ | asociativas **con inverso** (suma) |
+| sparse table | $O(n \lg n)$ | $O(1)$ | asociativas **idempotentes** (mín, máx, gcd) |
+| Disjoint Sparse Table | $O(n \lg n)$ | $O(1)$ | **cualquier** asociativa (suma, producto, composición) |
+| segment tree | $O(n)$ | $O(\lg n)$ | cualquier asociativa, y admite actualizaciones |
+| cartesiano + RMQ $\pm1$ | $O(n)$ | $O(1)$ | sólo mínimo (o máximo) |
+
+Si $n$ no es potencia de 2 se rellena hasta la siguiente (con el neutro) o se calcula sólo lo que cae dentro del arreglo.
+
+## Errores típicos
+
+- **Usar $\lfloor \lg(r - l + 1)\rfloor$ como nivel** (eso es la sparse table): el nivel de la DST sale de $l \oplus r$, no de la longitud.
+- **Invertir el orden** al combinar con una operación no conmutativa: primero el sufijo izquierdo, después el prefijo derecho.
+- **Olvidar el caso $l = r$**: $l \oplus r = 0$ no tiene bit más alto.
+- **Índices desde 1** con la fórmula del XOR: la fórmula supone posiciones desde 0 y bloques alineados.
+- **Creer que la sparse table sirve para sumas**: cuenta dos veces el solape (ejercicio 17c).
+
+## Qué memorizar
+
+- $T[h][i]$: sufijo hasta el centro (mitad izquierda) o prefijo desde el centro (mitad derecha) del bloque de $2^h$ que contiene a $i$.
+- Nivel: $h = \mathrm{msb}(l \oplus r) + 1$; respuesta $T[h][l] \oplus T[h][r]$.
+- $O(n \lg n)$ construcción y memoria, $O(1)$ consulta, cualquier operación asociativa.
+- Sparse table: idempotentes; prefijos: invertibles; segment tree: $O(\lg n)$ pero con actualizaciones.
+- Repasar también: [árbol cartesiano](/structures/cartesian-tree), [LCA con Euler](/structures/lca-euler-tour), [RMQ ±1](/structures/plus-minus-one-rmq).

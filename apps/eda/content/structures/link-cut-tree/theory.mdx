@@ -1,0 +1,199 @@
+---
+kind: "theory"
+title: "Link-cut trees"
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+## Motivación
+
+El ejemplo de la clase: un rey quiere conservar un árbol de carreteras de costo mínimo y pregunta por la arista más cara de un camino, mientras las carreteras **aparecen, desaparecen y se fuerzan**. [Heavy-Light](/structures/heavy-light-decomposition) responde caminos en $O(\lg^2 n)$, pero es **estático**: una arista nueva cambia los tamaños y hay que rehacerlo en $O(n)$. Los link-cut trees de Sleator y Tarjan (1983) mantienen un bosque que cambia, con todas las operaciones en $O(\lg n)$ amortizado.
+
+| Estructura | Caminos | Cambios |
+| --- | --- | --- |
+| arreglo de padres | $O(n)$ | $O(1)$ |
+| Euler tour | sólo subárboles | rehacer, $O(n)$ |
+| HLD + segment tree | $O(\lg^2 n)$ | rehacer, $O(n)$ |
+| link-cut tree | $O(\lg n)$ amortizado | $O(\lg n)$ amortizado |
+
+**El problema.** Un bosque de árboles con raíz, con:
+
+- **Link(v, w)**: $v$ es raíz de su árbol; lo cuelga de $w$.
+- **Cut(v)**: separa $v$ de su padre; $v$ pasa a ser raíz.
+- **FindRoot(v)**: la raíz del árbol de $v$.
+- **PathAgg(v)**: suma, mínimo o máximo de los valores en el camino $v \leadsto$ raíz.
+
+## Intuición dibujada
+
+**Hijo preferido.** Para cada nodo $v$, su hijo preferido es el hijo $c$ tal que el último acceso dentro del subárbol de $v$ fue dentro del subárbol de $c$ (si el último acceso fue $v$ mismo, no hay hijo preferido). Las aristas a hijos preferidos forman **caminos preferidos** que parten el árbol en caminos disjuntos. A diferencia de Heavy-Light, no los elige el tamaño sino el **último acceso**, y cambian en cada acceso.
+
+**Representación.** Cada camino preferido se guarda en un [splay tree](/structures/splay-tree) con clave = profundidad en el árbol original (izquierda: ancestros; derecha: descendientes). La raíz de cada splay guarda un **path-parent**: el padre, en el árbol original, del nodo más alto de su camino. Es el mismo campo padre; se distingue porque el padre no tiene a ese nodo como hijo.
+
+El ejemplo de la clase: el árbol $1 \to \{2, 3\}$, $2 \to \{4, 5\}$, $3 \to \{6\}$ con caminos preferidos $\{1,2,4\}$, $\{3,6\}$, $\{5\}$.
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El árbol representado. Las aristas preferidas 1–2 y 2–4 forman el camino {1, 2, 4} (en azul); 3–6 forma {3, 6}; 5 queda solo. Los caminos preferidos parten los nodos.",
+      nodes: [
+        { id: "1", value: "1", parent: null, state: "active" },
+        { id: "2", value: "2", parent: "1", state: "active" },
+        { id: "3", value: "3", parent: "1", state: "marked" },
+        { id: "4", value: "4", parent: "2", state: "active" },
+        { id: "5", value: "5", parent: "2" },
+        { id: "6", value: "6", parent: "3", state: "marked" },
+      ],
+      caption: "Caminos preferidos: {1, 2, 4}, {3, 6}, {5}.",
+    },
+    {
+      note: "Los árboles auxiliares: {1,2,4} es un splay con raíz 2 (1 a la izquierda por ser ancestro, 4 a la derecha). {3,6} y {5} cuelgan por path-parent (punteado) de 1 y de 2: los padres en el árbol original de 3 y de 5.",
+      nodes: [
+        { id: "2", value: "2", parent: null, state: "active" },
+        { id: "1", value: "1", parent: "2", side: "left", state: "active" },
+        { id: "4", value: "4", parent: "2", side: "right", state: "active" },
+        { id: "3", value: "3", parent: "1", edge: false, state: "marked" },
+        { id: "6", value: "6", parent: "3", side: "right", state: "marked" },
+        { id: "5", value: "5", parent: "4", edge: false },
+      ],
+      links: [
+        { from: "3", to: "1", kind: "pointer", dash: true },
+        { from: "5", to: "2", kind: "pointer", dash: true, label: "pp" },
+      ],
+      caption: "Árbol de árboles auxiliares: aristas sólidas = dentro de un splay; punteadas = path-parent.",
+    },
+  ],
+}} />
+
+## Definición y notación
+
+| Símbolo | Qué es |
+| --- | --- |
+| hijo preferido de $v$ | el hijo por cuyo subárbol pasó el último acceso dentro del subárbol de $v$ |
+| camino preferido | cadena maximal de aristas preferidas |
+| árbol auxiliar | splay de un camino preferido, clave = profundidad |
+| path-parent | puntero de la raíz de un auxiliar al padre (en el árbol original) del tope de su camino |
+| $\mathrm{rev}[v]$ | marca perezosa: el subárbol del splay debe intercambiar izquierda y derecha |
+
+## Operaciones paso a paso
+
+### Access(v): la operación fundamental
+
+**Access(v)** hace que el camino raíz $\leadsto v$ sea un único camino preferido y deja a $v$ como raíz de su árbol auxiliar.
+
+1. Splay(v) en su árbol auxiliar.
+2. Descartar el hijo derecho de $v$ (sus descendientes en el camino): pasa a ser otro camino, con path-parent $v$.
+3. Subir por el path-parent hasta $w$, hacer Splay(w) y poner el árbol de $v$ como hijo derecho de $w$ (descartando el derecho anterior de $w$).
+4. Repetir hasta el camino de la raíz; al final, Splay(v).
+
+En pseudocódigo de clase: $\mathrm{ultimo} \leftarrow$ nulo, $y \leftarrow v$; mientras $y \ne$ nulo: Splay(y), $\mathrm{der}[y] \leftarrow \mathrm{ultimo}$, Actualizar(y), $\mathrm{ultimo} \leftarrow y$, $y \leftarrow \mathrm{padre}[y]$; Splay(v).
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Access(5). Antes: {1,2,4} con raíz 2, y {5} colgando de 2 por path-parent. Paso 1: Splay(5) en su auxiliar; ya es raíz y no tiene hijo derecho que descartar. Su path-parent es 2.",
+      nodes: [
+        { id: "2", value: "2", parent: null },
+        { id: "1", value: "1", parent: "2", side: "left" },
+        { id: "4", value: "4", parent: "2", side: "right" },
+        { id: "5", value: "5", parent: "4", edge: false, state: "active" },
+        { id: "3", value: "3", parent: "1", edge: false, state: "muted" },
+        { id: "6", value: "6", parent: "3", side: "right", state: "muted" },
+      ],
+      links: [
+        { from: "5", to: "2", kind: "pointer", dash: true, label: "pp" },
+        { from: "3", to: "1", kind: "pointer", dash: true },
+      ],
+      caption: "y = 5, último = nulo.",
+    },
+    {
+      note: "Paso 2: se sube a w = 2 y Splay(2) (ya es raíz). Su hijo derecho 4 se descarta: {4} pasa a colgar de 2 por path-parent, y el árbol de 5 pasa a ser el hijo derecho de 2. Es el único cambio de hijo preferido: 2 prefería 4 y ahora prefiere 5.",
+      nodes: [
+        { id: "2", value: "2", parent: null, state: "active" },
+        { id: "1", value: "1", parent: "2", side: "left" },
+        { id: "5", value: "5", parent: "2", side: "right", state: "active" },
+        { id: "4", value: "4", parent: "5", edge: false, state: "marked" },
+        { id: "3", value: "3", parent: "1", edge: false, state: "muted" },
+        { id: "6", value: "6", parent: "3", side: "right", state: "muted" },
+      ],
+      links: [
+        { from: "4", to: "2", kind: "pointer", dash: true, label: "pp" },
+        { from: "3", to: "1", kind: "pointer", dash: true },
+      ],
+      caption: "2 no tiene path-parent: es el camino de la raíz. Termina el bucle.",
+    },
+    {
+      note: "Paso final: Splay(5). Ahora 5 es raíz de un splay que contiene exactamente el camino raíz → 5, sin hijo derecho: {1, 2, 5}. Quedan {4} y {3, 6}.",
+      nodes: [
+        { id: "5", value: "5", parent: null, state: "answer" },
+        { id: "2", value: "2", parent: "5", side: "left" },
+        { id: "1", value: "1", parent: "2", side: "left" },
+        { id: "4", value: "4", parent: "2", edge: false, state: "marked" },
+        { id: "3", value: "3", parent: "1", edge: false, state: "muted" },
+        { id: "6", value: "6", parent: "3", side: "right", state: "muted" },
+      ],
+      links: [
+        { from: "4", to: "2", kind: "pointer", dash: true, label: "pp" },
+        { from: "3", to: "1", kind: "pointer", dash: true },
+      ],
+      caption: "Caminos preferidos: {1, 2, 5}, {4}, {3, 6}.",
+    },
+  ],
+}} />
+
+### Operaciones con raíz fija
+
+- **FindRoot(v)**: Access(v) y bajar por la izquierda hasta el nodo más a la izquierda (la raíz); Splay de ella.
+- **PathAgg(v)**: Access(v); el agregado guardado en la raíz del splay es el del camino.
+- **Cut(v)**: Access(v); el hijo izquierdo $a$ de $v$ es el splay de sus ancestros: $\mathrm{padre}[a] \leftarrow$ nulo, $\mathrm{izq}[v] \leftarrow$ nulo, actualizar $v$.
+- **Link(v, w)**: Access(v) (como $v$ es raíz, su splay es sólo $v$); $\mathrm{padre}[v] \leftarrow w$ como path-parent. No hace falta tocar $w$: el camino de $v$ queda colgando de $w$ sin ser preferido.
+- **LCA dinámico**: Access(u) y luego Access(v): el último nodo donde se hace un salto de path-parent es el $\mathrm{LCA}(u, v)$.
+
+### Raíz variable: MakeRoot
+
+**MakeRoot(v)** (evert) cambia la raíz del árbol de $v$ a $v$, lo que invierte el camino de la raíz antigua a $v$. Se logra con Access(v) y una **marca de reversión perezosa** $\mathrm{rev}[v]$ en su splay, que se aplica (Empujar) antes de usar los hijos y se traspasa a ellos. Splay empuja las marcas desde la raíz del splay hasta $x$ antes de rotar; $x$ es raíz de su splay si su padre es nulo o si no es hijo izquierdo ni derecho de su padre (entonces es un path-parent). Con MakeRoot:
+
+- **Link(u, v)**: MakeRoot(u); $\mathrm{padre}[u] \leftarrow v$.
+- **Cut(u, v)**: MakeRoot(u); Access(v); $u$ es hijo izquierdo de $v$: se separan.
+- **Conectados(u, v)**: FindRoot(u) = FindRoot(v).
+- **Camino(u, v)**: MakeRoot(u); Access(v); el agregado de la raíz del splay de $v$.
+
+**Valores en aristas.** Una arista $(u, v)$ de peso $w$ se convierte en un nodo $e$: Link(u, e), Link(e, v); los nodos originales valen $-\infty$ (o el neutro). Así se mantiene un **MST dinámico**: al agregar $(u, v, w)$, si no están conectados se enlazan; si lo están, se consulta el máximo del camino $u \leadsto v$ y, si es mayor que $w$, se corta esa arista y se enlaza la nueva. $O(\lg n)$ amortizado por arista.
+
+## De dónde sale la cota
+
+**Qué hay que acotar.** Cada vuelta del while de Access cambia el hijo preferido de un nodo: un splay y un salto. Si hay $k$ cambios, el costo es $k$ splays.
+
+**Heavy-Light como análisis.** Una arista $(u,v)$ es pesada si $\mathrm{tam}(v) > \mathrm{tam}(u)/2$ y liviana si no; un camino de un nodo a la raíz tiene a lo más $\lg n$ livianas.
+
+$$
+\#\text{cambios} \;\le\; \underbrace{m \lg n}_{\text{livianas que se vuelven preferidas}} \;+\; \underbrace{n + m(\lg n + 1)}_{\text{pesadas que se vuelven preferidas}} \;=\; O(n + m \lg n).
+$$
+
+- Livianas: todas están en la ruta raíz $\leadsto v$ del Access, a lo más $\lg n$ por acceso.
+- Pesadas, a crédito: una pesada deja de ser preferida sólo si su hermana liviana se vuelve preferida ($\le \lg n$ por acceso) o si el acceso termina en su padre (una vez por acceso); al inicio hay a lo más $n$ pesadas no preferidas.
+
+**Costo de los splays.** Con $s(x)$ el tamaño del subárbol de $x$ contando los auxiliares colgados por path-parent y $\Phi = \sum_x \lg s(x)$, el costo amortizado de Splay(x) es $\le 3\,r(\text{raíz virtual}) - r(x) + 1$, y la suma sobre un Access **telescopa** a $\le 3 \lg n + k$. Con $k$ amortizado $O(\lg n)$:
+
+**Teorema (Sleator y Tarjan, 1983).** Access, Link, Cut, FindRoot, MakeRoot y las consultas de camino cuestan $O(\lg n)$ amortizado. La cota es amortizada: una operación suelta puede costar $\Theta(n)$.
+
+| | Heavy-Light | Link-cut |
+| --- | --- | --- |
+| árbol | estático | dinámico |
+| camino | $O(\lg^2 n)$ | $O(\lg n)$ amortizado |
+| subárbol | sí, con rangos | no directo |
+| implementación | corta | más delicada (splay + reversión) |
+
+## Errores típicos y casos límite
+
+- **Olvidar descartar el hijo derecho** de $v$ en Access: el camino incluiría descendientes de $v$.
+- **Confundir path-parent con hijo**: el padre no tiene al nodo como hijo; por eso "ser raíz del splay" se verifica mirando si es hijo izquierdo o derecho de su padre.
+- **No empujar las marcas $\mathrm{rev}$** antes de rotar: los hijos quedan invertidos a medias.
+- **Link sin que $v$ sea raíz**: con raíz fija hay que exigirlo (o usar MakeRoot).
+- **Esperar $O(\lg n)$ en peor caso**: es amortizado.
+
+## Conexión
+
+- Antes: [splay tree](/structures/splay-tree) (rotaciones, potencial y lema de acceso), [Heavy-Light](/structures/heavy-light-decomposition) (aquí sólo como análisis).
+- Aplicaciones citadas en clase: MST bajo inserciones y eliminaciones, flujo máximo con Dinic en $O(nm \lg n)$, conectividad en bosques y LCA dinámico, detección de ciclos al agregar aristas.

@@ -1,0 +1,1267 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Dynamic Graphs I
+Semana 14
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+10 de noviembre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué los caminos de un árbol no se resuelven con tiempos
+   de visita, y dos formas de partir un árbol para atacarlos
+ ▶ Heavy-Light: demostrar que un camino cruza O(lg n) cadenas y
+   resolver caminos, subárboles y LCA con un solo arreglo
+ ▶ Centroides: demostrar que existe un centroide, que el árbol de
+   centroides tiene profundidad O(lg n), y usarlo para contar caminos y
+   hallar el marcado más cercano
+ ▶ Comparar ambas descomposiciones
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+Lo que ya sabemos hacer
+Con los tiempos de entrada y salida de un recorrido en profundidad, un subár-
+bol es un intervalo [in(v ), out(v )) de un arreglo: consultas y actualizaciones
+sobre subárboles se vuelven consultas sobre rangos.
+
+¿Y los caminos?
+Máximo en un camino, sumar x a todos los nodos de un camino, contar
+pares de nodos a cierta distancia. Un camino u ⇝ v no es un intervalo, y
+recorrerlo nodo a nodo cuesta O(n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        3 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+Lo que ya sabemos hacer
+Con los tiempos de entrada y salida de un recorrido en profundidad, un subár-
+bol es un intervalo [in(v ), out(v )) de un arreglo: consultas y actualizaciones
+sobre subárboles se vuelven consultas sobre rangos.
+
+¿Y los caminos?
+Máximo en un camino, sumar x a todos los nodos de un camino, contar
+pares de nodos a cierta distancia. Un camino u ⇝ v no es un intervalo, y
+recorrerlo nodo a nodo cuesta O(n).
+
+Dos formas de partir un árbol
+Por cadenas (Heavy-Light): todo camino se corta en pocos tramos, y cada
+tramo es un intervalo. Por separadores (centroides): todo camino pasa por
+un nodo que parte el árbol a la mitad.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        3 / 48
+Heavy-Light: aristas pesadas y livianas
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea
+
+
+
+
+Partir las aristas en dos clases
+ ▶ Pesadas: se concatenan formando cadenas.
+ ▶ Livianas: conectan unas cadenas con otras.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   5 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La idea
+
+
+
+
+Partir las aristas en dos clases
+ ▶ Pesadas: se concatenan formando cadenas.
+ ▶ Livianas: conectan unas cadenas con otras.
+
+Lo que queremos
+Que cualquier camino hacia la raíz toque pocas cadenas. Entonces cada
+camino se parte en pocos tramos, y cada tramo es un intervalo de un
+arreglo si numeramos cada cadena de forma consecutiva.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    5 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Una definición
+
+
+
+
+Arista pesada
+Sea v un hijo de u. La arista (u, v ) es pesada si tam[v ] ≥ tam[w ] para todo
+otro hijo w de u (se desempata de forma arbitraria). Las demás son livianas.
+
+Observación
+Todo nodo interno tiene exactamente un hijo pesado. Con la definición
+alternativa “2 tam[v ] > tam[u]” puede no tener ninguno, y la cota de más
+abajo vale igual.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      6 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo
+
+
+
+
+                                               1
+
+
+                             2                                    3              4
+
+
+                   5                6                             7
+
+
+             8           9         10                             11
+
+
+
+Cadenas: [1, 2, 5, 8], [9], [6, 10], [3, 7, 11] y [4]. Las aristas livianas son (1, 3), (1, 4),
+                                        (2, 6) y (5, 9).
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología                   7 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo
+
+
+
+
+                                                     1   tam = 11
+
+
+
+                               2   6                                    3    3   4
+
+
+                   5   3                  6   2                         7
+
+
+             8             9             10                             11
+
+
+
+Cadenas: [1, 2, 5, 8], [9], [6, 10], [3, 7, 11] y [4]. Las aristas livianas son (1, 3), (1, 4),
+                                        (2, 6) y (5, 9).
+
+
+
+
+Víctor Racsó Galván Oyola              Universidad de Ingeniería y Tecnología             7 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La propiedad fundamental
+
+
+
+
+Proposición
+                                                             tam[u]
+Si (u, v ) es una arista liviana, entonces tam[v ] ≤                .
+                                                               2
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    8 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La propiedad fundamental
+
+
+
+
+Proposición
+                                                             tam[u]
+Si (u, v ) es una arista liviana, entonces tam[v ] ≤                .
+                                                               2
+
+Demostración (definición 2)
+Como (u, v ) es liviana, u tiene otro hijo w pesado con tam[w ] ≥ tam[v ].
+Ambos son subárboles disjuntos dentro de u:
+2 tam[v ] ≤ tam[v ] + tam[w ] ≤ tam[u] − 1.
+
+           Con la definición 1 es inmediato: no cumple 2 tam[v ] > tam[u].
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         8 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Consecuencia
+
+
+
+
+Del nodo a la raíz
+Cada arista liviana que se sube al menos duplica el tamaño del subárbol,
+que nunca supera n. Entonces un camino de cualquier nodo a la raíz tiene a
+lo más ⌊lg n⌋ aristas livianas y, por tanto, cruza a lo más ⌊lg n⌋ + 1 cadenas
+pesadas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      9 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Consecuencia
+
+
+
+
+Del nodo a la raíz
+Cada arista liviana que se sube al menos duplica el tamaño del subárbol,
+que nunca supera n. Entonces un camino de cualquier nodo a la raíz tiene a
+lo más ⌊lg n⌋ aristas livianas y, por tanto, cruza a lo más ⌊lg n⌋ + 1 cadenas
+pesadas.
+
+En el ejemplo
+n = 11: a lo más 3 aristas livianas. El camino de 9 a la raíz: 9 → 5 (liviana),
+luego 5, 2, 1 por una cadena: 1 arista liviana y 2 cadenas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       9 / 48
+Heavy-Light: la descomposición
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos recorridos
+
+
+
+
+Paso 1: tamaños y hijo pesado
+Un recorrido en profundidad calcula tam[v ] y el hijo pesado pes[v ] de cada
+nodo (el de mayor tam).
+
+Paso 2: numerar con el pesado primero
+Otro recorrido visita primero al hijo pesado y asigna a cada nodo su
+posición pos[v ] y la cabeza de su cadena tope[v ]. Así los nodos de una
+cadena quedan en posiciones consecutivas.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       11 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Algoritmo de Heavy-Light
+
+
+
+
+Algoritmo 1: Descomponer(v , h)                (h es la cabeza de la cadena de v )
+tope[v ] ← h; pos[v ] ← t; t ← t + 1
+si v tiene hijo pesado entonces Descomponer(pes[v ], h)
+para cada otro hijo u de v hacer
+     Descomponer(u, u)
+sal[v ] ← t
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            12 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Algoritmo de Heavy-Light
+
+
+
+
+Algoritmo 2: Descomponer(v , h)                  (h es la cabeza de la cadena de v )
+tope[v ] ← h; pos[v ] ← t; t ← t + 1
+si v tiene hijo pesado entonces Descomponer(pes[v ], h)
+para cada otro hijo u de v hacer
+     Descomponer(u, u)
+sal[v ] ← t
+
+
+Resultado en el ejemplo
+                  nodo      1   2   5   8    9   6    10   3    7    11    4
+                   pos      0   1   2   3    4   5     6   7    8     9   10
+                  tope      1   1   1   1    9   6     6   3    3     3    4
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología            12 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Qué se obtiene
+
+
+
+
+Tres tipos de intervalos
+ ▶ Una cadena desde su cabeza hasta un nodo x de ella:
+   [pos[tope[x]], pos[x]].
+ ▶ Un subárbol de v : [pos[v ], sal[v ]) (porque el recorrido es en
+   profundidad).
+ ▶ Un camino entre dos nodos: unión de O(lg n) intervalos de cadena.
+
+    Es el mismo arreglo para todo: un solo segment tree (o Fenwick) sirve para
+                            caminos y para subárboles.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         13 / 48
+Heavy-Light: recorrer caminos
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Subir por cadenas
+
+
+
+
+Mover el nodo cuya cadena empieza más abajo
+Mientras u y v estén en cadenas distintas, se mueve el de cabeza más pro-
+funda: se procesa el tramo tope[u] ⇝ u y se salta al padre de la cabeza.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Subir por cadenas
+
+
+
+
+Mover el nodo cuya cadena empieza más abajo
+Mientras u y v estén en cadenas distintas, se mueve el de cabeza más pro-
+funda: se procesa el tramo tope[u] ⇝ u y se salta al padre de la cabeza.
+
+Por qué siempre termina
+Todo nodo pertenece a alguna cadena y cada salto lleva a una cadena más
+cercana a la raíz: eventualmente ambos están en la misma cadena.
+Quedan a lo más 2(lg n + 1) saltos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Consulta de camino
+
+
+
+Algoritmo 3: Consultar-Camino(u, v )
+res ← neutro
+mientras tope[u] ̸= tope[v ] hacer
+    si prof[tope[u]] > prof[tope[v ]] entonces
+         res ← res ⊕ Consultar[pos[tope[u]], pos[u]]
+         u ← padre[tope[u]]
+    en otro caso
+         res ← res ⊕ Consultar[pos[tope[v ]], pos[v ]]
+         v ← padre[tope[v ]]
+
+si prof[u] < prof[v ] entonces
+     res ← res ⊕ Consultar[pos[u], pos[v ]]
+en otro caso
+     res ← res ⊕ Consultar[pos[v ], pos[u]]
+devolver res
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   16 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos trazas en el ejemplo
+
+
+
+
+Camino 8 ⇝ 11
+tope[8] = 1 (prof. 0), tope[11] = 3 (prof. 1). Se mueve 11: rango [7, 9] y
+v = padre[3] = 1. Ya están en la misma cadena: rango [0, 3]. Total: 2 rangos,
+7 nodos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    17 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dos trazas en el ejemplo
+
+
+
+
+Camino 8 ⇝ 11
+tope[8] = 1 (prof. 0), tope[11] = 3 (prof. 1). Se mueve 11: rango [7, 9] y
+v = padre[3] = 1. Ya están en la misma cadena: rango [0, 3]. Total: 2 rangos,
+7 nodos.
+
+Camino 10 ⇝ 9
+Se mueve 9: [4, 4], v = 5. Se mueve 10: [5, 6], u = 2. Misma cadena: [1, 2].
+Los nodos 9, 6, 10, 2, 5 quedan cubiertos con 3 rangos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    17 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Actualizar un camino
+
+
+
+
+Misma estructura de recorrido
+Donde Consultar usaba un rango, Actualizar aplica la operación al
+rango (por ejemplo sumar x con propagación perezosa en el segment tree).
+
+Costo
+O(lg n) rangos × O(f (n)) por rango: con segment tree O(lg2 n) por
+operación. Con Fenwick (cuando la operación lo permite) también O(lg2 n),
+con constante pequeña.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   18 / 48
+Heavy-Light: aplicaciones
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    LCA con descomposición pesada-liviana
+
+
+
+
+Sin visitar rangos
+Se repite el mismo bucle sin consultar nada y al final se devuelve el de menor
+profundidad entre u y v .
+
+Ventajas frente a binary lifting
+O(lg n) por consulta con memoria O(n) (no O(n lg n)) y sin tablas de
+saltos. Más lento que el Euler tour con RMQ, que es O(1), pero sirve
+cuando ya tenemos la descomposición.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     20 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Subárboles
+
+
+
+
+El hijo pesado primero lo hace gratis
+Como pos es el tiempo de entrada de un recorrido en profundidad, el subárbol
+de v es [pos[v ], sal[v ]). La misma estructura responde consultas y actualiza-
+ciones de subárbol y de camino.
+
+Ejemplo
+“Sumar x al subárbol de v ” y “máximo en el camino u ⇝ v ” mezclados en
+un solo problema, con un solo arreglo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      21 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo total y mejoras
+
+
+
+
+                                                                   Tiempo     Memoria
+    Preprocesar (dos recorridos)                                    O(n)       O(n)
+    LCA                                                            O(lg n)     O(n)
+    Consulta o actualización de camino con segment tree            O(lg2 n)    O(n)
+    Consulta o actualización de subárbol                           O(lg n)     O(n)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                  22 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo total y mejoras
+
+
+
+
+                                                                   Tiempo     Memoria
+    Preprocesar (dos recorridos)                                    O(n)       O(n)
+    LCA                                                            O(lg n)     O(n)
+    Consulta o actualización de camino con segment tree            O(lg2 n)    O(n)
+    Consulta o actualización de subárbol                           O(lg n)     O(n)
+
+
+Se puede bajar a O(lg n)
+Guardando cada cadena en un árbol de búsqueda sesgado por tamaño (el
+nodo v pesa tam de sus subárboles livianos +1), los saltos y las búsquedas
+se pagan en conjunto: es la idea que reaparece en los Link-Cut Trees.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                  22 / 48
+Centroides
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Definición
+
+
+
+
+Centroide
+Un nodo c de un árbol con n nodos es un centroide si al eliminarlo, cada
+componente conexa tiene a lo más ⌊n/2⌋ nodos.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   24 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Definición
+
+
+
+
+Centroide
+Un nodo c de un árbol con n nodos es un centroide si al eliminarlo, cada
+componente conexa tiene a lo más ⌊n/2⌋ nodos.
+
+Ejemplo
+En el árbol de 11 nodos del ejemplo de Heavy-Light, al quitar el nodo 2
+quedan componentes de 3 (con raíz 5), 2 (con raíz 6) y 5 (la parte de
+arriba): todas ≤ 5. El nodo 2 es centroide.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      24 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Todo árbol tiene un centroide
+
+
+
+
+Teorema (Jordan, 1869)
+Todo árbol tiene al menos un centroide, y a lo más dos (adyacentes).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Todo árbol tiene un centroide
+
+
+
+
+Teorema (Jordan, 1869)
+Todo árbol tiene al menos un centroide, y a lo más dos (adyacentes).
+
+Demostración
+Enraizar en cualquier nodo r y empezar en v = r . Si algún hijo u de v tiene
+tam[u] > n/2, mover v ← u (el subárbol de u es la componente grande).
+Cada paso baja, así que termina. En el nodo final: todo hijo tiene ≤ n/2 y la
+componente de arriba tiene n − tam[v ] < n/2 (pues al llegar a v se cumplió
+tam[v ] > n/2, o v = r ).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    25 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo encontrarlo
+
+
+
+
+Algoritmo 4: Centroide(r )                (componente de r sin nodos eliminados)
+calcular tam[·] en la componente con un recorrido desde r
+n ← tam[r ]; v ← r ; p ← −1
+mientras existe un hijo u ̸= p de v (no eliminado) con tam[u] > n/2 hacer
+    p ← v; v ← u
+devolver v
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           26 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cómo encontrarlo
+
+
+
+
+Algoritmo 5: Centroide(r )                (componente de r sin nodos eliminados)
+calcular tam[·] en la componente con un recorrido desde r
+n ← tam[r ]; v ← r ; p ← −1
+mientras existe un hijo u ̸= p de v (no eliminado) con tam[u] > n/2 hacer
+    p ← v; v ← u
+devolver v
+
+O(n)
+Un recorrido para los tamaños y un descenso por un solo camino. No hace
+falta enraizar en un centroide: cualquier raíz sirve.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           26 / 48
+Descomposición por centroides
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dividir por el centroide
+
+
+
+
+Recursión
+  1. Encontrar el centroide c del árbol.
+  2. Eliminarlo: el árbol se parte en componentes de ≤ n/2 nodos.
+  3. Repetir en cada componente. El centroide de una componente queda
+     como hijo de c en un árbol nuevo: el árbol de centroides.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Dividir por el centroide
+
+
+
+
+Recursión
+  1. Encontrar el centroide c del árbol.
+  2. Eliminarlo: el árbol se parte en componentes de ≤ n/2 nodos.
+  3. Repetir en cada componente. El centroide de una componente queda
+     como hijo de c en un árbol nuevo: el árbol de centroides.
+
+Es una jerarquía
+La raíz del árbol de centroides es c; cada nodo del árbol original aparece
+una vez como centroide, en el nivel en que se eliminó.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     28 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Algoritmo de centroides
+
+
+
+
+Algoritmo 6: Descomponer(r , padreC, d)
+c ← Centroide(r ); elim[c] ← verdadero
+cpadre[c] ← padreC; nivel[c] ← d
+para cada vecino u de c con elim[u] falso hacer
+   Descomponer(u, c, d + 1)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Algoritmo de centroides
+
+
+
+
+Algoritmo 7: Descomponer(r , padreC, d)
+c ← Centroide(r ); elim[c] ← verdadero
+cpadre[c] ← padreC; nivel[c] ← d
+para cada vecino u de c con elim[u] falso hacer
+   Descomponer(u, c, d + 1)
+
+
+Se llama Descomponer(cualquier nodo, −1, 0)
+Una marca elim impide cruzar centroides ya eliminados: cada llamada
+trabaja solo sobre su componente.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ejemplo en el árbol de 11 nodos
+
+
+
+
+                                            2                            nivel 0
+
+
+
+                    5               6                       3            nivel 1
+
+
+
+             8              9      10                7             1     nivel 2
+
+
+
+                                                     11            4     nivel 3
+
+
+
+
+     Primer centroide: 2; luego 5, 6 y 3 en sus componentes; el nivel máximo es
+                                     3 = ⌊lg 11⌋.
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología             30 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Profundidad logarítmica
+
+
+
+Teorema
+El árbol de centroides tiene profundidad a lo más ⌊lg n⌋ (con la raíz a profun-
+didad 0).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      31 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Profundidad logarítmica
+
+
+
+Teorema
+El árbol de centroides tiene profundidad a lo más ⌊lg n⌋ (con la raíz a profun-
+didad 0).
+
+Demostración
+Una componente en el nivel d tiene a lo más n/2d nodos: al eliminar su
+centroide, cada componente nueva tiene a lo más la mitad. Una
+componente de ≥ 1 nodo requiere n/2d ≥ 1, es decir, d ≤ lg n.
+
+Tiempo
+Cada nivel trabaja sobre componentes disjuntas, en total O(n): la
+descomposición cuesta O(n lg n).
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      31 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La propiedad clave
+
+
+
+
+Todo camino pasa por un centroide “separador”
+Sea ℓ = LCAcentroides (u, v ). Entonces el camino u ⇝ v del árbol original
+pasa por ℓ.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La propiedad clave
+
+
+
+
+Todo camino pasa por un centroide “separador”
+Sea ℓ = LCAcentroides (u, v ). Entonces el camino u ⇝ v del árbol original
+pasa por ℓ.
+
+Demostración
+Hasta que se elimina ℓ, u y v están en la misma componente (ambos son
+descendientes de ℓ en el árbol de centroides), así que el camino entre ellos
+está en esa componente. Al eliminar ℓ se separan (o uno de ellos es ℓ), luego
+el camino contiene a ℓ.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    32 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Qué nos da
+
+
+
+Descomponer un problema de caminos
+Para cada par (u, v ) hay un único centroide ℓ que lo “cuenta”: el LCA de
+ambos en el árbol de centroides. Se pueden contar los caminos por pedazos:
+
+                             d(u, v ) = d(u, ℓ) + d(ℓ, v )
+
+con d(·, ℓ) calculadas una vez por centroide ℓ (un recorrido de su compo-
+nente).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Qué nos da
+
+
+
+Descomponer un problema de caminos
+Para cada par (u, v ) hay un único centroide ℓ que lo “cuenta”: el LCA de
+ambos en el árbol de centroides. Se pueden contar los caminos por pedazos:
+
+                             d(u, v ) = d(u, ℓ) + d(ℓ, v )
+
+con d(·, ℓ) calculadas una vez por centroide ℓ (un recorrido de su compo-
+nente).
+
+Costo
+Cada nodo tiene a lo más ⌊lg n⌋ + 1 centroides ancestros: O(n lg n) pares
+(nodo, centroide ancestro) en total.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 48
+Aplicaciones de los centroides
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Caminos de longitud exactamente k
+
+
+
+
+Problema (CSES 2080)
+Contar los pares de nodos a distancia exactamente k.
+
+En cada centroide c
+Contar los caminos que pasan por c: se recorre cada subárbol vecino
+anotando las profundidades d (distancias a c); un nodo a profundidad d se
+empareja con los ya vistos a profundidad k − d (de otros subárboles y el
+propio c con d = 0). Se guarda cnt[d].
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   35 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contar caminos con centroides
+
+
+
+
+Algoritmo 8: Contar(c)              (c es el centroide de su componente)
+cnt[0] ← 1
+para cada vecino u de c no eliminado hacer
+    D ← profundidades (respecto de c) de los nodos del subárbol de u
+    para d ∈ D hacer ans ← ans + cnt[k − d]
+    para d ∈ D hacer cnt[d] ← cnt[d] + 1
+limpiar cnt
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       36 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contar caminos con centroides
+
+
+
+
+Algoritmo 9: Contar(c)              (c es el centroide de su componente)
+cnt[0] ← 1
+para cada vecino u de c no eliminado hacer
+    D ← profundidades (respecto de c) de los nodos del subárbol de u
+    para d ∈ D hacer ans ← ans + cnt[k − d]
+    para d ∈ D hacer cnt[d] ← cnt[d] + 1
+limpiar cnt
+
+
+O(n lg n)
+El centroide c cuesta lo que mide su componente. Sumando por niveles:
+O(n) por nivel y lg n niveles.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       36 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El marcado más cercano
+
+
+
+
+Problema (Codeforces 342E)
+Un árbol con un nodo rojo. Operaciones: pintar de rojo el nodo v ; dado v ,
+devolver la distancia al nodo rojo más cercano.
+
+Idea
+Para cada centroide c se guarda mejor[c]: la menor distancia de c a un nodo
+rojo de su componente. El rojo más cercano a v está en la componente de
+algún centroide ancestro de v y el camino pasa por él:
+
+                 respuesta(v ) =          mı́n        mejor[a] + d(v , a)
+                                    a ancestro de v
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        37 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Pintar y consultar
+
+
+
+
+Algoritmo 10: Pintar(v )
+para cada ancestro a de v en el árbol de centroides (incluido v ) hacer
+    mejor[a] ← mı́n(mejor[a], d(v , a))
+
+
+Algoritmo 11: Consultar(v )
+res ← ∞
+para cada ancestro a de v en el árbol de centroides hacer
+    res ← mı́n(res, mejor[a] + d(v , a))
+devolver res
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      38 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Costo y distancias
+
+
+
+
+O(lg n) por operación
+Hay ≤ lg n + 1 ancestros. La distancia d(v , a) se obtiene de la descom-
+posición: al construirla, cada centroide recorre su componente y guarda
+dist[nivel[a]][v ] (O(n lg n) de memoria).
+
+Preprocesamiento
+O(n lg n). Es mucho mejor que O(n) por consulta, y funciona aunque las
+marcas lleguen online.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un uso inesperado: asignar niveles
+
+
+
+
+Problema (Codeforces 321C)
+Asignar a cada nodo una letra de A a Z de modo que entre dos nodos con la
+misma letra haya un nodo con letra mayor en su camino.
+
+El nivel del centroide es la letra
+Letra = nivel en el árbol de centroides (A para la raíz). Dos nodos del
+mismo nivel están en componentes distintas y el camino entre ellos pasa por
+un centroide de nivel menor. Como el nivel es ≤ ⌊lg n⌋, alcanza con 26
+letras para n < 226 .
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   40 / 48
+Comparación y práctica
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Heavy-Light frente a centroides
+
+
+
+
+                                  Heavy-Light                     Centroides
+        Se basa en            tamaño de subárbol          componente balanceada
+        Estructura             cadenas + arreglo            árbol de centroides
+        Camino u ⇝ v             O(lg n) rangos            pasa por LCAc (u, v )
+        Actualizaciones     rangos con segment tree         puntuales, O(lg n)
+        Memoria                      O(n)                    O(n) a O(n lg n)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               42 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Heavy-Light frente a centroides
+
+
+
+
+                                  Heavy-Light                     Centroides
+        Se basa en            tamaño de subárbol          componente balanceada
+        Estructura             cadenas + arreglo            árbol de centroides
+        Camino u ⇝ v             O(lg n) rangos            pasa por LCAc (u, v )
+        Actualizaciones     rangos con segment tree         puntuales, O(lg n)
+        Memoria                      O(n)                    O(n) a O(n lg n)
+
+
+Cuál usar
+Valores en nodos o aristas con caminos y subárboles: Heavy-Light.
+Problemas de distancias entre pares (contar, más cercano, sumas):
+centroides.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología               42 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Práctica
+
+
+
+
+     Problema                                 Idea
+     CSES 1138 — Path Queries                 suma en el camino a la raíz, con actualiza-
+                                              ción puntual
+     CSES 2134 — Path Queries II              máximo en un camino y actualización pun-
+                                              tual
+     CSES 1137 — Subtree Queries              subárbol como rango
+     CSES 1135 — Distance Queries             LCA con la descomposición
+     CSES 2079 — Finding a Centroid           definición y tamaños
+     CSES 2080 — Fixed-Length Paths I         contar con cnt[k − d]
+     Codeforces 321C — Ciel the Commander     nivel del centroide
+     Codeforces 342E — Xenia and Tree         más cercano marcado
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                    43 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Heavy-Light: una arista liviana al menos divide el subárbol a la mitad,
+   así que un camino a la raíz cruza ≤ lg n aristas livianas. Numerando
+   con el hijo pesado primero, cada cadena y cada subárbol son intervalos:
+   un camino son O(lg n) intervalos (O(lg2 n) con segment tree) y el LCA
+   sale en O(lg n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   44 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Heavy-Light: una arista liviana al menos divide el subárbol a la mitad,
+   así que un camino a la raíz cruza ≤ lg n aristas livianas. Numerando
+   con el hijo pesado primero, cada cadena y cada subárbol son intervalos:
+   un camino son O(lg n) intervalos (O(lg2 n) con segment tree) y el LCA
+   sale en O(lg n).
+ ▶ Centroides: todo árbol tiene un centroide, que se halla en O(n);
+   quitarlos recursivamente da un árbol de profundidad ≤ ⌊lg n⌋ en
+   O(n lg n), y todo camino pasa por el LCA de sus extremos en ese árbol.
+ ▶ Heavy-Light para valores en caminos y subárboles; centroides para
+   distancias entre pares (contar, más cercano).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   44 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   45 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos demostrar la cota de cadenas por camino y resolver consultas
+   de camino, de subárbol y LCA
+ ▶ Sabemos demostrar la existencia del centroide y acotar la altura del
+   árbol de centroides
+ ▶ Sabemos contar caminos y mantener el marcado más cercano con
+   centroides
+ ▶ Sabemos elegir entre las dos descomposiciones
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   45 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   46 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+Bibliografía citada
+ ▶ Sleator, D. D., & Tarjan, R. E. (1983). A data structure for dynamic
+   trees. Journal of Computer and System Sciences, 26(3), 362–391.
+ ▶ Harel, D., & Tarjan, R. E. (1984). Fast algorithms for finding nearest
+   common ancestors. SIAM Journal on Computing, 13(2), 338–355.
+ ▶ Jordan, C. (1869). Sur les assemblages de lignes. Journal für die reine
+   und angewandte Mathematik, 70, 185–190.
+ ▶ Galván, V. R. (2026). Heavy-Light Decomposition. Training Camp
+   Bolivia 2026.
+ ▶ Demaine, Erik (2021). 6.851: Advanced Data Structures (Spring’21).
+   https://courses.csail.mit.edu/6.851/spring21/.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   47 / 48
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT 6.851)
+y en las charlas de Heavy-Light Decomposition y de descomposiciones en
+árboles del Training Camp Bolivia 2026.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   48 / 48
+

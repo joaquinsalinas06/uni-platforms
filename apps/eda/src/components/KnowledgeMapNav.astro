@@ -1,5 +1,8 @@
 ---
+import { getCollection } from 'astro:content';
 import { knowledgeMap } from '../lib/knowledge-map';
+
+const temasFinal = (await getCollection('finalTemas')).sort((a, b) => a.data.order - b.data.order);
 
 // La navegación sale entera del knowledge map: no hay rutas escritas a mano.
 const current = Astro.url.pathname;
@@ -30,9 +33,21 @@ const activeUnit = knowledgeMap.units.find((unit) =>
   <a href="/compare" data-nav-link class="nav-link mb-1 block rounded px-1 py-1 text-[0.8125rem] no-underline">
     comparar estructuras
   </a>
-  <a href="/repaso" data-nav-link class="nav-link mb-6 block rounded px-1 py-1 text-[0.8125rem] no-underline">
+  <a href="/repaso" data-nav-link class="nav-link mb-1 block rounded px-1 py-1 text-[0.8125rem] no-underline">
     repaso del parcial
   </a>
+  <a href="/final" data-nav-link class="nav-link mb-1 block rounded px-1 py-1 text-[0.8125rem] no-underline">
+    examen final
+  </a>
+  <ul class="mb-6 ml-3 border-l border-[var(--rule)] pl-2">
+    {temasFinal.map((t) => (
+      <li>
+        <a href={`/final/${t.id}`} data-nav-link class="nav-link block rounded px-1 py-0.5 text-[0.75rem] no-underline">
+          {t.data.title}
+        </a>
+      </li>
+    ))}
+  </ul>
   <div class="stagger">
     {
       knowledgeMap.units.filter((unit) => unit.topics.length > 0).map((unit) => (

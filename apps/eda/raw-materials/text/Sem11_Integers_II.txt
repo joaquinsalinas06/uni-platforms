@@ -1,0 +1,1289 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Enteros II
+Semana 11
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+23 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Ver la vEB como un árbol binario sobre los bits y buscar en él con una
+   búsqueda binaria sobre la profundidad
+ ▶ Construir los X-fast trees: tabla hash de prefijos, O(lg w ) por consulta
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      2 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Ver la vEB como un árbol binario sobre los bits y buscar en él con una
+   búsqueda binaria sobre la profundidad
+ ▶ Construir los X-fast trees: tabla hash de prefijos, O(lg w ) por consulta
+ ▶ Reducir el espacio y la actualización con indirección y llegar a los Y-fast
+   trees: O(lg w ) y Θ(n)
+ ▶ Demostrar la amortización de la indirección
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      2 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+La deuda de la vEB
+Con w = 32 una vEB reserva unas 4 · 109 palabras aunque guarde 10 llaves,
+y con w = 64 ni siquiera cabe en memoria.
+
+¿Se puede conservar el tiempo O(lg w ) y pagar solo por las n llaves?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+La deuda de la vEB
+Con w = 32 una vEB reserva unas 4 · 109 palabras aunque guarde 10 llaves,
+y con w = 64 ni siquiera cabe en memoria.
+
+¿Se puede conservar el tiempo O(lg w ) y pagar solo por las n llaves?
+
+Sí, con dos ideas
+Guardar solo lo que existe (una tabla hash) y agrupar las llaves en bloques
+de tamaño Θ(w ) para actualizar la estructura con poca frecuencia.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 34
+Ahorrar espacio en la vEB
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    No guardar los clusters vacíos
+
+
+
+Una tabla hash en lugar de un arreglo de clusters
+V .cluster [c] pasa a ser una entrada de una tabla hash que solo existe cuando
+el cluster es no vacío. Con hashing perfecto dinámico, buscar y crear una
+entrada cuestan O(1) esperado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      5 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    No guardar los clusters vacíos
+
+
+
+Una tabla hash en lugar de un arreglo de clusters
+V .cluster [c] pasa a ser una entrada de una tabla hash que solo existe cuando
+el cluster es no vacío. Con hashing perfecto dinámico, buscar y crear una
+entrada cuestan O(1) esperado.
+
+¿Cuánto espacio ocupa ahora?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      5 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    No guardar los clusters vacíos
+
+
+
+Una tabla hash en lugar de un arreglo de clusters
+V .cluster [c] pasa a ser una entrada de una tabla hash que solo existe cuando
+el cluster es no vacío. Con hashing perfecto dinámico, buscar y crear una
+entrada cuestan O(1) esperado.
+
+¿Cuánto espacio ocupa ahora?
+
+O(n lg w )
+Cada inserción hace una sola llamada costosa por nivel de recursión y hay
+lg w niveles: cada llave deja O(1) registros por nivel. Con w = 32 y 1024
+llaves medimos entre 3,3 y 3,9 registros por llave.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      5 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    No guardar los clusters vacíos
+
+
+
+
+¿Se puede llegar a Θ(n) siguiendo por este camino?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   6 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    No guardar los clusters vacíos
+
+
+
+
+¿Se puede llegar a Θ(n) siguiendo por este camino?
+
+Con refinamientos más complejos (Mehlhorn y Näher), sí
+Nosotros tomamos otro camino: reducir el problema a una estructura más
+simple y luego aplicar indirección. Para eso hace falta mirar la vEB de otra
+forma.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     6 / 34
+La vista de árbol
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El conjunto como un árbol binario
+
+
+
+
+                                                                    1
+                                                                    0
+
+                                    1
+                                    0                                                                 1
+                                                                                                      0
+
+                    1
+                    0                               1
+                                                    0                               0                                   1
+                                                                                                                        0
+
+            0               1
+                            0               0
+                                            1               0
+                                                            1               0                0                 0                 1
+                                                                                                                                 0
+
+        0       0       0
+                        1       0
+                                1       0
+                                        1       0
+                                                1       0       0
+                                                                1       0       0       0        0        0        0        0
+                                                                                                                            1        0
+                                                                                                                                     1
+        0       1       2       3       4       5       6       7       8       9       10       11       12       13       14       15
+
+
+
+Un árbol binario perfecto de altura w sobre los u bits (u = 16, w = 4). Cada nodo
+vale el OR de sus hijos: 1 si su intervalo contiene alguna llave. El nodo a
+profundidad ℓ en el camino de x corresponde a sus ℓ bits más altos: x ≫ (w − ℓ).
+
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología                                                        8 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La ruta hacia x
+
+
+
+
+                                                                    1
+                                                                    0
+
+                                    1
+                                    0                                                                 1
+                                                                                                      0
+
+                    1
+                    0                               1
+                                                    0                               0                                   1
+                                                                                                                        0
+
+            0               1
+                            0               0
+                                            1               0
+                                                            1               0                0                 0                 1
+                                                                                                                                 0
+
+        0       0       1
+                        0       1
+                                0       1
+                                        0       0
+                                                1       0       1
+                                                                0       0       0       0        0        0        0        1
+                                                                                                                            0        1
+                                                                                                                                     0
+        0       1       2       3       4       5       6       7       8       9       10       11       12       13       14       15
+
+
+
+
+Ruta de x = 9 = 10012 : valores 1, 1, 0, 0, 0
+Si un nodo vale 0, todos sus descendientes valen 0: a lo largo de la ruta los valores
+son 1 · · · 10 · · · 0.
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología                                                        9 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar la transición 1 → 0
+
+
+
+¿Cómo encontrar el último nodo con valor 1 en la ruta?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar la transición 1 → 0
+
+
+
+¿Cómo encontrar el último nodo con valor 1 en la ruta?
+
+Con una búsqueda binaria sobre la profundidad ℓ ∈ [0, w ]
+Se necesita el valor del nodo a profundidad ℓ en O(1): el nodo es el prefijo
+x ≫ (w − ℓ), una operación aritmética de la word RAM. En O(lg w ) probes
+se llega al último 1, el nodo p.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   10 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Buscar la transición 1 → 0
+
+
+
+¿Cómo encontrar el último nodo con valor 1 en la ruta?
+
+Con una búsqueda binaria sobre la profundidad ℓ ∈ [0, w ]
+Se necesita el valor del nodo a profundidad ℓ en O(1): el nodo es el prefijo
+x ≫ (w − ℓ), una operación aritmética de la word RAM. En O(lg w ) probes
+se llega al último 1, el nodo p.
+
+Del nodo p al sucesor
+El hijo de p hacia x vale 0. Si es el hijo izquierdo, el sucesor es el mínimo del
+hijo derecho. Si es el derecho, el predecesor es el máximo del hijo izquierdo.
+Cada nodo guarda min y max.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        10 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(9)
+
+
+
+                                                                    1
+                                                                    0
+
+                                    1
+                                    0                                                                 1
+                                                                                                      0
+
+                    1
+                    0                               1
+                                                    0                               0                                   1
+                                                                                                                        0
+
+            0               1
+                            0               1
+                                            0               1
+                                                            0               0                0                 0                 1
+                                                                                                                                 0
+
+        0       0       0
+                        1       0
+                                1       0
+                                        1       0
+                                                1       0       0
+                                                                1       0       0       0        0        0        0        0
+                                                                                                                            1        0
+                                                                                                                                     1
+        0       1       2       3       4       5       6       7       8       9       10       11       12       13       14       15
+
+
+
+
+  ▶ El último 1 en la ruta de 9 es p = prefijo 1 (rojo).
+
+
+
+
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología                                                        11 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(9)
+
+
+
+                                                                    1
+                                                                    0
+
+                                    1
+                                    0                                                                 1
+                                                                                                      0
+
+                    1
+                    0                               1
+                                                    0                               0                                   1
+                                                                                                                        0
+
+            0               1
+                            0               1
+                                            0               1
+                                                            0               0                0                 0                 1
+                                                                                                                                 0
+
+        0       0       0
+                        1       0
+                                1       0
+                                        1       0
+                                                1       0       0
+                                                                1       0       0       0        0        0        0        0
+                                                                                                                            1        0
+                                                                                                                                     1
+        0       1       2       3       4       5       6       7       8       9       10       11       12       13       14       15
+
+
+
+
+  ▶ El último 1 en la ruta de 9 es p = prefijo 1 (rojo).
+  ▶ Su hijo hacia 9 es el prefijo 10 (azul), con valor 0: es el hijo izquierdo.
+
+
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología                                                        11 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(9)
+
+
+
+                                                                    1
+                                                                    0
+
+                                    1
+                                    0                                                                 1
+                                                                                                      0
+
+                    1
+                    0                               1
+                                                    0                               0                                   1
+                                                                                                                        0
+
+            0               1
+                            0               0
+                                            1               0
+                                                            1               0                0                 0                 1
+                                                                                                                                 0
+
+        0       0       0
+                        1       0
+                                1       0
+                                        1       0
+                                                1       0       0
+                                                                1       0       0       0        0        0        0        0
+                                                                                                                            1        0
+                                                                                                                                     1
+        0       1       2       3       4       5       6       7       8       9       10       11       12       13       14       15
+
+
+
+
+  ▶ El último 1 en la ruta de 9 es p = prefijo 1 (rojo).
+  ▶ Su hijo hacia 9 es el prefijo 10 (azul), con valor 0: es el hijo izquierdo.
+  ▶ El sucesor es el mínimo del hijo derecho, el prefijo 11 (verde): 14.
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología                                                        11 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué cuesta esta versión?
+
+
+
+
+Consulta: O(lg w )
+Una búsqueda binaria sobre las w + 1 profundidades.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué cuesta esta versión?
+
+
+
+
+Consulta: O(lg w )
+Una búsqueda binaria sobre las w + 1 profundidades.
+
+¿Y la actualización y el espacio?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Qué cuesta esta versión?
+
+
+
+
+Consulta: O(lg w )
+Una búsqueda binaria sobre las w + 1 profundidades.
+
+¿Y la actualización y el espacio?
+
+Actualizar: O(w ). Espacio: Θ(u)
+Insertar x cambia los w + 1 nodos de su ruta (el OR, el min y el max), y el
+árbol tiene 2u − 1 nodos. Es la misma consulta que la vEB, pero con
+actualización más cara.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   12 / 34
+X-fast trees
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Guardar solo los nodos con valor 1
+
+
+
+                                                                    1
+                                                                    0
+
+                                    1
+                                    0                                                                 1
+                                                                                                      0
+
+                    1
+                    0                               1
+                                                    0                               0                                   1
+                                                                                                                        0
+
+            0               1
+                            0               0
+                                            1               0
+                                                            1               0                0                 0                 1
+                                                                                                                                 0
+
+        0       0       0
+                        1       0
+                                1       0
+                                        1       0
+                                                1       0       0
+                                                                1       0       0       0        0        0        0        0
+                                                                                                                            1        0
+                                                                                                                                     1
+        0       1       2       3       4       5       6       7       8       9       10       11       12       13       14       15
+
+
+
+
+La tabla T
+Una tabla hash con una entrada por cada prefijo de cada llave: la clave es el
+par (ℓ, prefijo) y el valor es (min, max) del subárbol. Más una lista doblemente
+enlazada con las llaves en orden.
+Víctor Racsó Galván Oyola                   Universidad de Ingeniería y Tecnología                                                        14 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La tabla del ejemplo
+
+
+
+¿Cuántas entradas tiene T para S = {2, 3, 4, 5, 7, 14, 15}?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La tabla del ejemplo
+
+
+
+¿Cuántas entradas tiene T para S = {2, 3, 4, 5, 7, 14, 15}?
+
+17: los nodos con valor 1 del dibujo
+1 en la raíz, 2 a profundidad 1, 3 a profundidad 2, 4 a profundidad 3 y 7
+hojas. Como mucho n(w + 1) en general.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    15 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La tabla del ejemplo
+
+
+
+¿Cuántas entradas tiene T para S = {2, 3, 4, 5, 7, 14, 15}?
+
+17: los nodos con valor 1 del dibujo
+1 en la raíz, 2 a profundidad 1, 3 a profundidad 2, 4 a profundidad 3 y 7
+hojas. Como mucho n(w + 1) en general.
+
+                                (ℓ, prefijo)   (min, max)
+
+                                (0, ε)         (2, 15)
+                                (1, 0)         (2, 7)
+                                (2, 01)        (4, 7)
+                                (3, 111)       (14, 15)
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    15 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor en un X-fast tree
+
+
+Algoritmo 1: Sucesor-X(x)
+lo ← 0, hi ← w                   // el prefijo de longitud 0 siempre está
+mientras lo < hi hacer
+    mid ← ⌈(lo + hi)/2⌉
+    si (mid, x ≫ (w − mid)) ∈ T entonces
+         lo ← mid
+    en otro caso
+         hi ← mid − 1
+ℓ ← lo, p ← x ≫ (w − ℓ)
+si ℓ = w entonces devolver sig (x)            // x ∈ S: el siguiente de la lista
+
+si el bit ℓ + 1 de x es 0 entonces
+     devolver T [(ℓ + 1, 2p + 1)].min          // falta el hijo izquierdo
+en otro caso
+     y ← T [(ℓ + 1, 2p)].max // falta el hijo derecho: y es el predecesor
+     devolver sig (y )
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          16 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(6) y Sucesor(13)
+
+
+
+
+x = 6 = 01102
+Los prefijos de x en T son ε, 0, 01, 011; el de longitud 4 (0110) no está. Entonces
+ℓ = 3, p = 011, y el bit siguiente de x es 0.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          17 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(6) y Sucesor(13)
+
+
+
+
+x = 6 = 01102
+Los prefijos de x en T son ε, 0, 01, 011; el de longitud 4 (0110) no está. Entonces
+ℓ = 3, p = 011, y el bit siguiente de x es 0.
+
+  ▶ Falta el hijo izquierdo 0110; se devuelve el min del derecho, T [(4, 0111)] = 7.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           17 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(6) y Sucesor(13)
+
+
+
+
+x = 6 = 01102
+Los prefijos de x en T son ε, 0, 01, 011; el de longitud 4 (0110) no está. Entonces
+ℓ = 3, p = 011, y el bit siguiente de x es 0.
+
+  ▶ Falta el hijo izquierdo 0110; se devuelve el min del derecho, T [(4, 0111)] = 7.
+
+x = 13 = 11012
+Prefijos presentes: ε, 1, 11. Entonces ℓ = 2, p = 11 y el bit siguiente es 0 (prefijo
+110 ausente).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            17 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: Sucesor(6) y Sucesor(13)
+
+
+
+
+x = 6 = 01102
+Los prefijos de x en T son ε, 0, 01, 011; el de longitud 4 (0110) no está. Entonces
+ℓ = 3, p = 011, y el bit siguiente de x es 0.
+
+  ▶ Falta el hijo izquierdo 0110; se devuelve el min del derecho, T [(4, 0111)] = 7.
+
+x = 13 = 11012
+Prefijos presentes: ε, 1, 11. Entonces ℓ = 2, p = 11 y el bit siguiente es 0 (prefijo
+110 ausente).
+
+  ▶ Falta el hijo izquierdo 110: sucesor = T [(3, 111)].min = 14.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            17 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar y eliminar
+
+
+
+
+Insertar(x)
+Buscar el sucesor con Sucesor-X para ubicar a x en la lista y agregar los
+w + 1 prefijos de x a T , actualizando min y max de los que ya existían.
+
+Eliminar(x)
+En cada prefijo de x: si x era la única llave, se borra la entrada; si era el min
+(o el max), el nuevo valor es el siguiente (o el anterior) de x en la lista.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        18 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar y eliminar
+
+
+
+
+Insertar(x)
+Buscar el sucesor con Sucesor-X para ubicar a x en la lista y agregar los
+w + 1 prefijos de x a T , actualizando min y max de los que ya existían.
+
+Eliminar(x)
+En cada prefijo de x: si x era la única llave, se borra la entrada; si era el min
+(o el max), el nuevo valor es el siguiente (o el anterior) de x en la lista.
+
+Tiempo Θ(w ) por actualización
+Es lo mismo que en el árbol sin hash: hay que tocar toda la ruta.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        18 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen del X-fast tree
+
+
+
+
+                                Consulta       Actualización       Espacio
+
+                 vEB             O(lg w )         O(lg w )              Θ(u)
+                 X-fast tree     O(lg w )           Θ(w )           O(nw )
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología          19 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen del X-fast tree
+
+
+
+
+                                Consulta       Actualización       Espacio
+
+                 vEB             O(lg w )         O(lg w )              Θ(u)
+                 X-fast tree     O(lg w )           Θ(w )           O(nw )
+
+
+¿Cómo evitar pagar w por actualización y w de espacio por llave?
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología          19 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen del X-fast tree
+
+
+
+
+                                Consulta       Actualización       Espacio
+
+                 vEB             O(lg w )         O(lg w )              Θ(u)
+                 X-fast tree     O(lg w )           Θ(w )           O(nw )
+
+
+¿Cómo evitar pagar w por actualización y w de espacio por llave?
+
+Haciendo que el X-fast tree guarde solo n/w llaves
+Si cada llave del X-fast tree representa a Θ(w ) llaves, su espacio total es
+(n/w ) · w = n.
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología          19 / 34
+Y-fast trees
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Indirección
+
+
+
+
+    X-fast:
+
+
+
+
+              BST de Θ(w ) llaves    BST de Θ(w ) llaves   BST de Θ(w ) llaves   BST de Θ(w ) llaves
+
+
+
+
+Las llaves ordenadas se parten en grupos contiguos de Θ(w ); cada grupo vive en
+un BST y un representante entra al X-fast tree.
+
+
+
+
+Víctor Racsó Galván Oyola           Universidad de Ingeniería y Tecnología                             21 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El invariante de tamaño
+
+
+
+
+Cada grupo tiene entre w /2 y 2w llaves
+ ▶ Si crece a 2w + 1: se parte en dos grupos de w y w + 1.
+ ▶ Si baja de w /2: se fusiona con un vecino; si el resultado supera 1,5w ,
+   se parte por la mitad.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    22 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El invariante de tamaño
+
+
+
+
+Cada grupo tiene entre w /2 y 2w llaves
+ ▶ Si crece a 2w + 1: se parte en dos grupos de w y w + 1.
+ ▶ Si baja de w /2: se fusiona con un vecino; si el resultado supera 1,5w ,
+   se parte por la mitad.
+
+Los representantes
+Cada grupo tiene un representante rj fijado al crear el grupo (por ejemplo su
+mínimo en ese momento). Aunque la llave rj se elimine, se queda en el X-fast
+tree hasta la próxima partición o fusión. Así Gj = {x ∈ S | rj ≤ x < rj+1 }.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    22 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Espacio
+
+
+
+
+¿Cuántas llaves tiene el X-fast tree de arriba?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Espacio
+
+
+
+
+¿Cuántas llaves tiene el X-fast tree de arriba?
+
+A lo más 2n/w : O(n) en total
+Cada grupo tiene al menos w /2 llaves, así que hay a lo más 2n/w
+representantes. Cada uno ocupa O(w ) en el X-fast tree: O(n). Los BST
+suman O(n).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor en un Y-fast tree
+
+
+
+
+Algoritmo 2: Sucesor-Y(x)
+rj ← el mayor representante ≤ x (consulta al X-fast tree)
+si hay una llave > x en el BST de Gj entonces devolver la menor de ellas
+si existe Gj+1 entonces devolver el mínimo de Gj+1
+devolver nulo
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       24 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sucesor en un Y-fast tree
+
+
+
+
+Algoritmo 3: Sucesor-Y(x)
+rj ← el mayor representante ≤ x (consulta al X-fast tree)
+si hay una llave > x en el BST de Gj entonces devolver la menor de ellas
+si existe Gj+1 entonces devolver el mínimo de Gj+1
+devolver nulo
+
+O(lg w ) + O(lg w ) = O(lg w )
+La búsqueda de rj es del X-fast tree; las demás búsquedas son en BST de
+Θ(w ) llaves. El predecesor es simétrico: busca en Gj y, si no hay, toma el
+máximo de Gj−1 .
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       24 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué solo Gj y Gj+1 ?
+
+
+
+
+Si rj ≤ x < rj+1 , ¿puede el sucesor de x estar en Gj+2 o más lejos?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+     ¿Por qué solo Gj y Gj+1 ?
+
+
+
+
+Si rj ≤ x < rj+1 , ¿puede el sucesor de x estar en Gj+2 o más lejos?
+
+No
+Todas las llaves de Gj+1 son ≥ rj+1 > x. Si Gj no tiene llaves mayores que
+x, la menor llave mayor que x es el mínimo de Gj+1 ; y si Gj+1 no existe, no
+hay sucesor.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    25 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar y eliminar
+
+
+Insertar(x)
+Encontrar Gj con el X-fast tree (O(lg w )), insertar en su BST (O(lg w )). Si
+el grupo supera 2w llaves, partirlo.
+
+Eliminar(x)
+Eliminar de su BST. Si el grupo baja de w /2, fusionarlo con un vecino (y
+partir si hace falta).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    26 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar y eliminar
+
+
+Insertar(x)
+Encontrar Gj con el X-fast tree (O(lg w )), insertar en su BST (O(lg w )). Si
+el grupo supera 2w llaves, partirlo.
+
+Eliminar(x)
+Eliminar de su BST. Si el grupo baja de w /2, fusionarlo con un vecino (y
+partir si hace falta).
+
+Una partición o fusión cuesta Θ(w ). ¿No arruina eso el tiempo?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    26 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Insertar y eliminar
+
+
+Insertar(x)
+Encontrar Gj con el X-fast tree (O(lg w )), insertar en su BST (O(lg w )). Si
+el grupo supera 2w llaves, partirlo.
+
+Eliminar(x)
+Eliminar de su BST. Si el grupo baja de w /2, fusionarlo con un vecino (y
+partir si hace falta).
+
+Una partición o fusión cuesta Θ(w ). ¿No arruina eso el tiempo?
+
+Solo si ocurren seguido, y no ocurren seguido
+Reconstruir los BST cuesta O(w ), y cambiar un representante en el X-fast
+tree cuesta O(w ). Veamos cada cuánto sucede.
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    26 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cada cuánto se reestructura
+
+
+
+
+Tras una partición o fusión, ¿cuántas actualizaciones hacen falta en
+ese grupo para que haya otra?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cada cuánto se reestructura
+
+
+
+
+Tras una partición o fusión, ¿cuántas actualizaciones hacen falta en
+ese grupo para que haya otra?
+
+Al menos w /4
+ ▶ Partición de 2w + 1: grupos de tamaño w y w + 1. Para volver a 2w + 1
+   hacen falta ≥ w inserciones; para bajar de w /2, ≥ w /2 eliminaciones.
+ ▶ Fusión: el resultado mide ≥ w − 1 y, si supera 1,5w , se parte en grupos
+   de (0,75w , 1,25w ): para llegar a 2w o a w /2 hacen falta ≥ w /4
+   operaciones.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   27 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La cota amortizada
+
+
+
+
+Teorema
+Insertar y Eliminar cuestan O(lg w ) amortizado.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La cota amortizada
+
+
+
+
+Teorema
+Insertar y Eliminar cuestan O(lg w ) amortizado.
+
+Demostración
+Cada operación paga O(lg w ) por la búsqueda en el X-fast tree y el BST.
+Una reestructuración cuesta O(w ) y ocurre a lo más una vez por cada w /4
+operaciones de ese grupo: se cobra O(w )/(w /4) = O(1) a cada una. Total:
+O(lg w ) + O(1).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   28 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen de las cuatro estructuras
+
+
+
+
+                                 Consulta      Actualización           Espacio
+
+               vEB               O(lg w )          O(lg w )             Θ(u)
+               vEB con hash      O(lg w )          O(lg w )        O(n lg w )
+               X-fast tree       O(lg w )           Θ(w )              O(nw )
+               Y-fast tree       O(lg w )     O(lg w ) amort.           Θ(n)
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             29 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Resumen de las cuatro estructuras
+
+
+
+
+                                 Consulta      Actualización           Espacio
+
+               vEB               O(lg w )          O(lg w )             Θ(u)
+               vEB con hash      O(lg w )          O(lg w )        O(n lg w )
+               X-fast tree       O(lg w )           Θ(w )              O(nw )
+               Y-fast tree       O(lg w )     O(lg w ) amort.           Θ(n)
+
+     Con tablas hash, los tiempos de X-fast y Y-fast son esperados (o con alta
+        probabilidad). Para n = 109 y w = 64: lg w = 6 contra lg n ≈ 30.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología             29 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ La vEB como árbol binario: los valores a lo largo de la ruta de x son
+   1 · · · 10 · · · 0, y una búsqueda binaria sobre la profundidad, con min y
+   max en cada nodo, da el sucesor en O(lg w ).
+ ▶ X-fast: solo los nodos con 1, en una tabla hash de prefijos. Consulta
+   O(lg w ), pero actualización Θ(w ) y espacio O(nw ).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       30 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ La vEB como árbol binario: los valores a lo largo de la ruta de x son
+   1 · · · 10 · · · 0, y una búsqueda binaria sobre la profundidad, con min y
+   max en cada nodo, da el sucesor en O(lg w ).
+ ▶ X-fast: solo los nodos con 1, en una tabla hash de prefijos. Consulta
+   O(lg w ), pero actualización Θ(w ) y espacio O(nw ).
+ ▶ Y-fast: indirección con grupos de Θ(w ) en BST y un X-fast de
+   representantes. Espacio Θ(n), consulta O(lg w ).
+ ▶ La actualización cuesta O(lg w ) amortizado: reestructurar cuesta O(w )
+   y ocurre una vez cada Ω(w ) operaciones.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       30 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos buscar el sucesor en el árbol binario con una búsqueda binaria
+   sobre la profundidad
+ ▶ Sabemos construir un X-fast tree y ejecutar sus consultas
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos buscar el sucesor en el árbol binario con una búsqueda binaria
+   sobre la profundidad
+ ▶ Sabemos construir un X-fast tree y ejecutar sus consultas
+ ▶ Sabemos aplicar indirección y justificar los tamaños de grupo
+ ▶ Sabemos demostrar que un Y-fast tree usa Θ(n) de espacio y O(lg w )
+   por operación
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   32 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+
+Bibliografía citada
+ ▶ van Emde Boas, P. (1975). Preserving order in a forest in less than
+   logarithmic time. Proceedings of FOCS’75, 75–84.
+ ▶ Willard, D. E. (1983). Log-logarithmic worst-case range queries are
+   possible in space Θ(n). Information Processing Letters, 17(2), 81–84.
+ ▶ Mehlhorn, K., & Näher, S. (1990). Bounded ordered dictionaries in
+   O(log log N) time and O(n) space. Information Processing Letters,
+   35(4), 183–189.
+ ▶ Demaine, Erik (2012). 6.851: Advanced Data Structures (Spring’12),
+   Lecture 11. https://courses.csail.mit.edu/6.851/spring12/.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     33 / 34
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   34 / 34
+

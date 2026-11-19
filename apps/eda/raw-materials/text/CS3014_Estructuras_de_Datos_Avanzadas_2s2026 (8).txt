@@ -1,0 +1,1322 @@
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+CS3014 - Estructuras de Datos Avanzadas
+Enteros III
+Semana 12
+Víctor Racsó Galván Oyola
+vgalvan@utec.edu.pe
+
+
+
+27 de octubre de 2026
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   1 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué un B-tree de ramificación w 1/5 lleva al tiempo
+   O(logw n) si se puede buscar en un nodo en O(1)
+ ▶ Comprimir las llaves de un nodo con sketches y corregir la búsqueda
+   cuando q no es una llave
+ ▶ Calcular el sketch con una multiplicación y comparar con todas las
+   llaves de un nodo con una resta
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Objetivos de la sesión
+
+
+
+
+ ▶ Entender por qué un B-tree de ramificación w 1/5 lleva al tiempo
+   O(logw n) si se puede buscar en un nodo en O(1)
+ ▶ Comprimir las llaves de un nodo con sketches y corregir la búsqueda
+   cuando q no es una llave
+ ▶ Calcular el sketch con una multiplicación y comparar con todas las
+   llaves de un nodo con una resta
+                                       √
+ ▶ Combinar vEB y fusion trees en O( lg n) y ubicar todo en el panorama
+   de cotas y de ordenamiento de enteros
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     2 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Dos estructuras para el predecesor
+vEB y Y-fast tree cuestan O(lg w ); un árbol de búsqueda, O(lg n). Para
+w = 64 y n = 109 : 6 contra 30.
+
+¿Y si w es enorme, por ejemplo w = n0,5 ? ¿lg w sigue siendo bueno?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   3 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Motivación
+
+
+
+
+Dos estructuras para el predecesor
+vEB y Y-fast tree cuestan O(lg w ); un árbol de búsqueda, O(lg n). Para
+w = 64 y n = 109 : 6 contra 30.
+
+¿Y si w es enorme, por ejemplo w = n0,5 ? ¿lg w sigue siendo bueno?
+
+Hay un tiempo que decrece con w : logw n = lg n/ lg w
+Con w = n0,5 , logw n = 2. La idea es usar los w bits de una palabra para
+tomar decisiones sobre muchas llaves a la vez.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología    3 / 41
+La idea general
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un B-tree con ramificación w 1/5
+
+
+
+
+Cada nodo tiene hasta k = w 1/5 llaves
+La altura es logw 1/5 n = 5 logw n = Θ(logw n). Cualquier potencia pequeña de
+w sirve, y la elegimos para que las cuentas siguientes quepan en una palabra.
+
+¿Cuánto cuesta buscar a q entre las k llaves de un nodo?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     5 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un B-tree con ramificación w 1/5
+
+
+
+
+Cada nodo tiene hasta k = w 1/5 llaves
+La altura es logw 1/5 n = 5 logw n = Θ(logw n). Cualquier potencia pequeña de
+w sirve, y la elegimos para que las cuentas siguientes quepan en una palabra.
+
+¿Cuánto cuesta buscar a q entre las k llaves de un nodo?
+
+Leerlas ya cuesta más que una palabra
+k llaves de w bits son w 6/5 > w bits. Si cada nodo se resuelve en O(1), el
+predecesor completo cuesta O(logw n): todo el trabajo está en el nodo.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     5 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuántos bits de una llave importan?
+
+
+           nivel 0
+                                                       0
+           nivel 1
+                                                       1
+           nivel 2
+                                                0              1
+           nivel 3
+                                            0                             0
+           nivel 4
+                                        0        1                        1
+           nivel 5
+
+                             0      1                  1                  1
+           nivel 6
+                       010000       010001           010011           011011
+
+
+
+
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología        6 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cuántos bits de una llave importan?
+
+
+           nivel 0
+                                                      0
+           nivel 1
+                                                      1
+           nivel 2                                           posición 2
+                                                0                  1
+           nivel 3
+                                           0                                0
+           nivel 4                              posición 4
+                                      0         1                           1
+           nivel 5                   posición 5
+                             0      1                 1                     1
+           nivel 6
+                       010000       010001          010011                011011
+
+
+En rojo, los nodos que ramifican. Con k llaves hay k − 1: a lo más k − 1 posiciones
+                 de bit (desde la izquierda) distinguen a las llaves.
+Víctor Racsó Galván Oyola        Universidad de Ingeniería y Tecnología            6 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sketch perfecto
+
+
+Definición
+Sean c0 < c1 < · · · < cr −1 los exponentes de los bits donde ramifica el trie
+(r ≤ k − 1). El sketch de x es el número de r bits
+                                              −1
+                                             rX
+                                  sk(x) =          xcj 2j ,
+                                             j=0
+
+con xc el bit de peso 2c . Las posiciones 2, 4, 5 del dibujo (desde la izquierda)
+son los exponentes 3, 1, 0.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         7 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Sketch perfecto
+
+
+Definición
+Sean c0 < c1 < · · · < cr −1 los exponentes de los bits donde ramifica el trie
+(r ≤ k − 1). El sketch de x es el número de r bits
+                                               −1
+                                              rX
+                                    sk(x) =         xcj 2j ,
+                                              j=0
+
+con xc el bit de peso 2c . Las posiciones 2, 4, 5 del dibujo (desde la izquierda)
+son los exponentes 3, 1, 0.
+                            Llave     Bits c = {0, 1, 3}       sk
+                            010000            0, 0, 0          000
+                            010001            1, 0, 0          001
+                            010011            1, 1, 0          011
+                            011011            1, 1, 1          111
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología         7 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch conserva el orden entre las llaves
+
+
+
+Dos llaves x < x ′ difieren por primera vez en el bit c. ¿Es c uno de los
+cj ?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   8 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch conserva el orden entre las llaves
+
+
+
+Dos llaves x < x ′ difieren por primera vez en el bit c. ¿Es c uno de los
+cj ?
+
+Sí: allí ramifica el trie, y por eso sk(x) < sk(x ′ )
+El primer bit donde difieren es el nodo del trie donde se separan: un nodo de
+ramificación. Más arriba coinciden y, entre los bits que importan, el primero
+que difiere es justo ese. Entonces sk(x0 ) < sk(x1 ) < · · · < sk(xk−1 ).
+
+Todos los sketches caben en una palabra
+k · r ≤ k 2 = w 2/5 ≪ w bits: el nodo guarda un solo número con los sketches
+de todas sus llaves.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     8 / 41
+Buscar cuando q no es una llave
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El problema
+
+
+q puede no ser una llave
+Las llaves 0000, 0010, 1100, 1111 tienen sketches 00, 01, 10, 11 (bits 0 y
+2 desde la izquierda). Buscamos a q = 0101.
+
+
+                                           0          1
+
+
+                                    0                           1
+
+
+                            0   1                           0       1
+
+
+
+
+                      0000       0010                  1100         1111
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología     10 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El problema
+
+
+q puede no ser una llave
+Las llaves 0000, 0010, 1100, 1111 tienen sketches 00, 01, 10, 11 (bits 0 y
+2 desde la izquierda). Buscamos a q = 0101.
+
+
+                                           0          1
+
+
+                                    0                           1
+
+
+                            0   1                           0       1
+
+
+
+
+                      0000       0010     0101 = q     1100         1111
+
+
+
+sk(q) = 00 lo ubica junto a 0000. ¿Es 0000 el predecesor de 0101?
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología     10 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch de q puede mentir
+
+
+
+
+No: el predecesor es 0010 y el sucesor 1100
+q se separa del trie en un nodo que no es de ramificación (el prefijo 01 no
+existe), así que sus bits en las posiciones cj no dicen en qué lugar de la
+ordenación cae. El sketch es correcto para las llaves, pero no para consultas
+arbitrarias.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     11 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch de q puede mentir
+
+
+
+
+No: el predecesor es 0010 y el sucesor 1100
+q se separa del trie en un nodo que no es de ramificación (el prefijo 01 no
+existe), así que sus bits en las posiciones cj no dicen en qué lugar de la
+ordenación cae. El sketch es correcto para las llaves, pero no para consultas
+arbitrarias.
+
+La corrección
+Hay que averiguar dónde sale q del trie y buscar con otra palabra, e, cuya
+posición sí se puede decidir con sketches.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     11 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El prefijo común más largo
+
+
+
+
+Sea p el prefijo más largo de q que lo es de alguna llave
+Todas las llaves con prefijo p forman un bloque B. Ninguna llave tiene prefijo
+pβ, con β el bit siguiente de q. Entonces todo B comparte el prefijo p β̄.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     12 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El prefijo común más largo
+
+
+
+
+Sea p el prefijo más largo de q que lo es de alguna llave
+Todas las llaves con prefijo p forman un bloque B. Ninguna llave tiene prefijo
+pβ, con β el bit siguiente de q. Entonces todo B comparte el prefijo p β̄.
+
+Si β = 1, todo B es menor que q; si β = 0, todo B es mayor
+ ▶ β = 1: pred(q) = máx B. Sea e = p01 · · · 1.
+ ▶ β = 0: suc(q) = mı́n B. Sea e = p10 · · · 0.
+e es la palabra con prefijo p β̄ más cercana a q: se decide solo con p y β.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      12 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué e sí se puede buscar con sketches?
+
+
+
+¿Dónde queda sk(e) respecto de los sketches de las llaves?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   13 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Por qué e sí se puede buscar con sketches?
+
+
+
+¿Dónde queda sk(e) respecto de los sketches de las llaves?
+
+Dentro de B es el máximo (o el mínimo) y fuera de B, queda en su
+sitio
+ ▶ Una llave z ∈ B coincide con e hasta p β̄; después e tiene solo unos (o
+   ceros), así que sk(z) ≤ sk(e) (o ≥).
+ ▶ Una llave fuera de B difiere de p en una posición dentro de p: allí
+   ramifica el trie, así que el sketch ya la separa y e coincide con p en ese
+   bit.
+Por tanto, con β = 1: pred(q) es la mayor llave con sk ≤ sk(e). Con β = 0:
+suc(q) es la menor con sk ≥ sk(e).
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     13 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: q = 0101
+
+
+
+
+p=0yβ=1
+El prefijo común más largo de q con las llaves es 0 (con 0000 y 0010). El bit siguiente
+de q es 1: e = p 0 1 1 = 0011.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              14 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: q = 0101
+
+
+
+
+p=0yβ=1
+El prefijo común más largo de q con las llaves es 0 (con 0000 y 0010). El bit siguiente
+de q es 1: e = p 0 1 1 = 0011.
+
+  ▶ sk(e) = 01 (bits 0 y 2 desde la izquierda: 0 y 1).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              14 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo: q = 0101
+
+
+
+
+p=0yβ=1
+El prefijo común más largo de q con las llaves es 0 (con 0000 y 0010). El bit siguiente
+de q es 1: e = p 0 1 1 = 0011.
+
+  ▶ sk(e) = 01 (bits 0 y 2 desde la izquierda: 0 y 1).
+  ▶ Llaves con sk ≤ 01: 0000 y 0010. La mayor es 0010 = pred(q), y el sucesor
+    es la siguiente llave: 1100.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              14 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo hallar p sin mirar todas las llaves?
+
+
+
+¿Cuáles llaves pueden tener el prefijo común más largo con q?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   15 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    ¿Cómo hallar p sin mirar todas las llaves?
+
+
+
+¿Cuáles llaves pueden tener el prefijo común más largo con q?
+
+Una de las dos vecinas por sketch de q
+Sean sk(xi ) ≤ sk(q) < sk(xi+1 ). El sketch de q coincide con el de B en los
+bits de ramificación que están dentro de p, y B ocupa un tramo contiguo en
+la ordenación: sk(q) cae dentro del tramo de B o justo a su lado. Entonces
+xi o xi+1 está en B.
+
+La que comparte más prefijo con q
+Para y ∈ B, q y y difieren por primera vez en el bit siguiente a p. Para las
+llaves de fuera, antes. Gana la de menor q ⊕ y ; su bit más significativo da |p|.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología        15 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La búsqueda en un nodo
+
+
+
+Algoritmo 1: Predecesor-Nodo(q) — índice de la mayor llave ≤ q
+i ← (cantidad de llaves con sk ≤ sk(q)) − 1                      // rango por sketch
+y ← la de xi , xi+1 que minimiza q ⊕ y
+si y = q entonces devolver el índice de y
+j ← msb(q ⊕ y ), β ← el bit j de q                                // aquí se separan
+si β = 1 entonces
+     e ← (q ≫ (j + 1)) ≪ (j + 1) | (2j − 1)                            // e = p 0 1 · · · 1
+     devolver (cantidad de llaves con sk ≤ sk(e)) − 1
+en otro caso
+     e ← (q ≫ (j + 1)) ≪ (j + 1) | 2j                                  // e = p 1 0 · · · 0
+     devolver (cantidad de llaves con sk < sk(e)) − 1
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     16 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La búsqueda en un nodo
+
+
+
+Algoritmo 2: Predecesor-Nodo(q) — índice de la mayor llave ≤ q
+i ← (cantidad de llaves con sk ≤ sk(q)) − 1                      // rango por sketch
+y ← la de xi , xi+1 que minimiza q ⊕ y
+si y = q entonces devolver el índice de y
+j ← msb(q ⊕ y ), β ← el bit j de q                                // aquí se separan
+si β = 1 entonces
+     e ← (q ≫ (j + 1)) ≪ (j + 1) | (2j − 1)                            // e = p 0 1 · · · 1
+     devolver (cantidad de llaves con sk ≤ sk(e)) − 1
+en otro caso
+     e ← (q ≫ (j + 1)) ≪ (j + 1) | 2j                                  // e = p 1 0 · · · 0
+     devolver (cantidad de llaves con sk < sk(e)) − 1
+
+
+ Faltan tres ingredientes en O(1): calcular sk(q), contar llaves con sketch menor o
+                                    igual, y msb.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     16 / 41
+Sketch con una multiplicación
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch perfecto es caro; el aproximado, no
+
+
+Idea
+Con una multiplicación se copia la palabra desplazada varias veces, de modo
+que cada bit importante caiga en un lugar conocido:
+                    X         XX                           X
+         (x & M) ·     2mj =          xci 2 ci +mj , M=        2c i .
+                            j           i    j                           i
+
+
+¿Qué hay que exigirle a los mj ?
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       18 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch perfecto es caro; el aproximado, no
+
+
+Idea
+Con una multiplicación se copia la palabra desplazada varias veces, de modo
+que cada bit importante caiga en un lugar conocido:
+                    X         XX                           X
+         (x & M) ·     2mj =          xci 2 ci +mj , M=        2c i .
+                            j           i    j                           i
+
+
+¿Qué hay que exigirle a los mj ?
+
+Tres propiedades
+  1. Los r 2 exponentes ci + mj son distintos: sin acarreos.
+  2. Los Pj = cj + mj crecen con j: se conserva el orden.
+  3. Pr −1 − P0 = O(r 4 ) = O(w 4/5 ): queda compacto.
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología       18 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Elegir los mj
+
+
+
+Paso 1: sin colisiones
+Elegir t0 , t1 , . . . < r 3 tales que ts ̸≡ ti + ca − cb (mód r 3 ) para i < s y todo
+a, b. Cada ts debe evitar menos de s r 2 < r 3 residuos, así que siempre existe.
+
+Paso 2: en ventanas crecientes
+Sea mj el valor congruente con tj módulo r 3 tal que
+
+                    Pj = cj + mj ∈ [ w + j r 3 , w + (j + 1) r 3 ).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              19 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Elegir los mj
+
+
+
+Paso 1: sin colisiones
+Elegir t0 , t1 , . . . < r 3 tales que ts ̸≡ ti + ca − cb (mód r 3 ) para i < s y todo
+a, b. Cada ts debe evitar menos de s r 2 < r 3 residuos, así que siempre existe.
+
+Paso 2: en ventanas crecientes
+Sea mj el valor congruente con tj módulo r 3 tal que
+
+                    Pj = cj + mj ∈ [ w + j r 3 , w + (j + 1) r 3 ).
+
+Las tres propiedades se cumplen
+Distintos: si j ̸= s coincidieran, ts ≡ tj + ci − ca ; si j = s, ci ̸= ca .
+Crecientes: ventanas disjuntas. Compacto: Pr −1 − P0 < r · r 3 .
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología              19 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo con r = 3
+
+
+
+w = 6, bits importantes c = (0, 1, 3), r 3 = 27
+t = (0, 4, 8) da m = (27, 58, 62). Los 9 exponentes ci + mj :
+
+                                   m0 = 27      m1 = 58      m2 = 62
+                       c0 = 0         27            58           62
+                       c1 = 1         28            59           63
+                       c2 = 3         30            61           65
+
+
+
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología   20 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo con r = 3
+
+
+
+w = 6, bits importantes c = (0, 1, 3), r 3 = 27
+t = (0, 4, 8) da m = (27, 58, 62). Los 9 exponentes ci + mj :
+
+                                   m0 = 27      m1 = 58      m2 = 62
+                       c0 = 0         27            58           62
+                       c1 = 1         28            59           63
+                       c2 = 3         30            61           65
+
+  ▶ Distintos y las diagonales P = (27, 59, 65) caen en las ventanas
+    [6, 33), [33, 60), [60, 87).
+  ▶ Para x = 010011: x & M tiene los bits c0 , c1 ; tras multiplicar y enmascarar
+    con D = 227 + 259 + 265 quedan los bits 27 y 59: el sketch aproximado es
+    1 + 232 .
+
+Víctor Racsó Galván Oyola       Universidad de Ingeniería y Tecnología         20 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch aproximado
+
+
+
+                         
+sk(x)
+e     = ((x & M) · m) & D ≫ P0
+con m = j 2mj . Son una conjunción, una multiplicación, otra conjunción y
+         P
+un desplazamiento: O(1).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   21 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El sketch aproximado
+
+
+
+                         
+sk(x)
+e     = ((x & M) · m) & D ≫ P0
+con m = j 2mj . Son una conjunción, una multiplicación, otra conjunción y
+         P
+un desplazamiento: O(1).
+
+Conserva el orden de las llaves (y de cualquier q)
+Es el mismo sketch con los bits separados en posiciones crecientes: comparar
+dos aproximados equivale a comparar los perfectos. Mide a lo más r 4 bits.
+
+ Suponemos que el producto de dos palabras se obtiene completo (2w bits), como
+             en la instrucción de multiplicación de un procesador.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      21 / 41
+Comparación en paralelo
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La palabra del nodo
+
+
+
+
+Una palabra con todos los sketches
+Cada llave ocupa un bloque de r 4 + 1 bits: un 1 delante (el centinela) y su
+sketch aproximado. Con k llaves, el nodo ocupa k(r 4 + 1) = O(w ) bits.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   23 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    La palabra del nodo
+
+
+
+
+Una palabra con todos los sketches
+Cada llave ocupa un bloque de r 4 + 1 bits: un 1 delante (el centinela) y su
+sketch aproximado. Con k llaves, el nodo ocupa k(r 4 + 1) = O(w ) bits.
+
+Para comparar, una sola resta
+Se replica sk(q)
+            e    en k bloques (multiplicando por 0 · · · 01 0 · · · 01 · · · ) y se
+resta de la palabra del nodo. En cada bloque, 1sk(xi ) − 0sk(q) > 0: no hay
+préstamos entre bloques, y el centinela sobrevive si y solo si sk(xi ) ≥ sk(q).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           23 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo con sketches de 3 bits
+
+
+
+
+                                             x0       x1       x2       x3
+
+                               Sketches     000      001      011      111
+                                  Nodo     1000     1001      1011     1111
+                sk(q) = 010 replicado      0010     0010      0010     0010
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          24 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Un ejemplo con sketches de 3 bits
+
+
+
+
+                                             x0       x1       x2       x3
+
+                               Sketches     000      001       011     111
+                                  Nodo     1000      1001     1011     1111
+                sk(q) = 010 replicado      0010      0010     0010     0010
+                Resta bloque a bloque      0110      0111     1001     1101
+
+
+Los centinelas 0, 0, 1, 1: dos llaves tienen sketch menor que sk(q)
+q cae entre x1 y x2 : 001 < 010 < 011.
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología          24 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contar los unos
+
+
+
+Los centinelas quedaron separados cada r 4 + 1 bits. ¿Cómo sumarlos
+con una multiplicación?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   25 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Contar los unos
+
+
+
+Los centinelas quedaron separados cada r 4 + 1 bits. ¿Cómo sumarlos
+con una multiplicación?
+
+Multiplicando por 0 · · · 01 0 · · · 01 · · · 0 · · · 01
+Cada centinela se copia en todos los bloques; en el bloque de más a la
+izquierda llegan los k centinelas, uno por copia, y ahí se lee la suma (cabe
+                             4
+en un bloque porque k < 2r ). Se enmascara y se desplaza: O(1).
+
+Resultado
+En O(1): la cantidad de llaves con sk mayor o igual que el de q, es decir
+el rango de q entre los sketches. Con sk(q) + 1 se obtiene el ≤.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     25 / 41
+El bit más significativo
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Falta msb: el primer bit donde difieren q e y
+
+
+
+
+msb(q ⊕ y ) en O(1)
+                       √                    √
+Parte la palabra en         w clusters de       w bits.
+  1. Obtener, con unas pocas operaciones de palabra, un bit por cada
+     cluster no vacío.
+                      √
+  2. Comprimir esos w bits con otro sketch (una multiplicación).
+  3. Comparar en paralelo contra las potencias de 2: eso da el primer cluster
+     no vacío.
+  4. Repetir lo mismo dentro de ese cluster.
+
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   27 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El paso 1, con w = 16
+
+
+
+
+                                              x    0101 0000 1000 1101
+               F (primer bit de cada cluster)      1000 1000 1000 1000
+                                   t1 = x & F      0000 0000 1000 1000
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     28 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El paso 1, con w = 16
+
+
+
+
+                                                x    0101 0000 1000 1101
+                 F (primer bit de cada cluster)      1000 1000 1000 1000
+                                     t1 = x & F      0000 0000 1000 1000
+            t2 = x ⊕ t1 (sin los primeros bits)      0101 0000 0000 0101
+                                    t3 = F − t2      0011 1000 1000 0011
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología       28 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El paso 1, con w = 16
+
+
+
+
+                                                x    0101 0000 1000 1101
+                 F (primer bit de cada cluster)      1000 1000 1000 1000
+                                     t1 = x & F      0000 0000 1000 1000
+            t2 = x ⊕ t1 (sin los primeros bits)      0101 0000 0000 0101
+                                    t3 = F − t2      0011 1000 1000 0011
+                              t4 = (t3 ⊕ F ) & F     1000 0000 0000 1000
+                                     y = t1 | t4     1000 0000 1000 1000
+
+ y tiene un 1 en la cabeza de cada cluster no vacío. En la resta, el primer bit de F
+             se pierde en un cluster si y solo si quedaba algo más en él.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología            28 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El resto de msb
+
+
+
+
+Compactar y comparar
+                                       √           √
+Los bits √de y están en las posiciones w − 1 + i w . Multiplicando por
+P                √
+     w −( w −1)−j w +j los √
+  j2                         w bits caen consecutivos desde la posición w :
+                      √
+un sketch perfecto de w bits.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   29 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    El resto de msb
+
+
+
+
+Compactar y comparar
+                                       √           √
+Los bits √de y están en las posiciones w − 1 + i w . Multiplicando por
+P                √
+     w −( w −1)−j w +j los √
+  j2                         w bits caen consecutivos desde la posición w :
+                      √
+un sketch perfecto de w bits.
+                                                                   √
+Después, comparación en paralelo con 1, 2, 4, . . . , 2 w −1
+    √                                 √
+Las w potencias, con un bloque de w + 1 bits cada una, ocupan menos
+de 2w bits: una restas y un conteo dan el cluster más significativo, y repetir
+dentro de él da el bit. Todo es O(1).
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      29 / 41
+El fusion tree
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Todo junto
+
+
+
+Teorema (Fredman y Willard)
+Un conjunto estático de n palabras de w bits se guarda en un B-tree de
+ramificación w 1/5 con O(n) de espacio, y Predecesor y Sucesor cuestan
+O(logw n) en la word RAM.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   31 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Todo junto
+
+
+
+Teorema (Fredman y Willard)
+Un conjunto estático de n palabras de w bits se guarda en un B-tree de
+ramificación w 1/5 con O(n) de espacio, y Predecesor y Sucesor cuestan
+O(logw n) en la word RAM.
+
+Por qué
+La altura es O(logw n) y en cada nodo la búsqueda es O(1): sketch
+aproximado (una multiplicación), rango por comparación en paralelo (una
+resta y una multiplicación), msb, y otra pasada con e.
+
+ Versiones dinámicas: árboles exponenciales (O(logw n + lg lg n) por actualización,
+  determinista) y con hashing (O(logw n) esperado). Sin multiplicación (modelo
+            AC0 ) se puede calcular el sketch perfecto con otra técnica.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           31 / 41
+El panorama
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Lo mejor de dos mundos
+
+
+
+
+vEB y Y-fast: O(lg w ). Fusion tree: O(logw n).
+El predecesor cuesta O(mı́n{lg w , logw n}).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   33 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Lo mejor de dos mundos
+
+
+
+
+vEB y Y-fast: O(lg w ). Fusion tree: O(logw n).
+El predecesor cuesta O(mı́n{lg w , logw n}).
+                        √
+mı́n{lg w , logw n} = O( lg n)
+            √                                   √
+Si lg w ≤       lg n, ya está. Si no, lg w >        lg n y
+                                        lg n   lg n   p
+                            logw n =         <√      = lg n.
+                                       lg w     lg n
+
+¿Es el mejor tiempo posible?
+
+
+
+Víctor Racsó Galván Oyola      Universidad de Ingeniería y Tecnología   33 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cotas inferiores
+
+
+
+
+En cell probe, para espacio polinomial
+El predecesor estático necesita
+                                  n         lg w o
+                             Ω mı́n logw n,
+                                            lg lg n
+
+accesos a memoria (técnica de round elimination: Miltersen, Nisan, Safra,
+Wigderson; Beame y Fich).
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   34 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cotas inferiores
+
+
+
+
+En cell probe, para espacio polinomial
+El predecesor estático necesita
+                                  n         lg w o
+                             Ω mı́n logw n,
+                                            lg lg n
+
+accesos a memoria (técnica de round elimination: Miltersen, Nisan, Safra,
+Wigderson; Beame y Fich).
+
+La mejor estructura de arriba es óptima, salvo un factor lg lg
+vEB / Y-fast para w polilogarítmico en n y fusion trees para w grande,
+justo en el rango donde cada una gana.
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología     34 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar enteros
+
+
+
+            Método                        Tiempo          Condición
+
+            Comparaciones                 O(n lg n)       ninguna
+            Counting sort                 O(n + 2w )      w = O(lg n): O(n)
+            Radix sort                    O(n w / lg n)   w = O(lg n): O(n)
+            Ordenar con vEB / Y-fast      O(n lg w )      O(n lg lg n) si w = lgO(1) n
+            Signature sort                O(n)            w = Ω(lg2+ϵ n)
+            Han                           O(n lg lg n)    determinista
+                                             √
+            Han y Thorup                  O(n lg lg n)    aleatorizado
+
+
+
+¿Se puede ordenar n enteros en O(n) para todo w ?
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     35 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Ordenar enteros
+
+
+
+            Método                        Tiempo          Condición
+
+            Comparaciones                 O(n lg n)       ninguna
+            Counting sort                 O(n + 2w )      w = O(lg n): O(n)
+            Radix sort                    O(n w / lg n)   w = O(lg n): O(n)
+            Ordenar con vEB / Y-fast      O(n lg w )      O(n lg lg n) si w = lgO(1) n
+            Signature sort                O(n)            w = Ω(lg2+ϵ n)
+            Han                           O(n lg lg n)    determinista
+                                             √
+            Han y Thorup                  O(n lg lg n)    aleatorizado
+
+
+
+¿Se puede ordenar n enteros en O(n) para todo w ?
+
+Es un problema abierto (y, por la equivalencia, también una cola de
+prioridad con operaciones O(1))
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología                     35 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Signature sort, en una frase por paso
+
+
+
+
+Para w = Ω(lg2+ϵ n)
+   1. Partir cada entero en lgϵ n bloques (dígitos).
+   2. Reemplazar cada bloque por un hash perfecto de O(lg n) bits: hay pocos
+      bloques distintos.
+   3. Con palabras tan cortas, el packed sort (mergesort con redes de ordenamiento
+      bitónicas sobre palabras) ordena en O(n).
+   4. Un trie comprimido sobre los hashes; ordenar sus aristas recursivamente da el
+      orden real; el recorrido en inorden entrega los enteros ordenados.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología           36 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Fusion tree: B-tree de ramificación w 1/5 ; si cada nodo se busca en
+   O(1), el predecesor cuesta O(logw n) con O(n) de espacio.
+ ▶ Sketch: los k − 1 bits donde ramifica el trie bastan para ordenar las
+   llaves, y los sketches de un nodo caben en una palabra. Con una q
+   cualquiera se corrige con e y el prefijo común más largo.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Cierre de la sesión
+
+
+
+
+ ▶ Fusion tree: B-tree de ramificación w 1/5 ; si cada nodo se busca en
+   O(1), el predecesor cuesta O(logw n) con O(n) de espacio.
+ ▶ Sketch: los k − 1 bits donde ramifica el trie bastan para ordenar las
+   llaves, y los sketches de un nodo caben en una palabra. Con una q
+   cualquiera se corrige con e y el prefijo común más largo.
+ ▶ Con una multiplicación se calcula el sketch; con una resta se compara
+   con todas las llaves a la vez; msb también es O(1).
+                            √
+ ▶ mı́n{lg w , logw n} = O( lg n), óptimo salvo lg lg en cell probe.
+   Ordenar enteros en tiempo lineal para todo w sigue abierto.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología      37 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos por qué un B-tree de ramificación w 1/5 da O(logw n) si el
+   nodo se resuelve en O(1)
+ ▶ Sabemos definir el sketch perfecto, demostrar que conserva el orden y
+   corregir la búsqueda de una q cualquiera
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Logros de la sesión
+
+
+
+
+ ▶ Sabemos por qué un B-tree de ramificación w 1/5 da O(logw n) si el
+   nodo se resuelve en O(1)
+ ▶ Sabemos definir el sketch perfecto, demostrar que conserva el orden y
+   corregir la búsqueda de una q cualquiera
+ ▶ Sabemos calcular el sketch con una multiplicación y comparar en
+   paralelo con una resta
+                                               √
+ ▶ Sabemos combinar vEB y fusion trees en O( lg n) y ubicar el
+   predecesor y el ordenamiento de enteros en el panorama
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   38 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+
+
+                                          Gracias
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   39 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Referencias
+
+
+
+Bibliografía citada
+ ▶ Fredman, M. L., & Willard, D. E. (1993). Surpassing the information
+   theoretic barrier with fusion trees. Journal of Computer and System
+   Sciences, 47, 424–436.
+ ▶ Andersson, A., Miltersen, P. B., & Thorup, M. (1999). Fusion trees can
+   be implemented with AC0 instructions only. Theoretical Computer
+   Science, 215, 337–344.
+ ▶ Andersson, A., Hagerup, T., Nilsson, S., & Raman, R. (1998). Sorting
+   in linear time? Journal of Computer and System Sciences, 57, 74–93.
+ ▶ Demaine, Erik (2012). 6.851: Advanced Data Structures (Spring’12),
+   Lectures 12, 13 y 14.
+   https://courses.csail.mit.edu/6.851/spring12/.
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   40 / 41
+CS3014 - Estructuras de Datos Avanzadas
+
+
+    Agradecimientos
+
+
+
+
+Estas diapositivas están basadas en las clases de Luciano A. Romero Calla
+para este curso (a su vez basadas en las clases de Erik Demaine, MIT
+6.851), así como en clases similares de otras universidades.
+Lista de créditos: Luciano A. Romero Calla, Erik Demaine, Keith Schwarz.
+
+
+
+
+Víctor Racsó Galván Oyola     Universidad de Ingeniería y Tecnología   41 / 41
+

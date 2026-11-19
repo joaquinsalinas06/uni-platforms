@@ -1,0 +1,47 @@
+---
+kind: examples
+title: Casos resueltos
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+
+*(Mínimo y límite derivados aplicando el algoritmo de clase; no aparecen en las diapositivas.)*
+
+## Mínimo: una estrella
+
+Raíz 1 con hijos $2, \dots, n$. Desde 1 ningún hijo supera $n/2$: el centro es el centroide y deja $n - 1$ componentes de un nodo. El árbol de centroides tiene profundidad 1 y en Ciel the Commander bastan dos letras: A para el centro y B para las hojas (dos B tienen la A en su camino).
+
+## Normal: un camino de 8 nodos
+
+<Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "Camino 1–2–…–8 llamado desde 1: se baja mientras el resto mida más de 4 (tam[2] = 7, tam[3] = 6, tam[4] = 5) y se para en 4 (tam[5] = 4). Componentes {1,2,3} y {5,6,7,8}.",
+      nodes: [
+        { id: "c4", value: "4", tag: "A", parent: null, state: "answer" },
+        { id: "c2", value: "2", tag: "B", parent: "c4" },
+        { id: "c6", value: "6", tag: "B", parent: "c4" },
+      ],
+      caption: "{1,2,3} desde 3 da 2; {5,6,7,8} desde 5 da 6.",
+    },
+    {
+      note: "Nivel 2: 1 y 3 bajo 2; 5 y {7, 8} bajo 6, con centroide 7. Nivel 3: 8. Profundidad 3 = ⌊lg 8⌋: las letras de 1 a 8 son C B C A C B C D.",
+      nodes: [
+        { id: "c4", value: "4", tag: "A", parent: null },
+        { id: "c2", value: "2", tag: "B", parent: "c4" },
+        { id: "c6", value: "6", tag: "B", parent: "c4" },
+        { id: "c1", value: "1", tag: "C", parent: "c2" },
+        { id: "c3", value: "3", tag: "C", parent: "c2" },
+        { id: "c5", value: "5", tag: "C", parent: "c6" },
+        { id: "c7", value: "7", tag: "C", parent: "c6" },
+        { id: "c8", value: "8", tag: "D", parent: "c7", state: "active" },
+      ],
+      caption: "Los ancestros de 5 son 5, 6, 4: tres centroides para Pintar o Consultar.",
+    },
+  ],
+}} />
+
+## Límite: el árbol de la clase
+
+El de la teoría: 11 nodos, profundidad 3 = $\lfloor \lg 11\rfloor$, la cota se alcanza. Niveles 2 | 5, 6, 3 | 8, 9, 10, 7, 1 | 11, 4.
