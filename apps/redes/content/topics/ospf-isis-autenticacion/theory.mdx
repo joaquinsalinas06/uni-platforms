@@ -1,0 +1,78 @@
+---
+kind: theory
+title: "OSPF, IS-IS y Autenticación con HMAC"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Mismo principio, dos protocolos (slide 18)
+
+OSPF e IS-IS son **link-state**. Ambos siguen cuatro pasos:
+
+1. **Descubrir** a los vecinos.
+2. **Inundar** (flood) el estado de enlace.
+3. **Construir** la base de datos de estado de enlace (el mapa).
+4. **Correr SPF** (Dijkstra).
+
+| | OSPF | IS-IS |
+|---|---|---|
+| Unidad que intercambia | **LSA** (link-state advertisement) | **LSP** (link-state PDU) |
+
+**Pregunta de seguridad de la slide:** ¿y si el mapa compartido contiene datos falsos?
+
+---
+
+## 2. Por qué autenticar (slide 19)
+
+Un update falsificado provoca: (1) costos de enlace incorrectos, (2) redirección de tráfico, (3) agujeros negros o bucles, (4) inestabilidad.
+
+> **Dijkstra puede ser correcto aunque su topología de entrada sea maliciosa.**
+
+---
+
+## 3. Cómo se autentica cada protocolo (slides 20–21)
+
+| | Mecanismo |
+|---|---|
+| **OSPFv2** (IPv4) | autenticación criptográfica del paquete; claves compartidas + **HMAC-SHA**; un **Key ID** identifica la asociación de seguridad |
+| **OSPFv3** (IPv6) | IPsec AH/ESP o *Authentication Trailer*; formato distinto al de OSPFv2 |
+| **IS-IS** | un **TLV de autenticación** (TLV 10) con la etiqueta HMAC; soporta HMAC-SHA; si la autenticación es inválida, **descarta la PDU**; **no cifra** la topología |
+
+En los tres casos el receptor verifica la autenticidad **antes** de usar el update.
+
+---
+
+## 4. HMAC en una figura (slide 22)
+
+<Visualization viz={{ type: "sequence", title: "Autenticación de un paquete de routing con HMAC", steps: [
+  { note: "El emisor calcula Tag = HMAC-SHA-256(K, paquete) con la clave compartida K y envía paquete + tag.",
+    actors: [ { id: "s", label: "Router emisor" }, { id: "r", label: "Router receptor" } ],
+    msgs: [ { from: "s", to: "r", label: "paquete + Tag", state: "active" } ] },
+  { note: "El receptor recalcula el tag con la misma K. Si coincide, acepta; si no, descarta.",
+    actors: [ { id: "s", label: "Router emisor" }, { id: "r", label: "Router receptor" } ],
+    msgs: [ { from: "s", to: "r", label: "paquete + Tag: recalcular y comparar", state: "answer" } ] } ] }} />
+
+- HMAC ayuda a detectar **alteraciones** y **falsificaciones** no autorizadas.
+- HMAC **no cifra**: el contenido sigue siendo legible.
+- La protección contra **replay** necesita controles adicionales del protocolo.
+
+---
+
+## 5. Lo que la autenticación hace y no hace (slide 23)
+
+| Ayuda a | No logra |
+|---|---|
+| rechazar paquetes falsos sin la clave | arreglar un router de confianza **comprometido** |
+| detectar modificación en tránsito | mantener **confidencial** la topología |
+| reducir la inyección no autorizada | prevenir todo DoS o replay |
+
+Defensa en profundidad: claves fuertes, rotación, control de acceso y monitoreo. El ejercicio del costo falsificado de la slide 24 está resuelto en [HMAC y el ataque del costo falso](/topics/ospf-isis-autenticacion/subtopics/hmac-ataque-costo-falso).
+
+---
+
+## 6. Errores típicos
+
+- "HMAC cifra el LSA": solo lo autentica.
+- Pensar que con autenticación no hay ataques internos: un router legítimo comprometido firma bien sus mentiras.
+- Confundir LSA (OSPF) con LSP (IS-IS).
+
+Fuente: `Sem13_NetT-Dijkstra_OSPF_ISIS`, slides 17–26.

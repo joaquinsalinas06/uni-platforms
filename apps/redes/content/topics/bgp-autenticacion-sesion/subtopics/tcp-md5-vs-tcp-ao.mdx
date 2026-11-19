@@ -1,0 +1,40 @@
+---
+kind: subtopic
+title: "TCP MD5 frente a TCP-AO"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Los dos mecanismos agregan a **cada segmento TCP** de la sesión BGP un código calculado con una **clave compartida** por los dos pares. Quien no tiene la clave no puede fabricar un código válido.
+
+<Visualization viz={{ type: "sequence", title: "Esquema común (slide 26)", steps: [
+  { note: "El emisor calcula un código con la clave compartida y el segmento TCP, y lo envía junto al segmento.",
+    actors: [ { id: "a", label: "Par BGP A" }, { id: "b", label: "Par BGP B" } ],
+    msgs: [ { from: "a", to: "b", label: "segmento TCP + código", flags: "clave compartida", state: "active" } ] },
+  { note: "El par recalcula el código con su copia de la clave: si coincide acepta el segmento; si no, lo descarta. El contenido viaja sin cifrar.",
+    actors: [ { id: "a", label: "Par BGP A" }, { id: "b", label: "Par BGP B" } ],
+    msgs: [ { from: "a", to: "b", label: "segmento TCP + código", flags: "verificado", state: "answer" } ] } ] }} />
+
+---
+
+## 2. Comparación (slide 26)
+
+| | TCP MD5 | TCP-AO |
+|---|---|---|
+| Base | secreto compartido + **digest MD5 con clave** | algoritmos **MAC modernos** |
+| Qué verifica | autenticidad de cada segmento TCP | autenticidad de cada segmento TCP |
+| Claves | mecanismo **heredado**, poca agilidad para cambiar claves | **mejor rotación** de claves (key rollover) |
+| Replay | — | **mejor protección contra replay** |
+| Estado | legado | diseñado para **reemplazar** a TCP MD5 |
+| ¿Cifra BGP? | **no** | **no** |
+
+---
+
+## 3. Errores típicos
+
+- Decir que TCP MD5 "cifra con MD5": calcula un digest con clave, no cifra.
+- Elegir TCP MD5 por ser "más simple" cuando la pregunta es sobre replay o rotación: ahí gana TCP-AO.
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slide 26.

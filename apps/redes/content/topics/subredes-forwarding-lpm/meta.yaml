@@ -1,0 +1,37 @@
+{
+  "id": "subredes-forwarding-lpm",
+  "type": "concept",
+  "title": "Clases IPv4, Subredes y Longest Prefix Match",
+  "unit": "s13",
+  "prerequisites": [
+    "direccionamiento-ipv4-subredes",
+    "arquitectura-router"
+  ],
+  "buildsOn": [
+    "direccionamiento-ipv4-subredes",
+    "arquitectura-router"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "packet",
+  "formulas": [
+    {
+      "name": "Hosts utilizables en un /p",
+      "tex": "H = 2^{32-p} - 2",
+      "reasoning": "De las direcciones del bloque se restan la dirección de red y la de broadcast, que no se asignan a interfaces.",
+      "source": "Sem11_LAB4A_IP (2) §B.2"
+    },
+    {
+      "name": "Bits prestados para s subredes iguales",
+      "tex": "2^{b} \\ge s \\Rightarrow p_{\\text{nuevo}} = p + b",
+      "reasoning": "Se toma el menor número de bits b cuya potencia de dos alcance las subredes pedidas y se alarga el prefijo.",
+      "source": "Sem13_Excercises5_NetworkLayer Q7.4"
+    },
+    {
+      "name": "Direcciones que cubre un prefijo de k bits (8 bits de host)",
+      "tex": "2^{8-k}",
+      "reasoning": "En la red de juguete de 8 bits, un prefijo de k bits deja 8-k bits libres; LPM resta luego lo que capturan prefijos más largos.",
+      "source": "Sem13_Excercises5_NetworkLayer Q4-Q5"
+    }
+  ]
+}

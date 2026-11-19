@@ -1,0 +1,31 @@
+{
+  "id": "seguridad-router-icmp",
+  "type": "concept",
+  "title": "Seguridad del Router: Spoofing, uRPF, ICMP y Traceroute",
+  "unit": "s12",
+  "prerequisites": [
+    "arquitectura-router",
+    "nat-firewall"
+  ],
+  "buildsOn": [
+    "arquitectura-router",
+    "nat-firewall"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": [
+    {
+      "name": "TTL de la respuesta ICMP al llegar",
+      "tex": "TTL_{\\text{llegada}} = TTL_{\\text{inicial}} - (k-1)",
+      "reasoning": "La respuesta del router del salto k cruza los k-1 routers anteriores en el regreso simétrico y cada uno resta 1.",
+      "source": "Sem11_LAB4A_IP (2) §traceroute; EF_2025/EF_2026 (convención declarada)"
+    },
+    {
+      "name": "TTL de la sonda que expira en el salto k",
+      "tex": "TTL_{\\text{sonda}} = k",
+      "reasoning": "Traceroute envía TTL=1,2,3,... y el router k recibe la sonda con TTL=1, la descarta y responde Tipo 11 Código 0.",
+      "source": "Sem11_LAB4A_IP (2) líneas 219-236"
+    }
+  ]
+}

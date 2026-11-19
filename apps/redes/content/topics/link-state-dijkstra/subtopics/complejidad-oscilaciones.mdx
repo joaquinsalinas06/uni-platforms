@@ -1,0 +1,69 @@
+---
+kind: subtopic
+title: "Complejidad de Dijkstra y oscilaciones de rutas"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Complejidad del algoritmo (slide 15)
+
+Con $n$ nodos, cada una de las $n$ iteraciones revisa todos los nodos que todavía no están en $N'$:
+
+$$n + (n-1) + \dots + 1 = \frac{n(n+1)}{2}\ \text{comparaciones} = O(n^2).$$
+
+Hay implementaciones más eficientes, de $O(n\log n)$.
+
+*(derivado)* Con los 6 nodos del ejemplo de la slide 12: $6\cdot 7/2 = 21$ comparaciones.
+
+---
+
+## 2. Complejidad de mensajes (slide 15)
+
+- Cada router debe **difundir** su estado de enlace a los otros $n$ routers.
+- Un algoritmo de broadcast eficiente necesita $O(n)$ cruces de enlace por mensaje.
+- Como el mensaje de cada router cruza $O(n)$ enlaces y hay $n$ routers: $O(n^2)$ en total.
+
+---
+
+## 3. Oscilaciones (slide 16)
+
+Si el **costo de un enlace depende del volumen de tráfico** que lo cruza, cambiar las rutas cambia los costos, y los nuevos costos vuelven a cambiar las rutas.
+
+Escenario de la slide: destino **a**; entra tráfico en **d**, **c** y **b** con tasas $1$, $e\ (\lt 1)$ y $1$; los costos son **direccionales** y dependen del volumen. (El texto de la slide dice "d, c, e"; la figura muestra que la tercera entrada es b.)
+
+<Visualization viz={{ type: "net-scene", title: "Oscilación de rutas hacia a (slide 16)", steps: [
+  { note: "Inicialmente: d envía directo a a; c y b llegan por b. El enlace b→a carga 1+e y d→a carga 1.",
+    devices: [
+      { id: "a", kind: "router", label: "a", sub: "destino", x: 50, y: 10, state: "marked" },
+      { id: "d", kind: "router", label: "d", sub: "entra 1", x: 12, y: 50 },
+      { id: "b", kind: "router", label: "b", sub: "entra 1", x: 88, y: 50 },
+      { id: "c", kind: "router", label: "c", sub: "entra e", x: 50, y: 90 } ],
+    cables: [ { from: "d", to: "a", label: "1" }, { from: "b", to: "a", label: "1+e" }, { from: "d", to: "c", label: "0" }, { from: "c", to: "b", label: "e" } ],
+    packets: [ { from: "d", to: "a", label: "d", order: 1, state: "active" }, { from: "c", to: "b", label: "c", order: 2, state: "active" }, { from: "b", to: "a", label: "b + c", order: 3, state: "active" } ] },
+  { note: "Con esos costos, el lado de b parece caro: todos recalculan y se van en sentido contrario (b→c→d→a). Ahora d→a carga 2+e.",
+    devices: [
+      { id: "a", kind: "router", label: "a", sub: "destino", x: 50, y: 10, state: "marked" },
+      { id: "d", kind: "router", label: "d", sub: "entra 1", x: 12, y: 50 },
+      { id: "b", kind: "router", label: "b", sub: "entra 1", x: 88, y: 50 },
+      { id: "c", kind: "router", label: "c", sub: "entra e", x: 50, y: 90 } ],
+    cables: [ { from: "d", to: "a", label: "2+e" }, { from: "b", to: "a", label: "0" }, { from: "d", to: "c", label: "1+e" }, { from: "c", to: "b", label: "1" } ],
+    packets: [ { from: "b", to: "c", label: "b", order: 1, state: "active" }, { from: "c", to: "d", label: "b + c", order: 2, state: "active" }, { from: "d", to: "a", label: "todos", order: 3, state: "active" } ] },
+  { note: "Ahora el lado de d es el caro: todos giran al otro sentido (d→c→b→a) y b→a pasa a 2+e. La siguiente iteración vuelve al paso anterior: la ruta oscila.",
+    devices: [
+      { id: "a", kind: "router", label: "a", sub: "destino", x: 50, y: 10, state: "marked" },
+      { id: "d", kind: "router", label: "d", sub: "entra 1", x: 12, y: 50 },
+      { id: "b", kind: "router", label: "b", sub: "entra 1", x: 88, y: 50 },
+      { id: "c", kind: "router", label: "c", sub: "entra e", x: 50, y: 90 } ],
+    cables: [ { from: "d", to: "a", label: "0" }, { from: "b", to: "a", label: "2+e" }, { from: "d", to: "c", label: "1" }, { from: "c", to: "b", label: "1+e" } ],
+    packets: [ { from: "d", to: "c", label: "d", order: 1, state: "active" }, { from: "c", to: "b", label: "d + c", order: 2, state: "active" }, { from: "b", to: "a", label: "todos", order: 3, state: "active" } ] } ] }} />
+
+La moraleja: Dijkstra calcula bien sobre los costos que recibe, pero si esos costos **reaccionan** a las rutas elegidas, el sistema puede no estabilizarse.
+
+---
+
+## 4. Errores típicos
+
+- Escribir $O(n)$ para el algoritmo: es la complejidad de un **broadcast**, no de Dijkstra.
+- Atribuir la oscilación a un error de Dijkstra: el problema son los **costos dependientes de la carga**.
+
+Fuente: `Sem13_NetT-Dijkstra_OSPF_ISIS`, slides 15–16.

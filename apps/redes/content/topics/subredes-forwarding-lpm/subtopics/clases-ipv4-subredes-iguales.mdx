@@ -1,0 +1,72 @@
+---
+kind: subtopic
+title: "Clases, máscaras, subredes iguales y ¿misma subred?"
+order: 1
+---
+
+## 1. Idea
+
+Dos preguntas aparecen siempre: **¿a qué red pertenece esta IP?** y **¿cómo parto este bloque en $s$ subredes?** Ambas se responden en binario, octeto por octeto.
+
+---
+
+## 2. Método A: red, broadcast y clase de una IP
+
+1. **Clase** por el primer octeto (tabla de la teoría).
+2. **Máscara** a partir del /p.
+3. **Red** = IP AND máscara; **broadcast** = red con los bits de host a 1.
+
+**Final 2025-II, P6:**
+
+| | PC-1: 10.25.14.7/8 | PC-2: 172.20.5.200/16 |
+|---|---|---|
+| Clase | A (primer octeto 10) | B (primer octeto 172) |
+| Máscara | 255.0.0.0 | 255.255.0.0 |
+| Dirección de red | 10.0.0.0 | 172.20.0.0 |
+| Broadcast | 10.255.255.255 | 172.20.255.255 |
+
+El enunciado escribe "Dirección de red (gateway)": lo que se calcula es la **dirección de red**; el gateway es una interfaz de router **dentro** de esa red, no la red misma. Ambas IP son además **privadas** (10/8 y 172.16/12).
+
+---
+
+## 3. Método B: dividir un bloque en $s$ subredes iguales
+
+1. Menor $b$ con $2^b \ge s$.
+2. Nuevo prefijo $p+b$; máscara en decimal.
+3. Tamaño del bloque $2^{32-(p+b)}$; las redes avanzan de ese tamaño en ese tamaño.
+4. Hosts utilizables $2^{32-(p+b)}-2$.
+
+**Ejemplo de las slides IP del LAB4:** 192.168.10.0/24 en 4 subredes → $b=2$, **/26**, 255.255.255.192, 62 hosts.
+
+| Subred | Red | Rango utilizable | Broadcast |
+|---|---|---|---|
+| 1 | 192.168.10.0 | .1 – .62 | .63 |
+| 2 | 192.168.10.64 | .65 – .126 | .127 |
+| 3 | 192.168.10.128 | .129 – .190 | .191 |
+| 4 | 192.168.10.192 | .193 – .254 | .255 |
+
+**Ex5, Q7.4:** 200.50.10.0/24 en **6** subredes iguales. $2^2=4$ no alcanza; $2^3 = 8 \ge 6$ → $b=3$, **/27**, máscara **255.255.255.224**, $2^5-2 = $ **30 hosts** por subred. Se usan 6 de las 8.
+
+---
+
+## 4. Método C: ¿se hablan directo o por router? (Ex5, Q7)
+
+PC1 192.168.100.50/26, PC2 192.168.100.110/26, PC3 192.168.100.150/26, GW1 192.168.100.1/26, todos en el mismo switch.
+
+1. **Clase de 192.168.100.0:** C; máscara classful 255.255.255.0 (/24).
+2. **PC1 y PC2:** con /26 los bloques son de 64.
+   - PC1: 50 está en 0–63 → red **192.168.100.0/26**.
+   - PC2: 110 está en 64–127 → red **192.168.100.64/26**.
+
+   Redes distintas: **no** se entregan directo en capa 2; necesitan un router. Ojo: GW1 (.1) está en la red de PC1, no en la de PC2, así que PC2 no tiene gateway en su subred tal como está configurado.
+3. **PC3 y GW1:** PC3 está en **192.168.100.128/26** (128–191) y GW1 en .0/26. No comparten subred: PC3 **no** puede usar a GW1 como siguiente salto directo; necesitaría un gateway en su propia subred.
+
+---
+
+## 5. Errores típicos
+
+- Decir "mismo switch ⇒ misma red": la red la define el prefijo, no el cableado.
+- Usar $2^b \gt s$ estrictamente: si $2^b = s$ también sirve.
+- Olvidar que 172.20.x.x es privada (172.16/12 abarca de 172.16 a 172.31).
+
+Fuente: `Sem10_LAB4_Slides_IP`; `Sem11_LAB4A_IP (2)` §B; `Sem13_Excercises5_NetworkLayer` Q7; EF 2025-II P6.

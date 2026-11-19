@@ -1,0 +1,38 @@
+{
+  "id": "link-state-dijkstra",
+  "type": "concept",
+  "title": "Enrutamiento Link-State y Algoritmo de Dijkstra",
+  "unit": "s13",
+  "prerequisites": [
+    "arquitectura-router"
+  ],
+  "buildsOn": [
+    "arquitectura-router"
+  ],
+  "usedBy": [
+    "ospf-isis-autenticacion",
+    "distance-vector-bellman-ford"
+  ],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": [
+    {
+      "name": "Costo de un camino",
+      "tex": "c(x_1,x_2,\\dots,x_n)=c_{x_1,x_2}+c_{x_2,x_3}+\\dots",
+      "reasoning": "El costo de una ruta es la suma de los costos de los enlaces directos que la forman, fijados por el operador.",
+      "source": "Sem13_NetT-Dijkstra_OSPF_ISIS#7"
+    },
+    {
+      "name": "Relajación de Dijkstra",
+      "tex": "D(v)=\\min\\left(D(v),\\ D(w)+c_{w,v}\\right)",
+      "reasoning": "Al añadir w a N se revisa si llegar a cada vecino v pasando por w mejora la estimación actual de v.",
+      "source": "Sem13_NetT-Dijkstra_OSPF_ISIS#11"
+    },
+    {
+      "name": "Comparaciones de Dijkstra",
+      "tex": "\\frac{n(n+1)}{2} = O(n^2)",
+      "reasoning": "En cada una de las n iteraciones se revisan todos los nodos aún fuera de N para hallar el mínimo.",
+      "source": "Sem13_NetT-Dijkstra_OSPF_ISIS#15"
+    }
+  ]
+}

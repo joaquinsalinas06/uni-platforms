@@ -1,0 +1,88 @@
+---
+kind: subtopic
+title: "ICMP, TTL y traceroute: cómo se resuelven las preguntas de los finales"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Los dos finales (2025-II P5 y P9; 2026-I P5 y P6) preguntan lo mismo con otros números: **qué mensaje ICMP llega, por qué y con qué TTL**. Todo sale de dos reglas del LAB4A: el router **resta 1** al TTL de cada datagrama que reenvía, y si llega a **0** lo descarta y avisa al origen con ICMP **Tipo 11** (TTL excedido).
+
+---
+
+## 2. Mensajes ICMP del laboratorio (LAB4C)
+
+| Mensaje | Tipo | Código | Cuándo aparece |
+|---|---:|---:|---|
+| Echo Request (ping) | 8 | 0 | el host pregunta "¿estás?" |
+| Echo Reply | 0 | 0 | respuesta al ping |
+| Destino inalcanzable | 3 | — | host o red inexistente, o bloqueado |
+| Fragmentation needed and DF set | 3 | 4 | el datagrama no cabe en la MTU y tiene DF=1 (base de PMTUD) |
+| **Time Exceeded** | **11** | **0** | **TTL llegó a 0 en tránsito** (traceroute) |
+
+- ICMP **no tiene puertos**: no es protocolo de transporte; viaja dentro de IP con **protocolo 1**. El ping usa *identifier* y *sequence number* para asociar pedido y respuesta.
+- Un mensaje de **error** ICMP lleva la **cabecera IP del datagrama original y sus primeros bytes** (en una sonda UDP, la cabecera UDP con los puertos). Así el emisor sabe **qué sonda** murió y **qué socket** debe recibir el error.
+- El TTL existe para que un datagrama atrapado en un bucle de enrutamiento **no circule para siempre**.
+
+---
+
+## 3. Traceroute paso a paso (LAB4A §2)
+
+1. Envía sondas con **TTL = 1**: el router a 1 salto responde Tipo 11.
+2. Luego **TTL = 2**: responde el router a 2 saltos. Y así sucesivamente (Windows `tracert` manda 3 sondas por TTL).
+3. La IP **origen** de cada Time Exceeded es la del router de ese salto.
+4. En Linux/macOS las sondas son **UDP** (protocolo 17); en Windows `tracert` usa ICMP Echo.
+5. Termina cuando responde el destino.
+
+`* * *` en un salto significa que no llegó respuesta: ese router reenvía en el plano de datos pero **no genera** (o filtra, o limita en tasa) los ICMP. Es la política de filtrado selectivo de la slide 39 de `Sem12_NetT-Routers`.
+
+---
+
+## 4. Las dos fórmulas de TTL
+
+**Convención usada en todas las soluciones** (enrutamiento simétrico): el router del **salto $k$** es el $k$-ésimo router del camino.
+
+**Sonda que expira en el salto $k$.** Cada uno de los $k-1$ routers anteriores resta 1 y la sonda llega al router $k$ con TTL 1:
+
+$$TTL_{\text{sonda}} = k.$$
+
+**Respuesta ICMP del salto $k$.** El router $k$ la genera con un TTL inicial y, de regreso, la reenvían los $k-1$ routers anteriores:
+
+$$TTL_{\text{llegada}} = TTL_{\text{inicial}} - (k-1).$$
+
+> Si el profesor cuenta "saltos" como la simple diferencia $TTL_{\text{inicial}} - TTL_{\text{llegada}}$, cada respuesta se corre en 1. Escribe tu convención en el examen; abajo se da también ese valor.
+
+<Visualization viz={{ type: "net-scene", static: true, title: "Respuesta del salto 3 con TTL inicial 128 (EF 2025-II P5B)", steps: [
+  { note: "El router 3 genera el ICMP con TTL 128. De vuelta, el router 2 lo deja en 127 y el router 1 en 126: llega con 126.",
+    devices: [
+      { id: "h", kind: "laptop", label: "Host", sub: "recibe TTL 126", x: 8, y: 50, state: "answer" },
+      { id: "r1", kind: "router", label: "Salto 1", sub: "192.168.1.1", x: 34, y: 50 },
+      { id: "r2", kind: "router", label: "Salto 2", sub: "10.20.30.1", x: 60, y: 50 },
+      { id: "r3", kind: "router", label: "Salto 3", sub: "172.16.0.5", x: 88, y: 50, state: "active" } ],
+    cables: [ { from: "h", to: "r1" }, { from: "r1", to: "r2" }, { from: "r2", to: "r3" } ],
+    packets: [ { from: "r3", to: "r2", label: "TTL 128", order: 1, state: "muted" }, { from: "r2", to: "r1", label: "TTL 127", order: 2, state: "muted" }, { from: "r1", to: "h", label: "TTL 126", order: 3, state: "answer" } ] } ] }} />
+
+---
+
+## 5. Aplicación a los finales
+
+| Pregunta | Datos | Cálculo | Respuesta (otra convención) |
+|---|---|---|---|
+| EF 2025-II P5A | 203.0.113.17 es el salto 5 | $TTL_{\text{sonda}} = 5$ | 5 |
+| EF 2025-II P5B | inicial 128, llega 126 | $126 = 128-(k-1) \Rightarrow k=3$ | salto 3, **172.16.0.5** (salto 2, 10.20.30.1) |
+| EF 2026-I P5.3 | salto 8, inicial 255 | $255-(8-1)$ | **248** (247) |
+| EF 2026-I P6.2 / EF 2025-II P9B | llega con 245, inicial 255 | $245 = 255-(k-1) \Rightarrow k=11$ | sonda con **TTL 11** (10) |
+
+En la captura de P6/P9 el datagrama original tiene **Total Length 1500 y MF=1**: es el primer fragmento de una sonda grande. Un traceroute normal manda sondas pequeñas; aquí se usó un tamaño explícito (como `traceroute gaia.cs.umass.edu 2000` del LAB4A), que obliga a fragmentar.
+
+---
+
+## 6. Errores típicos
+
+- Restar $k$ en vez de $k-1$ (o al revés) sin decir qué convención se usa.
+- Decir que la sonda que expira en el salto $k$ salió con TTL 1: salió con TTL $k$ y **llegó** con 1.
+- Confundir el TTL del IP **externo** (el del ICMP, 245) con el del IP **encapsulado** (la sonda, 1).
+- Explicar `* * *` como "el router está caído": la traza sigue, así que reenvía; solo no responde ICMP.
+
+Fuente: `Sem11_LAB4A_IP (2)` §2; `Sem13_LAB4C_ICMP` §1–4; `Sem12_NetT-Routers`, slides 38–39; EF 2025-II P5 y P9; EF 2026-I P5 y P6.

@@ -1,0 +1,65 @@
+---
+kind: subtopic
+title: "Túnel IPv6 sobre IPv4 y fragmentación del datagrama encapsulado"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Dentro del túnel, el datagrama IPv6 es **carga útil de IPv4**. Si el datagrama IPv4 resultante no cabe en la MTU del troncal, lo fragmenta **IPv4** con las mismas reglas de la semana 10: datos no finales múltiplos de 8, offset en bloques de 8 bytes y MF=1 salvo en el último.
+
+---
+
+## 2. Método
+
+1. **Apilar tamaños:** datos + TCP → segmento; + IPv6 → datagrama IPv6; + IPv4 → datagrama del túnel.
+2. **Comparar con la MTU.** Si el datagrama del túnel la supera, hay que fragmentar.
+3. **Carga útil IPv4 a repartir:** el **datagrama IPv6 completo** (no se cuenta la cabecera IPv4).
+4. **Datos por fragmento no final:** $8\lfloor (MTU-20)/8 \rfloor$.
+5. Cada fragmento lleva **su propia** cabecera IPv4 de 20 bytes; offset = datos previos / 8.
+
+---
+
+## 3. Ejemplo resuelto: final 2026-I, pregunta 2
+
+**Datos:** datos de aplicación 1440 B, TCP 20 B, IPv6 40 B, IPv4 del túnel 20 B, MTU del troncal 1400 B.
+
+**1. Apilar.**
+
+$$1440 + 20 = 1460\text{ B (segmento TCP)} \qquad 1460 + 40 = 1500\text{ B (datagrama IPv6)} \qquad 1500 + 20 = 1520\text{ B (datagrama IPv4)}$$
+
+**2. ¿Cabe?** $1520 \gt 1400$: hay que fragmentar.
+
+**3. Carga útil IPv4:** 1500 B (todo el datagrama IPv6).
+
+**4. Datos por fragmento no final:**
+
+$$8\left\lfloor \frac{1400-20}{8} \right\rfloor = 8 \cdot 172 = 1376\text{ B}$$
+
+(1380 no sirve: no es múltiplo de 8.)
+
+**5. Repartir:** $1500 = 1376 + 124$.
+
+| Fragmento | Datos IPv4 (B) | Longitud total (B) | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 1376 | 1396 | 0 | 1 |
+| 2 | 124 | 144 | $1376/8 = 172$ | 0 |
+
+**Comprobación:** $1376 + 124 = 1500$ B de carga útil y $172 \cdot 8 = 1376$ B de offset.
+
+<Visualization viz={{ type: "packet", static: true, title: "Los dos fragmentos IPv4 del túnel (EF 2026-I P2)", steps: [
+  { note: "Cada fragmento repite la cabecera IPv4 de 20 B. El primero lleva 1376 B del datagrama IPv6 y el segundo los 124 B restantes.",
+    fields: { width: 32, rows: [
+      [ { label: "IPv4 20 B", bits: 4 }, { label: "frag. 1: 1376 B del IPv6 · offset 0 · MF=1", bits: 28, state: "active" } ],
+      [ { label: "IPv4 20 B", bits: 4 }, { label: "frag. 2: 124 B · offset 172 · MF=0", bits: 28, state: "answer" } ] ] } } ] }} />
+
+---
+
+## 4. Errores típicos
+
+- Repartir 1520 B en vez de 1500: la cabecera IPv4 original no es carga útil.
+- Usar 1380 B por fragmento: el offset se mide en unidades de 8 bytes.
+- Fragmentar en IPv6: dentro del túnel los routers son IPv4 y fragmentan IPv4.
+
+Fuente: `Sem11_NetT-NetLayer2`, slide 26; `Sem10_NetT-NetLayer_Addressing`, slide 8; EF 2026-I P2.

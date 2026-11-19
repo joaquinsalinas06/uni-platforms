@@ -1,0 +1,83 @@
+---
+kind: theory
+title: "NAT, Tabla de Traducción y Firewalls"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Por qué existe NAT
+
+La semana 10 terminó con una pregunta de la slide 9 de `Sem11_NetT-NetLayer2`: **¿alcanzan las direcciones IPv4 de 32 bits?** ICANN entregó el último bloque IPv4 a los registros regionales en **2011**. Hay dos respuestas en el curso: **NAT** (esta página), que alivia el agotamiento, e **IPv6** (128 bits, [siguiente tema](/topics/ipv6-tunel-transicion)).
+
+Antes de NAT, la slide repasa el **direccionamiento jerárquico**: el ISP recibe un bloque (200.23.16.0/20), lo reparte en ocho /23 y anuncia solo el agregado. Si una organización se muda de proveedor, el nuevo ISP anuncia la **ruta más específica** 200.23.18.0/23 y gana por prefijo más largo. Ese ejemplo ya está resuelto en [Subredes y agregación de rutas](/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes).
+
+---
+
+## 2. La idea: una sola IP pública para toda la red local
+
+> **NAT (network address translation):** todos los dispositivos de la red local comparten **una sola dirección IPv4** frente al mundo exterior.
+
+- Dentro, los equipos usan direcciones **privadas**, que solo valen en la red local: **10/8**, **172.16/12** y **192.168/16**.
+- Todo datagrama que sale lleva **la misma IP origen** (la del router NAT, 138.76.29.7 en la slide) pero **distinto puerto origen**.
+- Los datagramas que circulan dentro de la red local usan sus direcciones 10.0.0/24 como siempre.
+
+<Visualization viz={{ type: "net-scene", static: true, title: "Red local detrás de un router NAT (slide 11)", steps: [
+  { note: "Adentro hay tres hosts 10.0.0.x; afuera todos se ven como 138.76.29.7. Lo que distingue cada conexión es el puerto.",
+    devices: [
+      { id: "h1", kind: "laptop", label: "10.0.0.1", x: 12, y: 20 },
+      { id: "h2", kind: "host", label: "10.0.0.2", x: 12, y: 55 },
+      { id: "h3", kind: "host", label: "10.0.0.3", x: 12, y: 88 },
+      { id: "r", kind: "router", label: "Router NAT", sub: "LAN 10.0.0.4 · WAN 138.76.29.7", x: 50, y: 55 },
+      { id: "i", kind: "cloud", label: "Internet", x: 88, y: 55 } ],
+    cables: [ { from: "h1", to: "r" }, { from: "h2", to: "r" }, { from: "h3", to: "r" }, { from: "r", to: "i" } ],
+    zones: [ { label: "Red local 10.0.0/24 (privada)", devices: ["h1", "h2", "h3"] } ] } ] }} />
+
+### Ventajas que lista la slide 12
+
+1. Basta **una** dirección del ISP para todos los dispositivos.
+2. Se pueden cambiar las direcciones internas sin avisar al exterior.
+3. Se puede cambiar de ISP sin renumerar la red local.
+4. Seguridad: los dispositivos internos **no son direccionables** directamente desde afuera.
+
+---
+
+## 3. Qué hace el router NAT (slide 13)
+
+Tres obligaciones, todas transparentes para los hosts:
+
+| Sentido | Acción |
+|---|---|
+| Datagrama **saliente** | reemplaza (IP origen, puerto origen) por (IP NAT, puerto nuevo) |
+| **Tabla de traducción** | recuerda cada par (IP origen, puerto) ↔ (IP NAT, puerto nuevo) |
+| Datagrama **entrante** | reemplaza (IP NAT, puerto nuevo) del **destino** por el (IP, puerto) interno guardado |
+
+El ejemplo numérico completo (10.0.0.1:3345 → 138.76.29.7:5001) se recorre paquete por paquete en [La tabla de traducción NAT](/topics/nat-firewall/subtopics/tabla-traduccion-nat).
+
+---
+
+## 4. Por qué NAT es controvertido (slide 15)
+
+- Los routers "deberían" procesar solo hasta la **capa 3**, pero NAT reescribe **puertos** (capa 4).
+- La escasez de direcciones "debería" resolverla **IPv6**.
+- **Viola el argumento extremo a extremo**: un dispositivo de red manipula números de puerto.
+- **NAT traversal**: ¿cómo se conecta un cliente a un servidor que está detrás de un NAT? No hay entrada en la tabla hasta que el de adentro inicia.
+
+Aun así **NAT llegó para quedarse**: hogares, instituciones y redes celulares 4G/5G lo usan masivamente.
+
+---
+
+## 5. NAT no es un firewall
+
+La slide 16 lo resume: **NAT traduce direcciones; un firewall controla el acceso.** Suelen vivir en el mismo router, pero cumplen funciones distintas. NAT descarta un paquete entrante no solicitado solo porque **no encuentra entrada** en su tabla, no porque exista una política. El caso de evaluación del LAB4 (TechNova) insiste en ese error de diseño.
+
+Los firewalls sin estado y con estado, la 5-tupla y la segmentación en zonas (LAN, DMZ, Internet) están en [Firewalls sin estado y con estado](/topics/nat-firewall/subtopics/firewall-sin-estado-con-estado).
+
+---
+
+## 6. Errores típicos
+
+- Decir que NAT cambia **solo** la IP: también cambia el **puerto origen** (y por eso el checksum).
+- Pensar que la respuesta del servidor llega a la IP privada: llega a **(IP NAT, puerto nuevo)** y el router la traduce.
+- Confundir "no es alcanzable desde afuera" con "está protegido por una política": eso es trabajo del firewall.
+- Olvidar que 10.0.1.254 o 172.20.x.x también son privadas (10/8 y 172.16/12), aunque estén en el lado "ISP" de un laboratorio.
+
+Fuente: `Sem11_NetT-NetLayer2`, slides 4–22; `Sem12_LAB4B_NAT`; `Evaluación_LAB4_TEST_Assignment`.

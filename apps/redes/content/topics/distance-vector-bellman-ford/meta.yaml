@@ -1,0 +1,31 @@
+{
+  "id": "distance-vector-bellman-ford",
+  "type": "concept",
+  "title": "Distance Vector y Ecuación de Bellman-Ford",
+  "unit": "s14",
+  "prerequisites": [
+    "link-state-dijkstra"
+  ],
+  "buildsOn": [
+    "link-state-dijkstra"
+  ],
+  "usedBy": [
+    "bgp-autenticacion-sesion"
+  ],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": [
+    {
+      "name": "Ecuación de Bellman-Ford",
+      "tex": "D_x(y)=\\min_{v}\\{\\,c_{x,v}+D_v(y)\\,\\}",
+      "reasoning": "El mejor costo de x a y sale de probar cada vecino v: costo directo a v más lo que v estima hasta y.",
+      "source": "Sem14_NetT-DistanceVector_BGPAuthentication#8"
+    },
+    {
+      "name": "Actualización del vector de distancias",
+      "tex": "D_x(y)\\leftarrow \\min_{v}\\{c_{x,v}+D_v(y)\\}\\quad \\forall y\\in N",
+      "reasoning": "Cada vez que x recibe un DV nuevo de un vecino recalcula todo su vector y avisa solo si algo cambió.",
+      "source": "Sem14_NetT-DistanceVector_BGPAuthentication#10"
+    }
+  ]
+}

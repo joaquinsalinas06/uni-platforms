@@ -1,0 +1,57 @@
+---
+kind: subtopic
+title: "Movilidad: quién se encarga de encontrar al dispositivo"
+order: 3
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. El espectro de movilidad (slide 31)
+
+Desde el punto de vista de la red:
+
+| Poca movilidad | → | → | Mucha movilidad |
+|---|---|---|---|
+| se mueve entre redes pero **se apaga** mientras se mueve | se mueve **dentro del mismo AP** | se mueve **entre APs** de un mismo proveedor | se mueve **entre redes de varios proveedores** manteniendo conexiones abiertas |
+
+Los casos interesantes son los dos últimos.
+
+---
+
+## 2. El desafío (slide 32)
+
+Si un dispositivo se muda de una red a otra (en la slide, de Verizon a AT&T), ¿cómo sabe la Internet pública que debe reenviar sus paquetes a la red **nueva**?
+
+---
+
+## 3. Dos enfoques (slides 33–34)
+
+**A. Que lo resuelva la red (los routers).** Los routers anuncian el nombre, la dirección permanente de 32 bits o el número (de celular) del nodo visitante con el intercambio normal de tablas; el **longest prefix match** indicaría dónde está cada móvil. Funciona sin cambiar nada… pero **no escala a miles de millones de móviles**.
+
+**B. Que lo resuelvan los extremos** (funcionalidad en el borde):
+- **Ruteo indirecto:** el corresponsal envía a la **red de origen** (home) del móvil y esta reenvía al móvil remoto.
+- **Ruteo directo:** el corresponsal obtiene la **dirección foránea** del móvil y le envía directamente.
+
+<Visualization viz={{ type: "net-scene", title: "Ruteo indirecto frente a directo", steps: [
+  { note: "Indirecto: el corresponsal sigue enviando a la red de origen del móvil, que reenvía a la red visitada. Un desvío, pero el corresponsal no se entera del cambio.",
+    devices: [
+      { id: "c", kind: "server", label: "Corresponsal", x: 10, y: 50 },
+      { id: "home", kind: "router", label: "Red de origen", x: 50, y: 15 },
+      { id: "vis", kind: "router", label: "Red visitada", x: 75, y: 75 },
+      { id: "m", kind: "phone", label: "Móvil", x: 94, y: 50 } ],
+    packets: [ { from: "c", to: "home", label: "a la dirección de origen", order: 1, state: "active" }, { from: "home", to: "vis", label: "reenvío", order: 2, state: "active" }, { from: "vis", to: "m", label: "entrega", order: 3, state: "active" } ] },
+  { note: "Directo: el corresponsal conoce la dirección foránea y envía sin pasar por la red de origen.",
+    devices: [
+      { id: "c", kind: "server", label: "Corresponsal", x: 10, y: 50 },
+      { id: "home", kind: "router", label: "Red de origen", x: 50, y: 15 },
+      { id: "vis", kind: "router", label: "Red visitada", x: 75, y: 75 },
+      { id: "m", kind: "phone", label: "Móvil", x: 94, y: 50 } ],
+    packets: [ { from: "c", to: "vis", label: "a la dirección foránea", order: 1, state: "answer" }, { from: "vis", to: "m", label: "entrega", order: 2, state: "answer" } ] } ] }} />
+
+---
+
+## 4. Errores típicos
+
+- Decir que el enfoque "por routers" es imposible: es posible, el problema es la **escalabilidad**.
+- Confundir ruteo indirecto con directo: en el indirecto el tráfico **pasa por la red de origen**.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 31–34.

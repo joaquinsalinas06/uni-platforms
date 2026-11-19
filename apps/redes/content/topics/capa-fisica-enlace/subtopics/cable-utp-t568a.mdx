@@ -1,0 +1,70 @@
+---
+kind: subtopic
+title: "Cable UTP Cat5e con T568A y lectura del tester RJ45"
+order: 4
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Un cable Ethernet Cat5e tiene **4 pares trenzados** (8 hilos). Cada hilo va a un **pin** del conector RJ45 según un estándar de colores. Si ambos extremos usan **el mismo** orden (T568A en la práctica del curso), el pin $k$ de un lado llega al pin $k$ del otro: el tester enciende los LED **1 a 8 en secuencia, en ambos lados a la vez**.
+
+---
+
+## 2. Orden T568A (guía de la práctica, §3.3)
+
+| Pin | Color |
+|---:|---|
+| 1 | blanco / verde |
+| 2 | verde |
+| 3 | blanco / naranja |
+| 4 | azul |
+| 5 | blanco / azul |
+| 6 | naranja |
+| 7 | blanco / marrón |
+| 8 | marrón |
+
+<Visualization viz={{ type: "packet", static: true, title: "Conector RJ45 con T568A, pines 1 a 8", steps: [
+  { note: "Con el clip hacia abajo y los contactos dorados hacia ti, los hilos van de izquierda a derecha en este orden. El otro extremo usa exactamente el mismo.",
+    fields: { width: 8, rows: [ [ { label: "B/V", bits: 1, value: "1" }, { label: "V", bits: 1, value: "2" }, { label: "B/N", bits: 1, value: "3" }, { label: "Az", bits: 1, value: "4" }, { label: "B/Az", bits: 1, value: "5" }, { label: "N", bits: 1, value: "6" }, { label: "B/M", bits: 1, value: "7" }, { label: "M", bits: 1, value: "8" } ] ] } } ] }} />
+
+**Procedimiento (resumen):** pelar unos 4 cm de funda; separar y enderezar los 8 hilos; ordenarlos según T568A; recortar dejando 1,2 cm expuestos; insertar con el clip hacia abajo hasta ver los 8 cobres en la ventana; crimpar; repetir en el otro extremo con el **mismo** orden; probar con el tester.
+
+**Diagnóstico de la guía (§4):**
+
+| Síntoma en el tester | Causa |
+|---|---|
+| LED fuera de orden o al azar | hilos mezclados antes de insertar |
+| uno o más LED no encienden | un hilo no llegó al fondo o el crimpado fue débil |
+| la funda se sale del conector | hilos cortados demasiado largos |
+
+---
+
+## 3. Final 2025-II, P7: leer el tester
+
+En cada instante $t_k$ el tester activa el pin $k$ del extremo principal y se observa qué LED se enciende en el remoto:
+
+| Instante | Pin principal | LED remoto | Diagnóstico |
+|---|---:|---:|---|
+| t1 | 1 | 1 | correcto |
+| t2 | 2 | ninguno | **abierto** |
+| t3 | 3 | 3 | correcto |
+| t4 | 4 | ninguno | **abierto** |
+| t5 | 5 | 7 | cruzado |
+| t6 | 6 | 5 | cruzado |
+| t7 | 7 | 6 | cruzado |
+| t8 | 8 | ninguno | **abierto** |
+
+**Conexión resultante:** 1→1, 3→3, 5→7, 6→5, 7→6; los pines **2, 4 y 8 no tienen continuidad**. El esquema pedido une con una línea solo esos pares de pines.
+
+**Conclusión:** el cable **no** cumple T568A en ambos extremos (no es el 1→1 … 8→8 esperado). Según la guía, los LED fuera de orden indican **hilos mezclados** (5, 6 y 7 en el extremo remoto) y los que no encienden, **hilos que no llegaron al fondo o mal crimpados** (2, 4 y 8). Hay que cortar y rehacer el conector.
+
+---
+
+## 4. Errores típicos
+
+- Leer solo el lado principal: lo que importa es **qué LED remoto** acompaña a cada pin.
+- Confundir "no enciende" (abierto) con "enciende otro" (cruzado).
+- Usar T568A en un extremo y otro orden en el otro.
+
+Fuente: `Sem14_Experience_Ethernet` §3–4 (idéntico a `Sem15_Experience_Ethernet`); EF 2025-II P7.

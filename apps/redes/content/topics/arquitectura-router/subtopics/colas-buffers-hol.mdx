@@ -1,0 +1,73 @@
+---
+kind: subtopic
+title: "Colas de entrada y salida, bloqueo HOL y tamaño del buffer"
+order: 3
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Un router tiene buffers en dos lugares. Cuando se llenan, el datagrama que llega se **pierde**. Esto conecta la arquitectura del router con la congestión de la semana 9: las pérdidas por buffer finito son las que dibuja la curva de throughput del final 2025-II P1.
+
+---
+
+## 2. Cola de entrada y bloqueo HOL (slide 31)
+
+Si el fabric es más lento que la suma de las entradas, se forma cola en la entrada: retardo y pérdidas por desbordamiento.
+
+**Head-of-the-Line (HOL) blocking:** el datagrama al frente de la cola **impide avanzar a los de atrás**, aunque estos vayan a una salida libre.
+
+<Visualization viz={{ type: "net-scene", title: "Bloqueo HOL (slide 31)", steps: [
+  { note: "Dos entradas tienen al frente un paquete rojo hacia la misma salida: solo uno puede cruzar (contención de salida).",
+    devices: [
+      { id: "e1", kind: "switch", label: "Entrada 1", sub: "frente: rojo", x: 12, y: 25 },
+      { id: "e3", kind: "switch", label: "Entrada 3", sub: "frente: rojo · atrás: verde", x: 12, y: 80 },
+      { id: "f", kind: "router", label: "Fabric", x: 50, y: 52 },
+      { id: "sr", kind: "switch", label: "Salida roja", x: 88, y: 25 },
+      { id: "sv", kind: "switch", label: "Salida verde", x: 88, y: 80 } ],
+    cables: [ { from: "e1", to: "f" }, { from: "e3", to: "f" }, { from: "f", to: "sr" }, { from: "f", to: "sv" } ],
+    packets: [ { from: "e1", to: "sr", label: "rojo", order: 1, state: "active" } ] },
+  { note: "Un tiempo de paquete después: el verde de la entrada 3 quiere ir a una salida LIBRE, pero espera detrás del rojo bloqueado. Eso es HOL.",
+    devices: [
+      { id: "e1", kind: "switch", label: "Entrada 1", x: 12, y: 25 },
+      { id: "e3", kind: "switch", label: "Entrada 3", sub: "frente: rojo · atrás: verde", x: 12, y: 80, state: "active" },
+      { id: "f", kind: "router", label: "Fabric", x: 50, y: 52 },
+      { id: "sr", kind: "switch", label: "Salida roja", x: 88, y: 25 },
+      { id: "sv", kind: "switch", label: "Salida verde", sub: "libre", x: 88, y: 80, state: "marked" } ],
+    cables: [ { from: "e1", to: "f" }, { from: "e3", to: "f" }, { from: "f", to: "sr" }, { from: "f", to: "sv" } ],
+    packets: [ { from: "e1", to: "sr", label: "rojo", order: 1, state: "muted" } ] } ] }} />
+
+---
+
+## 3. Cola de salida (slides 32–33)
+
+- Se necesita buffer cuando llegan del fabric (a tasa hasta $NR$) más datagramas de los que el enlace transmite (a $R$).
+- **Política de descarte:** ¿qué datagrama tirar si no hay buffer libre?
+- **Disciplina de planificación:** ¿cuál de los encolados se transmite primero? La prioridad decide quién obtiene mejor rendimiento, de ahí la discusión de **neutralidad de red**.
+- Pérdidas por congestión o falta de buffer.
+
+---
+
+## 4. ¿Cuánto buffer? (slide 34)
+
+**Regla RFC 3439:** buffer promedio igual a un RTT "típico" (250 ms) por la capacidad del enlace:
+
+$$B = RTT\cdot C = 0{,}25\ \text{s} \times 10\ \text{Gbps} = 2{,}5\ \text{Gbit}.$$
+
+**Recomendación más reciente**, con $N$ flujos:
+
+$$B=\frac{RTT\cdot C}{\sqrt{N}}.$$
+
+*(derivado)* Con los mismos 250 ms y 10 Gbps y $N=100$ flujos: $B = 2{,}5\ \text{Gbit}/10 = 250\ \text{Mbit}$.
+
+**Pero demasiado buffer aumenta el retardo** (sobre todo en routers domésticos): RTT largos, mal desempeño para aplicaciones en tiempo real y TCP lento en reaccionar. Recuerda el control basado en retardo: "mantener el enlace cuello de botella justo lleno, no más".
+
+---
+
+## 5. Errores típicos
+
+- Dividir entre $N$ en vez de $\sqrt{N}$.
+- Mezclar unidades: 250 ms = 0,25 s; Gbps × s = Gbit.
+- Atribuir HOL a la cola de salida: ocurre en la **entrada**.
+
+Fuente: `Sem12_NetT-Routers`, slides 31–34.

@@ -11,7 +11,11 @@
     "capa-red-ipv4-fragmentacion",
     "dns-arquitectura-resolucion"
   ],
-  "usedBy": [],
+  "usedBy": [
+    "nat-firewall",
+    "subredes-forwarding-lpm",
+    "wifi-celular-movilidad"
+  ],
   "hasVisualization": true,
   "visualizationType": "net-scene",
   "formulas": [

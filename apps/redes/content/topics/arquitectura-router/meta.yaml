@@ -1,0 +1,39 @@
+{
+  "id": "arquitectura-router",
+  "type": "concept",
+  "title": "Arquitectura del Router, Conmutación y SDN",
+  "unit": "s12",
+  "prerequisites": [
+    "capa-red-ipv4-fragmentacion"
+  ],
+  "buildsOn": [
+    "capa-red-ipv4-fragmentacion"
+  ],
+  "usedBy": [
+    "seguridad-router-icmp",
+    "subredes-forwarding-lpm",
+    "link-state-dijkstra"
+  ],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": [
+    {
+      "name": "Tasa de conmutación deseable",
+      "tex": "R_{\\text{fabric}} = N\\,R",
+      "reasoning": "Con N puertos de entrada a tasa R, el fabric no forma cola de entrada si mueve N veces la tasa de línea.",
+      "source": "Sem12_NetT-Routers#25"
+    },
+    {
+      "name": "Buffer por regla RFC 3439",
+      "tex": "B = RTT \\cdot C",
+      "reasoning": "El buffer promedio equivale a un RTT típico (250 ms) por la capacidad del enlace: 10 Gbps dan 2,5 Gbit.",
+      "source": "Sem12_NetT-Routers#34"
+    },
+    {
+      "name": "Buffer con N flujos",
+      "tex": "B = \\frac{RTT \\cdot C}{\\sqrt{N}}",
+      "reasoning": "Recomendación reciente de la slide: con muchos flujos TCP desincronizados basta un buffer menor, dividido por raíz de N.",
+      "source": "Sem12_NetT-Routers#34"
+    }
+  ]
+}

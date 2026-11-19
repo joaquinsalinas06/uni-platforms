@@ -1,0 +1,21 @@
+{
+  "id": "nat-firewall",
+  "type": "concept",
+  "title": "NAT, Tabla de Traducción y Firewalls",
+  "unit": "s11",
+  "prerequisites": [
+    "direccionamiento-ipv4-subredes",
+    "protocolo-tcp-mecanismos"
+  ],
+  "buildsOn": [
+    "direccionamiento-ipv4-subredes",
+    "protocolo-tcp-mecanismos"
+  ],
+  "usedBy": [
+    "ipv6-tunel-transicion",
+    "seguridad-router-icmp"
+  ],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": []
+}

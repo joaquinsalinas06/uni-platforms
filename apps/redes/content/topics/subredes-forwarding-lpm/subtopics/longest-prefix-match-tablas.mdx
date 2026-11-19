@@ -1,0 +1,106 @@
+---
+kind: subtopic
+title: "Longest prefix match y diseño de una tabla de forwarding"
+order: 2
+---
+
+## 1. Idea
+
+Una tabla de forwarding no lista cada destino: lista **prefijos**. Un destino puede coincidir con varios; gana el **prefijo más largo**. Para saber qué direcciones van a cada interfaz, hay que restar a cada prefijo lo que "se llevan" los prefijos más largos contenidos en él.
+
+---
+
+## 2. Método (direcciones de 8 bits)
+
+1. Un prefijo de $k$ bits cubre $2^{8-k}$ direcciones contiguas.
+2. Ordena los prefijos del más largo al más corto.
+3. A cada uno asígnale lo que cubre **menos** lo ya asignado a prefijos más largos.
+4. *Otherwise* se queda con todo lo que sobre.
+5. Comprueba que la suma dé 256.
+
+---
+
+## 3. Ex5, pregunta 4
+
+| Prefijo | Interfaz |
+|---|---|
+| 00 | 0 |
+| 010 | 1 |
+| 011 | 2 |
+| 10 | 2 |
+| 11 | 3 |
+
+Ningún prefijo está contenido en otro, así que cada uno es un bloque limpio:
+
+| Interfaz | Rango | Direcciones |
+|---|---|---:|
+| 0 | 00000000 – 00111111 (0 – 63) | 64 |
+| 1 | 01000000 – 01011111 (64 – 95) | 32 |
+| 2 | 01100000 – 10111111 (96 – 191) | 32 + 64 = 96 |
+| 3 | 11000000 – 11111111 (192 – 255) | 64 |
+
+Comprobación: $64+32+96+64 = 256$.
+
+---
+
+## 4. Ex5, pregunta 5 (prefijos anidados)
+
+| Prefijo | Interfaz |
+|---|---|
+| 1 | 0 |
+| 10 | 1 |
+| 111 | 2 |
+| otherwise | 3 |
+
+Los prefijos 10 y 111 están **dentro** de 1, así que le quitan direcciones:
+
+| Interfaz | Rango | Direcciones |
+|---|---|---:|
+| 2 (111) | 11100000 – 11111111 (224 – 255) | 32 |
+| 1 (10) | 10000000 – 10111111 (128 – 191) | 64 |
+| 0 (1, lo que queda: 110) | 11000000 – 11011111 (192 – 223) | 128 − 64 − 32 = 32 |
+| 3 (otherwise: 0…) | 00000000 – 01111111 (0 – 127) | 128 |
+
+Comprobación: $32+64+32+128 = 256$.
+
+---
+
+## 5. Ex5, pregunta 6: diseñar subredes y tabla
+
+Prefijo común 223.1.17.0/24. Subred 1 ≥ 60 interfaces, Subred 2 ≥ 90, Subred 3 ≥ 12.
+
+**1. Tamaños.** Se busca el menor bloque con $2^{h}-2 \ge$ requerido:
+- 90 → $2^7-2=126$ → **/25** (128 direcciones);
+- 60 → $2^6-2=62$ → **/26** (64);
+- 12 → $2^4-2=14$ → **/28** (16).
+
+Total $128+64+16 = 208 \le 256$: cabe.
+
+**2. Ubicar del más grande al más chico** (así cada bloque queda alineado):
+
+| Subred | Bloque | Rango |
+|---|---|---|
+| 2 | **223.1.17.0/25** | .0 – .127 |
+| 1 | **223.1.17.128/26** | .128 – .191 |
+| 3 | **223.1.17.192/28** | .192 – .207 |
+
+**3. Tabla de forwarding** (Subred 1 → interfaz 0, Subred 2 → 1, Subred 3 → 2):
+
+| Prefijo | Interfaz |
+|---|---|
+| 223.1.17.128/26 | 0 |
+| 223.1.17.0/25 | 1 |
+| 223.1.17.192/28 | 2 |
+| otherwise | 3 |
+
+**4. IP válida en la Subred 1:** por ejemplo **223.1.17.130** (no es la red .128 ni el broadcast .191).
+
+---
+
+## 6. Errores típicos
+
+- En la P5, darle a la interfaz 0 los 128 valores que empiezan en 1.
+- Ubicar primero el bloque pequeño: deja huecos desalineados.
+- Asignar a una interfaz la dirección de red o de broadcast.
+
+Fuente: `Sem13_Excercises5_NetworkLayer` Q4–Q6; `Sem12_NetT-Routers`, slides 26–27 (lookup en el puerto de entrada).

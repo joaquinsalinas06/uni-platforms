@@ -1,0 +1,72 @@
+---
+kind: subtopic
+title: "Planos de datos, control y gestión; SDN y NFV"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+Las slides 5–20 de `Sem12_NetT-Routers` replantean la **división del trabajo** en una red. En la red tradicional cada switch o router mezcla tres tareas; SDN las separa y **centraliza lógicamente** el control.
+
+---
+
+## 2. Tres planos en la red tradicional (slides 6–8)
+
+| Plano | Qué hace | Escala |
+|---|---|---|
+| **Datos** | reenviar, filtrar, encolar, marcar, limitar tasa y medir paquetes ("packet streaming") | por paquete |
+| **Control** | algoritmos distribuidos: seguir cambios de topología, calcular rutas, instalar reglas de forwarding | segundos/ms |
+| **Gestión** | recolectar mediciones y configurar los equipos | tiempo humano |
+
+La slide 5 ("networking hour glass") muestra el switch/router típico: el control link-state distribuido llena la **tabla de rutas** y el paquete que entra sale por el destino que indica la tabla.
+
+---
+
+## 3. SDN: control lógicamente centralizado (slides 9–15)
+
+<Visualization viz={{ type: "net-scene", title: "Tradicional frente a SDN (slides 7 y 9)", steps: [
+  { note: "Tradicional: cada switch corre su parte del plano de control (algoritmos distribuidos) además del plano de datos.",
+    devices: [
+      { id: "a", kind: "switch", label: "Switch A", sub: "datos + control", x: 15, y: 70 },
+      { id: "b", kind: "switch", label: "Switch B", sub: "datos + control", x: 50, y: 85 },
+      { id: "c", kind: "switch", label: "Switch C", sub: "datos + control", x: 85, y: 70 } ],
+    cables: [ { from: "a", to: "b" }, { from: "b", to: "c" }, { from: "a", to: "c" } ] },
+  { note: "SDN: un controlador lógicamente centralizado (inteligente, lento) programa a switches simples (rápidos) a través de una API al plano de datos, por ejemplo OpenFlow.",
+    devices: [
+      { id: "ctl", kind: "server", label: "Controlador", sub: "Network OS", x: 50, y: 12, state: "active" },
+      { id: "a", kind: "switch", label: "Switch A", sub: "solo datos", x: 15, y: 70 },
+      { id: "b", kind: "switch", label: "Switch B", sub: "solo datos", x: 50, y: 85 },
+      { id: "c", kind: "switch", label: "Switch C", sub: "solo datos", x: 85, y: 70 } ],
+    cables: [ { from: "a", to: "b" }, { from: "b", to: "c" }, { from: "a", to: "c" } ],
+    packets: [ { from: "ctl", to: "a", label: "reglas", order: 1, state: "active" }, { from: "ctl", to: "c", label: "reglas", order: 2, state: "active" } ] } ] }} />
+
+**Elementos fundamentales (slides 11–13):**
+- Un **Network OS** controla varios dispositivos de reenvío; el plano de control está **físicamente separado** del de datos.
+- Encima corren **programas de control** (routing, ingeniería de tráfico, movilidad) sobre una **vista abstracta de la red**.
+- La **virtualización de red** traduce esa vista abstracta a la vista global; cada switch solo guarda reglas *match → action*.
+- Ejemplo de la slide 13: un "firewall.c" de pocas líneas que descarta los paquetes con puerto TCP destino 22.
+
+**Definición (slide 17, Open Networking Foundation):** en SDN los planos de control y de datos están **desacoplados**, la inteligencia y el estado están **lógicamente centralizados** y la infraestructura se **abstrae** de las aplicaciones. La HotSDN CFP añade: interfaces abiertas que hacen el control más flexible y predecible.
+
+**Analogía de la slide 14:** la industria de computadoras pasó de mainframes cerrados a hardware x86 + capa de virtualización + varios sistemas operativos; la de redes, a hardware de switching + OpenFlow + Network OS.
+
+**Origen del término (slide 18):** MIT Technology Review lo incluyó entre las "10 Breakthrough Technologies" de 2009.
+
+---
+
+## 4. NFV (slides 19–20)
+
+**Network Functions Virtualization:** hacer la red más flexible reduciendo la dependencia del hardware. En vez de un **equipo dedicado por función** (firewall, DPI, CG-NAT, router de borde), las funciones corren como **software sobre servidores estándar** de alto volumen.
+
+La slide final lo resume: **SDN ≠ NFV**. SDN redefine la *arquitectura de red* (desacopla control y datos); NFV redefine la *arquitectura de los equipos* (desacopla las funciones del hardware).
+
+---
+
+## 5. Errores típicos
+
+- "SDN es un controlador físicamente único": es **lógicamente** centralizado.
+- Confundir SDN con NFV.
+- Decir que en SDN los switches dejan de reenviar: siguen siendo el plano de datos, pero ya no calculan rutas.
+
+Fuente: `Sem12_NetT-Routers`, slides 4–20.

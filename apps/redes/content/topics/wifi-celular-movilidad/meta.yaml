@@ -1,0 +1,18 @@
+{
+  "id": "wifi-celular-movilidad",
+  "type": "concept",
+  "title": "Wi-Fi 802.11, Bluetooth, 4G/5G y Movilidad",
+  "unit": "s15",
+  "prerequisites": [
+    "capa-fisica-enlace",
+    "direccionamiento-ipv4-subredes"
+  ],
+  "buildsOn": [
+    "capa-fisica-enlace",
+    "direccionamiento-ipv4-subredes"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "sequence",
+  "formulas": []
+}

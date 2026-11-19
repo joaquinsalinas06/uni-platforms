@@ -1,0 +1,70 @@
+---
+kind: theory
+title: "BGP entre Sistemas Autónomos y Autenticación de Sesión"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Qué es lo que se protege (slide 25)
+
+- **BGP** intercambia rutas **entre sistemas autónomos** (AS). En la slide, R1 del AS 65001 y R2 del AS 65002 forman una sesión **eBGP**.
+- BGP corre sobre **TCP, puerto 179**.
+- Un **segmento TCP falsificado** puede interrumpir la sesión.
+- Por eso los pares **autentican los segmentos TCP** que intercambian.
+
+**Objetivo:** que ningún segmento no autorizado sea aceptado como tráfico BGP legítimo.
+
+<Visualization viz={{ type: "net-scene", title: "Sesión eBGP y un segmento falsificado (slide 25)", steps: [
+  { note: "R1 (AS 65001) y R2 (AS 65002) intercambian rutas por una sesión TCP al puerto 179.",
+    devices: [
+      { id: "r1", kind: "router", label: "R1", sub: "AS 65001", x: 15, y: 40 },
+      { id: "r2", kind: "router", label: "R2", sub: "AS 65002", x: 85, y: 40 },
+      { id: "atk", kind: "laptop", label: "Atacante", x: 50, y: 88 } ],
+    cables: [ { from: "r1", to: "r2", label: "eBGP · TCP/179" } ],
+    zones: [ { label: "AS 65001", devices: ["r1"] }, { label: "AS 65002", devices: ["r2"] } ],
+    packets: [ { from: "r1", to: "r2", label: "UPDATE + código", order: 1, state: "answer" } ] },
+  { note: "El atacante inyecta un segmento TCP falso hacia R2. Sin el código de autenticación correcto, R2 lo rechaza.",
+    devices: [
+      { id: "r1", kind: "router", label: "R1", sub: "AS 65001", x: 15, y: 40 },
+      { id: "r2", kind: "router", label: "R2", sub: "AS 65002", x: 85, y: 40, state: "marked" },
+      { id: "atk", kind: "laptop", label: "Atacante", x: 50, y: 88, state: "active" } ],
+    cables: [ { from: "r1", to: "r2", label: "eBGP · TCP/179" } ],
+    zones: [ { label: "AS 65001", devices: ["r1"] }, { label: "AS 65002", devices: ["r2"] } ],
+    packets: [ { from: "r1", to: "r2", label: "UPDATE + código", order: 1, state: "muted" }, { from: "atk", to: "r2", label: "segmento forjado", order: 2, lost: true, state: "active" } ] } ] }} />
+
+---
+
+## 2. TCP MD5 frente a TCP-AO (slide 26)
+
+Ambos siguen el mismo esquema: **clave compartida + segmento TCP → código de autenticación → el par lo verifica**. Detalle en [TCP MD5 frente a TCP-AO](/topics/bgp-autenticacion-sesion/subtopics/tcp-md5-vs-tcp-ao).
+
+> **Ninguno cifra** la información de routing de BGP.
+
+---
+
+## 3. Los límites de la autenticación (slide 27)
+
+| Protege | No puede probar |
+|---|---|
+| la **autenticidad** de los segmentos TCP | que un par de confianza anuncie un prefijo **verdadero** |
+| la detección de segmentos **alterados** | autenticación válida ≠ **origen de ruta válido** |
+| la resistencia a la **inyección** no autorizada | |
+
+**Pregunta rápida de la slide:** un par autenticado anuncia un prefijo que **no le pertenece**. ¿La ruta es automáticamente confiable? **No.**
+
+Controles complementarios: **filtrado de rutas** y **validación de origen de ruta** (RPKI/ROV).
+
+---
+
+## 4. Relación con lo visto
+
+Es el mismo patrón que OSPF/IS-IS en la semana 13: autenticar demuestra **quién** envió el mensaje y que **no se alteró**, no que su **contenido** sea cierto. En OSPF se autentica cada LSA; en BGP, la **sesión TCP** entre pares.
+
+---
+
+## 5. Errores típicos
+
+- Decir que TCP-AO cifra las rutas.
+- Creer que una sesión autenticada impide el secuestro de prefijos por un par legítimo.
+- Olvidar que BGP va sobre TCP: lo que se falsifica es un **segmento TCP**.
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slides 24–29.

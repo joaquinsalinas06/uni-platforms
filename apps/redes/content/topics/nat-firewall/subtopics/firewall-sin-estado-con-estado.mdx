@@ -1,0 +1,112 @@
+---
+kind: subtopic
+title: "Firewalls sin estado y con estado; segmentación en zonas"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+NAT y firewall suelen estar en la misma caja, pero responden a preguntas distintas (slide 16):
+
+| | NAT | Firewall |
+|---|---|---|
+| Qué hace | modifica IP (y puertos, en PAT) | permite o deniega tráfico según una política |
+| Qué guarda | tabla de traducción | reglas (y, si es con estado, tabla de conexiones) |
+| Inspección de estado | no la provee por sí mismo | sí, en el firewall con estado |
+
+---
+
+## 2. Sin estado frente a con estado (slides 18–20)
+
+**Firewall sin estado (stateless):**
+- examina **cada paquete por separado**;
+- aplica reglas predefinidas (ACL) sobre IP origen/destino, protocolo y puertos;
+- **no** mantiene estado de conexión.
+
+**Firewall con estado (stateful):**
+- sigue las conexiones activas en una **tabla de estado**;
+- evalúa cada paquete con las reglas **y** con el estado de la conexión;
+- deja pasar el **tráfico de retorno** de conexiones permitidas;
+- puede bloquear el tráfico entrante **no solicitado**.
+
+---
+
+## 3. Seguimiento de conexiones: la 5-tupla (slide 21)
+
+Cada conexión de la tabla de estado se identifica con:
+
+1. IP origen,
+2. IP destino,
+3. puerto origen,
+4. puerto destino,
+5. protocolo de transporte (TCP/UDP).
+
+Además guarda el **estado** de la conexión y un **tiempo de inactividad** (timeout). Las entradas se actualizan mientras la conexión avanza y se borran al cerrar o expirar.
+
+---
+
+## 4. Segmentación y política por zonas (slide 22)
+
+La red se divide en **zonas de confianza** con permisos distintos. El enfoque común es **denegar por defecto** entre zonas y permitir explícitamente solo los servicios necesarios.
+
+| Origen → Destino | Servicio | Acción |
+|---|---|---|
+| LAN interna → Internet | HTTPS (TCP 443) | ALLOW |
+| Internet → LAN interna | tráfico no solicitado | DENY |
+| Internet → servidor web en DMZ | HTTPS (TCP 443) | ALLOW |
+| DMZ → LAN interna | tráfico no solicitado | DENY |
+
+<Visualization viz={{ type: "net-scene", title: "Política por zonas de la slide 22", steps: [
+  { note: "Tres zonas: LAN interna, DMZ con el servidor web e Internet. Todo se cruza en el firewall.",
+    devices: [
+      { id: "lan", kind: "host", label: "LAN interna", x: 12, y: 30 },
+      { id: "fw", kind: "router", label: "Firewall con estado", x: 50, y: 50 },
+      { id: "dmz", kind: "server", label: "Servidor web", sub: "DMZ", x: 50, y: 90 },
+      { id: "net", kind: "cloud", label: "Internet", x: 88, y: 30 } ],
+    cables: [ { from: "lan", to: "fw" }, { from: "fw", to: "dmz" }, { from: "fw", to: "net" } ] },
+  { note: "LAN → Internet por HTTPS: permitido. El firewall anota la conexión y dejará volver la respuesta.",
+    devices: [
+      { id: "lan", kind: "host", label: "LAN interna", x: 12, y: 30 },
+      { id: "fw", kind: "router", label: "Firewall con estado", x: 50, y: 50, state: "marked" },
+      { id: "dmz", kind: "server", label: "Servidor web", sub: "DMZ", x: 50, y: 90 },
+      { id: "net", kind: "cloud", label: "Internet", x: 88, y: 30 } ],
+    cables: [ { from: "lan", to: "fw" }, { from: "fw", to: "dmz" }, { from: "fw", to: "net" } ],
+    packets: [ { from: "lan", to: "net", label: "TCP 443 ALLOW", order: 1, state: "answer" },
+               { from: "net", to: "lan", label: "retorno ALLOW", order: 2, state: "answer" } ] },
+  { note: "Internet → LAN sin conexión previa: no hay entrada en la tabla de estado, se deniega.",
+    devices: [
+      { id: "lan", kind: "host", label: "LAN interna", x: 12, y: 30 },
+      { id: "fw", kind: "router", label: "Firewall con estado", x: 50, y: 50, state: "active" },
+      { id: "dmz", kind: "server", label: "Servidor web", sub: "DMZ", x: 50, y: 90 },
+      { id: "net", kind: "cloud", label: "Internet", x: 88, y: 30 } ],
+    cables: [ { from: "lan", to: "fw" }, { from: "fw", to: "dmz" }, { from: "fw", to: "net" } ],
+    packets: [ { from: "net", to: "lan", label: "no solicitado DENY", order: 3, lost: true, state: "active" } ] },
+  { note: "Internet → servidor web de la DMZ por 443: permitido. DMZ → LAN no solicitado: denegado.",
+    devices: [
+      { id: "lan", kind: "host", label: "LAN interna", x: 12, y: 30 },
+      { id: "fw", kind: "router", label: "Firewall con estado", x: 50, y: 50 },
+      { id: "dmz", kind: "server", label: "Servidor web", sub: "DMZ", x: 50, y: 90 },
+      { id: "net", kind: "cloud", label: "Internet", x: 88, y: 30 } ],
+    cables: [ { from: "lan", to: "fw" }, { from: "fw", to: "dmz" }, { from: "fw", to: "net" } ],
+    packets: [ { from: "net", to: "dmz", label: "TCP 443 ALLOW", order: 4, state: "answer" },
+               { from: "dmz", to: "lan", label: "DENY", order: 5, lost: true, state: "active" } ] } ] }} />
+
+---
+
+## 5. Relación con la tabla NAT (LAB4B §3)
+
+Ambas tablas se llenan con el handshake de una conexión iniciada desde adentro, por eso se confunden. La diferencia está en el **porqué** del descarte:
+
+- NAT descarta un SYN entrante no solicitado porque **no sabe a quién traducirlo**;
+- el firewall con estado lo descarta porque **la política lo prohíbe** (deny por defecto).
+
+---
+
+## 6. Errores típicos
+
+- Decir "NAT es mi firewall": no tiene política explícita ni inspección de estado.
+- Olvidar el protocolo en la 5-tupla.
+- Creer que un firewall con estado necesita una regla para el tráfico de retorno: lo deja pasar por la tabla de estado.
+
+Fuente: `Sem11_NetT-NetLayer2`, slides 16–22; `Sem12_LAB4B_NAT` §3; `Evaluación_LAB4_TEST_Assignment`.

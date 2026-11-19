@@ -1,0 +1,48 @@
+---
+kind: subtopic
+title: "Ejercicio de la slide 24: un costo de enlace falsificado"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Enunciado (slide 24)
+
+Triángulo A, B, C con costos **A–B = 3**, **B–C = 3** y **A–C = 9**. El camino normal de A a C es **A → B → C, costo 6**. Un atacante inyecta un costo falso **A → C = 1**.
+
+- **Q1.** ¿Qué ruta elegiría SPF?
+- **Q2.** ¿Y si el paquete falla la verificación HMAC?
+- **Q3.** ¿Y si un router de confianza está comprometido?
+
+---
+
+## 2. Solución
+
+**Q1. SPF con el costo falso.** Dijkstra compara los dos caminos de A a C:
+
+$$c(A,B,C) = 3+3 = 6 \qquad c(A,C)_{\text{falso}} = 1$$
+
+Como $1 \lt 6$, SPF elige el **enlace directo A → C**. El algoritmo es correcto; la entrada es mentira. El tráfico se desvía por un enlace que en realidad cuesta 9.
+
+**Q2. Falla HMAC.** El receptor recalcula la etiqueta con la clave compartida, no coincide y **descarta** el LSA/LSP. El costo falso nunca entra a la base de datos y SPF sigue eligiendo A → B → C con costo 6.
+
+**Q3. Router de confianza comprometido.** El atacante tiene la clave: sus updates **pasan** la verificación HMAC. La autenticación no puede detectarlo (slide 23); hacen falta otras defensas (rotación de claves, control de acceso, monitoreo).
+
+<Visualization viz={{ type: "net-scene", title: "Costo falso A→C = 1", steps: [
+  { note: "Topología real: A-B 3, B-C 3, A-C 9. SPF elige A→B→C con costo 6.",
+    devices: [ { id: "a", kind: "router", label: "A", x: 15, y: 20 }, { id: "b", kind: "router", label: "B", x: 85, y: 20 }, { id: "c", kind: "router", label: "C", x: 50, y: 85 } ],
+    cables: [ { from: "a", to: "b", label: "3", state: "answer" }, { from: "b", to: "c", label: "3", state: "answer" }, { from: "a", to: "c", label: "9" } ] },
+  { note: "Con el LSA falso aceptado, A-C vale 1 en la base de datos: SPF elige el enlace directo y desvía el tráfico.",
+    devices: [ { id: "a", kind: "router", label: "A", x: 15, y: 20 }, { id: "b", kind: "router", label: "B", x: 85, y: 20 }, { id: "c", kind: "router", label: "C", x: 50, y: 85 } ],
+    cables: [ { from: "a", to: "b", label: "3" }, { from: "b", to: "c", label: "3" }, { from: "a", to: "c", label: "1 (falso)", state: "active" } ] },
+  { note: "Con HMAC, el LSA falso no verifica y se descarta: la ruta vuelve a ser A→B→C.",
+    devices: [ { id: "a", kind: "router", label: "A", x: 15, y: 20 }, { id: "b", kind: "router", label: "B", x: 85, y: 20 }, { id: "c", kind: "router", label: "C", x: 50, y: 85 } ],
+    cables: [ { from: "a", to: "b", label: "3", state: "answer" }, { from: "b", to: "c", label: "3", state: "answer" }, { from: "a", to: "c", label: "9" } ] } ] }} />
+
+---
+
+## 3. Errores típicos
+
+- Decir que "Dijkstra falló": hizo exactamente lo correcto con datos falsos.
+- Creer que HMAC protege contra un router legítimo comprometido.
+
+Fuente: `Sem13_NetT-Dijkstra_OSPF_ISIS`, slides 19–24.

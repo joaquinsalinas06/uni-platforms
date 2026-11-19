@@ -311,6 +311,68 @@ Sin opciones, MTU=1500 da MSS=1460 B; MTU=1000 da 960 B. Para el conteo ideal, M
 
 ---
 
+## Semana 11 — NAT e IPv6
+
+### 1. Tamaño del datagrama en un túnel IPv6 sobre IPv4
+
+$$L_{\text{túnel}} = L_{\text{datos}} + H_{TCP} + H_{IPv6} + H_{IPv4}$$
+
+La carga útil IPv4 a fragmentar es el **datagrama IPv6 completo** ($L_{\text{datos}} + H_{TCP} + H_{IPv6}$). Datos por fragmento no final: $8\lfloor (MTU-20)/8 \rfloor$. EF 2026-I P2: $1440+20+40 = 1500$ B de carga, $1520 \gt 1400$; fragmentos de 1396 B (offset 0) y 144 B (offset 172). Fuente: `Sem11_NetT-NetLayer2`, slide 26.
+
+### 2. Direcciones privadas
+
+10.0.0.0/8, 172.16.0.0/12 y 192.168.0.0/16 (slide 12). NAT reescribe (IP origen, puerto origen) al salir y (IP destino, puerto destino) al volver.
+
+---
+
+## Semana 12 — Router, buffers y TTL
+
+### 1. Fabric y buffer
+
+$$R_{\text{fabric}} = N\,R \qquad B = RTT\cdot C \qquad B = \frac{RTT\cdot C}{\sqrt{N}}$$
+
+Con RTT = 250 ms y C = 10 Gbps, $B = 2{,}5$ Gbit (slide 34). Con $N$ flujos se divide entre $\sqrt{N}$, no entre $N$.
+
+### 2. TTL en traceroute (ruta simétrica)
+
+$$TTL_{\text{sonda}} = k \qquad TTL_{\text{llegada}} = TTL_{\text{inicial}} - (k-1)$$
+
+$k$ es el salto que responde. La sonda llega a ese router con TTL 1; su respuesta cruza $k-1$ routers de regreso. Convención declarada en las soluciones de los finales; si se cuenta la diferencia de TTL como saltos, el resultado se corre en 1. Fuente: `Sem11_LAB4A_IP (2)` §2.
+
+---
+
+## Semana 13 — Dijkstra y subredes
+
+### 1. Dijkstra
+
+$$D(v) = \min\big(D(v),\ D(w) + c_{w,v}\big) \qquad \frac{n(n+1)}{2} = O(n^2)$$
+
+Relajar solo a los vecinos del nodo que acaba de entrar en $N'$. Mensajes: $O(n^2)$. Fuente: `Sem13_NetT-Dijkstra_OSPF_ISIS`, slides 11 y 15.
+
+### 2. Subredes y hosts
+
+$$H = 2^{32-p} - 2 \qquad 2^{b} \ge s \Rightarrow p_{\text{nuevo}} = p + b$$
+
+Clases por primer octeto: A 0–127 (/8), B 128–191 (/16), C 192–223 (/24). En LPM con 8 bits, un prefijo de $k$ bits cubre $2^{8-k}$ direcciones menos las que capturan prefijos más largos. Fuentes: `Sem10_LAB4_Slides_IP`; `Sem13_Excercises5_NetworkLayer`.
+
+---
+
+## Semana 14 — Distance vector
+
+$$D_x(y) = \min_v\{\,c_{x,v} + D_v(y)\,\}$$
+
+Mínimo sobre los **vecinos** de $x$; el vecino ganador es el siguiente salto. Ejemplo de la slide 9: $\min\{2+5, 1+3, 5+3\} = 4$ por x. Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slides 8–10.
+
+---
+
+## Semana 15 — Enlace inalámbrico
+
+$$\text{path loss} \propto (f\,d)^2$$
+
+Mayor frecuencia o mayor distancia, más pérdida (slide 12 de `Sem15_NetT-Wireless-PhyLayer`). T568A, pines 1–8: blanco/verde, verde, blanco/naranja, azul, blanco/azul, naranja, blanco/marrón, marrón.
+
+---
+
 ## Resumen de Examen — Todas las Fórmulas en una Tabla
 
 Retardos y tasas de las primeras semanas en bits, bps y segundos; ventanas, MTU, MSS y archivos TCP/IP en bytes cuando se indica. Para convertir tasas, 1 B = 8 bits (ver [Símbolos y Unidad Base](#símbolos-y-unidad-base-un-solo-criterio-para-todo-el-formulario)).
@@ -348,3 +410,10 @@ Retardos y tasas de las primeras semanas en bits, bps y segundos; ventanas, MTU,
 | CIDR | $2^{32-p}$ direcciones; red=IP AND máscara; broadcast=red OR NOT máscara |
 | MSS base IPv4/TCP | $MTU-20-20$ bytes, sin opciones |
 | Archivo ideal | $N=\lceil F/M\rceil$; F y M en bytes |
+| Túnel IPv6/IPv4 | carga IPv4 = datagrama IPv6; $L=L_{datos}+H_{TCP}+H_{IPv6}+H_{IPv4}$ |
+| Buffer | $RTT\cdot C$; con $N$ flujos $RTT\cdot C/\sqrt{N}$ |
+| TTL traceroute | sonda $=k$; respuesta llega con $TTL_0-(k-1)$ |
+| Dijkstra | $D(v)=\min(D(v),D(w)+c_{w,v})$; $O(n^2)$ |
+| Hosts por subred | $2^{32-p}-2$; $2^b\ge s$ |
+| Bellman-Ford | $D_x(y)=\min_v\{c_{x,v}+D_v(y)\}$ |
+| Path loss | $\propto (f d)^2$ |

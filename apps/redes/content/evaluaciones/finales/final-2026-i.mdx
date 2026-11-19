@@ -1,0 +1,253 @@
+---
+title: "Examen Final 2026-I"
+category: "finales"
+categoryLabel: "Exámenes Finales"
+order: 2
+pdf: "/evaluaciones/finales/2026-i.pdf"
+source: "Examen Final CS4054 Computer Networks, 2026-I (20 de julio de 2026)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExamStatement from '../../../src/components/ExamStatement.astro';
+import ExamFigure from '../../../src/components/ExamFigure.astro';
+import figTrace from './2026-i/p4-traza-tcp.png';
+import figTr from './2026-i/p5-traceroute.png';
+import figWs from './2026-i/p6-icmp-wireshark.png';
+import figNat from './2026-i/p7-nat-topologia.png';
+
+## Instrucciones
+
+- **Curso**: CS4054 Computer Networks. **Fecha**: 20 de julio de 2026. Individual; solo cuenta el procedimiento del cuadernillo; las unidades son obligatorias.
+- Parte A, teoría (10 pts, P1–P3); Parte B, laboratorio (10 pts, P4–P7).
+- Mapa de temas: P1 congestión MIMD ([semana 9](/units/s9)); P2 NAT, túnel y fragmentación ([semana 11](/units/s11)); P3 TCP sobre inalámbrico ([semana 15](/units/s15)); P4 RTT ([semana 9](/units/s9)); P5–P6 ICMP/traceroute ([semana 12](/units/s12)); P7 NAT ([semana 11](/units/s11)).
+
+---
+
+## Pregunta 1: TCP-Agresivo, MIMD (4 puntos)
+
+<ExamStatement>
+
+Considere una variante experimental de TCP llamada *TCP-Agresivo*, diseñada con un algoritmo MIMD (Multiplicative Increase / Multiplicative Decrease) que gobierna la ventana de congestión (*cwnd*) bajo las siguientes reglas:
+
+- *Fase sin pérdidas*: Por cada RTT en el que todos los paquetes se confirmen con éxito, la ventana de congestión se multiplica por 1,5 ($cwnd = cwnd \times 1{,}5$).
+- *Fase de pérdida*: Cuando se detecta una pérdida de paquetes mediante triple ACK duplicado, la ventana de congestión solo se reduce en un 10 % ($cwnd = cwnd \times 0{,}9$).
+
+Considere un escenario donde dos usuarios A y B comparten un mismo enlace cuello de botella. El Usuario A inició su transmisión antes y posee una *cwnd* significativamente más grande que la del Usuario B, quien acaba de conectarse a la red. Se solicita:
+
+1. **Análisis de Equidad (2 pts):** Determine si ambos usuarios lograrán eventualmente repartirse el ancho de banda del enlace de forma equitativa (50 % y 50 %) a lo largo del tiempo. Justifique analíticamente cómo afectan los factores de modificación (1,5 y 0,9) a la diferencia absoluta entre las ventanas de ambos usuarios tras sufrir un evento de congestión.
+2. **Estabilidad del Buffer y Rediseño (1 pts):** Explique el impacto que tendrá el incremento multiplicativo (1,5) y la reducción leve (0,9) sobre el comportamiento del buffer del router intermedio. ¿Qué ocurrirá con el estado de congestión del router una vez que el buffer se llene por primera vez?
+3. **Nuevo factor de pérdida (1 pts):** Determine a cuánto se debería cambiar, al menos, el factor de pérdida (en lugar de 0,9) para solucionar el desbordamiento permanente del buffer, justificando su respuesta matemáticamente en función del incremento.
+
+</ExamStatement>
+
+**Solución.** Se usa el mismo plano de fases que para AIMD ([equidad](/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad)): ventanas $(x_A, x_B)$ con $x_A \gt x_B$.
+
+**1. Equidad.** Ambas operaciones son **multiplicativas** y se aplican igual a los dos usuarios:
+
+$$\frac{1{,}5\,x_A}{1{,}5\,x_B} = \frac{x_A}{x_B} \qquad \frac{0{,}9\,x_A}{0{,}9\,x_B} = \frac{x_A}{x_B}$$
+
+El **cociente** $x_A/x_B$ nunca cambia: el punto se mueve sobre una recta que pasa por el origen y **no se acerca** a la línea de equidad. La **diferencia absoluta** se multiplica por 1,5 en cada RTT sin pérdidas y solo por 0,9 en cada pérdida:
+
+$$|x_A-x_B| \to 1{,}5\,|x_A-x_B| \qquad |x_A-x_B| \to 0{,}9\,|x_A-x_B|$$
+
+Como el crecimiento domina, la brecha absoluta incluso **aumenta**. **No** se alcanza el 50 %/50 %: A conserva su ventaja proporcional. *(derivado)* Por ejemplo, con $x_A=40$ y $x_B=10$ (reparto 80/20), tras un RTT quedan 60 y 15 (diferencia 45, sigue 80/20) y tras una pérdida 54 y 13,5 (diferencia 40,5, sigue 80/20).
+
+**2. Buffer.** El agregado crece **exponencialmente** (×1,5 por RTT), así que llena el buffer en pocos RTT. Al llenarse hay pérdida, pero la reducción es leve (solo 10 %): el agregado queda en 0,9 del nivel que ya desbordaba y en el siguiente RTT sube a $0{,}9 \cdot 1{,}5 = 1{,}35$ veces ese nivel, **más arriba que antes**. El router queda en **congestión permanente**: buffer siempre lleno, pérdidas continuas, retardo de cola máximo.
+
+**3. Nuevo factor $\beta$.** Para que tras una pérdida y un RTT de crecimiento el agregado no supere el nivel que provocó la pérdida:
+
+$$1{,}5\,\beta \le 1 \quad\Rightarrow\quad \beta \le \frac{1}{1{,}5} = \frac{2}{3} \approx 0{,}667$$
+
+El factor de pérdida debe bajar **al menos a 2/3** (reducir la ventana un 33 % o más) para compensar el aumento de 1,5. Aun así, al ser MIMD, **seguiría sin ser equitativo**: el cociente $x_A/x_B$ sigue fijo. *(Cota derivada del enunciado; el material solo establece que MD es lo que da equidad en AIMD.)*
+
+---
+
+## Pregunta 2: NAT, encapsulación y coexistencia IPv4/IPv6 (4 puntos)
+
+<ExamStatement>
+
+Considere el escenario donde dos redes corporativas que operan puramente con el protocolo *IPv6* deben comunicarse a través de la infraestructura troncal de un ISP que únicamente soporta *IPv4*. Para interconectarlas, se configura un túnel manual en los routers de la frontera que encapsula los paquetes IPv6 dentro de paquetes IPv4. Un host de la red interna envía un segmento de datos hacia la otra red con un *payload* de aplicación de *1440 Bytes* utilizando la pila de protocolos TCP/IPv6. Las cabeceras estándar tienen los siguientes tamaños fijos:
+
+– Cabecera TCP = 20 Bytes — Cabecera IPv6 = 40 Bytes — Cabecera IPv4 (túnel) = 20 Bytes
+
+El paquete encapsulado resultante debe transmitirse por el enlace troncal del ISP, el cual tiene una *MTU estricta de 1400 Bytes*. Además, la red local original utiliza direccionamiento privado y pasa por un proceso de NAT. Se solicita:
+
+1. **Mecanismo de Nat (1.5 pts):** Explique detalladamente el funcionamiento conceptual del protocolo NAT. Describa cómo interactúan las direcciones privadas y públicas, y qué rol cumple la tabla de estados de traducción dentro de un router.
+2. **Concepto de Encapsulación (1 pts):** Explique a qué nos referimos con el término "encapsulación" y cómo se aplica en este escenario para lograr la coexistencia de IPv4 e IPv6 a través de un túnel.
+3. **Desglose de Fragmentos (1.5 pts):** Si el paquete debe fragmentarse, determine el número total de fragmentos IPv4 que se generarán. Para cada fragmento, especifique razonadamente: El tamaño total del fragmento en Bytes (incluyendo su respectiva cabecera IPv4), el tamaño de la carga útil de IPv4 contenida y el valor del campo *Fragment Offset*.
+
+</ExamStatement>
+
+**Solución.**
+
+**1. NAT.** Todos los equipos de la red local usan direcciones **privadas** (10/8, 172.16/12, 192.168/16), válidas solo dentro; hacia afuera todos comparten **una IP pública** del router NAT. En cada datagrama **saliente** el router reemplaza (IP origen, puerto origen) por (IP pública, puerto nuevo) y lo anota en la **tabla de traducción**. En cada datagrama **entrante** busca el (IP pública, puerto) de destino en la tabla y lo reemplaza por el (IP privada, puerto) original. Sin entrada en la tabla, un paquete entrante no tiene a quién entregarse. Ver [Tabla NAT](/topics/nat-firewall/subtopics/tabla-traduccion-nat).
+
+**2. Encapsulación.** Cada capa trata lo que recibe de la de arriba como **carga útil** y le pega su propia cabecera. En el túnel, el router de borde toma el **datagrama IPv6 completo** (cabecera IPv6 + segmento TCP) como carga útil de un datagrama **IPv4**: los routers del ISP solo ven y procesan la cabecera IPv4; el router del otro extremo la quita y entrega el datagrama IPv6 intacto.
+
+<Visualization viz={{ type: "packet", static: true, title: "Tamaños en el túnel (EF 2026-I P2)", steps: [
+  { note: "1440 + 20 = 1460 B de segmento; + 40 = 1500 B de datagrama IPv6; + 20 = 1520 B de datagrama IPv4, que excede la MTU de 1400 B.",
+    layers: [ { label: "Segmento TCP: 1460 B", header: "TCP 20", payload: "datos 1440" }, { label: "Datagrama IPv6: 1500 B", header: "IPv6 40" }, { label: "Datagrama IPv4: 1520 B", header: "IPv4 20", state: "active" } ] } ] }} />
+
+**3. Fragmentación.**
+
+$$1440+20+40 = 1500\text{ B (datagrama IPv6 = carga útil IPv4)} \qquad 1500+20 = 1520 \gt 1400$$
+
+Datos por fragmento no final: $8\lfloor (1400-20)/8 \rfloor = 8\cdot 172 = 1376$ B. Reparto: $1500 = 1376 + 124$ ⇒ **2 fragmentos**.
+
+| Fragmento | Tamaño total (B) | Carga útil IPv4 (B) | Fragment Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | **1396** | 1376 | **0** | 1 |
+| 2 | **144** | 124 | **172** (= 1376/8) | 0 |
+
+**Comprobación:** $1376+124 = 1500$. No se usan 1380 B porque no es múltiplo de 8. Ver [Túnel y fragmentación](/topics/ipv6-tunel-transicion/subtopics/tunel-fragmentacion-ipv4).
+
+---
+
+## Pregunta 3: Repercusiones de las comunicaciones inalámbricas (2 puntos)
+
+<ExamStatement>
+
+La naturaleza de las ondas electromagnéticas introduce fenómenos físicos complejos en el medio inalámbrico que no ocurren en los enlaces cableados guiados. Estos fenómenos de la Capa Física tienen repercusiones directas y severas sobre el rendimiento de los protocolos en otras capas. Mencionar y explicar el problema que se tiene con la capa de transporte (TCP).
+
+</ExamStatement>
+
+**Solución.**
+
+1. **Fenómenos** (`Sem15`, slides 12–15): atenuación (path loss $\propto (fd)^2$), multitrayecto, ruido/interferencia (SNR baja) y terminal oculto. Producen **errores de bit**, tramas descartadas, retransmisiones de enlace y pérdidas en el **handover**.
+2. **El problema con TCP** (slide 17): TCP **interpreta toda pérdida como congestión**. Ante 3 ACK duplicados o un timeout reduce cwnd (a la mitad o a 1 MSS), aunque el enlace no esté congestionado: el throughput cae **innecesariamente**.
+3. **Efectos adicionales:** las retransmisiones de la capa de enlace aumentan y hacen variar el retardo (afecta al tráfico en tiempo real y al timeout de TCP) y el ancho de banda inalámbrico es escaso.
+
+Ver [Impacto en TCP](/topics/capa-fisica-enlace/subtopics/impacto-tcp-inalambrico).
+
+---
+
+## Pregunta 4: Estimación del RTT de TCP (2,5 puntos)
+
+<ExamStatement>
+
+Llene la siguiente tabla en su cuadernillo para los primeros 5 segmentos, referente a los tiempos RTT (vista en el laboratorio), empleando los datos de los traces mostrados en la figura. Considere las siguientes condiciones:
+
+- Todos los paquetes enviados tienen sus respectivos ACK en orden.
+- Para el primer segmento, asuma que el RTT estimado es igual a la primera muestra obtenida ($EstimatedRTT_1 = SampleRTT_1$).
+- Realice todos sus cálculos redondeando a **3 cifras decimales** y mantenga las unidades en milisegundos (ms).
+
+Emplee la fórmula: $EstimatedRTT_n = 0{,}875 \cdot EstimatedRTT_{n-1} + 0{,}125 \cdot SampleRTT_n$
+
+| Nº | Sent time | ACK Received time | RTT (ms) | EstimatedRTT |
+|---|---|---|---|---|
+| Seg1 | | | | |
+
+</ExamStatement>
+
+<ExamFigure src={figTrace} alt="Traza de Wireshark de un POST de 192.168.86.68 a 128.119.245.12: frame 4 POST en 0.024047, frames 5 y 6 en 0.024048 y 0.024049; ACK 1449 en 0.052671 (frame 7), ACK 2897 en 0.052676 (frame 8); frames 9 a 12 en 0.052774, 0.052775, 0.052854, 0.052855; ACK 4345 en 0.053626 (frame 13); ACK 5793 en 0.080768 (frame 16), ACK 7241 en 0.080771 (frame 17)." caption="Traza TCP de la pregunta 4" />
+
+**Solución.** Cada segmento de datos lleva 1448 B; el segmento $n$ queda confirmado por el ACK $= 1 + 1448\,n$.
+
+**1. Emparejar envíos y ACK.**
+
+| Seg. | Frame enviado | ACK que lo confirma |
+|---|---|---|
+| 1 | 4 (0,024047 s) | 1449, frame 7 (0,052671 s) |
+| 2 | 5 (0,024048 s) | 2897, frame 8 (0,052676 s) |
+| 3 | 6 (0,024049 s) | 4345, frame 13 (0,053626 s) |
+| 4 | 9 (0,052774 s) | 5793, frame 16 (0,080768 s) |
+| 5 | 10 (0,052775 s) | 7241, frame 17 (0,080771 s) |
+
+**2. Muestras y EWMA** (redondeo a 3 decimales en cada paso):
+
+$$E_2 = 0{,}875(28{,}624) + 0{,}125(28{,}628) = 28{,}6245 \to 28{,}625$$
+$$E_3 = 0{,}875(28{,}625) + 0{,}125(29{,}577) = 28{,}744$$
+$$E_4 = 0{,}875(28{,}744) + 0{,}125(27{,}994) = 28{,}650$$
+$$E_5 = 0{,}875(28{,}650) + 0{,}125(27{,}996) = 28{,}568$$
+
+| Nº | Sent time (s) | ACK Received time (s) | RTT (ms) | EstimatedRTT (ms) |
+|---|---|---|---:|---:|
+| Seg1 | 0,024047 | 0,052671 | 28,624 | **28,624** |
+| Seg2 | 0,024048 | 0,052676 | 28,628 | **28,625** |
+| Seg3 | 0,024049 | 0,053626 | 29,577 | **28,744** |
+| Seg4 | 0,052774 | 0,080768 | 27,994 | **28,650** |
+| Seg5 | 0,052775 | 0,080771 | 27,996 | **28,568** |
+
+Es la misma traza del laboratorio 3; la serie completa está en [RTT y gráfica de Stevens](/topics/lab-tcp-wireshark/subtopics/rtt-y-grafica-stevens).
+
+---
+
+## Pregunta 5: Análisis de traceroute (2,5 puntos)
+
+<ExamStatement>
+
+Suponga que ejecuta el comando: `traceroute 8.8.8.8` desde una terminal Linux hacia un servidor remoto y obtiene el resultado mostrado a la derecha:
+
+1. Sabiendo que el sistema emisor utiliza UDP para este comando, indique qué **Tipo y Código** de mensaje ICMP devuelve específicamente el router de la dirección **203.0.113.17** y cuál es el evento que lo dispara. **(0.75 pts)**
+2. Los saltos 4 y 7 muestran asteriscos (`* * *`) indicando *Request timed out*. Sin embargo, la traza continúa. Explique una razón técnica a nivel de políticas de red por la cual estos nodos descartan el paquete de prueba pero siguen enrutando los paquetes con TTL mayor a 0. **(0.75 pts)**
+3. Suponga que la red presenta un **enrutamiento perfectamente simétrico** (la ruta de retorno es exactamente la misma que la de ida). Si el router del salto 8 (`203.0.113.17`) genera su respuesta ICMP con un TTL inicial de 255, determine **cuál será el valor del campo TTL** con el que dicho paquete llegará al host emisor. Justifique su cálculo. **(1.00 pt)**
+
+</ExamStatement>
+
+<ExamFigure src={figTr} alt="Salida de traceroute: 1 192.168.1.1 1.123 ms; 2 10.20.30.1 3.456 ms; 3 172.16.0.5 7.789 ms; 4 * * *; 5 200.48.50.1 12.345 ms; 6 198.51.100.42 45.678 ms; 7 * * *; 8 203.0.113.17 89.123 ms; 9 142.250.78.36 92.456 ms; 10 8.8.8.8 93.345 ms." caption="Salida de traceroute de la pregunta 5" />
+
+**Solución.**
+
+**1.** ICMP **Tipo 11, Código 0** (*Time Exceeded*, TTL excedido en tránsito). Evento: la sonda UDP salió con TTL 8, cada uno de los 7 routers anteriores le restó 1 y llegó a 203.0.113.17 con TTL 1; al decrementarlo a **0**, el router la descarta y avisa al origen.
+
+**2.** El reenvío ocurre en el **plano de datos** (hardware) y no depende de responder ICMP. Generar un ICMP es trabajo extra del router, y la política de seguridad de `Sem12_NetT-Routers` (slides 38–39) recomienda **filtrar y limitar en tasa** ICMP para evitar el reconocimiento de la red: esos routers no generan (o filtran) el Time Exceeded, pero siguen reenviando todo datagrama cuyo TTL no expira en ellos. Por eso los saltos 5 y 8 responden y la traza continúa.
+
+**3.** La respuesta del salto $k=8$ cruza de regreso los routers 7, 6, …, 1 (7 decrementos):
+
+$$TTL_{\text{llegada}} = 255-(8-1) = \boxed{248}$$
+
+*(Si se cuentan 8 decrementos, 247; declarar la convención.)* Ver [ICMP, TTL y traceroute](/topics/seguridad-router-icmp/subtopics/icmp-ttl-traceroute).
+
+---
+
+## Pregunta 6: Análisis ICMP en Wireshark (2,5 puntos)
+
+<ExamStatement>
+
+Durante una captura de red visualizada en Wireshark, se intercepta el paquete ICMP mostrado en la figura, producto de una herramienta de diagnóstico. Basándose en los campos expuestos, responda:
+
+1. **(0.50 pts)** Explique el mecanismo exacto en el plano de datos del router que desencadena la generación de un mensaje ICMP *Tipo 11, Código 0*, y cuál es el propósito central de este control en redes IP.
+2. **(0.50 pts)** Asumiendo un enrutamiento simétrico y que el router generó la respuesta ICMP con un TTL inicial de 255, calcule analíticamente cuál fue el **TTL inicial** que el host emisor (`192.168.86.61`) configuró en el paquete UDP original.
+3. **(0.75 pts)** Justifique por qué el estándar exige que ICMP encapsule la cabecera IP original y los primeros bytes de su carga útil. ¿Qué rol crucial cumplen los puertos UDP (visibles al final de la traza) para el host que recibe este error?
+4. **(0.75 pts)** Observe el campo *Flags* y *Total Length* del paquete IP original encapsulado. ¿Qué indican estos valores sobre el tamaño del datagrama enviado? ¿Por qué esto representa un comportamiento atípico para un `traceroute` estándar?
+
+</ExamStatement>
+
+<ExamFigure src={figWs} alt="Frame 290: IPv4 128.119.0.10 → 192.168.86.61, Total Length 56, TTL 245, ICMP. Type 11 Time-to-live exceeded, Code 0. IP encapsulado 192.168.86.61 → 128.119.245.12, Total Length 1500, Identification 0xfdbd (64957), Flags 0x1 More fragments, Fragment Offset 0, TTL 1, UDP. UDP Src Port 64929, Dst Port 33462." caption="Captura de la pregunta 6" />
+
+**Solución.**
+
+**1.** Al reenviar cada datagrama el router **decrementa el TTL**; si llega a **0**, lo **descarta** y envía al origen un ICMP Tipo 11 Código 0. Aquí la sonda llegó a 128.119.0.10 con TTL 1 (lo muestra la cabecera encapsulada). Propósito: que un datagrama atrapado en un **bucle** no circule para siempre, y avisar al emisor; traceroute lo aprovecha para descubrir cada salto.
+
+**2.** La respuesta salió con 255 y llegó con 245. Si el router está en el salto $k$, de regreso la decrementan $k-1$ routers:
+
+$$245 = 255-(k-1) \Rightarrow k = 11$$
+
+La sonda llegó al salto 11 con TTL 1, así que el host la envió con $\boxed{TTL = 11}$. *(Con la convención "saltos = 255 − 245", 10.)*
+
+**3.** El emisor necesita saber **qué datagrama** falló: la cabecera IP original (destino 128.119.245.12, ID 0xfdbd, protocolo UDP) más los primeros bytes de su carga, que en UDP son la **cabecera UDP**. Los **puertos 64929 → 33462** permiten al host entregar el error al **socket/proceso** que envió la sonda y asociarlo con el TTL de esa sonda.
+
+**4.** **Total Length = 1500** y **Flags = 0x1 (More Fragments), offset 0**: el datagrama original era **mayor que 1500 B** y este es su **primer fragmento**. Un traceroute estándar envía sondas **pequeñas** que no se fragmentan; aquí se pidió un tamaño grande (como `traceroute gaia.cs.umass.edu 2000` del LAB4A), lo que obliga a fragmentar.
+
+---
+
+## Pregunta 7: Análisis de NAT (2,5 puntos)
+
+<ExamStatement>
+
+Considere la topología de red mostrada en la figura, donde se realiza una experiencia de laboratorio capturando tráfico a ambos lados de un router NAT. Responda:
+
+1. **(0.75 pts)** Explique qué cambios exactos realiza el router NAT en la *Dirección IP Origen* y el *Puerto TCP Origen* del paquete inicial (segmento SYN) cuando este sale de la red de la casa hacia el servidor `138.76.29.8`.
+2. **(0.75 pts)** Cuando el servidor `138.76.29.8` responde, ¿a qué dirección IP y puerto llega primero esa respuesta? Explique brevemente cómo hace el router NAT para saber que debe reenviar ese paquete específicamente a la PC `192.168.10.11`.
+3. **(1.00 pt)** Note que la IP del router hacia la red del ISP es `10.0.1.254`. Indique si esta es una IP pública o privada; y a qué clase pertenece.
+
+</ExamStatement>
+
+<ExamFigure src={figNat} alt="Topología: home network con la PC 192.168.10.11, NAT router con interfaz 10.0.1.254 hacia la ISP network; capturas NAT_home_side y NAT_ISP_side. Server: 138.76.29.8." caption="Topología de la pregunta 7" />
+
+**Solución.**
+
+**1.** IP origen: **192.168.10.11 → 10.0.1.254**. Puerto TCP origen: el del cliente → un **puerto nuevo elegido por el NAT**. No cambian la IP y el puerto destino (138.76.29.8), los flags ni los números de secuencia; el checksum IP se recalcula. El router guarda la fila (10.0.1.254, puerto nuevo) ↔ (192.168.10.11, puerto original).
+
+**2.** La respuesta llega primero a **10.0.1.254** y al **puerto nuevo**. El router busca ese puerto en su **tabla de traducción**, encuentra 192.168.10.11 y el puerto original, reescribe el destino y entrega el segmento a la PC.
+
+**3.** **Privada**: pertenece a 10.0.0.0/8. Es **clase A** (primer octeto 10 ∈ 0–127). En el laboratorio, la "red del ISP" también usa direccionamiento privado.

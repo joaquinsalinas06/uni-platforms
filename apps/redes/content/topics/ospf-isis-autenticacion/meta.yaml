@@ -1,0 +1,25 @@
+{
+  "id": "ospf-isis-autenticacion",
+  "type": "concept",
+  "title": "OSPF, IS-IS y Autenticación con HMAC",
+  "unit": "s13",
+  "prerequisites": [
+    "link-state-dijkstra"
+  ],
+  "buildsOn": [
+    "link-state-dijkstra"
+  ],
+  "usedBy": [
+    "bgp-autenticacion-sesion"
+  ],
+  "hasVisualization": true,
+  "visualizationType": "sequence",
+  "formulas": [
+    {
+      "name": "Etiqueta HMAC",
+      "tex": "\\text{Tag}=\\text{HMAC-SHA-256}(K,\\ \\text{paquete})",
+      "reasoning": "Emisor y receptor comparten la clave K; el receptor recalcula la etiqueta y descarta el paquete si no coincide.",
+      "source": "Sem13_NetT-Dijkstra_OSPF_ISIS#22"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "capa-fisica-enlace",
+  "type": "concept",
+  "title": "Capa Física: Enlace Inalámbrico, Terminal Oculto y Cable UTP",
+  "unit": "s15",
+  "prerequisites": [
+    "control-congestion-tcp-avanzado"
+  ],
+  "buildsOn": [
+    "control-congestion-tcp-avanzado"
+  ],
+  "usedBy": [
+    "wifi-celular-movilidad"
+  ],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": [
+    {
+      "name": "Pérdida de trayecto en espacio libre",
+      "tex": "\\text{path loss} \\propto (f\\,d)^2",
+      "reasoning": "La señal pierde potencia con el cuadrado de frecuencia por distancia: más alta la banda o más lejos, más atenuación.",
+      "source": "Sem15_NetT-Wireless-PhyLayer#12"
+    }
+  ]
+}

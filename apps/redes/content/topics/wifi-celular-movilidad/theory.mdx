@@ -1,0 +1,55 @@
+---
+kind: theory
+title: "Wi-Fi 802.11, Bluetooth, 4G/5G y Movilidad"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Panorama de tecnologías (slides 9 y 19)
+
+Las tecnologías inalámbricas del curso se ordenan por **tasa** y **alcance**:
+
+| Tecnología | Tasa máxima (slide) | Alcance típico |
+|---|---|---|
+| Bluetooth | 2 Mbps | interior, menos de 10 m |
+| 802.11b | 11 Mbps | 30 m |
+| 802.11g | 54 Mbps | 30 m |
+| 802.11n (WiFi 4) | 600 Mbps | 70 m |
+| 802.11ac (WiFi 5) | 3,47 Gbps | 70 m |
+| 802.11ax (WiFi 6) | 14 Gbps | 70 m |
+| 802.11af / ah | 35–560 / 347 Mbps | 1 km |
+| 4G LTE | cientos de Mbps | km |
+| 5G | 10 Gbps (pico 20 Gbps en la tabla de KPI) | km |
+
+<Visualization viz={{ type: "xy-chart", static: true, title: "Tasa máxima de los estándares 802.11 (slide 19)", steps: [
+  { note: "Escala logarítmica: de 11 Mbps (802.11b, 1999) a 14 Gbps (802.11ax, 2020). Todos usan CSMA/CA.",
+    x: { label: "año", min: 1998, max: 2021 }, y: { label: "tasa máxima (Mbps)", min: 5, max: 20000, log: true },
+    series: [ { id: "w", label: "802.11", kind: "line", points: [[1999,11],[2003,54],[2009,600],[2013,3470],[2020,14000]] } ] } ] }} />
+
+---
+
+## 2. Wi-Fi 802.11 (slides 19–23)
+
+- **Arquitectura:** el host habla con la estación base = **access point (AP)**. Un **BSS** ("celda") en modo infraestructura tiene hosts y un AP; en ad hoc, solo hosts.
+- **Canales:** el espectro se divide en canales; el administrador elige el del AP; puede haber **interferencia** si un AP vecino eligió el mismo.
+- **Asociación:** el host escanea canales escuchando **beacons** (SSID y MAC del AP), elige un AP, puede autenticarse y normalmente corre **DHCP** para obtener IP en la subred del AP.
+- **Acceso múltiple:** CSMA/CA.
+
+Detalle en [Arquitectura 802.11 y asociación](/topics/wifi-celular-movilidad/subtopics/arquitectura-80211-asociacion).
+
+---
+
+## 3. Bluetooth, 4G/5G y movilidad
+
+- **Bluetooth** (slide 25): red de área personal, menos de 10 m, reemplazo de cables, ad hoc, modo *parked* para ahorrar batería, autoensamblaje en una **piconet** con un maestro.
+- **4G/5G** (slides 26–30 y 37–41): la solución para Internet móvil de área amplia; arquitectura LTE (UE, eNode-B, MME, HSS, S-GW, P-GW) y KPI de 5G. Ver [Redes celulares 4G/5G](/topics/wifi-celular-movilidad/subtopics/celular-4g-5g).
+- **Movilidad** (slides 31–34): ¿cómo sabe Internet a qué red reenviar cuando un dispositivo se muda? Ver [Movilidad](/topics/wifi-celular-movilidad/subtopics/movilidad-enrutamiento).
+
+---
+
+## 4. Errores típicos
+
+- Pensar que todos los 802.11 usan la misma banda: b/g en 2,4 GHz, ac en 5 GHz, n/ax en ambas, af en bandas de TV, ah en 900 MHz.
+- Confundir BSS con SSID: el BSS es la celda; el SSID es el nombre que anuncia el AP.
+- Olvidar que tras asociarse el host todavía necesita **DHCP** para tener IP.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 9 y 18–43.

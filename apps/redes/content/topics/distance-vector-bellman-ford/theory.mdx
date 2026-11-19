@@ -1,0 +1,71 @@
+---
+kind: theory
+title: "Distance Vector y Ecuación de Bellman-Ford"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Otra forma de calcular rutas
+
+Link-state supone que todos conocen el mapa completo. **Distance vector** no: cada router empieza conociendo **solo** el costo a sus vecinos directos y aprende lo demás **conversando con ellos**. La slide 4 de `Sem14_NetT-DistanceVector_BGPAuthentication` clasifica los algoritmos:
+
+| Pregunta | Opción 1 | Opción 2 |
+|---|---|---|
+| ¿Información global o descentralizada? | **global**: todos conocen topología y costos ("link state") | **descentralizada**: cálculo iterativo intercambiando con vecinos ("distance vector") |
+| ¿Qué tan rápido cambian las rutas? | **estático**: cambian lento | **dinámico**: actualizaciones periódicas o ante cambios de costo |
+
+---
+
+## 2. Bellman-Ford (slide 8)
+
+Si $D_x(y)$ es el costo del camino mínimo de $x$ a $y$:
+
+$$D_x(y)=\min_{v}\{\,c_{x,v}+D_v(y)\,\}$$
+
+donde el mínimo se toma sobre **todos los vecinos** $v$ de $x$. El vecino que da el mínimo es el **siguiente salto** hacia $y$.
+
+<Visualization viz={{ type: "net-scene", static: true, title: "Bellman-Ford en u hacia z (slide 9)", steps: [
+  { note: "u prueba cada vecino: v da 2+5=7, x da 1+3=4, w da 5+3=8. Gana x: Du(z)=4 y x es el siguiente salto.",
+    devices: [
+      { id: "u", kind: "router", label: "u", sub: "Du(z) = 4", x: 8, y: 50, state: "answer" },
+      { id: "v", kind: "router", label: "v", sub: "Dv(z) = 5", x: 32, y: 14 },
+      { id: "w", kind: "router", label: "w", sub: "Dw(z) = 3", x: 66, y: 14 },
+      { id: "x", kind: "router", label: "x", sub: "Dx(z) = 3", x: 32, y: 86, state: "active" },
+      { id: "y", kind: "router", label: "y", x: 66, y: 86 },
+      { id: "z", kind: "router", label: "z", x: 92, y: 50 } ],
+    cables: [ { from: "u", to: "v", label: "2" }, { from: "u", to: "x", label: "1", state: "answer" }, { from: "u", to: "w", label: "5" },
+              { from: "v", to: "x", label: "2" }, { from: "v", to: "w", label: "3" }, { from: "x", to: "w", label: "3" },
+              { from: "x", to: "y", label: "1" }, { from: "w", to: "y", label: "1" }, { from: "w", to: "z", label: "5" }, { from: "y", to: "z", label: "2" } ] } ] }} />
+
+Ejemplo completo en [La ecuación de Bellman-Ford](/topics/distance-vector-bellman-ford/subtopics/ecuacion-bellman-ford).
+
+---
+
+## 3. El algoritmo (slides 6–7 y 10)
+
+Cada nodo:
+
+1. **espera** un cambio en el costo de un enlace local o un mensaje DV de un vecino;
+2. **recalcula** su vector con el DV recibido: $D_x(y)\leftarrow \min_v\{c_{x,v}+D_v(y)\}$ para cada destino $y$;
+3. **si su DV cambió**, se lo notifica a sus vecinos.
+
+Propiedades:
+- **iterativo y asíncrono:** cada iteración local la dispara un cambio de costo local o un DV de un vecino;
+- **distribuido y autodetenido:** solo se avisa cuando el DV cambia; "si no llega notificación, no se hace nada".
+
+La red de 9 nodos de las slides 11–20, iteración por iteración, está en [Iteraciones de DV en la grilla](/topics/distance-vector-bellman-ford/subtopics/iteraciones-dv-grilla).
+
+---
+
+## 4. Buenas noticias rápido, malas noticias lento
+
+Cuando un costo **baja**, la mejora se propaga en pocas iteraciones. Cuando **sube**, dos nodos pueden seguir creyendo que el otro tiene un buen camino y subir sus costos de a poco: **count-to-infinity**. Ver [Cambios de costo y count-to-infinity](/topics/distance-vector-bellman-ford/subtopics/cambios-costo-count-to-infinity) y la [comparación LS frente a DV](/topics/distance-vector-bellman-ford/subtopics/comparacion-ls-dv).
+
+---
+
+## 5. Errores típicos
+
+- Tomar el mínimo sobre **todos los nodos** en vez de solo los **vecinos**.
+- Sumar $D_v(y)$ sin el costo del enlace $c_{x,v}$.
+- Creer que DV necesita el mapa completo: solo necesita los vectores de sus vecinos.
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slides 4–23.

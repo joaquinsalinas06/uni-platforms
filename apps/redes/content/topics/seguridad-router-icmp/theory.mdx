@@ -1,0 +1,81 @@
+---
+kind: theory
+title: "Seguridad del Router: Spoofing, uRPF, ICMP y Traceroute"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. El problema: el forwarding solo mira el destino
+
+El forwarding tradicional decide con la **IP destino**. Nadie revisa que la **IP origen** sea verdadera. La última parte de `Sem12_NetT-Routers` (slides 35–39) trata tres riesgos y sus defensas: **spoofing**, **uRPF** e **ICMP**. Los laboratorios LAB4A y LAB4C muestran el otro lado de ICMP: el diagnóstico con **ping** y **traceroute**, que los finales preguntan siempre.
+
+---
+
+## 2. IP spoofing y uRPF
+
+**IP spoofing:** el atacante **falsifica la IP origen** de sus paquetes. En la slide, el origen real es 203.0.113.9 pero el paquete dice 192.168.1.50.
+
+Amenazas: suplantar al origen, ataques de **reflexión/amplificación** y evadir reglas basadas en el origen. Idea clave: **que el destino sea alcanzable no prueba que el origen sea legítimo.**
+
+**uRPF (Unicast Reverse Path Forwarding):** el router valida el origen con su **propia tabla de rutas al revés**: ¿por dónde mandaría yo un paquete hacia esa IP origen?
+
+| | Strict uRPF | Loose uRPF |
+|---|---|---|
+| Condición | la mejor ruta de vuelta al origen usa **la misma interfaz** por la que llegó | el origen es alcanzable por **alguna** ruta aceptable |
+| Costo | puede rechazar tráfico válido **asimétrico** | admite rutas asimétricas, protege menos |
+
+Ejemplo de la slide: el paquete llega por la interfaz A y la mejor ruta de vuelta usa B → **strict falla, loose puede pasar**. Desarrollo en [Spoofing y uRPF](/topics/seguridad-router-icmp/subtopics/spoofing-urpf).
+
+---
+
+## 3. ICMP: útil y abusable
+
+ICMP da **diagnóstico y reporte de errores**, pero algunos mensajes se abusan (slide 38):
+
+| Ataque | Cómo funciona |
+|---|---|
+| **Smurf** | Echo Requests con origen falsificado hacia direcciones de **broadcast dirigido**: muchas respuestas caen sobre la víctima |
+| **ICMP Redirect malicioso** | Redirects falsos intentan cambiar el siguiente salto de un host |
+| **Reconocimiento** | sondas y errores ICMP revelan hosts alcanzables y la topología |
+
+**Defensa (slide 39): filtrar de forma selectiva, no bloquear todo ICMP.**
+- filtrar tipos innecesarios o peligrosos;
+- deshabilitar el reenvío de broadcasts dirigidos cuando corresponda;
+- restringir o validar los Redirect;
+- limitar tasa y monitorear patrones raros;
+- **conservar los errores esenciales** para diagnóstico y para **Path MTU Discovery**.
+
+El caso TechNova del LAB4 TEST muestra qué pasa si se bloquea todo ICMP: se pierde el *Fragmentation needed* (Tipo 3, Código 4), PMTUD falla y las conexiones grandes quedan colgadas mientras los ping pequeños funcionan.
+
+---
+
+## 4. TTL y traceroute en una figura
+
+<Visualization viz={{ type: "net-scene", title: "Traceroute: cada TTL descubre un router", steps: [
+  { note: "Sonda con TTL=1: el primer router la recibe con TTL 1, lo baja a 0, la descarta y responde ICMP Tipo 11 Código 0 (TTL excedido).",
+    devices: [
+      { id: "h", kind: "laptop", label: "Host", x: 8, y: 50 },
+      { id: "r1", kind: "router", label: "Router 1", x: 32, y: 50 },
+      { id: "r2", kind: "router", label: "Router 2", x: 56, y: 50 },
+      { id: "d", kind: "server", label: "Destino", x: 90, y: 50 } ],
+    cables: [ { from: "h", to: "r1" }, { from: "r1", to: "r2" }, { from: "r2", to: "d" } ],
+    packets: [ { from: "h", to: "r1", label: "TTL=1", order: 1, state: "muted" }, { from: "r1", to: "h", label: "ICMP 11/0", order: 2, state: "active" } ] },
+  { note: "Sonda con TTL=2: atraviesa el router 1 (TTL pasa a 1) y expira en el router 2, que responde. Así se lee la ruta salto a salto.",
+    devices: [
+      { id: "h", kind: "laptop", label: "Host", x: 8, y: 50 },
+      { id: "r1", kind: "router", label: "Router 1", x: 32, y: 50 },
+      { id: "r2", kind: "router", label: "Router 2", x: 56, y: 50, state: "active" },
+      { id: "d", kind: "server", label: "Destino", x: 90, y: 50 } ],
+    cables: [ { from: "h", to: "r1" }, { from: "r1", to: "r2" }, { from: "r2", to: "d" } ],
+    packets: [ { from: "h", to: "r2", label: "TTL=2", order: 3, state: "muted" }, { from: "r2", to: "h", label: "ICMP 11/0", order: 4, state: "active" } ] } ] }} />
+
+La regla para calcular TTL (de la sonda y de la respuesta) y las preguntas de los finales están en [ICMP, TTL y traceroute](/topics/seguridad-router-icmp/subtopics/icmp-ttl-traceroute).
+
+---
+
+## 5. Errores típicos
+
+- "Bloquear todo ICMP es más seguro": rompe PMTUD y el diagnóstico.
+- Creer que strict uRPF nunca descarta tráfico legítimo: con rutas asimétricas sí lo hace.
+- Confundir Tipo 11 (TTL excedido) con Tipo 3 (destino inalcanzable).
+
+Fuente: `Sem12_NetT-Routers`, slides 35–40; `Sem13_LAB4C_ICMP`; `Sem11_LAB4A_IP (2)` §2; `Evaluación_LAB4_TEST_Assignment`.

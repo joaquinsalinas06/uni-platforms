@@ -8,6 +8,7 @@ buildsOn:
   - principios-costes-congestion
 usedBy:
   - lab-tcp-wireshark
+  - capa-fisica-enlace
 hasVisualization: true
 visualizationType: xy-chart
 formulas:

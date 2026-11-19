@@ -1,0 +1,47 @@
+---
+kind: subtopic
+title: "Fabrics de conmutación: memoria, bus y red de interconexión"
+order: 2
+---
+
+## 1. Idea
+
+El fabric es el "cruce" interno del router. Su **tasa de conmutación** es cuántos paquetes por segundo puede mover de entradas a salidas. Con $N$ puertos de entrada a tasa $R$, lo deseable es $N\cdot R$: así el fabric nunca es el cuello de botella.
+
+---
+
+## 2. Los tres tipos (slides 26–30)
+
+| Tipo | Cómo funciona | Límite | Ejemplo de la slide |
+|---|---|---|---|
+| **Memoria** | routers de primera generación: computadoras comunes, la CPU copia el paquete a la memoria del sistema y de ahí a la salida | ancho de banda de memoria: **2 cruces de bus por datagrama** | — |
+| **Bus** | el datagrama pasa de la memoria del puerto de entrada a la del de salida por un **bus compartido** | **contención del bus**: un paquete a la vez | bus de 32 Gbps (Cisco 5600), suficiente para routers de acceso |
+| **Red de interconexión** | crossbar, redes Clos; switch multietapa $n\times n$ armado con switches más pequeños | escala con paralelismo | Cisco CRS: 8 planos de conmutación, cada uno red de 3 etapas, hasta cientos de Tbps |
+
+---
+
+## 3. Paralelismo en la red de interconexión (slides 29–30)
+
+- El datagrama se **fragmenta en celdas de tamaño fijo** a la entrada.
+- Las celdas cruzan el fabric en paralelo.
+- Se **reensambla** el datagrama a la salida.
+- Varios **planos** de conmutación en paralelo dan *speedup* y *scaleup*.
+
+---
+
+## 4. Ejemplo (derivado)
+
+*(derivado)* Un router con $N=8$ puertos de 10 Gbps necesita, idealmente, un fabric de
+
+$$N\,R = 8 \times 10\ \text{Gbps} = 80\ \text{Gbps}.$$
+
+Un bus de 32 Gbps como el de la slide no alcanza: aparecería cola en la entrada.
+
+---
+
+## 5. Errores típicos
+
+- Pensar que en conmutación por memoria el paquete cruza el bus una vez: son **dos** (entrada → memoria → salida).
+- Olvidar que el bus solo permite **un** paquete a la vez.
+
+Fuente: `Sem12_NetT-Routers`, slides 25–30.

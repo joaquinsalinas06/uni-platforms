@@ -1,0 +1,46 @@
+---
+kind: subtopic
+title: "Atenuación, multitrayecto, ruido y SNR"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Atenuación o fading (slide 12)
+
+La señal de radio **pierde potencia** a medida que se propaga (pérdida de trayecto en espacio libre):
+
+$$\text{path loss} \propto (f\,d)^2$$
+
+con $f$ la frecuencia y $d$ la distancia. **Mayor frecuencia o mayor distancia ⇒ mayor pérdida.**
+
+*(derivado)* Duplicar la distancia con la misma frecuencia multiplica la pérdida por $2^2=4$; pasar de 2,4 GHz a 5 GHz a la misma distancia la multiplica por $(5/2{,}4)^2 \approx 4{,}3$.
+
+---
+
+## 2. Multitrayecto (slide 13)
+
+La señal se refleja en el suelo y en los edificios y llega al destino **por varios caminos** (uno en línea de vista, LOS, y otros reflejados) en **instantes ligeramente distintos**.
+
+<Visualization viz={{ type: "net-scene", static: true, title: "Multitrayecto (slide 13)", steps: [
+  { note: "La misma señal llega por la línea de vista y por un camino reflejado en un edificio, un poco más tarde.",
+    devices: [
+      { id: "tx", kind: "router", label: "Emisor", x: 10, y: 60 },
+      { id: "bld", kind: "server", label: "Edificio", sub: "reflexión", x: 50, y: 12 },
+      { id: "rx", kind: "phone", label: "Receptor", x: 90, y: 60 } ],
+    packets: [ { from: "tx", to: "rx", label: "línea de vista", order: 1, state: "active" }, { from: "tx", to: "bld", label: "reflejado", order: 2, state: "marked" }, { from: "bld", to: "rx", label: "llega después", order: 3, state: "marked" } ] } ] }} />
+
+---
+
+## 3. Ruido y SNR (slide 14)
+
+Otras fuentes interfieren en las mismas frecuencias: motores, electrodomésticos. La **SNR** (*signal-to-noise ratio*, relación señal a ruido) mide cuánto sobresale la señal: **cuanto mayor la SNR, más fácil extraer la señal del ruido** ("algo bueno").
+
+---
+
+## 4. Errores típicos
+
+- Leer $(f d)^2$ como "la pérdida baja con la frecuencia": sube.
+- Confundir multitrayecto (copias de la misma señal) con interferencia (señales de otras fuentes).
+- Decir que una SNR baja es deseable.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 12–14.

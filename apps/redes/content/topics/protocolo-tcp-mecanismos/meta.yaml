@@ -11,6 +11,7 @@ usedBy:
   - "control-flujo-congestion-tcp"
   - "lab-tcp-wireshark"
   - "capa-red-ipv4-fragmentacion"
+  - nat-firewall
 formulas: []
 hasVisualization: true
 visualizationType: "packet"

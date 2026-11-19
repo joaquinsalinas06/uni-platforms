@@ -70,7 +70,7 @@ export const collections = {
     }),
     schema: z.object({
       title: z.string(),
-      category: z.enum(['parciales', 'laboratorio']),
+      category: z.enum(['parciales', 'finales', 'laboratorio']),
       categoryLabel: z.string(),
       order: z.number().int().default(0),
       /** PDF original del examen, servido desde public/ (p. ej.

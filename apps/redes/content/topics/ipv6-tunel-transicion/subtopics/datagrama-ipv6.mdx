@@ -1,0 +1,54 @@
+---
+kind: subtopic
+title: "El datagrama IPv6 frente al IPv4"
+order: 1
+---
+
+## 1. Idea
+
+IPv6 no es "IPv4 con direcciones largas": quita campos para que cada router trabaje menos. El LAB4A pide comparar ambas cabeceras campo por campo en Wireshark; esta tabla resume esa comparación con lo que dicen las slides.
+
+---
+
+## 2. Campos de la cabecera IPv6 (slide 25)
+
+| Campo | Qué indica |
+|---|---|
+| **ver** | versión (6) |
+| **pri** (prioridad) | prioridad entre datagramas de un flujo |
+| **flow label** | identifica datagramas del mismo "flujo" (concepto no bien definido, dice la slide) |
+| **payload len** | longitud de la carga útil |
+| **next hdr** | protocolo de la capa superior (o cabecera siguiente) |
+| **hop limit** | saltos que le quedan |
+| **source / destination address** | 128 bits cada una |
+
+---
+
+## 3. Comparación con IPv4 (LAB4A §1 y LAB4 slides IP)
+
+| Aspecto | IPv4 | IPv6 |
+|---|---|---|
+| Cabecera base | 20 bytes, variable con opciones (campo *header length*) | **40 bytes fijos**, sin *header length* |
+| Vida del datagrama | TTL | **hop limit** |
+| Protocolo superior | protocol | **next header** |
+| Checksum de cabecera | sí | **no** |
+| Fragmentación | identification, flags, offset; la hacen los routers | no está en la cabecera base; **los routers no fragmentan** |
+| Direcciones | 32 bits | **128 bits** |
+
+---
+
+## 4. Cómo se escribe una dirección IPv6 (LAB4A)
+
+Ocho grupos de 4 dígitos hexadecimales separados por `:`. Se omiten los ceros a la izquierda, y `::` reemplaza una secuencia de grupos en cero:
+
+$$\texttt{fe80::1085:6434:583:e79} = \texttt{fe80:0000:0000:0000:1085:6434:0583:0e79}$$
+
+---
+
+## 5. Errores típicos
+
+- Responder "IPv6 tiene 32 bytes de cabecera": son **40**, fijos.
+- Decir que IPv6 elimina el checksum "porque no hay errores": se elimina para acelerar el procesamiento en routers.
+- Escribir dos `::` en una misma dirección: la abreviatura solo puede usarse una vez.
+
+Fuente: `Sem11_NetT-NetLayer2`, slides 24–25; `Sem11_LAB4A_IP (2)` §1; `Sem10_LAB4_Slides_IP`.

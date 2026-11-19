@@ -1,0 +1,77 @@
+---
+kind: subtopic
+title: "Iteraciones de distance vector en la red de 9 nodos"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. La red de las slides 11–20
+
+Nueve routers en grilla 3×3. Todos los enlaces cuestan **1**, con dos asimetrías: el enlace **a–b cuesta 8** y **falta el enlace c–f** (c solo tiene a b como vecino).
+
+En $t=0$ cada nodo conoce solo el costo a sus vecinos directos. En cada iteración **todos** reciben los DV de sus vecinos, recalculan y envían su nuevo DV.
+
+DV de a en $t=0$ (slide 11): $D_a(a)=0$, $D_a(b)=8$, $D_a(d)=1$ y $\infty$ para c, e, f, g, h, i.
+
+---
+
+## 2. Cálculo de b en $t=1$ (slide 18)
+
+b recibe los DV de a, c y e ($t=0$) y aplica Bellman-Ford con $c_{b,a}=8$, $c_{b,c}=1$, $c_{b,e}=1$:
+
+| Destino | vía a: $8+D_a$ | vía c: $1+D_c$ | vía e: $1+D_e$ | $D_b$ |
+|---|---|---|---|---|
+| a | 8 | ∞ | ∞ | **8** |
+| c | ∞ | 1 | ∞ | **1** |
+| d | 9 | ∞ | 2 | **2** |
+| e | ∞ | ∞ | 1 | **1** |
+| f | ∞ | ∞ | 2 | **2** |
+| g | ∞ | ∞ | ∞ | **∞** |
+| h | ∞ | ∞ | 2 | **2** |
+| i | ∞ | ∞ | ∞ | **∞** |
+
+DV de b en $t=1$: a=8, c=1, d=2, e=1, f=2, g=∞, h=2, i=∞.
+
+---
+
+## 3. Cálculo de c en $t=1$ (slide 19)
+
+c solo tiene a b de vecino ($c_{c,b}=1$), y usa el DV de b en $t=0$ (b=0, a=8, c=1, e=1, el resto ∞):
+
+$$D_c(a)=1+8=9,\quad D_c(b)=1+0=1,\quad D_c(e)=1+1=2,\quad D_c(d)=D_c(f)=\dots=1+\infty=\infty$$
+
+DV de c en $t=1$: a=9, b=1, c=0, **d=∞, e=2**, f, g, h, i = ∞.
+
+> **Inconsistencia de la slide 19:** el recuadro final escribe $D_c(d)=2$ y $D_c(e)=\infty$, intercambiados respecto de su propio cálculo. Lo correcto es $D_c(d)=\infty$ y $D_c(e)=2$.
+
+---
+
+## 4. Difusión de la información (slide 20)
+
+Cada iteración la información avanza **un salto**. La slide dice que en $t=3$ llega a "c, f, h": es una errata por **d, f, h** (c ya la tenía).
+
+<Visualization viz={{ type: "net-scene", title: "Difusión del estado de c (slide 20)", steps: [{"note": "t=0: el estado de c solo lo conoce c.", "devices": [{"id": "a", "kind": "router", "label": "a", "x": 10, "y": 12}, {"id": "b", "kind": "router", "label": "b", "x": 50, "y": 12}, {"id": "c", "kind": "router", "label": "c", "x": 90, "y": 12, "state": "active"}, {"id": "d", "kind": "router", "label": "d", "x": 10, "y": 50}, {"id": "e", "kind": "router", "label": "e", "x": 50, "y": 50}, {"id": "f", "kind": "router", "label": "f", "x": 90, "y": 50}, {"id": "g", "kind": "router", "label": "g", "x": 10, "y": 88}, {"id": "h", "kind": "router", "label": "h", "x": 50, "y": 88}, {"id": "i", "kind": "router", "label": "i", "x": 90, "y": 88}], "cables": [{"from": "a", "to": "b", "label": "8"}, {"from": "b", "to": "c", "label": "1"}, {"from": "a", "to": "d", "label": "1"}, {"from": "b", "to": "e", "label": "1"}, {"from": "d", "to": "e", "label": "1"}, {"from": "e", "to": "f", "label": "1"}, {"from": "d", "to": "g", "label": "1"}, {"from": "e", "to": "h", "label": "1"}, {"from": "f", "to": "i", "label": "1"}, {"from": "g", "to": "h", "label": "1"}, {"from": "h", "to": "i", "label": "1"}]}, {"note": "t=1: c envía su DV a b, su único vecino. Ahora puede influir en los cálculos de b (1 salto).", "devices": [{"id": "a", "kind": "router", "label": "a", "x": 10, "y": 12}, {"id": "b", "kind": "router", "label": "b", "x": 50, "y": 12, "state": "active"}, {"id": "c", "kind": "router", "label": "c", "x": 90, "y": 12, "state": "marked"}, {"id": "d", "kind": "router", "label": "d", "x": 10, "y": 50}, {"id": "e", "kind": "router", "label": "e", "x": 50, "y": 50}, {"id": "f", "kind": "router", "label": "f", "x": 90, "y": 50}, {"id": "g", "kind": "router", "label": "g", "x": 10, "y": 88}, {"id": "h", "kind": "router", "label": "h", "x": 50, "y": 88}, {"id": "i", "kind": "router", "label": "i", "x": 90, "y": 88}], "cables": [{"from": "a", "to": "b", "label": "8"}, {"from": "b", "to": "c", "label": "1"}, {"from": "a", "to": "d", "label": "1"}, {"from": "b", "to": "e", "label": "1"}, {"from": "d", "to": "e", "label": "1"}, {"from": "e", "to": "f", "label": "1"}, {"from": "d", "to": "g", "label": "1"}, {"from": "e", "to": "h", "label": "1"}, {"from": "f", "to": "i", "label": "1"}, {"from": "g", "to": "h", "label": "1"}, {"from": "h", "to": "i", "label": "1"}]}, {"note": "t=2: b reenvía; la información de c llega a a y e (2 saltos).", "devices": [{"id": "a", "kind": "router", "label": "a", "x": 10, "y": 12, "state": "active"}, {"id": "b", "kind": "router", "label": "b", "x": 50, "y": 12, "state": "marked"}, {"id": "c", "kind": "router", "label": "c", "x": 90, "y": 12, "state": "marked"}, {"id": "d", "kind": "router", "label": "d", "x": 10, "y": 50}, {"id": "e", "kind": "router", "label": "e", "x": 50, "y": 50, "state": "active"}, {"id": "f", "kind": "router", "label": "f", "x": 90, "y": 50}, {"id": "g", "kind": "router", "label": "g", "x": 10, "y": 88}, {"id": "h", "kind": "router", "label": "h", "x": 50, "y": 88}, {"id": "i", "kind": "router", "label": "i", "x": 90, "y": 88}], "cables": [{"from": "a", "to": "b", "label": "8"}, {"from": "b", "to": "c", "label": "1"}, {"from": "a", "to": "d", "label": "1"}, {"from": "b", "to": "e", "label": "1"}, {"from": "d", "to": "e", "label": "1"}, {"from": "e", "to": "f", "label": "1"}, {"from": "d", "to": "g", "label": "1"}, {"from": "e", "to": "h", "label": "1"}, {"from": "f", "to": "i", "label": "1"}, {"from": "g", "to": "h", "label": "1"}, {"from": "h", "to": "i", "label": "1"}]}, {"note": "t=3: llega a d, f y h (3 saltos: por b-e-d, b-e-f y b-e-h). La slide escribe c en lugar de d.", "devices": [{"id": "a", "kind": "router", "label": "a", "x": 10, "y": 12, "state": "marked"}, {"id": "b", "kind": "router", "label": "b", "x": 50, "y": 12, "state": "marked"}, {"id": "c", "kind": "router", "label": "c", "x": 90, "y": 12, "state": "marked"}, {"id": "d", "kind": "router", "label": "d", "x": 10, "y": 50, "state": "active"}, {"id": "e", "kind": "router", "label": "e", "x": 50, "y": 50, "state": "marked"}, {"id": "f", "kind": "router", "label": "f", "x": 90, "y": 50, "state": "active"}, {"id": "g", "kind": "router", "label": "g", "x": 10, "y": 88}, {"id": "h", "kind": "router", "label": "h", "x": 50, "y": 88, "state": "active"}, {"id": "i", "kind": "router", "label": "i", "x": 90, "y": 88}], "cables": [{"from": "a", "to": "b", "label": "8"}, {"from": "b", "to": "c", "label": "1"}, {"from": "a", "to": "d", "label": "1"}, {"from": "b", "to": "e", "label": "1"}, {"from": "d", "to": "e", "label": "1"}, {"from": "e", "to": "f", "label": "1"}, {"from": "d", "to": "g", "label": "1"}, {"from": "e", "to": "h", "label": "1"}, {"from": "f", "to": "i", "label": "1"}, {"from": "g", "to": "h", "label": "1"}, {"from": "h", "to": "i", "label": "1"}]}, {"note": "t=4: llega a g e i (4 saltos). Cada iteración avanza un salto.", "devices": [{"id": "a", "kind": "router", "label": "a", "x": 10, "y": 12, "state": "marked"}, {"id": "b", "kind": "router", "label": "b", "x": 50, "y": 12, "state": "marked"}, {"id": "c", "kind": "router", "label": "c", "x": 90, "y": 12, "state": "marked"}, {"id": "d", "kind": "router", "label": "d", "x": 10, "y": 50, "state": "marked"}, {"id": "e", "kind": "router", "label": "e", "x": 50, "y": 50, "state": "marked"}, {"id": "f", "kind": "router", "label": "f", "x": 90, "y": 50, "state": "marked"}, {"id": "g", "kind": "router", "label": "g", "x": 10, "y": 88, "state": "active"}, {"id": "h", "kind": "router", "label": "h", "x": 50, "y": 88, "state": "marked"}, {"id": "i", "kind": "router", "label": "i", "x": 90, "y": 88, "state": "active"}], "cables": [{"from": "a", "to": "b", "label": "8"}, {"from": "b", "to": "c", "label": "1"}, {"from": "a", "to": "d", "label": "1"}, {"from": "b", "to": "e", "label": "1"}, {"from": "d", "to": "e", "label": "1"}, {"from": "e", "to": "f", "label": "1"}, {"from": "d", "to": "g", "label": "1"}, {"from": "e", "to": "h", "label": "1"}, {"from": "f", "to": "i", "label": "1"}, {"from": "g", "to": "h", "label": "1"}, {"from": "h", "to": "i", "label": "1"}]}] }} />
+
+---
+
+## 5. ¿Y a la larga? *(derivado)*
+
+Siguiendo las iteraciones con la misma regla, en $t=2$ b descubre que llega a a por e–d con costo **3**, mucho mejor que su enlace directo de 8. Después de $t=3$ ningún DV cambia y el algoritmo **se detiene solo**:
+
+| Nodo | a | b | c | d | e | f | g | h | i |
+|---|---|---|---|---|---|---|---|---|---|
+| $D_a$ final | 0 | 3 | 4 | 1 | 2 | 3 | 2 | 3 | 4 |
+| $D_b$ final | 3 | 0 | 1 | 2 | 1 | 2 | 3 | 2 | 3 |
+| $D_c$ final | 4 | 1 | 0 | 3 | 2 | 3 | 4 | 3 | 4 |
+
+El enlace a–b de costo 8 no lo usa nadie: es la "asimetría" que el ejemplo quiere mostrar.
+
+---
+
+## 6. Errores típicos
+
+- Usar en $t=1$ vectores ya actualizados en $t=1$: cada cálculo usa los DV **recibidos** (los de $t=0$).
+- Olvidar que c no tiene enlace con f.
+- Copiar el recuadro de la slide 19 con d y e intercambiados.
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slides 11–20.

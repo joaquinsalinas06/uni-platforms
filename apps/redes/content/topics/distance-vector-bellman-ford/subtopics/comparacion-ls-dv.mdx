@@ -1,0 +1,31 @@
+---
+kind: subtopic
+title: "Comparación de link-state y distance vector"
+order: 4
+---
+
+## 1. La tabla de la slide 23
+
+| Criterio | Link-state (LS) | Distance vector (DV) |
+|---|---|---|
+| **Complejidad de mensajes** | $n$ routers: $O(n^2)$ mensajes | intercambio solo entre vecinos; el tiempo de convergencia varía |
+| **Velocidad de convergencia** | algoritmo $O(n^2)$ con $O(n^2)$ mensajes; puede tener **oscilaciones** | variable; puede tener **bucles de routing** y **count-to-infinity** |
+| **Robustez** (router que falla o es comprometido) | puede anunciar un **costo de enlace** incorrecto, pero cada router calcula **solo su propia tabla** | puede anunciar un **costo de camino** incorrecto ("tengo un camino muy barato a todos lados"): **black-holing**; como cada tabla la usan los demás, **el error se propaga** por la red |
+
+---
+
+## 2. Cómo usarla en una respuesta de examen
+
+1. Di **qué información** tiene cada nodo (todo el mapa frente a solo los vecinos).
+2. Compara **mensajes** y **convergencia** con la tabla.
+3. En robustez, la diferencia clave: en LS un error se queda en un enlace; en DV un error **se contagia** porque los vecinos construyen su DV con el tuyo.
+4. Conecta con seguridad: en LS se autentica el LSA (OSPF/IS-IS con HMAC, semana 13); entre sistemas autónomos se autentica la sesión BGP ([siguiente tema](/topics/bgp-autenticacion-sesion)).
+
+---
+
+## 3. Errores típicos
+
+- Atribuir las oscilaciones a DV y el count-to-infinity a LS: es al revés.
+- Decir que DV "no tiene problemas de seguridad" porque no inunda: un DV falso es aún más dañino.
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slide 23.

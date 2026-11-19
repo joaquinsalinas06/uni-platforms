@@ -1,0 +1,18 @@
+{
+  "id": "bgp-autenticacion-sesion",
+  "type": "concept",
+  "title": "BGP entre Sistemas Autónomos y Autenticación de Sesión",
+  "unit": "s14",
+  "prerequisites": [
+    "distance-vector-bellman-ford",
+    "ospf-isis-autenticacion"
+  ],
+  "buildsOn": [
+    "distance-vector-bellman-ford",
+    "ospf-isis-autenticacion"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "net-scene",
+  "formulas": []
+}

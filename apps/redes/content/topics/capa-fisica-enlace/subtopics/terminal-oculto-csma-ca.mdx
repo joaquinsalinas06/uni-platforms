@@ -1,0 +1,67 @@
+---
+kind: subtopic
+title: "Terminal oculto, CDMA y CSMA/CA"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. El problema del terminal oculto (slide 15)
+
+Tres nodos A, B y C:
+- B y A se escuchan;
+- B y C se escuchan;
+- **A y C no se escuchan** (un obstáculo o la atenuación). Por eso **no saben que interfieren en B**.
+
+<Visualization viz={{ type: "net-scene", title: "Terminal oculto", steps: [
+  { note: "A y C están en alcance de B, pero no uno del otro. Ninguno detecta que el otro transmite.",
+    devices: [
+      { id: "a", kind: "laptop", label: "A", x: 10, y: 50 },
+      { id: "b", kind: "router", label: "B", sub: "receptor / AP", x: 50, y: 50 },
+      { id: "c", kind: "laptop", label: "C", x: 90, y: 50 } ],
+    zones: [ { label: "A oye a B", devices: ["a", "b"] }, { label: "C oye a B", devices: ["c"] } ] },
+  { note: "A escucha el canal, no oye a C y transmite. C hace lo mismo. Las dos señales chocan en B: colisión que ninguno detecta.",
+    devices: [
+      { id: "a", kind: "laptop", label: "A", x: 10, y: 50 },
+      { id: "b", kind: "router", label: "B", sub: "colisión", x: 50, y: 50, state: "active" },
+      { id: "c", kind: "laptop", label: "C", x: 90, y: 50 } ],
+    packets: [ { from: "a", to: "b", label: "trama de A", order: 1, lost: true, state: "active" }, { from: "c", to: "b", label: "trama de C", order: 2, lost: true, state: "active" } ] } ] }} />
+
+La **atenuación** también produce terminales ocultos: la potencia de A decae con la distancia y la de C también; en B ambas señales llegan, pero A no recibe con fuerza la de C ni C la de A.
+
+**Efecto en el desempeño:** colisiones en el receptor que el emisor no ve, retransmisiones y menos throughput útil.
+
+---
+
+## 2. CDMA (slide 16)
+
+**Code Division Multiple Access:** cada usuario recibe un **código** único (secuencia de *chipping*). Todos comparten **la misma frecuencia**, pero cada uno codifica sus datos con su código; así varios usuarios **coexisten y transmiten a la vez** con mínima interferencia.
+
+---
+
+## 3. CSMA/CA en 802.11 (slide 23)
+
+- **CSMA:** escuchar antes de transmitir; no chocar con una transmisión **detectada**.
+- 802.11 **no hace detección de colisiones**:
+  - es difícil detectarlas: la señal propia que se transmite es fuerte y la que se recibe es débil por el fading;
+  - no se pueden detectar todas: **terminal oculto** y fading.
+- Por eso el objetivo es **evitar** colisiones: **CSMA/CA** (*Collision Avoidance*). Todos los estándares 802.11 lo usan (slide 19).
+
+---
+
+## 4. Cómo responder el final 2025-II, P4
+
+1. **Definición:** A y C no se escuchan pero ambos alcanzan a B; el sensado de portadora no los protege.
+2. **Efecto:** colisiones en B invisibles para los emisores, retransmisiones, caída del throughput.
+3. **Mitigación (del material):** 802.11 usa **CSMA/CA**: como no puede detectar colisiones, intenta **evitarlas** antes de transmitir. Otra técnica vista es **CDMA**, que permite transmisiones simultáneas con códigos distintos.
+
+> La reserva del canal con mensajes RTS/CTS no aparece en las slides del curso; si la mencionas, preséntala como complemento y no como respuesta principal.
+
+---
+
+## 5. Errores típicos
+
+- Decir que A y C "colisionan entre ellos": colisionan **en B**.
+- Afirmar que 802.11 usa CSMA/CD como Ethernet cableado.
+- Pensar que CDMA divide el tiempo o la frecuencia: divide por **código**.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 15–16, 19 y 23; EF 2025-II P4.

@@ -1,0 +1,76 @@
+---
+kind: theory
+title: "Capa Física: Enlace Inalámbrico, Terminal Oculto y Cable UTP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Inalámbrico y movilidad: dos desafíos distintos
+
+`Sem15_NetT-Wireless-PhyLayer` (slide 4) separa:
+- **wireless:** comunicarse por un **enlace inalámbrico**;
+- **mobility:** manejar a un usuario que **cambia de punto de conexión** a la red.
+
+"Inalámbrico no siempre significa móvil" (slide 6): un host puede ser inalámbrico y estar quieto.
+
+---
+
+## 2. Elementos de una red inalámbrica (slides 5–11)
+
+| Elemento | Qué es |
+|---|---|
+| **Host inalámbrico** | laptop, smartphone, IoT; corre aplicaciones; estacionario o móvil |
+| **Estación base** | conectada a la red cableada; hace de relé entre la red cableada y los hosts de su área (torre celular, access point 802.11) |
+| **Enlace inalámbrico** | conecta los móviles con la estación base (también como backbone); un **protocolo de acceso múltiple** coordina el acceso; distintas tasas, distancias y bandas |
+
+**Dos modos:**
+- **Infraestructura:** la estación base conecta a los móviles con la red cableada. **Handoff:** el móvil cambia de estación base.
+- **Ad hoc:** no hay estaciones base; los nodos solo transmiten a otros dentro de su cobertura y se organizan y enrutan entre ellos.
+
+<Visualization viz={{ type: "net-scene", title: "Infraestructura frente a ad hoc (slides 10–11)", steps: [
+  { note: "Modo infraestructura: los móviles hablan con la estación base, que los conecta a la red cableada.",
+    devices: [
+      { id: "net", kind: "cloud", label: "Red cableada", x: 50, y: 12 },
+      { id: "ap", kind: "router", label: "Estación base", sub: "AP / torre", x: 50, y: 48 },
+      { id: "m1", kind: "laptop", label: "Móvil 1", x: 15, y: 85 },
+      { id: "m2", kind: "phone", label: "Móvil 2", x: 85, y: 85 } ],
+    cables: [ { from: "net", to: "ap" } ],
+    packets: [ { from: "m1", to: "ap", label: "inalámbrico", order: 1, state: "active" }, { from: "ap", to: "m2", label: "inalámbrico", order: 2, state: "active" } ] },
+  { note: "Modo ad hoc: no hay estación base. Los nodos se organizan solos y retransmiten para llegar más lejos.",
+    devices: [
+      { id: "m1", kind: "laptop", label: "Nodo 1", x: 12, y: 50 },
+      { id: "m2", kind: "phone", label: "Nodo 2", x: 50, y: 50 },
+      { id: "m3", kind: "laptop", label: "Nodo 3", x: 88, y: 50 } ],
+    packets: [ { from: "m1", to: "m2", label: "salto 1", order: 1, state: "active" }, { from: "m2", to: "m3", label: "salto 2", order: 2, state: "active" } ] } ] }} />
+
+---
+
+## 3. Lo que hace difícil al enlace inalámbrico (slides 12–15)
+
+- **Atenuación (fading):** la señal pierde potencia al propagarse; en espacio libre la pérdida crece como $(f\,d)^2$.
+- **Multitrayecto:** la señal rebota y llega varias veces, en instantes algo distintos.
+- **Ruido e interferencia:** motores, electrodomésticos; se mide con la **SNR**.
+- **Terminal oculto:** dos emisores que no se escuchan entre sí chocan en el receptor.
+
+Ver [Atenuación, multitrayecto y SNR](/topics/capa-fisica-enlace/subtopics/atenuacion-multipath-snr) y [Terminal oculto, CDMA y CSMA/CA](/topics/capa-fisica-enlace/subtopics/terminal-oculto-csma-ca).
+
+---
+
+## 4. Impacto en las capas superiores (slide 17)
+
+Lógicamente no cambia nada: el servicio sigue siendo best effort y TCP/UDP corren igual. En **desempeño** sí: pérdidas por errores de bit y por handover, y **TCP interpreta esas pérdidas como congestión** y reduce la ventana sin necesidad. Es la pregunta 3 del final 2026-I: [Impacto en TCP](/topics/capa-fisica-enlace/subtopics/impacto-tcp-inalambrico).
+
+---
+
+## 5. El otro medio: cable UTP
+
+La práctica calificada de Ethernet de las semanas 14–15 arma un cable **Cat5e** con conectores **RJ45** según **T568A** y lo prueba con un tester. El final 2025-II (P7) pide interpretar el tester: [Cable UTP T568A y lectura del tester](/topics/capa-fisica-enlace/subtopics/cable-utp-t568a).
+
+---
+
+## 6. Errores típicos
+
+- Confundir **inalámbrico** con **móvil**.
+- Decir que la atenuación crece linealmente con la distancia: el modelo de la slide es cuadrático en $f\,d$.
+- Creer que TCP "sabe" que la pérdida fue por el canal: no lo distingue de congestión.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 4–17; `Sem14_Experience_Ethernet`.

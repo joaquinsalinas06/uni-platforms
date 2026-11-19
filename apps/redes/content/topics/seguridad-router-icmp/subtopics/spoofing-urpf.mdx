@@ -1,0 +1,62 @@
+---
+kind: subtopic
+title: "IP spoofing y uRPF estricto y laxo"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+La IP origen se escribe en el host que envía. Si el atacante la cambia, el router no lo nota, porque reenvía por destino. **uRPF** agrega una comprobación barata usando la tabla que el router ya tiene.
+
+---
+
+## 2. Spoofing (slide 36)
+
+<Visualization viz={{ type: "net-scene", static: true, title: "IP spoofing (slide 36)", steps: [
+  { note: "El origen real es 203.0.113.9, pero el paquete dice 192.168.1.50. El router lo reenvía porque el destino es alcanzable.",
+    devices: [
+      { id: "a", kind: "laptop", label: "Atacante", sub: "real: 203.0.113.9", x: 10, y: 50, state: "active" },
+      { id: "r", kind: "router", label: "Router", x: 50, y: 50 },
+      { id: "v", kind: "server", label: "Víctima / red", x: 90, y: 50 } ],
+    cables: [ { from: "a", to: "r" }, { from: "r", to: "v" } ],
+    packets: [ { from: "a", to: "v", label: "origen aparente 192.168.1.50", order: 1, state: "active" } ] } ] }} />
+
+Amenazas: suplantación del origen, reflexión/amplificación (las respuestas van a quien figura como origen) y evasión de reglas por origen.
+
+---
+
+## 3. uRPF paso a paso (slide 37)
+
+1. Llega un paquete por la interfaz **A** con IP origen $S$.
+2. El router busca en su tabla la mejor ruta **hacia** $S$.
+3. **Strict:** si esa ruta sale por **A**, acepta; si sale por otra interfaz, descarta.
+4. **Loose:** acepta si existe **alguna** ruta aceptable hacia $S$; descarta si $S$ no es alcanzable.
+
+<Visualization viz={{ type: "net-scene", title: "Ejemplo de la slide 37: llega por A, la ruta de vuelta usa B", steps: [
+  { note: "El paquete con origen S entra por la interfaz A.",
+    devices: [
+      { id: "ia", kind: "switch", label: "Interfaz A", x: 12, y: 30 },
+      { id: "r", kind: "router", label: "Router con uRPF", x: 50, y: 55 },
+      { id: "ib", kind: "switch", label: "Interfaz B", x: 12, y: 85 },
+      { id: "s", kind: "cloud", label: "Red de S", x: 88, y: 55 } ],
+    cables: [ { from: "ia", to: "r" }, { from: "ib", to: "r" }, { from: "r", to: "s" } ],
+    packets: [ { from: "ia", to: "r", label: "origen S", order: 1, state: "active" } ] },
+  { note: "La tabla dice que la mejor ruta hacia S sale por B, no por A. Strict uRPF descarta; loose acepta porque S sí es alcanzable.",
+    devices: [
+      { id: "ia", kind: "switch", label: "Interfaz A", sub: "strict: falla", x: 12, y: 30, state: "active" },
+      { id: "r", kind: "router", label: "Router con uRPF", x: 50, y: 55 },
+      { id: "ib", kind: "switch", label: "Interfaz B", sub: "ruta de vuelta", x: 12, y: 85, state: "marked" },
+      { id: "s", kind: "cloud", label: "Red de S", x: 88, y: 55 } ],
+    cables: [ { from: "ia", to: "r" }, { from: "ib", to: "r" }, { from: "r", to: "s" } ],
+    packets: [ { from: "ia", to: "r", label: "origen S", order: 1, state: "muted" }, { from: "r", to: "ib", label: "ruta hacia S", order: 2, state: "marked" } ] } ] }} />
+
+---
+
+## 4. Errores típicos
+
+- Pensar que uRPF mira la IP destino: mira la **origen**.
+- Decir que loose uRPF "no protege nada": sí descarta orígenes que no tienen ninguna ruta.
+- Aplicar strict uRPF en enlaces con rutas asimétricas y sorprenderse de que se pierda tráfico válido.
+
+Fuente: `Sem12_NetT-Routers`, slides 36–37.

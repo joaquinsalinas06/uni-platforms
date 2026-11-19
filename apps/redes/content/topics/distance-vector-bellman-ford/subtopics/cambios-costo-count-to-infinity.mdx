@@ -1,0 +1,62 @@
+---
+kind: subtopic
+title: "Cambios de costo: buenas noticias rápido, malas noticias lento"
+order: 3
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. La red de las slides 21–22
+
+Tres nodos: **x–y = 4**, **y–z = 1**, **x–z = 50**. Antes del cambio, $D_y(x)=4$ (directo) y $D_z(x)=5$ (por y, $1+4$).
+
+Ante un cambio de costo local, el nodo **detecta** el cambio, **actualiza** su información de routing y recalcula su DV; **si el DV cambió, avisa** a sus vecinos.
+
+---
+
+## 2. Buenas noticias: x–y baja de 4 a 1 (slide 21)
+
+| Instante | Qué pasa |
+|---|---|
+| $t_0$ | y detecta el cambio: $D_y(x)=\min(1,\ 1+5)=1$. Avisa a sus vecinos. |
+| $t_1$ | z recibe el DV de y: $D_z(x)=\min(50,\ 1+1)=2$. Envía su DV. |
+| $t_2$ | y recibe el DV de z: $\min(1,\ 1+2)=1$, no cambia. **y no envía nada.** Fin. |
+
+"Good news travels fast": dos iteraciones y el algoritmo se detiene.
+
+---
+
+## 3. Malas noticias: x–y sube de 4 a 60 (slide 22)
+
+y ve que su enlace directo cuesta 60, pero z le había dicho que llega a x con costo 5. y no sabe que ese camino de z **pasa por él mismo**:
+
+<Visualization viz={{ type: "sequence", title: "Count-to-infinity entre y y z", steps: [
+  { note: "y: min(60, 1+5) = 6 vía z. Avisa a z.",
+    actors: [ { id: "y", label: "y" }, { id: "z", label: "z" } ],
+    msgs: [ { from: "y", to: "z", label: "Dy(x) = 6", state: "active" } ] },
+  { note: "z: su mejor camino a x era por y; ahora 1+6 = 7 (su directo cuesta 50). Avisa a y.",
+    actors: [ { id: "y", label: "y" }, { id: "z", label: "z" } ],
+    msgs: [ { from: "y", to: "z", label: "Dy(x) = 6", state: "muted" }, { from: "z", to: "y", label: "Dz(x) = 7", state: "active" } ] },
+  { note: "y: 1+7 = 8 vía z. z: 1+8 = 9 vía y. Cada vuelta solo sube 2: la mala noticia avanza lento.",
+    actors: [ { id: "y", label: "y" }, { id: "z", label: "z" } ],
+    msgs: [ { from: "y", to: "z", label: "Dy(x) = 6", state: "muted" }, { from: "z", to: "y", label: "Dz(x) = 7", state: "muted" },
+            { from: "y", to: "z", label: "Dy(x) = 8", state: "active" }, { from: "z", to: "y", label: "Dz(x) = 9", state: "active" } ] } ] }} />
+
+<Visualization viz={{ type: "xy-chart", static: true, title: "Costos anunciados hacia x (derivado)", steps: [
+  { note: "y y z se pasan la pelota subiendo de 2 en 2. Solo se corta cuando z prefiere su enlace directo de 50 (cuando y anuncia 50, z calcula 51 y elige 50).",
+    x: { label: "actualización", min: 0, max: 24 }, y: { label: "costo anunciado hacia x", min: 0, max: 60 },
+    hlines: [ { at: 50, label: "enlace directo x–z = 50" } ],
+    series: [
+      { id: "y", label: "Dy(x)", kind: "step", points: [[0,4],[1,6],[2,8],[3,10],[4,12],[5,14],[6,16],[7,18],[8,20],[9,22],[10,24],[11,26],[12,28],[13,30],[14,32],[15,34],[16,36],[17,38],[18,40],[19,42],[20,44],[21,46],[22,48],[23,50],[24,51]] },
+      { id: "z", label: "Dz(x)", kind: "step", points: [[0,5],[1,7],[2,9],[3,11],[4,13],[5,15],[6,17],[7,19],[8,21],[9,23],[10,25],[11,27],[12,29],[13,31],[14,33],[15,35],[16,37],[17,39],[18,41],[19,43],[20,45],[21,47],[22,49],[23,50],[24,50]] } ] } ] }} />
+
+La slide se queda en el 9 y concluye: **"Distributed algorithms are tricky!"**. *(derivado)* Siguiendo la misma regla, el conteo sigue hasta que $1 + D_y(x)$ supera el enlace directo de z (50): entonces $D_z(x)=50$ y $D_y(x)=51$.
+
+---
+
+## 4. Errores típicos
+
+- Decir que y elige 60 de inmediato: elige el **mínimo** entre 60 y lo que le anunció z.
+- Pensar que las buenas noticias también tardan: se propagan en dos pasos.
+- En la slide, la tercera viñeta dice "via y" donde debería decir "via z" (errata).
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slides 21–22.

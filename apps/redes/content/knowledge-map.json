@@ -130,6 +130,70 @@
         "direccionamiento-ipv4-subredes",
         "lab-sockets-tcp-python"
       ]
+    },
+    {
+      "id": "s11",
+      "title": "Semana 11 — Capa de Red: NAT, Firewalls e IPv6",
+      "sourceFiles": [
+        "raw-materials/text/Sem11_NetT-NetLayer2.txt",
+        "raw-materials/text/Sem12_LAB4B_NAT.txt",
+        "raw-materials/text/Sem11_LAB4A_IP (2).txt"
+      ],
+      "topics": [
+        "nat-firewall",
+        "ipv6-tunel-transicion"
+      ]
+    },
+    {
+      "id": "s12",
+      "title": "Semana 12 — Arquitectura del Router, SDN y Seguridad ICMP",
+      "sourceFiles": [
+        "raw-materials/text/Sem12_NetT-Routers.txt",
+        "raw-materials/text/Sem13_LAB4C_ICMP.txt",
+        "raw-materials/text/Evaluación_LAB4_TEST_Assignment.txt"
+      ],
+      "topics": [
+        "arquitectura-router",
+        "seguridad-router-icmp"
+      ]
+    },
+    {
+      "id": "s13",
+      "title": "Semana 13 — Link-State, Dijkstra, OSPF/IS-IS y Subredes",
+      "sourceFiles": [
+        "raw-materials/text/Sem13_NetT-Dijkstra_OSPF_ISIS.txt",
+        "raw-materials/text/Sem13_Excercises5_NetworkLayer.txt"
+      ],
+      "topics": [
+        "link-state-dijkstra",
+        "ospf-isis-autenticacion",
+        "subredes-forwarding-lpm"
+      ]
+    },
+    {
+      "id": "s14",
+      "title": "Semana 14 — Distance Vector, Bellman-Ford y Autenticación BGP",
+      "sourceFiles": [
+        "raw-materials/text/Sem14_NetT-DistanceVector_BGPAuthentication.txt",
+        "raw-materials/text/EF_2025_CS4054.txt",
+        "raw-materials/text/EF_2026_CS4054.txt"
+      ],
+      "topics": [
+        "distance-vector-bellman-ford",
+        "bgp-autenticacion-sesion"
+      ]
+    },
+    {
+      "id": "s15",
+      "title": "Semana 15 — Capa Física, Redes Inalámbricas y Movilidad",
+      "sourceFiles": [
+        "raw-materials/text/Sem15_NetT-Wireless-PhyLayer.txt",
+        "raw-materials/text/Sem14_Experience_Ethernet.txt"
+      ],
+      "topics": [
+        "capa-fisica-enlace",
+        "wifi-celular-movilidad"
+      ]
     }
   ],
   "topics": {
@@ -594,7 +658,8 @@
         "rtt-timeout-retransmision",
         "control-flujo-congestion-tcp",
         "lab-tcp-wireshark",
-        "capa-red-ipv4-fragmentacion"
+        "capa-red-ipv4-fragmentacion",
+        "nat-firewall"
       ],
       "subtopics": [
         "segmento-tcp-secuencia-ack",
@@ -702,7 +767,8 @@
         "principios-costes-congestion"
       ],
       "usedBy": [
-        "lab-tcp-wireshark"
+        "lab-tcp-wireshark",
+        "capa-fisica-enlace"
       ],
       "subtopics": [
         "slow-start-aimd-tahoe-reno",
@@ -760,7 +826,9 @@
       ],
       "usedBy": [
         "direccionamiento-ipv4-subredes",
-        "lab-sockets-tcp-python"
+        "lab-sockets-tcp-python",
+        "ipv6-tunel-transicion",
+        "arquitectura-router"
       ],
       "subtopics": [
         "forwarding-datagrama-ip",
@@ -786,7 +854,11 @@
         "capa-red-ipv4-fragmentacion",
         "dns-arquitectura-resolucion"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "nat-firewall",
+        "subredes-forwarding-lpm",
+        "wifi-celular-movilidad"
+      ],
       "subtopics": [
         "cidr-mascaras-direcciones-especiales",
         "dhcp-configuracion-host",
@@ -820,6 +892,289 @@
       "sourceSlides": [
         "Sem10_LAB3_TCP_P2 (1)-1",
         "Sem10_Excercises4-TCP"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "status": "generated"
+    },
+    "nat-firewall": {
+      "type": "concept",
+      "title": "NAT, Tabla de Traducción y Firewalls",
+      "unit": "s11",
+      "prerequisites": [
+        "direccionamiento-ipv4-subredes",
+        "protocolo-tcp-mecanismos"
+      ],
+      "buildsOn": [
+        "direccionamiento-ipv4-subredes",
+        "protocolo-tcp-mecanismos"
+      ],
+      "usedBy": [
+        "ipv6-tunel-transicion",
+        "seguridad-router-icmp"
+      ],
+      "subtopics": [
+        "tabla-traduccion-nat",
+        "firewall-sin-estado-con-estado"
+      ],
+      "sourceSlides": [
+        "Sem11_NetT-NetLayer2",
+        "Sem12_LAB4B_NAT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "ipv6-tunel-transicion": {
+      "type": "concept",
+      "title": "IPv6: Datagrama, Túnel y Coexistencia con IPv4",
+      "unit": "s11",
+      "prerequisites": [
+        "nat-firewall",
+        "capa-red-ipv4-fragmentacion"
+      ],
+      "buildsOn": [
+        "nat-firewall",
+        "capa-red-ipv4-fragmentacion"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "datagrama-ipv6",
+        "tunel-fragmentacion-ipv4"
+      ],
+      "sourceSlides": [
+        "Sem11_NetT-NetLayer2",
+        "Sem11_LAB4A_IP (2)",
+        "EF_2026_CS4054"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "packet",
+      "status": "generated"
+    },
+    "arquitectura-router": {
+      "type": "concept",
+      "title": "Arquitectura del Router, Conmutación y SDN",
+      "unit": "s12",
+      "prerequisites": [
+        "capa-red-ipv4-fragmentacion"
+      ],
+      "buildsOn": [
+        "capa-red-ipv4-fragmentacion"
+      ],
+      "usedBy": [
+        "seguridad-router-icmp",
+        "subredes-forwarding-lpm",
+        "link-state-dijkstra"
+      ],
+      "subtopics": [
+        "planos-datos-control-sdn",
+        "fabric-conmutacion",
+        "colas-buffers-hol"
+      ],
+      "sourceSlides": [
+        "Sem12_NetT-Routers"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "seguridad-router-icmp": {
+      "type": "concept",
+      "title": "Seguridad del Router: Spoofing, uRPF, ICMP y Traceroute",
+      "unit": "s12",
+      "prerequisites": [
+        "arquitectura-router",
+        "nat-firewall"
+      ],
+      "buildsOn": [
+        "arquitectura-router",
+        "nat-firewall"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "spoofing-urpf",
+        "icmp-ttl-traceroute"
+      ],
+      "sourceSlides": [
+        "Sem12_NetT-Routers",
+        "Sem13_LAB4C_ICMP",
+        "Sem11_LAB4A_IP (2)",
+        "Evaluación_LAB4_TEST_Assignment"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "link-state-dijkstra": {
+      "type": "concept",
+      "title": "Enrutamiento Link-State y Algoritmo de Dijkstra",
+      "unit": "s13",
+      "prerequisites": [
+        "arquitectura-router"
+      ],
+      "buildsOn": [
+        "arquitectura-router"
+      ],
+      "usedBy": [
+        "ospf-isis-autenticacion",
+        "distance-vector-bellman-ford"
+      ],
+      "subtopics": [
+        "dijkstra-paso-a-paso",
+        "complejidad-oscilaciones"
+      ],
+      "sourceSlides": [
+        "Sem13_NetT-Dijkstra_OSPF_ISIS"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "ospf-isis-autenticacion": {
+      "type": "concept",
+      "title": "OSPF, IS-IS y Autenticación con HMAC",
+      "unit": "s13",
+      "prerequisites": [
+        "link-state-dijkstra"
+      ],
+      "buildsOn": [
+        "link-state-dijkstra"
+      ],
+      "usedBy": [
+        "bgp-autenticacion-sesion"
+      ],
+      "subtopics": [
+        "hmac-ataque-costo-falso"
+      ],
+      "sourceSlides": [
+        "Sem13_NetT-Dijkstra_OSPF_ISIS"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "status": "generated"
+    },
+    "subredes-forwarding-lpm": {
+      "type": "concept",
+      "title": "Clases IPv4, Subredes y Longest Prefix Match",
+      "unit": "s13",
+      "prerequisites": [
+        "direccionamiento-ipv4-subredes",
+        "arquitectura-router"
+      ],
+      "buildsOn": [
+        "direccionamiento-ipv4-subredes",
+        "arquitectura-router"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "clases-ipv4-subredes-iguales",
+        "longest-prefix-match-tablas"
+      ],
+      "sourceSlides": [
+        "Sem13_Excercises5_NetworkLayer",
+        "Sem11_LAB4A_IP (2)",
+        "EF_2025_CS4054"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "packet",
+      "status": "generated"
+    },
+    "distance-vector-bellman-ford": {
+      "type": "concept",
+      "title": "Distance Vector y Ecuación de Bellman-Ford",
+      "unit": "s14",
+      "prerequisites": [
+        "link-state-dijkstra"
+      ],
+      "buildsOn": [
+        "link-state-dijkstra"
+      ],
+      "usedBy": [
+        "bgp-autenticacion-sesion"
+      ],
+      "subtopics": [
+        "ecuacion-bellman-ford",
+        "iteraciones-dv-grilla",
+        "cambios-costo-count-to-infinity",
+        "comparacion-ls-dv"
+      ],
+      "sourceSlides": [
+        "Sem14_NetT-DistanceVector_BGPAuthentication"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "bgp-autenticacion-sesion": {
+      "type": "concept",
+      "title": "BGP entre Sistemas Autónomos y Autenticación de Sesión",
+      "unit": "s14",
+      "prerequisites": [
+        "distance-vector-bellman-ford",
+        "ospf-isis-autenticacion"
+      ],
+      "buildsOn": [
+        "distance-vector-bellman-ford",
+        "ospf-isis-autenticacion"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "tcp-md5-vs-tcp-ao"
+      ],
+      "sourceSlides": [
+        "Sem14_NetT-DistanceVector_BGPAuthentication"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "capa-fisica-enlace": {
+      "type": "concept",
+      "title": "Capa Física: Enlace Inalámbrico, Terminal Oculto y Cable UTP",
+      "unit": "s15",
+      "prerequisites": [
+        "control-congestion-tcp-avanzado"
+      ],
+      "buildsOn": [
+        "control-congestion-tcp-avanzado"
+      ],
+      "usedBy": [
+        "wifi-celular-movilidad"
+      ],
+      "subtopics": [
+        "atenuacion-multipath-snr",
+        "terminal-oculto-csma-ca",
+        "impacto-tcp-inalambrico",
+        "cable-utp-t568a"
+      ],
+      "sourceSlides": [
+        "Sem15_NetT-Wireless-PhyLayer",
+        "Sem14_Experience_Ethernet"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "net-scene",
+      "status": "generated"
+    },
+    "wifi-celular-movilidad": {
+      "type": "concept",
+      "title": "Wi-Fi 802.11, Bluetooth, 4G/5G y Movilidad",
+      "unit": "s15",
+      "prerequisites": [
+        "capa-fisica-enlace",
+        "direccionamiento-ipv4-subredes"
+      ],
+      "buildsOn": [
+        "capa-fisica-enlace",
+        "direccionamiento-ipv4-subredes"
+      ],
+      "usedBy": [],
+      "subtopics": [
+        "arquitectura-80211-asociacion",
+        "celular-4g-5g",
+        "movilidad-enrutamiento"
+      ],
+      "sourceSlides": [
+        "Sem15_NetT-Wireless-PhyLayer"
       ],
       "hasVisualization": true,
       "visualizationType": "sequence",

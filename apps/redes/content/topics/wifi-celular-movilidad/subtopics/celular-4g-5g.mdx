@@ -1,0 +1,80 @@
+---
+kind: subtopic
+title: "Bluetooth y redes celulares 4G/5G"
+order: 2
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Bluetooth (slide 25)
+
+Red de área personal: **menos de 10 m** de diámetro, reemplaza cables (mouse, teclado, audífonos), **ad hoc** sin infraestructura. Los clientes pueden pasar a modo **parked** (dormir y despertar luego, para ahorrar batería). Los nodos se **autoensamblan** (plug and play) en una **piconet** con roles: **M** maestro controlador, **C** cliente, **P** dispositivo parked (inactivo).
+
+---
+
+## 2. 4G/5G: Internet móvil de área amplia (slides 26–27)
+
+- Más dispositivos con banda ancha móvil que fija (5 a 1 en 2019); 4G disponible el 97 % del tiempo en Corea (90 % en EE. UU.).
+- Tasas de **cientos de Mbps**; estándares de **3GPP**; 4G = **LTE**.
+
+| Parecido a la Internet cableada | Diferente |
+|---|---|
+| distinción borde/núcleo, ambos del mismo operador | capa de enlace inalámbrica distinta |
+| red de redes global | **movilidad** como servicio de primera clase |
+| usa HTTP, DNS, TCP, UDP, IP, NAT, separación datos/control, SDN, Ethernet, túneles | identidad del usuario vía **SIM** |
+| interconectada con la Internet cableada | modelo de suscripción: **red propia** frente a **roaming** |
+
+---
+
+## 3. Arquitectura 4G LTE (slides 28–30)
+
+<Visualization viz={{ type: "net-scene", static: true, title: "Elementos de 4G LTE (slide 28)", steps: [
+  { note: "El UE se conecta por radio al eNode-B; el núcleo all-IP (EPC) tiene MME, HSS, S-GW y P-GW, que sale a Internet.",
+    devices: [
+      { id: "ue", kind: "phone", label: "UE", sub: "IMSI en la SIM", x: 6, y: 75 },
+      { id: "enb", kind: "router", label: "eNode-B", sub: "estación base", x: 24, y: 75 },
+      { id: "mme", kind: "server", label: "MME", x: 44, y: 20 },
+      { id: "hss", kind: "server", label: "HSS", x: 66, y: 20 },
+      { id: "sgw", kind: "router", label: "S-GW", x: 44, y: 75 },
+      { id: "pgw", kind: "router", label: "P-GW", x: 66, y: 75 },
+      { id: "net", kind: "cloud", label: "Internet", x: 92, y: 75 } ],
+    cables: [ { from: "enb", to: "mme" }, { from: "mme", to: "hss" }, { from: "enb", to: "sgw" }, { from: "sgw", to: "pgw" }, { from: "pgw", to: "net" } ],
+    zones: [ { label: "EPC (núcleo all-IP)", devices: ["mme", "hss", "sgw", "pgw"] } ],
+    packets: [ { from: "ue", to: "enb", label: "radio", order: 1, state: "active" } ] } ] }} />
+
+| Elemento | Función |
+|---|---|
+| **UE** (mobile device) | smartphone, tablet, laptop, IoT con radio LTE; **IMSI de 64 bits** en la SIM |
+| **eNode-B** (estación base) | en el borde de la red del operador; gestiona los recursos de radio de su **celda**; coordina la autenticación; a diferencia de un AP, participa activamente en la movilidad y coordina con estaciones vecinas |
+| **MME** | Mobility Management Entity |
+| **HSS** | Home Subscriber Service |
+| **S-GW / P-GW** | Serving Gateway y PDN Gateway (salida a Internet) |
+
+**Radio 4G (slide 30):** muchas bandas (600, 700, 850, 1500, 1700, 1900, 2100, 2600, 3500 MHz) con canales separados de subida y bajada; el canal se comparte con **OFDM** (combinación de FDM y TDM); cientos de Mbps por dispositivo.
+
+---
+
+## 4. 5G (slides 35–41)
+
+La slide 35 muestra el mapa de asignación de frecuencias de EE. UU. y marca la banda **CBRS**. Tecnologías habilitadoras de 5G (slide 41): **ondas milimétricas, small cells, massive MIMO, beamforming y full duplex**.
+
+Motivación: banda ancha móvil mejorada, comunicaciones masivas tipo máquina y comunicaciones ultra confiables de baja latencia; verticales como manufactura, transporte, salud, educación, agricultura.
+
+| KPI | 5G | Referencia IMT-Advanced |
+|---|---|---|
+| Tasa experimentada por usuario | 100 Mbps – 1 Gbps | 10 Mbps |
+| Tasa pico | 20 Gbps | 1 Gbps |
+| Movilidad | 500 km/h | 350 km/h |
+| Latencia (interfaz de radio) | 1 ms | 10 ms |
+| Densidad de conexiones | $10^6$ por km² | $10^5$ por km² |
+| Eficiencia energética | 100× | — |
+| Eficiencia espectral | 3× | — |
+| Capacidad de tráfico por área | 10 Mbps/km² | 0,1 Mbps/km² |
+
+---
+
+## 5. Errores típicos
+
+- Equiparar eNode-B con un AP de Wi-Fi: también gestiona movilidad y coordina con vecinas.
+- Decir que 5G tiene 1 ms de latencia "extremo a extremo": la tabla habla de la **interfaz de radio**.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 25–30 y 37–41.

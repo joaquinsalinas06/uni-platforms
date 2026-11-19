@@ -1,0 +1,84 @@
+---
+kind: theory
+title: "Arquitectura del Router, Conmutación y SDN"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Dos funciones, dos planos
+
+La semana 10 separó **forwarding** y **routing**. `Sem12_NetT-Routers` (slide 4) les asigna un plano a cada una:
+
+| Función | Qué hace | Plano | Escala de tiempo |
+|---|---|---|---|
+| **Forwarding** | mover un paquete del puerto de entrada al de salida adecuado | **datos** (hardware) | nanosegundos |
+| **Routing** | decidir la ruta de origen a destino | **control** (software) | milisegundos |
+
+El plano de control puede organizarse de dos formas: **por router** (tradicional, cada router corre algoritmos distribuidos) o **lógicamente centralizado** (SDN). Esa comparación está en [Planos de datos y control; SDN](/topics/arquitectura-router/subtopics/planos-datos-control-sdn).
+
+---
+
+## 2. Lo que hay dentro de un router (slide 25)
+
+<Visualization viz={{ type: "net-scene", title: "Arquitectura genérica de un router", steps: [
+  { note: "Arriba el procesador de routing (plano de control, software, ms). Abajo, el plano de datos en hardware: puertos de entrada, fabric de conmutación y puertos de salida (ns).",
+    devices: [
+      { id: "cpu", kind: "server", label: "Procesador de routing", sub: "plano de control", x: 50, y: 12 },
+      { id: "in1", kind: "switch", label: "Entrada 1", x: 12, y: 55 },
+      { id: "in2", kind: "switch", label: "Entrada 2", x: 12, y: 88 },
+      { id: "fab", kind: "router", label: "Fabric", sub: "alta velocidad", x: 50, y: 70 },
+      { id: "out1", kind: "switch", label: "Salida 1", x: 88, y: 55 },
+      { id: "out2", kind: "switch", label: "Salida 2", x: 88, y: 88 } ],
+    cables: [ { from: "cpu", to: "fab", label: "tabla" }, { from: "in1", to: "fab" }, { from: "in2", to: "fab" }, { from: "fab", to: "out1" }, { from: "fab", to: "out2" } ],
+    zones: [ { label: "Plano de datos (hardware)", devices: ["in1", "in2", "fab", "out1", "out2"] } ] },
+  { note: "Un datagrama entra por la entrada 1: el puerto busca la salida en su copia de la tabla (match plus action) y el fabric lo lleva a la salida 2.",
+    devices: [
+      { id: "cpu", kind: "server", label: "Procesador de routing", sub: "plano de control", x: 50, y: 12 },
+      { id: "in1", kind: "switch", label: "Entrada 1", x: 12, y: 55, state: "active" },
+      { id: "in2", kind: "switch", label: "Entrada 2", x: 12, y: 88 },
+      { id: "fab", kind: "router", label: "Fabric", sub: "alta velocidad", x: 50, y: 70 },
+      { id: "out1", kind: "switch", label: "Salida 1", x: 88, y: 55 },
+      { id: "out2", kind: "switch", label: "Salida 2", x: 88, y: 88, state: "answer" } ],
+    cables: [ { from: "cpu", to: "fab", label: "tabla" }, { from: "in1", to: "fab" }, { from: "in2", to: "fab" }, { from: "fab", to: "out1" }, { from: "fab", to: "out2" } ],
+    packets: [ { from: "in1", to: "fab", label: "lookup", order: 1, state: "muted" }, { from: "fab", to: "out2", label: "datagrama", order: 2, state: "active" } ] } ] }} />
+
+---
+
+## 3. Puerto de entrada (slides 26–27)
+
+Tres etapas: **terminación de línea** (capa física, recepción de bits) → **protocolo de enlace** (p. ej. Ethernet) → **lookup, forwarding y cola**.
+
+- **Conmutación descentralizada:** con los campos de la cabecera, el puerto busca el puerto de salida en la **tabla de forwarding guardada en su propia memoria** ("match plus action").
+- Objetivo: procesar a **velocidad de línea**.
+- **Forwarding basado en destino** (tradicional): solo mira la IP destino. Cómo se resuelve con **longest prefix match** está en [Longest prefix match](/topics/subredes-forwarding-lpm/subtopics/longest-prefix-match-tablas).
+- **Forwarding generalizado:** decide con **cualquier** conjunto de campos de cabecera.
+- **Cola de entrada:** aparece si los datagramas llegan más rápido de lo que el fabric los absorbe.
+
+---
+
+## 4. Fabric de conmutación (slides 28–33)
+
+Traslada el paquete de la entrada a la salida. Su **tasa de conmutación** se mide como múltiplo de la tasa de línea; con $N$ entradas a tasa $R$ lo deseable es
+
+$$R_{\text{fabric}} = N\,R.$$
+
+Tres tipos: **memoria**, **bus** y **red de interconexión**. Ver [Fabrics de conmutación](/topics/arquitectura-router/subtopics/fabric-conmutacion).
+
+---
+
+## 5. Colas y buffers (slides 31–34)
+
+Si el fabric es más lento que las entradas juntas, hay cola **en la entrada** (con bloqueo HOL). Si llegan desde el fabric más datagramas de los que el enlace de salida transmite, hay cola **en la salida**, con política de descarte y disciplina de planificación. El tamaño del buffer sigue la regla
+
+$$B = RTT\cdot C \quad\text{o, con } N \text{ flujos,}\quad B=\frac{RTT\cdot C}{\sqrt{N}}.$$
+
+Detalle y ejemplo de 2,5 Gbit en [Colas, HOL y tamaño del buffer](/topics/arquitectura-router/subtopics/colas-buffers-hol).
+
+---
+
+## 6. Errores típicos
+
+- Ubicar el lookup en el procesador de routing: en la arquitectura de la slide lo hace **cada puerto de entrada**.
+- Confundir "plano de datos rápido" con "algoritmo de routing rápido": el algoritmo vive en el plano de control.
+- Creer que más buffer siempre es mejor: aumenta el retardo (slide 34).
+
+Fuente: `Sem12_NetT-Routers`, slides 4–34.

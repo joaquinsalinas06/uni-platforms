@@ -1,0 +1,31 @@
+{
+  "id": "ipv6-tunel-transicion",
+  "type": "concept",
+  "title": "IPv6: Datagrama, Túnel y Coexistencia con IPv4",
+  "unit": "s11",
+  "prerequisites": [
+    "nat-firewall",
+    "capa-red-ipv4-fragmentacion"
+  ],
+  "buildsOn": [
+    "nat-firewall",
+    "capa-red-ipv4-fragmentacion"
+  ],
+  "usedBy": [],
+  "hasVisualization": true,
+  "visualizationType": "packet",
+  "formulas": [
+    {
+      "name": "Tamaño del datagrama en el túnel",
+      "tex": "L_{\\text{túnel}} = L_{\\text{datos}} + H_{TCP} + H_{IPv6} + H_{IPv4}",
+      "reasoning": "El datagrama IPv6 completo viaja como carga útil de IPv4: se suman todas las cabeceras antes de comparar con la MTU del troncal.",
+      "source": "Sem11_NetT-NetLayer2#26; EF_2026_CS4054 P2"
+    },
+    {
+      "name": "Carga útil máxima por fragmento IPv4",
+      "tex": "D_{\\max} = 8\\left\\lfloor \\frac{MTU - H_{IPv4}}{8} \\right\\rfloor",
+      "reasoning": "Los fragmentos no finales llevan un múltiplo de 8 bytes porque el offset se mide en bloques de 8 bytes.",
+      "source": "Sem10_NetT-NetLayer_Addressing#8 (aplicado al túnel)"
+    }
+  ]
+}

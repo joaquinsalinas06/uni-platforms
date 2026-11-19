@@ -1,0 +1,46 @@
+---
+kind: subtopic
+title: "Impacto del enlace inalámbrico en TCP"
+order: 3
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea (slide 17)
+
+**Lógicamente** el impacto debería ser mínimo: el modelo de servicio best effort no cambia y TCP y UDP corren sobre enlaces inalámbricos y móviles. Pero en **desempeño**:
+
+- **pérdida y retardo** por errores de bit (paquetes descartados, retransmisiones en la capa de enlace) y **pérdida en el handover**;
+- **TCP interpreta la pérdida como congestión** y reduce la ventana de congestión **sin necesidad**;
+- retardo que perjudica al tráfico en **tiempo real**;
+- el ancho de banda es un recurso **escaso** en los enlaces inalámbricos.
+
+---
+
+## 2. El mecanismo, paso a paso
+
+1. Un fenómeno físico (atenuación, multitrayecto, interferencia, terminal oculto) corrompe o pierde una trama.
+2. Si la capa de enlace no la recupera a tiempo, falta un segmento: llegan **ACK duplicados** o vence el **timeout**.
+3. TCP (semana 9) reacciona como ante congestión: **reduce cwnd** (a la mitad con 3 ACK duplicados, a 1 MSS con timeout).
+4. El enlace no estaba congestionado: el throughput cae **innecesariamente**.
+5. Las retransmisiones de la capa de enlace también hacen **variar el RTT**, y con él el timeout de TCP.
+
+<Visualization viz={{ type: "xy-chart", static: true, title: "cwnd ante una pérdida por el canal (ilustrativo)", steps: [
+  { note: "Ilustrativo (derivado): cwnd crece de forma aditiva; una trama perdida por fading en t=6 se lee como congestión y cwnd se reduce a la mitad aunque el enlace tenía capacidad.",
+    x: { label: "RTT", min: 0, max: 12 }, y: { label: "cwnd (MSS)", min: 0, max: 14 },
+    vlines: [ { at: 6, label: "pérdida por el canal" } ],
+    series: [ { id: "c", label: "cwnd", kind: "step", points: [[0,6],[1,7],[2,8],[3,9],[4,10],[5,11],[6,12],[7,6],[8,7],[9,8],[10,9],[11,10],[12,11]] } ] } ] }} />
+
+---
+
+## 3. Respuesta modelo: final 2026-I, P3
+
+> Los fenómenos físicos del medio inalámbrico (atenuación con $(fd)^2$, multitrayecto, ruido/interferencia y terminal oculto) producen **pérdidas por errores de bit y por handover** que no se deben a congestión. TCP no distingue el origen de la pérdida: ante ACK duplicados o timeout **reduce cwnd** como si la red estuviera congestionada, y el throughput baja sin necesidad. Además, las retransmisiones en la capa de enlace aumentan y hacen variar el retardo, lo que afecta al tráfico en tiempo real y al cálculo del timeout.
+
+---
+
+## 4. Errores típicos
+
+- Decir que TCP "no funciona" sobre inalámbrico: funciona, pero rinde peor.
+- Culpar a UDP: el problema mencionado es la **interpretación de pérdidas** de TCP.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slide 17; EF 2026-I P3; `Sem9_NetT-TCP2` (reacción de cwnd).

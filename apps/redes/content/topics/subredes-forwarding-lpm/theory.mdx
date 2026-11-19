@@ -1,0 +1,61 @@
+---
+kind: theory
+title: "Clases IPv4, Subredes y Longest Prefix Match"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Para qué sirve este tema
+
+La hoja `Sem13_Excercises5_NetworkLayer` (preguntas 4–7), las slides IP del LAB4 y el final 2025-II (P6) vuelven sobre direccionamiento con tres tareas concretas:
+
+1. reconocer la **clase** de una dirección y su máscara por defecto;
+2. **dividir** un bloque en subredes y decidir si dos equipos están en la misma;
+3. leer una **tabla de forwarding** con **longest prefix match** (LPM).
+
+Lo básico de CIDR (red = IP AND máscara, broadcast con los bits de host a 1, $2^{32-p}$ direcciones) está en la [semana 10](/topics/direccionamiento-ipv4-subredes).
+
+---
+
+## 2. Clases IPv4 (LAB4 slides IP)
+
+| Clase | Primer octeto | Bits de red | Bits de host | Rango privado | Uso típico |
+|---|---|---:|---:|---|---|
+| A | 0 – 127 | 8 | 24 | 10.0.0.0/8 | redes muy grandes |
+| B | 128 – 191 | 16 | 16 | 172.16.0.0/12 | redes medianas |
+| C | 192 – 223 | 24 | 8 | 192.168.0.0/16 | redes pequeñas |
+| D | 224 – 239 | — | — | — | multicast |
+| E | 240 – 255 | — | — | — | experimental |
+
+Máscara por defecto ("classful"): A → 255.0.0.0 (/8), B → 255.255.0.0 (/16), C → 255.255.255.0 (/24).
+
+---
+
+## 3. Subnetting: pedir bits prestados
+
+Se toman $b$ bits de la parte de host y se pasan a la red. Con $b$ bits hay $2^b$ subredes y cada una tiene
+
+$$H = 2^{32-p} - 2 \ \text{hosts utilizables}$$
+
+(se restan red y broadcast).
+
+<Visualization viz={{ type: "packet", static: true, title: "192.168.10.0/24 dividido en 4 subredes: /26", steps: [
+  { note: "Los 24 bits de red originales no cambian; se piden 2 bits al host (2^2 = 4 subredes) y quedan 6 bits de host: 2^6 - 2 = 62 hosts.",
+    fields: { width: 32, rows: [ [ { label: "red original 24 bits", bits: 24 }, { label: "+2", bits: 2, state: "active" }, { label: "host 6", bits: 6 } ] ] } } ] }} />
+
+Detalle de clases, subredes iguales y los ejercicios de Ex5 y del final en [Clases y subredes iguales](/topics/subredes-forwarding-lpm/subtopics/clases-ipv4-subredes-iguales).
+
+---
+
+## 4. Longest prefix match
+
+Cuando el destino coincide con **varios** prefijos de la tabla, el router usa el **más largo** (más bits fijos). Así una ruta específica (/23) gana sobre un agregado (/20), como en la semana 10. Con direcciones de 8 bits, las preguntas 4 y 5 de Ex5 piden el rango de cada interfaz: ver [Longest prefix match](/topics/subredes-forwarding-lpm/subtopics/longest-prefix-match-tablas).
+
+---
+
+## 5. Errores típicos
+
+- Confundir **clase** (histórica, por el primer octeto) con el **prefijo real** /p que indica la máscara.
+- Olvidar el "−2" al contar hosts utilizables.
+- Elegir en LPM la **primera** fila que coincide en vez de la **más larga**.
+
+Fuente: `Sem13_Excercises5_NetworkLayer` Q4–Q7; `Sem10_LAB4_Slides_IP`; `Sem11_LAB4A_IP (2)` §B; EF 2025-II P6.

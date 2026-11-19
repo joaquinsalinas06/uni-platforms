@@ -11,6 +11,8 @@ buildsOn:
 usedBy:
   - direccionamiento-ipv4-subredes
   - lab-sockets-tcp-python
+  - ipv6-tunel-transicion
+  - arquitectura-router
 hasVisualization: true
 visualizationType: packet
 formulas:

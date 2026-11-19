@@ -1,0 +1,44 @@
+---
+kind: subtopic
+title: "La ecuación de Bellman-Ford"
+order: 1
+---
+
+## 1. Idea
+
+"Mi mejor camino a $y$ empieza yendo a algún vecino." Si conozco cuánto me cuesta llegar a cada vecino y cuánto dice cada vecino que le cuesta llegar a $y$, me basta probar todas las combinaciones. Es programación dinámica.
+
+---
+
+## 2. La ecuación
+
+$$D_x(y)=\min_{v}\{\,c_{x,v}+D_v(y)\,\}$$
+
+| Símbolo | Significado |
+|---|---|
+| $D_x(y)$ | costo del camino mínimo de $x$ a $y$ |
+| $\min_v$ | mínimo sobre todos los **vecinos** $v$ de $x$ |
+| $c_{x,v}$ | costo directo del enlace de $x$ a $v$ |
+| $D_v(y)$ | costo mínimo **estimado** por $v$ hasta $y$ |
+
+El vecino que alcanza el mínimo es el **siguiente salto** en el camino de menor costo estimado.
+
+---
+
+## 3. Ejemplo de la slide 9
+
+Los vecinos de u (v, x, w) informan su costo hasta z: $D_v(z)=5$, $D_x(z)=3$, $D_w(z)=3$. Los enlaces de u cuestan $c_{u,v}=2$, $c_{u,x}=1$, $c_{u,w}=5$.
+
+$$D_u(z)=\min\{\,c_{u,v}+D_v(z),\ c_{u,x}+D_x(z),\ c_{u,w}+D_w(z)\,\}$$
+$$=\min\{\,2+5,\ 1+3,\ 5+3\,\}=\min\{7,4,8\}=\boxed{4}$$
+
+El mínimo lo da **x**: x es el siguiente salto de u hacia z. Coincide con Dijkstra en el mismo grafo (u-x-y-z, costo 4).
+
+---
+
+## 4. Errores típicos
+
+- Usar $\min\{D_v(z)\}$ sin sumar el enlace: daría 3 por w, que en realidad cuesta 8.
+- Confundir "costo mínimo" con "siguiente salto": son dos respuestas distintas.
+
+Fuente: `Sem14_NetT-DistanceVector_BGPAuthentication`, slides 8–10.

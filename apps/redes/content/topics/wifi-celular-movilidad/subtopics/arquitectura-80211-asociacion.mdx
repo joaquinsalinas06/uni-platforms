@@ -1,0 +1,61 @@
+---
+kind: subtopic
+title: "Arquitectura 802.11, canales y asociación a un AP"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Estándares (slide 19)
+
+| Estándar | Año | Tasa máx. | Alcance | Frecuencia |
+|---|---|---|---|---|
+| 802.11b | 1999 | 11 Mbps | 30 m | 2,4 GHz |
+| 802.11g | 2003 | 54 Mbps | 30 m | 2,4 GHz |
+| 802.11n (WiFi 4) | 2009 | 600 Mbps | 70 m | 2,4 y 5 GHz |
+| 802.11ac (WiFi 5) | 2013 | 3,47 Gbps | 70 m | 5 GHz |
+| 802.11ax (WiFi 6) | 2020 (exp.) | 14 Gbps | 70 m | 2,4 y 5 GHz |
+| 802.11af | 2014 | 35–560 Mbps | 1 km | bandas de TV sin uso (54–790 MHz) |
+| 802.11ah | 2017 | 347 Mbps | 1 km | 900 MHz |
+
+Todos usan **CSMA/CA** y tienen versiones con estación base y ad hoc.
+
+---
+
+## 2. Arquitectura (slide 20)
+
+- El host inalámbrico se comunica con la estación base, que en 802.11 se llama **access point (AP)**.
+- **BSS** (*Basic Service Set*, "celda") en modo infraestructura: hosts inalámbricos + un AP.
+- En modo ad hoc: solo hosts.
+- Varios BSS se conectan a Internet por un switch o router.
+
+---
+
+## 3. Canales (slide 21)
+
+El espectro (ejemplo: 2,4 GHz) se divide en **canales** de distinta frecuencia. El administrador del AP elige la frecuencia; si un AP vecino eligió el mismo canal, hay **interferencia**.
+
+La figura de la slide muestra los canales 1 a 11 de 2,4 GHz (2,400–2,470 GHz) solapados entre sí, y resalta **1, 6 y 11**, que no se solapan.
+
+---
+
+## 4. Asociación (slide 22)
+
+<Visualization viz={{ type: "sequence", title: "Un host llega a un BSS", steps: [
+  { note: "El host escanea canales y escucha los beacons: cada uno trae el nombre (SSID) y la MAC del AP.",
+    actors: [ { id: "h", label: "Host" }, { id: "ap", label: "AP" }, { id: "d", label: "Servidor DHCP" } ],
+    msgs: [ { from: "ap", to: "h", label: "beacon: SSID + MAC", state: "active" } ] },
+  { note: "Elige un AP y se asocia; puede haber un paso de autenticación.",
+    actors: [ { id: "h", label: "Host" }, { id: "ap", label: "AP" }, { id: "d", label: "Servidor DHCP" } ],
+    msgs: [ { from: "ap", to: "h", label: "beacon: SSID + MAC", state: "muted" }, { from: "h", to: "ap", label: "asociación (+ autenticación)", state: "active" } ] },
+  { note: "Ya asociado, normalmente corre DHCP para obtener una IP en la subred del AP (semana 10).",
+    actors: [ { id: "h", label: "Host" }, { id: "ap", label: "AP" }, { id: "d", label: "Servidor DHCP" } ],
+    msgs: [ { from: "ap", to: "h", label: "beacon: SSID + MAC", state: "muted" }, { from: "h", to: "ap", label: "asociación", state: "muted" }, { from: "h", to: "d", label: "DHCP Discover / Request", state: "active" }, { from: "d", to: "h", label: "Offer / ACK: IP", state: "answer" } ] } ] }} />
+
+---
+
+## 5. Errores típicos
+
+- Saltarse DHCP: asociarse no da IP.
+- Decir que el beacon lo envía el host: lo emite el AP.
+
+Fuente: `Sem15_NetT-Wireless-PhyLayer`, slides 19–23.

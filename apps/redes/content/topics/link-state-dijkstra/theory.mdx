@@ -1,0 +1,71 @@
+---
+kind: theory
+title: "Enrutamiento Link-State y Algoritmo de Dijkstra"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. El problema del routing
+
+El forwarding usa una tabla; el **routing** la llena. Su meta (slide 5) es hallar **buenos caminos** del host origen al destino a través de la red de routers. Un **camino** es la secuencia de routers que recorren los paquetes; "bueno" significa de **menor costo**, más rápido o menos congestionado. La slide lo llama un desafío "top-10" de las redes.
+
+---
+
+## 2. La red como grafo (slides 6–7)
+
+$G=(N,E)$: $N$ es el conjunto de routers y $E$ el de enlaces. Cada enlace tiene un costo $c_{a,b}$ que **define el operador**: puede ser siempre 1, inversamente proporcional al ancho de banda o relacionado con la congestión. El costo de un camino es la **suma** de sus enlaces:
+
+$$c(x_1,x_2,x_3,\dots)=c_{x_1,x_2}+c_{x_2,x_3}+\dots$$
+
+<Visualization viz={{ type: "net-scene", static: true, title: "Grafo de la slide 6 (costos en los enlaces)", steps: [
+  { note: "¿Cuál es el camino de menor costo de u a z? Un algoritmo de routing lo encuentra; aquí resulta u-x-y-z con costo 4.",
+    devices: [
+      { id: "u", kind: "router", label: "u", x: 8, y: 50, state: "marked" },
+      { id: "v", kind: "router", label: "v", x: 32, y: 14 },
+      { id: "w", kind: "router", label: "w", x: 66, y: 14 },
+      { id: "x", kind: "router", label: "x", x: 32, y: 86 },
+      { id: "y", kind: "router", label: "y", x: 66, y: 86 },
+      { id: "z", kind: "router", label: "z", x: 92, y: 50, state: "marked" } ],
+    cables: [ { from: "u", to: "v", label: "2" }, { from: "u", to: "x", label: "1", state: "answer" }, { from: "u", to: "w", label: "5" },
+              { from: "v", to: "x", label: "2" }, { from: "v", to: "w", label: "3" }, { from: "x", to: "w", label: "3" },
+              { from: "x", to: "y", label: "1", state: "answer" }, { from: "w", to: "y", label: "1" }, { from: "w", to: "z", label: "5" },
+              { from: "y", to: "z", label: "2", state: "answer" } ] } ] }} />
+
+---
+
+## 3. Link-state: todos conocen todo el mapa (slide 9)
+
+- **Centralizado** en el sentido de que la topología y los costos son conocidos por **todos** los nodos, gracias a un **broadcast del estado de enlace**: todos tienen la misma información.
+- Cada nodo calcula los caminos de menor costo **desde sí mismo** hacia todos los demás; eso le da su **tabla de forwarding**.
+- **Iterativo:** tras $k$ iteraciones conoce el camino mínimo a $k$ destinos.
+
+El cálculo es **Dijkstra**, con la relajación
+
+$$D(v)=\min\big(D(v),\ D(w)+c_{w,v}\big).$$
+
+La tabla completa del ejemplo, el árbol resultante y la tabla de forwarding de u están en [Dijkstra paso a paso](/topics/link-state-dijkstra/subtopics/dijkstra-paso-a-paso).
+
+---
+
+## 4. Costo del algoritmo y oscilaciones
+
+- **Complejidad:** $n(n+1)/2$ comparaciones, $O(n^2)$; con implementaciones más eficientes, $O(n\log n)$.
+- **Mensajes:** cada router difunde su estado a los otros $n$; en total $O(n^2)$.
+- **Oscilaciones:** si el costo depende del tráfico, las rutas pueden alternar sin parar.
+
+Ver [Complejidad y oscilaciones](/topics/link-state-dijkstra/subtopics/complejidad-oscilaciones).
+
+---
+
+## 5. Del algoritmo al protocolo
+
+OSPF e IS-IS son los protocolos link-state del curso: descubren vecinos, inundan el estado de enlace, arman la base de datos y corren **SPF (Dijkstra)**. Como todos confían en el mapa compartido, un costo falsificado desvía el tráfico: por eso se autentican (siguiente tema, [OSPF, IS-IS y HMAC](/topics/ospf-isis-autenticacion)).
+
+---
+
+## 6. Errores típicos
+
+- Pensar que link-state es "centralizado" porque hay un servidor: cada router calcula; lo compartido es la **información**.
+- Sumar costos de enlaces que no forman un camino continuo.
+- Confundir el costo mínimo (número) con la ruta (secuencia de nodos).
+
+Fuente: `Sem13_NetT-Dijkstra_OSPF_ISIS`, slides 4–16.

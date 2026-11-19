@@ -1,0 +1,309 @@
+---
+title: "Examen Final 2025-II"
+category: "finales"
+categoryLabel: "Exámenes Finales"
+order: 1
+pdf: "/evaluaciones/finales/2025-ii.pdf"
+source: "Examen Final CS4054 Redes y Comunicaciones, Sección 2 (3 de diciembre de 2025)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExamStatement from '../../../src/components/ExamStatement.astro';
+import ExamFigure from '../../../src/components/ExamFigure.astro';
+import figThr from './2025-ii/p1-throughput.png';
+import figTr from './2025-ii/p5-traceroute.png';
+import figRj from './2025-ii/p7-tester-rj45.png';
+import figWs from './2025-ii/p9-icmp-wireshark.png';
+import figNat from './2025-ii/p10-nat-topologia.png';
+
+## Instrucciones
+
+- **Curso**: CS4054 Redes y Comunicaciones. **Fecha**: 3 de diciembre de 2025. Individual; se califica el procedimiento y la redacción.
+- Sección teórica (10 pts, P1–P4) y sección de laboratorio (10 pts, P5–P10).
+- Mapa de temas: P1–P2 congestión y equidad ([semana 9](/units/s9)); P3 fragmentación ([semana 10](/units/s10)); P4 terminal oculto ([semana 15](/units/s15)); P5 y P9 ICMP/traceroute ([semana 12](/units/s12)); P6 clases ([semana 13](/units/s13)); P7 cableado ([semana 15](/units/s15)); P8 DHCP ([semana 10](/units/s10)); P10 NAT ([semana 11](/units/s11)).
+
+---
+
+## Pregunta 1: Throughput con buffers finitos (2 puntos)
+
+<ExamStatement>
+
+Explicar porque cuando se comparte un router de capacidad $R$ y se consideran buffers finitos el throughput pierde su comportamiento lineal y decae como se muestra en la figura. Reconocer el significado de las caídas marcadas por los puntos grises.
+
+</ExamStatement>
+
+<ExamFigure src={figThr} alt="Gráfica throughput λout frente a λ'in hasta R/2. Línea discontinua ideal hasta R/2 con un punto gris arriba; un segundo punto gris más abajo; la curva roja real se aplana y termina en un punto negro aún más bajo." caption="Figura de la pregunta 1" />
+
+**Solución.** Es el escenario 2 de congestión de `Sem9_NetT-TCP2` (slides 13–16): dos emisores comparten un router con enlace de salida $R$ y **buffer finito**, así que cada uno puede aspirar a $R/2$.
+
+1. **Con buffer finito hay descartes.** Cuando el buffer se llena, el router descarta paquetes; el emisor debe **retransmitir**. Por eso se distinguen $\lambda_{in}$ (datos originales) y $\lambda'_{in}$ (originales + retransmisiones), con $\lambda'_{in} \ge \lambda_{in}$.
+2. **El enlace transporta copias.** Parte de la capacidad se gasta en retransmisiones; el throughput útil $\lambda_{out}$ crece menos que la carga ofrecida y la curva deja de ser lineal al acercarse a $R/2$.
+3. **Puntos grises (las caídas):**
+   - el **punto gris superior**, sobre la diagonal en $R/2$, es el caso ideal (*perfect knowledge*): el emisor solo envía cuando hay buffer libre y el throughput llega a $R/2$;
+   - la **primera caída** hasta el segundo punto gris es la capacidad "desperdiciada" en **retransmisiones necesarias** (el emisor solo reenvía lo que sabe perdido);
+   - la **segunda caída** hasta el punto negro es la capacidad desperdiciada por **duplicados innecesarios**: timeouts prematuros envían dos copias y ambas se entregan.
+
+**Costes de la congestión** (slide 16): más trabajo (retransmisiones) para el mismo throughput del receptor, y copias innecesarias que **reducen el throughput máximo alcanzable**. Ver [Buffers, pérdidas y retransmisiones](/topics/principios-costes-congestion/subtopics/buffers-perdidas-retransmisiones).
+
+---
+
+## Pregunta 2: AIMD frente a AIAD (3 puntos)
+
+<ExamStatement>
+
+Muestre que el algoritmo AIMD (Additive Increase, Multiplicative Decrease) de TCP garantiza que exista una asignación equitativa. Haga un diagrama que ilustre esto y utilice valores de ejemplo para ilustrar la convergencia paso a paso.
+
+Suponga que, en lugar de una disminución multiplicativa, TCP redujera el *window size* en una cantidad constante. ¿Convergería el algoritmo resultante AIAD (Additive Increase, Additive Decrease) hacia una asignación equitativa? Justifique su respuesta.
+
+</ExamStatement>
+
+**Solución.** Dos flujos con igual RTT comparten capacidad $C$. Sea $(x_1, x_2)$ el par de tasas; la **línea de eficiencia** es $x_1+x_2=C$ y la de **equidad** $x_1=x_2$.
+
+**1. AI no cambia la diferencia:** $(x_1+a,\ x_2+a)$ ⇒ $x_1-x_2$ igual.
+
+**2. MD la divide:** $(x_1/2,\ x_2/2)$ ⇒ $(x_1-x_2)/2$.
+
+**3. Ejemplo** con $C=10$ y $P_0=(2,6)$:
+
+| Etapa | Punto | Suma | Diferencia |
+|---|---|---|---|
+| Inicio | (2, 6) | 8 | 4 |
+| AI hasta $C$ | (3, 7) | 10 | 4 |
+| MD | (1,5; 3,5) | 5 | 2 |
+| AI hasta $C$ | (4, 6) | 10 | 2 |
+| MD | (2, 3) | 5 | 1 |
+| AI hasta $C$ | (4,5; 5,5) | 10 | 1 |
+
+Tras $k$ pérdidas la diferencia es $4/2^k \to 0$: el punto zigzaguea y se acerca a la línea de equidad (5, 5).
+
+<Visualization viz={{ type: "xy-chart", static: true, title: "AIMD converge a la línea de equidad", steps: [
+  { note: "Cada subida a 45° (AI) mantiene la diferencia; cada bajada hacia el origen (MD) la reduce a la mitad. El recorrido se acerca a x1 = x2.",
+    x: { label: "x1", min: 0, max: 10 }, y: { label: "x2", min: 0, max: 10 },
+    series: [
+      { id: "eff", label: "eficiencia x1+x2=10", kind: "line", points: [[0,10],[10,0]] },
+      { id: "eq", label: "equidad x1=x2", kind: "line", points: [[0,0],[10,10]] },
+      { id: "p", label: "AIMD", kind: "line", state: "active", points: [[2,6],[3,7],[1.5,3.5],[4,6],[2,3],[4.5,5.5],[2.25,2.75],[4.75,5.25]] } ] } ] }} />
+
+**4. AIAD no converge.** Con disminución constante $(x_1-b,\ x_2-b)$ la diferencia **tampoco cambia**. Ni AI ni AD la reducen: el reparto inicial (p. ej. diferencia 4) se mantiene para siempre; la trayectoria oscila **paralela** a la línea de equidad. **No** hay convergencia a una asignación equitativa.
+
+Desarrollo completo en [Equidad: AIMD frente a AIAD](/topics/control-congestion-tcp-avanzado/subtopics/equidad-aimd-aiad).
+
+---
+
+## Pregunta 3: Fragmentación en dos redes (3 puntos)
+
+<ExamStatement>
+
+Un host A debe enviar un datagrama IP de 1000 bytes (incluyendo el header IP) hacia un host B. El datagrama atraviesa dos redes consecutivas, cada una con distinta MTU: **Red 1: MTU = 400 bytes**, **Red 2: MTU = 200 bytes**. El header IP tiene un tamaño de 20 bytes y no incluye opciones. El datagrama original no tiene activado el bit DF, por lo que puede fragmentarse.
+
+A. ¿Será necesario fragmentar? ¿Cuántos fragmentos se generan al salir del host A?
+B. ¿Cuántos fragmentos se generan al pasar por la segunda red, considerando que los fragmentos de la primera red pueden volver a fragmentarse?
+C. Para cada fragmento final que llega al host B, indicar: a. tamaño total; b. bytes de datos; c. fragment offset (en unidades de 8 bytes); d. bit MF.
+
+</ExamStatement>
+
+**Solución.**
+
+**A. Red 1.** $1000 \gt 400$: hay que fragmentar. Datos originales $1000-20=980$ B. Datos por fragmento no final: $8\lfloor (400-20)/8 \rfloor = 8\cdot 47 = 376$ B (380 no es múltiplo de 8). $980 = 376+376+228$ ⇒ **3 fragmentos**:
+
+| Frag. red 1 | Datos | Longitud total | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 376 | 396 | 0 | 1 |
+| 2 | 376 | 396 | 47 | 1 |
+| 3 | 228 | 248 | 94 | 0 |
+
+**B. Red 2.** Datos por fragmento no final: $8\lfloor (200-20)/8 \rfloor = 8\cdot 22 = 176$ B. Cada fragmento de 376 B da $176+176+24$ (3 piezas) y el de 228 B da $176+52$ (2 piezas): **8 fragmentos** llegan a B.
+
+**C. Fragmentos finales.** El offset se suma al del fragmento que se vuelve a partir; el MF del último trozo hereda el MF del fragmento padre.
+
+| # | Longitud total (B) | Datos (B) | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 196 | 176 | 0 | 1 |
+| 2 | 196 | 176 | 22 | 1 |
+| 3 | 44 | 24 | 44 | 1 |
+| 4 | 196 | 176 | 47 | 1 |
+| 5 | 196 | 176 | 69 | 1 |
+| 6 | 44 | 24 | 91 | 1 |
+| 7 | 196 | 176 | 94 | 1 |
+| 8 | 72 | 52 | 116 | 0 |
+
+**Comprobación:** $176\cdot 5 + 24\cdot 2 + 52 = 980$ B, y el último offset cumple $116\cdot 8 + 52 = 980$. Solo el fragmento 8 lleva MF=0. El reensamblado lo hace el host B. Método en [Fragmentación](/topics/capa-red-ipv4-fragmentacion/subtopics/mtu-offset-reensamblado).
+
+---
+
+## Pregunta 4: Terminales ocultos (2 puntos)
+
+<ExamStatement>
+
+En el ámbito de las comunicaciones inalámbricas, explique en qué consiste el problema de los *hidden terminals* (nodos ocultos) y describa cómo este fenómeno afecta el desempeño de la red. Finalmente, mencione y explique al menos una técnica empleada en redes inalámbricas para mitigar este problema.
+
+</ExamStatement>
+
+**Solución.**
+
+1. **Qué es** (`Sem15`, slide 15): A y C están en alcance de B, pero **no se escuchan entre sí** (un obstáculo o la atenuación). Ninguno sabe que el otro transmite, así que no saben que **interfieren en B**.
+2. **Efecto:** el sensado de portadora no sirve: ambos ven el canal libre, transmiten y **colisionan en B**. Hay colisiones que los emisores no ven, retransmisiones, más retardo y menos throughput útil.
+3. **Mitigación del material:** 802.11 usa **CSMA/CA** (slide 23). Como no puede detectar colisiones (la señal propia es fuerte y la recibida débil; terminal oculto y fading), su objetivo es **evitarlas** antes de transmitir. Otra técnica de la misma clase es **CDMA** (slide 16): cada usuario usa su propio código y varios pueden transmitir a la vez en la misma frecuencia con mínima interferencia.
+
+Ver [Terminal oculto, CDMA y CSMA/CA](/topics/capa-fisica-enlace/subtopics/terminal-oculto-csma-ca).
+
+---
+
+## Pregunta 5: Traceroute (2 puntos)
+
+<ExamStatement>
+
+Suponga que ejecuta el comando: "traceroute 8.8.8.8" y el resultado obtenido en la ventana de comandos fue el siguiente:
+
+A. ¿Cuál fue el TTL del paquete enviado (desde el usuario) que recibió respuesta desde la dirección 203.0.113.17?
+B. Suponga que todos los routers intermedios generan respuestas ICMP con un TTL inicial de 128. Si una de esas respuestas llega al host origen con TTL = 126, ¿Qué router intermedio es el que brindó tal respuesta?
+
+</ExamStatement>
+
+<ExamFigure src={figTr} alt="Salida de traceroute: 1 192.168.1.1 1.123 ms; 2 10.20.30.1 3.456 ms; 3 172.16.0.5 7.789 ms; 4 * * *; 5 203.0.113.17 14.567 ms; 6 8.8.8.8 18.345 ms." caption="Salida de traceroute de la pregunta 5" />
+
+**Solución.** Convención: el router del salto $k$ recibe la sonda enviada con TTL $k$, y su respuesta cruza $k-1$ routers de regreso.
+
+**A.** 203.0.113.17 aparece en el **salto 5**: la sonda salió con $\boxed{TTL = 5}$ y llegó a ese router con TTL 1.
+
+**B.** $TTL_{\text{llegada}} = 128-(k-1) = 126 \Rightarrow k-1 = 2 \Rightarrow k = 3$: respondió el router del salto 3, **172.16.0.5**. Los routers 2 y 1 decrementaron la respuesta (128 → 127 → 126).
+
+*(Si se cuenta "saltos" como la simple diferencia $128-126 = 2$, la respuesta sería el salto 2, 10.20.30.1; conviene declarar la convención.)* Ver [ICMP, TTL y traceroute](/topics/seguridad-router-icmp/subtopics/icmp-ttl-traceroute).
+
+---
+
+## Pregunta 6: Clase, máscara, red y broadcast (2 puntos)
+
+<ExamStatement>
+
+Durante una auditoría de red en un laboratorio, se identificaron varias direcciones IPv4 asignadas a distintos equipos. Se tiene la PC-1 con IP: **10.25.14.7/8** y la PC2 con IP: **172.20.5.200/16**, determine para cada PC:
+
+A. Clase de IPV4 a la que pertenece.
+B. Máscara de subred en decimal.
+C. Dirección de red (gateway).
+D. Dirección de broadcast.
+
+</ExamStatement>
+
+**Solución.**
+
+| | PC-1: 10.25.14.7/8 | PC-2: 172.20.5.200/16 |
+|---|---|---|
+| A. Clase | **A** (primer octeto 10 ∈ 0–127) | **B** (172 ∈ 128–191) |
+| B. Máscara | **255.0.0.0** | **255.255.0.0** |
+| C. Red (IP AND máscara) | **10.0.0.0** | **172.20.0.0** |
+| D. Broadcast (host a 1) | **10.255.255.255** | **172.20.255.255** |
+
+El enunciado escribe "(gateway)", pero lo calculable es la **dirección de red**; el gateway sería una interfaz de router dentro de esa red. Ambas son direcciones **privadas** (10/8 y 172.16/12). Ver [Clases y subredes](/topics/subredes-forwarding-lpm/subtopics/clases-ipv4-subredes-iguales).
+
+---
+
+## Pregunta 7: Tester RJ45 (1,5 puntos)
+
+<ExamStatement>
+
+En la figura se muestra el resultado obtenido al probar un cable Ethernet con un tester RJ45 de 8 pines. Analice la secuencia de luces encendidas en ambos extremos y determine el orden de conexión de los pines entre ambos conectores RJ45. Dibuje un esquema similar al de la derecha para representar gráficamente la conexión entre los terminales.
+
+</ExamStatement>
+
+<ExamFigure src={figRj} alt="Ocho cuadros t1 a t8 del tester. Lado principal enciende el pin 1 a 8 en orden. Lado remoto: t1 pin 1, t2 ninguno, t3 pin 3, t4 ninguno, t5 pin 7, t6 pin 5, t7 pin 6, t8 ninguno. A la derecha, dibujo de un conector RJ45 con pines 1 a 8." caption="Lectura del tester de la pregunta 7" />
+
+**Solución.** En cada $t_k$ el tester activa el pin $k$ del extremo principal; se lee qué LED se enciende en el remoto.
+
+| $t_k$ | Pin principal | LED remoto | Estado |
+|---|---:|---:|---|
+| t1 | 1 | 1 | directo |
+| t2 | 2 | — | abierto |
+| t3 | 3 | 3 | directo |
+| t4 | 4 | — | abierto |
+| t5 | 5 | 7 | cruzado |
+| t6 | 6 | 5 | cruzado |
+| t7 | 7 | 6 | cruzado |
+| t8 | 8 | — | abierto |
+
+**Esquema de conexión:** 1–1, 3–3, 5–7, 6–5, 7–6; los pines 2, 4 y 8 sin línea (sin continuidad).
+
+Un cable correcto con T568A en ambos extremos (blanco/verde, verde, blanco/naranja, azul, blanco/azul, naranja, blanco/marrón, marrón) daría 1–1 … 8–8 en secuencia. Según la guía de la práctica, los LED fuera de orden indican hilos **mezclados** en el conector remoto (posiciones 5, 6, 7) y los que no encienden, hilos que **no llegaron al fondo o mal crimpados** (2, 4, 8). Ver [Cable UTP T568A](/topics/capa-fisica-enlace/subtopics/cable-utp-t568a).
+
+---
+
+## Pregunta 8: DHCP (1,5 puntos)
+
+<ExamStatement>
+
+Realice y explique el diagrama del protocolo servidor-cliente DHCP con un ejemplo de asignación IP con su respectivo puerto.
+
+</ExamStatement>
+
+**Solución.** DHCP corre sobre **UDP**: el cliente usa el puerto **68** y el servidor el **67**. El intercambio es DORA; el ejemplo es el de la slide 28 de `Sem10_NetT-NetLayer_Addressing`:
+
+<Visualization viz={{ type: "sequence", title: "DHCP: Discover, Offer, Request, ACK", steps: [
+  { note: "El cliente aún no tiene IP: envía desde 0.0.0.0:68 a la difusión 255.255.255.255:67.",
+    actors: [ { id: "c", label: "Cliente (puerto 68)" }, { id: "s", label: "Servidor DHCP (puerto 67)" } ],
+    msgs: [ { from: "c", to: "s", label: "Discover", flags: "0.0.0.0:68 → 255.255.255.255:67", state: "active" } ] },
+  { note: "El servidor ofrece 223.1.2.4 con un tiempo de concesión de 3600 s.",
+    actors: [ { id: "c", label: "Cliente (puerto 68)" }, { id: "s", label: "Servidor DHCP (puerto 67)" } ],
+    msgs: [ { from: "c", to: "s", label: "Discover", state: "muted" }, { from: "s", to: "c", label: "Offer: 223.1.2.4, 3600 s", flags: "67 → 68", state: "active" } ] },
+  { note: "El cliente pide formalmente la dirección ofrecida.",
+    actors: [ { id: "c", label: "Cliente (puerto 68)" }, { id: "s", label: "Servidor DHCP (puerto 67)" } ],
+    msgs: [ { from: "c", to: "s", label: "Discover", state: "muted" }, { from: "s", to: "c", label: "Offer", state: "muted" }, { from: "c", to: "s", label: "Request: 223.1.2.4", flags: "68 → 67", state: "active" } ] },
+  { note: "El servidor confirma: el cliente ya puede usar 223.1.2.4 (y recibe máscara, primer router y DNS).",
+    actors: [ { id: "c", label: "Cliente (puerto 68)" }, { id: "s", label: "Servidor DHCP (puerto 67)" } ],
+    msgs: [ { from: "c", to: "s", label: "Discover", state: "muted" }, { from: "s", to: "c", label: "Offer", state: "muted" }, { from: "c", to: "s", label: "Request", state: "muted" }, { from: "s", to: "c", label: "ACK: 223.1.2.4", flags: "67 → 68", state: "answer" } ] } ] }} />
+
+1. **Discover**: el cliente busca servidores por difusión.
+2. **Offer**: el servidor propone una IP y la duración de la concesión.
+3. **Request**: el cliente solicita esa IP.
+4. **ACK**: el servidor confirma (es un ACK de DHCP, no de TCP).
+
+Ver [DHCP](/topics/direccionamiento-ipv4-subredes/subtopics/dhcp-configuracion-host).
+
+---
+
+## Pregunta 9: Mensaje ICMP Tipo 11 en Wireshark (1,5 puntos)
+
+<ExamStatement>
+
+Durante una captura realizada en Wireshark, se observa un paquete ICMP con las siguientes características relevantes, producto de la ejecución de un comando traceroute.
+
+A. Explique por qué un router genera un paquete ICMP de Tipo 11 Código 0. En su respuesta incluya cuál es el evento exacto que dispara este mensaje y qué objetivo tiene en el proceso de comunicación.
+B. Con base en el TTL observado en el paquete original (valor=1 al llegar al router), estime cuál pudo haber sido el TTL inicial más probable del host emisor. Evalúe los escenarios posibles y seleccione el más verosímil, explicando por qué.
+C. Explique por qué el encabezado IP del paquete original aparece "incluido" dentro del mensaje ICMP. ¿Qué utilidad tiene para herramientas como traceroute o para el análisis forense de redes?
+
+</ExamStatement>
+
+<ExamFigure src={figWs} alt="Frame 290: IPv4 128.119.0.10 → 192.168.86.61, Total Length 56, TTL 245, protocolo ICMP. ICMP Type 11 (Time-to-live exceeded), Code 0. IP encapsulado: 192.168.86.61 → 128.119.245.12, Total Length 1500, Identification 0xfdbd, Flags 0x1 More fragments, Fragment Offset 0, TTL 1, UDP. UDP Src Port 64929, Dst Port 33462." caption="Captura de la pregunta 9" />
+
+**Solución.**
+
+**A. Evento y objetivo.** Al reenviar, el router **resta 1 al TTL**. La sonda UDP llegó a 128.119.0.10 con TTL 1; al decrementarlo quedó en **0**, el router la **descartó** y envió al origen (192.168.86.61) un ICMP **Tipo 11, Código 0** (*TTL exceeded in transit*). El TTL impide que un datagrama circule para siempre en un bucle; traceroute aprovecha el aviso para descubrir la IP de cada salto.
+
+**B. TTL inicial de la sonda.** Escenarios:
+- valores por defecto de un sistema (64, 128, 255): la sonda habría llegado con TTL 1 tras 63, 127 o 254 routers, algo **inverosímil**;
+- **traceroute** envía TTL = 1, 2, 3, …: la sonda que muere en el salto $k$ salió con TTL $k$. Es el escenario correcto.
+
+Para hallar $k$ se usa el ICMP externo: llegó con **TTL 245**. Si el router lo generó con 255 (el único valor por defecto mayor que 245) y la ruta es simétrica, $245 = 255-(k-1) \Rightarrow k = 11$. La sonda salió con **TTL ≈ 11** (10 si se cuenta la diferencia $255-245$ directamente).
+
+**C. Por qué se incluye la cabecera original.** El error ICMP copia la **cabecera IP original y los primeros bytes** de su carga (aquí la cabecera UDP con puertos 64929 → 33462). Con eso el emisor sabe **qué sonda** murió (destino, protocolo, ID 0xfdbd, puertos) y **qué proceso** debe recibir el error; traceroute asocia cada respuesta con su TTL. En análisis forense permite reconstruir qué datagrama provocó el error y desde dónde.
+
+Observación: la sonda original tenía **Total Length 1500 y MF=1**: era el primer fragmento de un datagrama grande, como el `traceroute gaia.cs.umass.edu 2000` del LAB4A. Ver [ICMP, TTL y traceroute](/topics/seguridad-router-icmp/subtopics/icmp-ttl-traceroute).
+
+---
+
+## Pregunta 10: Laboratorio de NAT (1,5 puntos)
+
+<ExamStatement>
+
+Considere la experiencia realizada en laboratorio de NAT.
+
+a) ¿Qué diferencias existen en las direcciones IP origen y puerto TCP origen entre el segmento SYN visto desde el lado home y el lado ISP?
+b) Cuando el servidor responde con el SYN-ACK, ¿a qué dirección IP y puerto se dirige (según el gráfico)? Explica cómo el router NAT asocia esa respuesta con el cliente original.
+
+</ExamStatement>
+
+<ExamFigure src={figNat} alt="Topología: red de casa con el cliente 192.168.10.11, router NAT y red del ISP; la interfaz del router hacia el ISP es 10.0.1.254. Capturas NAT_home_side y NAT_ISP_side. Server: 138.76.29.8." caption="Topología del laboratorio NAT" />
+
+**Solución.**
+
+**a)** Lado home: el SYN sale con **IP origen 192.168.10.11** y el puerto TCP que eligió el cliente. Lado ISP: el mismo SYN tiene **IP origen 10.0.1.254** (interfaz del NAT hacia el ISP) y un **puerto origen asignado por el NAT**. Destino (138.76.29.8 y su puerto), flags y números de secuencia no cambian; el checksum IP sí cambia porque cambió una dirección.
+
+**b)** El SYN-ACK va a **10.0.1.254** y al **puerto traducido**, nunca a 192.168.10.11. Al salir el SYN, el router guardó en su **tabla de traducción** la fila (10.0.1.254, puerto traducido) ↔ (192.168.10.11, puerto original). Al llegar el SYN-ACK busca el puerto destino en esa tabla, reescribe IP y puerto destino con los valores internos y lo entrega a la PC. Ver [La tabla de traducción NAT](/topics/nat-firewall/subtopics/tabla-traduccion-nat).

@@ -1,0 +1,168 @@
+---
+title: "Ejercicios 5 — Capa de Red: Fragmentación, LPM, Subredes, NAT e ICMP"
+category: "laboratorio"
+categoryLabel: "Laboratorios y Ejercicios Extra"
+order: 7
+pdf: "/evaluaciones/laboratorio/ejercicios-5-capa-red.pdf"
+source: "Ex 5: Network Layer Exercises, 7 de noviembre de 2026"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+# Ex5 — Capa de red, resuelto paso a paso
+
+Las preguntas 1–7 son teóricas y se resuelven con los datos del enunciado. Las 8–10 son de laboratorio con Wireshark: se responden con el concepto que piden; los valores concretos (tu IP, tu IP pública, tus puertos) dependen de tu captura y no se inventan.
+
+---
+
+## Pregunta 1. Dónde se reensambla y overhead
+
+**Enunciado.** ¿Dónde se reensamblan los fragmentos de un datagrama? Una aplicación genera bloques de 40 bytes cada 20 ms; cada bloque va en un segmento TCP y luego en un datagrama IP. ¿Qué porcentaje del datagrama es overhead y cuánto son datos?
+
+**Solución.**
+- El reensamblado se hace **en el host destino**, nunca en los routers intermedios.
+- Cabeceras sin opciones: TCP 20 B e IPv4 20 B. Datagrama $= 40+20+20 = 80$ B.
+
+$$\text{overhead} = \frac{40}{80} = 50\,\% \qquad \text{datos} = \frac{40}{80} = 50\,\%$$
+
+El periodo de 20 ms no cambia el porcentaje (afecta la tasa, no la proporción).
+
+---
+
+## Pregunta 2. Fragmentación I: 5200 B, MTU 1500 y 620
+
+**1.** $5200 \gt 1500$: **sí** hay que fragmentar.
+
+**2. Red 1.** Datos $=5200-20=5180$ B; por fragmento no final $8\lfloor 1480/8\rfloor = 1480$ B. $5180 = 1480+1480+1480+740$ ⇒ **4 fragmentos** (offsets 0, 185, 370, 555).
+
+**3. Red 2.** Datos por fragmento no final $8\lfloor 600/8 \rfloor = 600$ B. Cada 1480 → $600+600+280$; el de 740 → $600+140$. Total $3+3+3+2 =$ **11 fragmentos**.
+
+**4. Fragmentos que llegan a B.**
+
+| # | Longitud total | Datos | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 620 | 600 | 0 | 1 |
+| 2 | 620 | 600 | 75 | 1 |
+| 3 | 300 | 280 | 150 | 1 |
+| 4 | 620 | 600 | 185 | 1 |
+| 5 | 620 | 600 | 260 | 1 |
+| 6 | 300 | 280 | 335 | 1 |
+| 7 | 620 | 600 | 370 | 1 |
+| 8 | 620 | 600 | 445 | 1 |
+| 9 | 300 | 280 | 520 | 1 |
+| 10 | 620 | 600 | 555 | 1 |
+| 11 | 160 | 140 | 630 | 0 |
+
+**Comprobación:** $630\cdot 8 + 140 = 5180$ B.
+
+---
+
+## Pregunta 3. Fragmentación II: 4200 B, MTU 1500 y 820
+
+**1.** $4200 \gt 1500$: sí. El datagrama no cabe en la primera red y DF = 0.
+
+**2. Red 1.** Datos 4180 B $= 1480+1480+1220$ ⇒ **3 fragmentos** (offsets 0, 185, 370).
+
+**3. Red 2.** Datos por fragmento no final $8\lfloor 800/8 \rfloor = 800$ B. 1480 → $800+680$ (dos veces) y 1220 → $800+420$: **6 fragmentos**.
+
+**4.**
+
+| # | Longitud total | Datos | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 820 | 800 | 0 | 1 |
+| 2 | 700 | 680 | 100 | 1 |
+| 3 | 820 | 800 | 185 | 1 |
+| 4 | 700 | 680 | 285 | 1 |
+| 5 | 820 | 800 | 370 | 1 |
+| 6 | 440 | 420 | 470 | 0 |
+
+**Comprobación:** $470\cdot 8+420 = 4180$ B.
+
+---
+
+## Pregunta 4. LPM con 8 bits (prefijos disjuntos)
+
+| Interfaz | Rango | Nº de direcciones |
+|---|---|---:|
+| 0 (00) | 0 – 63 | 64 |
+| 1 (010) | 64 – 95 | 32 |
+| 2 (011 y 10) | 96 – 191 | 96 |
+| 3 (11) | 192 – 255 | 64 |
+
+Desarrollo en [Longest prefix match](/topics/subredes-forwarding-lpm/subtopics/longest-prefix-match-tablas).
+
+---
+
+## Pregunta 5. LPM con 8 bits (prefijos anidados)
+
+| Interfaz | Rango | Nº de direcciones |
+|---|---|---:|
+| 0 (1, sin 10 ni 111) | 192 – 223 | 32 |
+| 1 (10) | 128 – 191 | 64 |
+| 2 (111) | 224 – 255 | 32 |
+| 3 (otherwise) | 0 – 127 | 128 |
+
+---
+
+## Pregunta 6. Subredes en 223.1.17.0/24 y tabla
+
+1. Subred 2 (≥ 90) → **223.1.17.0/25**; Subred 1 (≥ 60) → **223.1.17.128/26**; Subred 3 (≥ 12) → **223.1.17.192/28**.
+2. Tabla: 223.1.17.128/26 → 0; 223.1.17.0/25 → 1; 223.1.17.192/28 → 2; otherwise → 3.
+3. IP válida para la Subred 1: **223.1.17.130**.
+
+---
+
+## Pregunta 7. Clases, conectividad y subredes
+
+1. 192.168.100.0 es **clase C**; máscara classful **255.255.255.0** (/24).
+2. Con /26: PC1 (.50) ∈ **192.168.100.0/26** y PC2 (.110) ∈ **192.168.100.64/26**. Redes distintas: **no** se comunican directo en capa 2; necesitan un router. Además GW1 (.1) está en la red de PC1, no en la de PC2.
+3. PC3 (.150) ∈ **192.168.100.128/26** y GW1 ∈ 192.168.100.0/26: no comparten subred, PC3 **no** puede enviar directo a GW1; necesita un gateway en su propia subred.
+4. 200.50.10.0/24 en 6 subredes iguales: $2^3 = 8 \ge 6$ ⇒ **/27**, **255.255.255.224**, $2^5-2 =$ **30 hosts** por subred.
+
+Desarrollo en [Clases y subredes iguales](/topics/subredes-forwarding-lpm/subtopics/clases-ipv4-subredes-iguales).
+
+---
+
+## Pregunta 8. NAT (laboratorio)
+
+1. **IP privada local:** la de `ipconfig`/`ifconfig`, en 10/8, 172.16/12 o 192.168/16 *(depende de tu red)*.
+2. **IP pública del sitio:** distinta de la privada, porque el router NAT reemplaza la IP origen al salir.
+3. **Origen:** en tu captura, tu IP privada; el servidor ve la IP pública del NAT.
+4. **Puertos:** cada conexión usa un puerto origen propio y el NAT puede asignar uno nuevo del lado público; la tabla guarda (IP privada, puerto) ↔ (IP pública, puerto nuevo).
+5. **Misma IP pública para todos:** todos los dispositivos de la red salen por la misma IP del NAT.
+6. **Contacto desde afuera a tu IP privada:** no llega; las privadas no se enrutan en Internet y el NAT no tiene entrada en su tabla para una conexión no iniciada desde adentro.
+7. **Otros campos de la cabecera IP que cambian:** el **header checksum**, que debe recalcularse porque cambió la dirección (el LAB4B lo pregunta en su punto 9). Fuera de la cabecera IP, NAT también cambia el **puerto origen** de la cabecera de transporte y, con él, su checksum.
+8. **Capa:** IP es capa 3; NAT reescribe IP **y puertos** de capa 4, por eso viola la separación de capas (slide 15 de `Sem11`).
+
+---
+
+## Pregunta 9. IP e ICMP (laboratorio)
+
+1. **Ping:** request de tu IP a la de www.inria.fr; reply al revés.
+2. **Echo Request:** Tipo 8, Código 0. **Echo Reply:** Tipo 0, Código 0.
+3. **Sin puertos:** ICMP no es transporte; viaja sobre IP (protocolo 1) y el ping usa *identifier* y *sequence number*.
+4. **TTL expirado:** Tipo 11 (Time Exceeded); revela la IP de cada router del camino.
+5. **TTL de las sondas:** 1, 2, 3, … (tres sondas por TTL en `tracert`): cada valor descubre un salto más.
+6. **RTT del ping:** el que muestre tu terminal; depende de distancia, retardos de cola, carga de la red y del Wi-Fi.
+7. **Request frente a Time Exceeded:** el Time Exceeded tiene como origen al router (no al destino), su propio TTL, y su carga trae la **cabecera IP original + primeros bytes** del datagrama descartado.
+8. **ICMP + IP:** IP entrega y decrementa TTL; ICMP reporta errores y permite pruebas (ping, traceroute).
+
+---
+
+## Pregunta 10. NAT, IP e ICMP extendido (laboratorio)
+
+1. NAT mantiene una fila por flujo (IP privada, puerto) ↔ (IP pública, puerto), así varias máquinas pueden hablar con el mismo servidor.
+2. Routers intermedios con TTL expirado: **Tipo 11, Código 0**.
+3. Patrón de TTL: 1, 2, 3, … creciente; cada valor hace expirar la sonda un salto más lejos.
+4. Carga del Time Exceeded: **cabecera IP original + primeros bytes** (cabecera de transporte o ICMP). El emisor lo necesita para saber **qué sonda** falló.
+5. NAT y el ICMP entrante: el router mira la **cabecera original embebida** (IP privada traducida y puertos o identificador) para encontrar la fila de su tabla y reenviar el error al host interno correcto.
+6. Campo Identification: si incrementa de forma secuencial por equipo, un observador puede contar cuántas secuencias distintas salen por una misma IP pública (cuántos dispositivos hay detrás del NAT) o inferir el sistema; si es aleatorio, eso se dificulta. *(Observación de tu captura.)*
+
+<Visualization viz={{ type: "net-scene", static: true, title: "El ICMP de error vuelve a través del NAT (P10.5)", steps: [
+  { note: "El router intermedio responde a la IP pública del NAT; el NAT lee la cabecera original embebida en el ICMP para saber a qué host interno entregarlo.",
+    devices: [
+      { id: "h", kind: "laptop", label: "Host interno", sub: "IP privada", x: 8, y: 50 },
+      { id: "n", kind: "router", label: "Router NAT", sub: "IP pública", x: 40, y: 50, state: "marked" },
+      { id: "r", kind: "router", label: "Router intermedio", sub: "TTL llega a 0", x: 72, y: 50 },
+      { id: "d", kind: "server", label: "1.1.1.1", x: 94, y: 50 } ],
+    cables: [ { from: "h", to: "n" }, { from: "n", to: "r" }, { from: "r", to: "d" } ],
+    packets: [ { from: "r", to: "n", label: "ICMP 11/0 + cabecera original", order: 1, state: "active" }, { from: "n", to: "h", label: "traducido", order: 2, state: "answer" } ] } ] }} />

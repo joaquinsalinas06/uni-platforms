@@ -1,0 +1,63 @@
+---
+kind: theory
+title: "IPv6: Datagrama, Túnel y Coexistencia con IPv4"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+
+## 1. Motivación
+
+La slide 24 de `Sem11_NetT-NetLayer2` da dos razones para IPv6:
+
+1. **Inicial:** el espacio IPv4 de 32 bits se iba a agotar por completo. IPv6 usa direcciones de **128 bits**.
+2. **Adicional:** procesar y reenviar más rápido gracias a una **cabecera fija de 40 bytes**, y poder tratar de forma distinta los **flujos** ("flows").
+
+---
+
+## 2. El datagrama IPv6 en una mirada
+
+<Visualization viz={{ type: "packet", static: true, title: "Datagrama IPv6 (slide 25), filas de 32 bits", steps: [
+  { note: "Cabecera fija de 40 bytes: dos filas de control y dos direcciones de 128 bits. No hay checksum, ni campos de fragmentación, ni opciones.",
+    fields: { width: 32, rows: [
+      [ { label: "ver", bits: 4 }, { label: "pri", bits: 8 }, { label: "flow label", bits: 20 } ],
+      [ { label: "payload len", bits: 16 }, { label: "next hdr", bits: 8 }, { label: "hop limit", bits: 8 } ],
+      [ { label: "dirección origen (128 bits)", bits: 32, state: "active" } ],
+      [ { label: "dirección destino (128 bits)", bits: 32, state: "active" } ],
+      [ { label: "payload (datos)", bits: 32 } ] ] } } ] }} />
+
+Lo que **falta** respecto de IPv4 (slide 25 y LAB4 slides IP):
+
+| Ausente en IPv6 | Por qué |
+|---|---|
+| checksum | acelerar el procesamiento en cada router |
+| fragmentación/reensamblado en routers | ya no se permite en los routers |
+| opciones | se manejan como protocolo de capa superior indicado por *next header* |
+
+El detalle de cada campo y su equivalente IPv4 está en [El datagrama IPv6 frente al IPv4](/topics/ipv6-tunel-transicion/subtopics/datagrama-ipv6).
+
+---
+
+## 3. Transición: no hay "día D"
+
+No todos los routers pueden actualizarse a la vez (slide 26). ¿Cómo funciona una red mixta? Con **tunneling**:
+
+> El datagrama IPv6 completo viaja como **carga útil** de un datagrama IPv4 entre routers IPv4 ("un paquete dentro de un paquete").
+
+<Visualization viz={{ type: "packet", title: "Encapsulamiento en el túnel IPv6 sobre IPv4", steps: [
+  { note: "El host genera un segmento TCP con los datos de la aplicación.",
+    layers: [ { label: "Segmento TCP", header: "TCP", payload: "datos" } ] },
+  { note: "IPv6 le agrega su cabecera fija de 40 bytes: este es el datagrama IPv6 que entra al túnel.",
+    layers: [ { label: "Segmento TCP", header: "TCP", payload: "datos" }, { label: "Datagrama IPv6", header: "IPv6", state: "active" } ] },
+  { note: "El router de entrada al túnel trata todo el datagrama IPv6 como datos y le pega una cabecera IPv4. Los routers IPv4 solo ven esta cabecera.",
+    layers: [ { label: "Segmento TCP", header: "TCP", payload: "datos" }, { label: "Datagrama IPv6", header: "IPv6" }, { label: "Datagrama IPv4 (túnel)", header: "IPv4", state: "active" } ] } ] }} />
+
+El túnel se usa también en otros contextos, como 4G/5G. El cálculo de tamaños y la fragmentación del datagrama del túnel (pregunta del final 2026-I) están en [Túnel y fragmentación IPv4](/topics/ipv6-tunel-transicion/subtopics/tunel-fragmentacion-ipv4).
+
+---
+
+## 4. Errores típicos
+
+- Pensar que IPv6 "no puede fragmentarse nunca": lo prohibido es fragmentar **en los routers**. En el túnel, quien fragmenta es **IPv4**, porque el datagrama IPv6 es solo su carga útil.
+- Sumar la cabecera IPv4 del túnel a la carga útil al fragmentar: la carga útil IPv4 es el **datagrama IPv6 completo**.
+- Olvidar que *next header* cumple el papel del campo *protocol* de IPv4 y *hop limit* el del TTL.
+
+Fuente: `Sem11_NetT-NetLayer2`, slides 23–27; `Sem10_LAB4_Slides_IP`; `Sem11_LAB4A_IP (2)` §1.

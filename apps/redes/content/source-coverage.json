@@ -1,5 +1,5 @@
 {
-  "scope": "Semanas documentadas 9 y 10; rutas anteriores conservadas",
+  "scope": "Semanas documentadas 9–15 y finales 2025-II y 2026-I; rutas anteriores conservadas",
   "sources": [
     {
       "file": "raw-materials/pdfs/Sem9_NetT-TCP2.pdf",
@@ -418,6 +418,645 @@
           ]
         }
       ]
+    },
+    {
+      "file": "raw-materials/sem11/Sem11_NetT-NetLayer2.pdf",
+      "text": "raw-materials/text/Sem11_NetT-NetLayer2.txt",
+      "sha256": "7014a13ab482100e06688b92cac04b29fdc4ca4c432be0c7c4b869b32eaf950e",
+      "pageCount": 28,
+      "sections": [
+        {
+          "label": "Portada, resumen y esquema",
+          "pages": [
+            1,
+            2,
+            3
+          ],
+          "targets": [
+            "content/units/s11.md"
+          ]
+        },
+        {
+          "label": "Direccionamiento jerárquico y rutas más específicas (repaso s10)",
+          "pages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "targets": [
+            "content/topics/direccionamiento-ipv4-subredes/subtopics/agregacion-rutas-subredes.mdx",
+            "content/topics/nat-firewall/theory.mdx"
+          ]
+        },
+        {
+          "label": "NAT: idea, ventajas, implementación, tabla y controversia",
+          "pages": [
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "targets": [
+            "content/topics/nat-firewall/theory.mdx",
+            "content/topics/nat-firewall/subtopics/tabla-traduccion-nat.mdx"
+          ]
+        },
+        {
+          "label": "NAT frente a firewall, sin/con estado, 5-tupla, zonas",
+          "pages": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+          ],
+          "targets": [
+            "content/topics/nat-firewall/subtopics/firewall-sin-estado-con-estado.mdx"
+          ]
+        },
+        {
+          "label": "IPv6: motivación, datagrama y túnel",
+          "pages": [
+            23,
+            24,
+            25,
+            26
+          ],
+          "targets": [
+            "content/topics/ipv6-tunel-transicion/theory.mdx",
+            "content/topics/ipv6-tunel-transicion/subtopics/datagrama-ipv6.mdx",
+            "content/topics/ipv6-tunel-transicion/subtopics/tunel-fragmentacion-ipv4.mdx"
+          ]
+        },
+        {
+          "label": "Conclusiones y cierre",
+          "pages": [
+            27,
+            28
+          ],
+          "targets": [
+            "content/units/s11.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem12/Sem12_NetT-Routers.pdf",
+      "text": "raw-materials/text/Sem12_NetT-Routers.txt",
+      "sha256": "54da6b98da1fc94b3df08f51075b64ca1b214e26f3c6556a682664e6f583adb9",
+      "pageCount": 41,
+      "sections": [
+        {
+          "label": "Portada, resumen y esquema",
+          "pages": [
+            1,
+            2,
+            3
+          ],
+          "targets": [
+            "content/units/s12.md"
+          ]
+        },
+        {
+          "label": "Funciones de capa de red, planos y SDN/NFV",
+          "pages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21
+          ],
+          "targets": [
+            "content/topics/arquitectura-router/theory.mdx",
+            "content/topics/arquitectura-router/subtopics/planos-datos-control-sdn.mdx"
+          ]
+        },
+        {
+          "label": "Arquitectura del router, puerto de entrada y fabrics",
+          "pages": [
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ],
+          "targets": [
+            "content/topics/arquitectura-router/theory.mdx",
+            "content/topics/arquitectura-router/subtopics/fabric-conmutacion.mdx"
+          ]
+        },
+        {
+          "label": "Colas de entrada/salida, HOL y tamaño del buffer",
+          "pages": [
+            31,
+            32,
+            33,
+            34
+          ],
+          "targets": [
+            "content/topics/arquitectura-router/subtopics/colas-buffers-hol.mdx"
+          ]
+        },
+        {
+          "label": "Seguridad: spoofing, uRPF, ataques y filtrado ICMP",
+          "pages": [
+            35,
+            36,
+            37,
+            38,
+            39
+          ],
+          "targets": [
+            "content/topics/seguridad-router-icmp/theory.mdx",
+            "content/topics/seguridad-router-icmp/subtopics/spoofing-urpf.mdx",
+            "content/topics/seguridad-router-icmp/subtopics/icmp-ttl-traceroute.mdx"
+          ]
+        },
+        {
+          "label": "Conclusiones y cierre",
+          "pages": [
+            40,
+            41
+          ],
+          "targets": [
+            "content/units/s12.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem13/Sem13_NetT-Dijkstra_OSPF_ISIS.pdf",
+      "text": "raw-materials/text/Sem13_NetT-Dijkstra_OSPF_ISIS.txt",
+      "sha256": "aebb984323a5758a217be3293a98e13bf008845d93df981c210473ca9cf25aa0",
+      "pageCount": 27,
+      "sections": [
+        {
+          "label": "Portada, resumen y esquema",
+          "pages": [
+            1,
+            2,
+            3
+          ],
+          "targets": [
+            "content/units/s13.md"
+          ]
+        },
+        {
+          "label": "Routing y grafo de costos",
+          "pages": [
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "targets": [
+            "content/topics/link-state-dijkstra/theory.mdx"
+          ]
+        },
+        {
+          "label": "Dijkstra: algoritmo, ejemplos, árbol y forwarding",
+          "pages": [
+            9,
+            10,
+            11,
+            12,
+            13,
+            14
+          ],
+          "targets": [
+            "content/topics/link-state-dijkstra/subtopics/dijkstra-paso-a-paso.mdx"
+          ]
+        },
+        {
+          "label": "Complejidad y oscilaciones",
+          "pages": [
+            15,
+            16
+          ],
+          "targets": [
+            "content/topics/link-state-dijkstra/subtopics/complejidad-oscilaciones.mdx"
+          ]
+        },
+        {
+          "label": "OSPF/IS-IS, autenticación y HMAC",
+          "pages": [
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "targets": [
+            "content/topics/ospf-isis-autenticacion/theory.mdx"
+          ]
+        },
+        {
+          "label": "Ejercicio del costo falsificado",
+          "pages": [
+            24
+          ],
+          "targets": [
+            "content/topics/ospf-isis-autenticacion/subtopics/hmac-ataque-costo-falso.mdx"
+          ]
+        },
+        {
+          "label": "Conclusiones y cierre",
+          "pages": [
+            25,
+            26,
+            27
+          ],
+          "targets": [
+            "content/units/s13.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem13/Sem13_Excercises5_NetworkLayer.pdf",
+      "text": "raw-materials/text/Sem13_Excercises5_NetworkLayer.txt",
+      "sha256": "711600e1bcc4aaf07e483a97872be403047cc90cbd55bf1997da032eba0fe389",
+      "pageCount": 4,
+      "sections": [
+        {
+          "label": "Q1–Q3 overhead y fragmentación",
+          "pages": [
+            1
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-5-capa-red.mdx"
+          ]
+        },
+        {
+          "label": "Q4–Q7 LPM, subredes y clases",
+          "pages": [
+            2
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-5-capa-red.mdx",
+            "content/topics/subredes-forwarding-lpm/subtopics/longest-prefix-match-tablas.mdx",
+            "content/topics/subredes-forwarding-lpm/subtopics/clases-ipv4-subredes-iguales.mdx"
+          ]
+        },
+        {
+          "label": "Q8–Q10 NAT, ICMP y traceroute (laboratorio)",
+          "pages": [
+            3,
+            4
+          ],
+          "targets": [
+            "content/evaluaciones/laboratorio/ejercicios-5-capa-red.mdx"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem14/Sem14_NetT-DistanceVector_BGPAuthentication.pdf",
+      "text": "raw-materials/text/Sem14_NetT-DistanceVector_BGPAuthentication.txt",
+      "sha256": "8abca9bd722578ce64c28b65a5a6d76c1ffcf1a3441772d3e50337ae501bdedb",
+      "pageCount": 30,
+      "sections": [
+        {
+          "label": "Portada, resumen, esquema y clasificación",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "targets": [
+            "content/topics/distance-vector-bellman-ford/theory.mdx"
+          ]
+        },
+        {
+          "label": "Algoritmo DV y Bellman-Ford",
+          "pages": [
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "targets": [
+            "content/topics/distance-vector-bellman-ford/subtopics/ecuacion-bellman-ford.mdx"
+          ]
+        },
+        {
+          "label": "Iteraciones en la grilla y difusión",
+          "pages": [
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20
+          ],
+          "targets": [
+            "content/topics/distance-vector-bellman-ford/subtopics/iteraciones-dv-grilla.mdx"
+          ]
+        },
+        {
+          "label": "Cambios de costo y count-to-infinity",
+          "pages": [
+            21,
+            22
+          ],
+          "targets": [
+            "content/topics/distance-vector-bellman-ford/subtopics/cambios-costo-count-to-infinity.mdx"
+          ]
+        },
+        {
+          "label": "Comparación LS frente a DV",
+          "pages": [
+            23
+          ],
+          "targets": [
+            "content/topics/distance-vector-bellman-ford/subtopics/comparacion-ls-dv.mdx"
+          ]
+        },
+        {
+          "label": "Autenticación de sesiones BGP",
+          "pages": [
+            24,
+            25,
+            26,
+            27,
+            28
+          ],
+          "targets": [
+            "content/topics/bgp-autenticacion-sesion/theory.mdx",
+            "content/topics/bgp-autenticacion-sesion/subtopics/tcp-md5-vs-tcp-ao.mdx"
+          ]
+        },
+        {
+          "label": "Conclusiones y cierre",
+          "pages": [
+            29,
+            30
+          ],
+          "targets": [
+            "content/units/s14.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem15/Sem15_NetT-Wireless-PhyLayer.pdf",
+      "text": "raw-materials/text/Sem15_NetT-Wireless-PhyLayer.txt",
+      "sha256": "4c330aa0dd43d8250749bc8d1db05876928a946513443ad72edefed8d5415fed",
+      "pageCount": 44,
+      "sections": [
+        {
+          "label": "Portada, resumen y esquema",
+          "pages": [
+            1,
+            2,
+            3
+          ],
+          "targets": [
+            "content/units/s15.md"
+          ]
+        },
+        {
+          "label": "Elementos de una red inalámbrica y modos",
+          "pages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "targets": [
+            "content/topics/capa-fisica-enlace/theory.mdx"
+          ]
+        },
+        {
+          "label": "Atenuación, multitrayecto y ruido",
+          "pages": [
+            12,
+            13,
+            14
+          ],
+          "targets": [
+            "content/topics/capa-fisica-enlace/subtopics/atenuacion-multipath-snr.mdx"
+          ]
+        },
+        {
+          "label": "Terminal oculto y CDMA",
+          "pages": [
+            15,
+            16
+          ],
+          "targets": [
+            "content/topics/capa-fisica-enlace/subtopics/terminal-oculto-csma-ca.mdx"
+          ]
+        },
+        {
+          "label": "Impacto en capas superiores",
+          "pages": [
+            17
+          ],
+          "targets": [
+            "content/topics/capa-fisica-enlace/subtopics/impacto-tcp-inalambrico.mdx"
+          ]
+        },
+        {
+          "label": "802.11: estándares, arquitectura, canales, asociación, CSMA/CA",
+          "pages": [
+            18,
+            19,
+            20,
+            21,
+            22,
+            23
+          ],
+          "targets": [
+            "content/topics/wifi-celular-movilidad/subtopics/arquitectura-80211-asociacion.mdx",
+            "content/topics/capa-fisica-enlace/subtopics/terminal-oculto-csma-ca.mdx"
+          ]
+        },
+        {
+          "label": "Bluetooth y 4G LTE",
+          "pages": [
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30
+          ],
+          "targets": [
+            "content/topics/wifi-celular-movilidad/subtopics/celular-4g-5g.mdx"
+          ]
+        },
+        {
+          "label": "Movilidad y espectro",
+          "pages": [
+            31,
+            32,
+            33,
+            34,
+            35
+          ],
+          "targets": [
+            "content/topics/wifi-celular-movilidad/subtopics/movilidad-enrutamiento.mdx"
+          ]
+        },
+        {
+          "label": "5G",
+          "pages": [
+            36,
+            37,
+            38,
+            39,
+            40,
+            41
+          ],
+          "targets": [
+            "content/topics/wifi-celular-movilidad/subtopics/celular-4g-5g.mdx"
+          ]
+        },
+        {
+          "label": "Conclusiones y cierre",
+          "pages": [
+            42,
+            43,
+            44
+          ],
+          "targets": [
+            "content/units/s15.md"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem14/EF_2025_CS4054.pdf",
+      "text": "raw-materials/text/EF_2025_CS4054.txt",
+      "sha256": "4acab7fd14102df8fcd48a985c44871579f9d6d32127005badeb06b26af2f46e",
+      "pageCount": 2,
+      "sections": [
+        {
+          "label": "P1–P6",
+          "pages": [
+            1
+          ],
+          "targets": [
+            "content/evaluaciones/finales/final-2025-ii.mdx"
+          ]
+        },
+        {
+          "label": "P7–P10",
+          "pages": [
+            2
+          ],
+          "targets": [
+            "content/evaluaciones/finales/final-2025-ii.mdx"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem14/EF_2026_CS4054.pdf",
+      "text": "raw-materials/text/EF_2026_CS4054.txt",
+      "sha256": "31d3dd24077f20eecf969a6f930323778060a5cd626e8c9f10dc379c444d2859",
+      "pageCount": 2,
+      "sections": [
+        {
+          "label": "P1–P4 (enunciados)",
+          "pages": [
+            1
+          ],
+          "targets": [
+            "content/evaluaciones/finales/final-2026-i.mdx"
+          ]
+        },
+        {
+          "label": "Figuras y P5–P7",
+          "pages": [
+            2
+          ],
+          "targets": [
+            "content/evaluaciones/finales/final-2026-i.mdx"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem08/Sem08_LAB_SolvedExcercises.pdf",
+      "text": "raw-materials/text/Sem08_LAB_SolvedExcercises.txt",
+      "sha256": "c381ffeafead91ec1ae0619ac8877f8c341cc8f997aa255a0449d2b7471a0aca",
+      "pageCount": 6,
+      "sections": [
+        {
+          "label": "Retardos, HTTP, cliente-servidor, checksum y caché (ya cubiertos por la práctica de s1–s6)",
+          "pages": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "targets": [
+            "content/practica.mdx"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "raw-materials/sem13/Evaluación_LAB4_TEST_Assignment.pdf",
+      "text": "raw-materials/text/Evaluación_LAB4_TEST_Assignment.txt",
+      "sha256": "881e5ee8d50902c34fa8f6f8cf35f9c37481c1d98c4a3ea5b6cd0621d6191feb",
+      "pageCount": 2,
+      "sections": [
+        {
+          "label": "Caso TechNova: PMTUD, NAT no es firewall, política ICMP",
+          "pages": [
+            1,
+            2
+          ],
+          "targets": [
+            "content/topics/seguridad-router-icmp/theory.mdx",
+            "content/topics/nat-firewall/theory.mdx"
+          ]
+        }
+      ]
     }
   ],
   "capture": {
@@ -430,6 +1069,6 @@
   },
   "missing": [
     "RFC_TCP.txt",
-    "Material identificado como semana 8 u 11"
+    "RTS/CTS, campos de trama 802.11/Ethernet y ARP: no figuran en el material de s14–s15"
   ]
 }

@@ -1,0 +1,95 @@
+---
+kind: subtopic
+title: "La tabla de traducción NAT, paquete por paquete"
+order: 1
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+
+## 1. Idea
+
+El router NAT es el único punto donde cambian las direcciones. Para devolver cada respuesta al host correcto necesita **memoria**: la **tabla de traducción**, con una fila por conexión.
+
+| Lado WAN | Lado LAN |
+|---|---|
+| 138.76.29.7, 5001 | 10.0.0.1, 3345 |
+| … | … |
+
+---
+
+## 2. Los cuatro pasos de la slide 14
+
+<Visualization viz={{ type: "net-scene", title: "NAT: ida y vuelta de una petición web (slide 14)", steps: [
+  { note: "1. El host 10.0.0.1 envía S: 10.0.0.1:3345, D: 128.119.40.186:80. Todavía no sabe nada de NAT.",
+    devices: [
+      { id: "h", kind: "laptop", label: "10.0.0.1", sub: "puerto 3345", x: 10, y: 50 },
+      { id: "r", kind: "router", label: "Router NAT", sub: "WAN 138.76.29.7", x: 50, y: 50 },
+      { id: "s", kind: "server", label: "Servidor web", sub: "128.119.40.186:80", x: 90, y: 50 } ],
+    cables: [ { from: "h", to: "r" }, { from: "r", to: "s" } ],
+    packets: [ { from: "h", to: "r", label: "S 10.0.0.1:3345 · D 128.119.40.186:80", order: 1, state: "active" } ] },
+  { note: "2. El router reemplaza el origen por 138.76.29.7:5001 y anota la fila 5001 ↔ 10.0.0.1:3345 en la tabla.",
+    devices: [
+      { id: "h", kind: "laptop", label: "10.0.0.1", sub: "puerto 3345", x: 10, y: 50 },
+      { id: "r", kind: "router", label: "Router NAT", sub: "tabla: 5001 ↔ 10.0.0.1:3345", x: 50, y: 50, state: "marked" },
+      { id: "s", kind: "server", label: "Servidor web", sub: "128.119.40.186:80", x: 90, y: 50 } ],
+    cables: [ { from: "h", to: "r" }, { from: "r", to: "s" } ],
+    packets: [ { from: "h", to: "r", label: "S 10.0.0.1:3345", order: 1, state: "muted" },
+               { from: "r", to: "s", label: "S 138.76.29.7:5001 · D 128.119.40.186:80", order: 2, state: "active" } ] },
+  { note: "3. La respuesta llega con D: 138.76.29.7:5001. El servidor nunca vio la IP privada.",
+    devices: [
+      { id: "h", kind: "laptop", label: "10.0.0.1", sub: "puerto 3345", x: 10, y: 50 },
+      { id: "r", kind: "router", label: "Router NAT", sub: "tabla: 5001 ↔ 10.0.0.1:3345", x: 50, y: 50, state: "marked" },
+      { id: "s", kind: "server", label: "Servidor web", sub: "128.119.40.186:80", x: 90, y: 50 } ],
+    cables: [ { from: "h", to: "r" }, { from: "r", to: "s" } ],
+    packets: [ { from: "h", to: "r", label: "S 10.0.0.1:3345", order: 1, state: "muted" },
+               { from: "r", to: "s", label: "S 138.76.29.7:5001", order: 2, state: "muted" },
+               { from: "s", to: "r", label: "S 128.119.40.186:80 · D 138.76.29.7:5001", order: 3, state: "active" } ] },
+  { note: "4. El router busca 5001 en la tabla y reescribe el destino a 10.0.0.1:3345. El host recibe la respuesta.",
+    devices: [
+      { id: "h", kind: "laptop", label: "10.0.0.1", sub: "puerto 3345", x: 10, y: 50, state: "answer" },
+      { id: "r", kind: "router", label: "Router NAT", sub: "tabla: 5001 ↔ 10.0.0.1:3345", x: 50, y: 50, state: "marked" },
+      { id: "s", kind: "server", label: "Servidor web", sub: "128.119.40.186:80", x: 90, y: 50 } ],
+    cables: [ { from: "h", to: "r" }, { from: "r", to: "s" } ],
+    packets: [ { from: "h", to: "r", label: "S 10.0.0.1:3345", order: 1, state: "muted" },
+               { from: "r", to: "s", label: "S 138.76.29.7:5001", order: 2, state: "muted" },
+               { from: "s", to: "r", label: "D 138.76.29.7:5001", order: 3, state: "muted" },
+               { from: "r", to: "h", label: "S 128.119.40.186:80 · D 10.0.0.1:3345", order: 4, state: "answer" } ] } ] }} />
+
+| Paso | Origen | Destino | Quién lo ve |
+|---|---|---|---|
+| 1 | 10.0.0.1, 3345 | 128.119.40.186, 80 | lado casa |
+| 2 | **138.76.29.7, 5001** | 128.119.40.186, 80 | lado ISP |
+| 3 | 128.119.40.186, 80 | **138.76.29.7, 5001** | lado ISP |
+| 4 | 128.119.40.186, 80 | **10.0.0.1, 3345** | lado casa |
+
+---
+
+## 3. Método para un ejercicio de NAT
+
+1. Escribe la 4-tupla del paquete **en el lado casa** (IP y puerto privados).
+2. En la salida cambian **solo IP origen y puerto origen**; destino, flags y números de secuencia TCP no cambian. El checksum IP cambia porque cambió una dirección.
+3. La respuesta va a **(IP pública del NAT, puerto traducido)**.
+4. El router busca ese puerto en la tabla y restaura **IP y puerto privados como destino**.
+5. Un paquete entrante sin fila en la tabla no tiene a quién entregarse y se descarta.
+
+Varias conexiones del mismo host usan puertos traducidos distintos: en la slide 11, 10.0.0.1:532 ↔ 138.76.29.7:100 y 10.0.0.1:400 ↔ 138.76.29.7:568.
+
+---
+
+## 4. Ejemplo tipo examen: el laboratorio NAT (EF 2025-II P10, EF 2026-I P7)
+
+La topología del laboratorio tiene el cliente **192.168.10.11** en la red de casa, el router NAT con interfaz **10.0.1.254** hacia la red del ISP y el servidor **138.76.29.8**. Hay una captura a cada lado (NAT_home_side y NAT_ISP_side).
+
+- **SYN en casa:** origen 192.168.10.11 y un puerto del cliente; destino 138.76.29.8.
+- **SYN en el lado ISP:** origen **10.0.1.254** y un puerto elegido por el NAT; el destino no cambia.
+- **SYN-ACK:** llega primero a **10.0.1.254** y al puerto traducido. El router lo busca en la tabla y lo reenvía a 192.168.10.11 con su puerto original.
+- **¿10.0.1.254 es pública?** No: está en **10/8**, rango privado, y es **clase A** (primer octeto 10). En el laboratorio el "ISP" es otra red privada.
+
+---
+
+## 5. Errores típicos
+
+- Responder "el servidor responde a 192.168.10.11": el servidor solo conoce la IP del NAT.
+- Inventar un número de puerto traducido cuando el enunciado no lo da: se escribe como "puerto asignado por el NAT".
+- Olvidar la fila de la tabla: sin ella no se puede justificar cómo llega la respuesta al host correcto.
+
+Fuente: `Sem11_NetT-NetLayer2`, slides 11–14; `Sem12_LAB4B_NAT` §2; EF 2025-II P10; EF 2026-I P7.

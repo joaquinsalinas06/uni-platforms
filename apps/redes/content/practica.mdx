@@ -640,3 +640,202 @@ El último lleva MF=0 porque **no hay un fragmento posterior**, no porque todos 
 </ExerciseBlock>
 
 Los nueve ejercicios de Ex4, incluidos GBN/SR/TCP, NAK y las experiencias de programación y captura, están en [Ex4 completo](/evaluaciones/laboratorio/ejercicios-4-tcp). Las capturas propias y experimentos de LAN/MTU tienen campos por completar; no se inventan mediciones.
+
+---
+
+## Semana 11 — NAT, firewalls e IPv6
+
+### Ejercicio 11.1: Paquetes a ambos lados del NAT (slide 14 y EF 2025-II P10)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "El host 10.0.0.1 abre una conexión desde su puerto 3345 al servidor web 128.119.40.186:80. El router NAT tiene IP pública 138.76.29.7 y asigna el puerto 5001. Escriba origen y destino (IP:puerto) de: (1) el datagrama en la red local; (2) el mismo datagrama en Internet; (3) la respuesta en Internet; (4) la respuesta en la red local. (5) ¿Qué fila guarda la tabla NAT? (6) ¿Qué pasa con un SYN que llega desde Internet a 138.76.29.7:7000 si no hay fila con el puerto 7000?",
+  hints: ["Al salir solo cambian IP y puerto de ORIGEN.", "Al volver, el router busca el puerto DESTINO en su tabla."],
+}}>
+
+**1–4. Las cuatro cabeceras.**
+
+| Tramo | Origen | Destino |
+|---|---|---|
+| (1) red local, ida | 10.0.0.1:3345 | 128.119.40.186:80 |
+| (2) Internet, ida | **138.76.29.7:5001** | 128.119.40.186:80 |
+| (3) Internet, vuelta | 128.119.40.186:80 | **138.76.29.7:5001** |
+| (4) red local, vuelta | 128.119.40.186:80 | **10.0.0.1:3345** |
+
+**5. Fila de la tabla:** WAN 138.76.29.7, 5001 ↔ LAN 10.0.0.1, 3345.
+
+**6. SYN no solicitado:** no hay fila con el puerto 7000; el NAT no sabe a qué host traducirlo y lo descarta. Eso no es una política de firewall: es falta de estado.
+
+**Comprobación:** el servidor nunca ve 10.0.0.1. [Tabla NAT paso a paso](/topics/nat-firewall/subtopics/tabla-traduccion-nat).
+</ExerciseBlock>
+
+### Ejercicio 11.2: Túnel IPv6 sobre IPv4 con fragmentación (EF 2026-I P2, variante)
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un host IPv6 envía 1440 B de datos de aplicación sobre TCP (cabecera 20 B) e IPv6 (40 B). El datagrama cruza un túnel IPv4 (cabecera 20 B). (a) Con MTU del troncal 1400 B, ¿cuántos fragmentos IPv4 salen y con qué longitud total, carga útil, offset y MF? (b) Repita con MTU 1000 B.",
+  hints: ["La carga útil IPv4 es el datagrama IPv6 completo: 1500 B.", "Datos por fragmento no final: 8·floor((MTU−20)/8)."],
+}}>
+
+**1. Tamaños.** Segmento $1440+20=1460$ B; datagrama IPv6 $1460+40=1500$ B; datagrama del túnel $1500+20=1520$ B.
+
+**(a) MTU 1400.** Datos no finales $8\lfloor 1380/8\rfloor=1376$ B; $1500=1376+124$.
+
+| Frag. | Long. total | Carga | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 1396 | 1376 | 0 | 1 |
+| 2 | 144 | 124 | 172 | 0 |
+
+**(b) MTU 1000** *(derivado)*. Datos no finales $8\lfloor 980/8\rfloor = 976$ B; $1500 = 976 + 524$.
+
+| Frag. | Long. total | Carga | Offset | MF |
+|---:|---:|---:|---:|---:|
+| 1 | 996 | 976 | 0 | 1 |
+| 2 | 544 | 524 | 122 | 0 |
+
+**Comprobación:** las cargas suman 1500 B en ambos casos y $122 \cdot 8 = 976$. [Túnel y fragmentación](/topics/ipv6-tunel-transicion/subtopics/tunel-fragmentacion-ipv4).
+</ExerciseBlock>
+
+---
+
+## Semana 12 — Router, buffers e ICMP
+
+### Ejercicio 12.1: Tamaño del buffer (slide 34)
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "Un enlace de C = 10 Gbps tiene un RTT típico de 250 ms. (1) Calcule el buffer con la regla RFC 3439. (2) Calcule el buffer recomendado si lo comparten N = 100 flujos. (3) ¿Por qué no conviene un buffer mucho mayor?",
+  hints: ["B = RTT·C; cuidado con ms y Gbps.", "Con N flujos se divide entre la raíz de N, no entre N."],
+}}>
+
+**1.** $B = RTT \cdot C = 0{,}25\text{ s}\times 10\times10^9\text{ bps} = \boxed{2{,}5\text{ Gbit}}$.
+
+**2.** $B = \dfrac{RTT\cdot C}{\sqrt{N}} = \dfrac{2{,}5\text{ Gbit}}{\sqrt{100}} = \boxed{250\text{ Mbit}}$ *(N = 100 es un dato derivado)*.
+
+**3.** Demasiado buffer aumenta el retardo de cola: RTT largos, mal desempeño en tiempo real y TCP lento en reaccionar ("mantener el cuello de botella justo lleno, no más").
+</ExerciseBlock>
+
+### Ejercicio 12.2: TTL en traceroute (EF 2025-II P5 y EF 2026-I P5)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un traceroute muestra: 1 192.168.1.1; 2 10.20.30.1; 3 172.16.0.5; 4 * * *; 5 200.48.50.1; 6 198.51.100.42; 7 * * *; 8 203.0.113.17. Con ruta simétrica: (1) ¿con qué TTL salió la sonda que respondió 203.0.113.17 y con qué TTL llegó a ese router? (2) Si ese router genera el ICMP con TTL 255, ¿con qué TTL llega al host? (3) Si una respuesta con TTL inicial 128 llega con 126, ¿qué salto respondió? (4) ¿Qué Tipo y Código ICMP llegan? (5) ¿Por qué el salto 4 muestra asteriscos pero la traza sigue?",
+  hints: ["La sonda que expira en el salto k sale con TTL k.", "La respuesta del salto k cruza k−1 routers de regreso."],
+}}>
+
+**1.** Salto 8: sale con **TTL 8**, llega con **1** (los 7 routers anteriores restan 1 cada uno).
+
+**2.** $255-(8-1) = \boxed{248}$.
+
+**3.** $126 = 128-(k-1) \Rightarrow k=3$: **172.16.0.5**.
+
+**4.** **Tipo 11, Código 0** (TTL excedido en tránsito).
+
+**5.** El router 4 reenvía en el plano de datos pero no genera (o filtra/limita) los ICMP, como recomienda el filtrado selectivo de `Sem12` (slide 39).
+
+**Convención:** si se cuenta la diferencia de TTL como número de saltos, (2) da 247 y (3) el salto 2; declárala en el examen. [ICMP, TTL y traceroute](/topics/seguridad-router-icmp/subtopics/icmp-ttl-traceroute).
+</ExerciseBlock>
+
+---
+
+## Semana 13 — Dijkstra y subredes
+
+### Ejercicio 13.1: Dijkstra desde u (slide 14)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Enlaces: u–v 7, u–w 3, u–x 5, w–v 3, w–x 4, w–y 8, x–y 7, x–z 9, v–y 4, y–z 2. Aplique Dijkstra desde u: tabla D(·),p(·) por paso, camino mínimo a z y tabla de forwarding de u.",
+  hints: ["En cada paso cierre el nodo de menor D fuera de N.", "Relaje solo a los vecinos del nodo que acaba de entrar."],
+}}>
+
+| Paso | N' | v | w | x | y | z |
+|---|---|---|---|---|---|---|
+| 0 | u | 7,u | **3,u** | 5,u | ∞ | ∞ |
+| 1 | uw | 6,w | | **5,u** | 11,w | ∞ |
+| 2 | uwx | **6,w** | | | 11,w | 14,x |
+| 3 | uwxv | | | | **10,v** | 14,x |
+| 4 | uwxvy | | | | | **12,y** |
+| 5 | uwxvyz | | | | | |
+
+**Camino a z:** $z \leftarrow y \leftarrow v \leftarrow w \leftarrow u$: u–w–v–y–z, costo $3+3+4+2 = \boxed{12}$.
+
+**Tabla de forwarding de u:** v, w, y, z → (u,w); x → (u,x).
+
+[Dijkstra paso a paso](/topics/link-state-dijkstra/subtopics/dijkstra-paso-a-paso).
+</ExerciseBlock>
+
+### Ejercicio 13.2: Subredes iguales y ¿misma subred? (Ex5 Q7 y slides IP del LAB4)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "(a) Divida 192.168.10.0/24 en 4 subredes iguales: máscara, hosts por subred y rango de la subred 2. (b) Divida 200.50.10.0/24 en 6 subredes iguales: máscara y hosts. (c) ¿192.168.100.50/26 y 192.168.100.110/26 se comunican sin router?",
+  hints: ["Menor b con 2^b mayor o igual que s.", "Con /26 los bloques son de 64 direcciones."],
+}}>
+
+**(a)** $2^2=4$ ⇒ /26, **255.255.255.192**, $2^6-2=62$ hosts. Subred 2: red 192.168.10.64, hosts .65–.126, broadcast .127.
+
+**(b)** $2^3=8\ge 6$ ⇒ /27, **255.255.255.224**, $2^5-2 = 30$ hosts.
+
+**(c)** .50 ∈ 192.168.100.0/26 y .110 ∈ 192.168.100.64/26: **redes distintas**, necesitan un router.
+
+[Clases y subredes](/topics/subredes-forwarding-lpm/subtopics/clases-ipv4-subredes-iguales).
+</ExerciseBlock>
+
+---
+
+## Semana 14 — Distance vector
+
+### Ejercicio 14.1: Bellman-Ford y count-to-infinity (slides 9 y 21–22)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "(1) Los vecinos de u informan Dv(z)=5, Dx(z)=3, Dw(z)=3 y los enlaces cuestan c(u,v)=2, c(u,x)=1, c(u,w)=5. Calcule Du(z) y el siguiente salto. (2) En el triángulo x–y = 4, y–z = 1, x–z = 50, el costo x–y sube a 60. Escriba los cuatro primeros valores que anuncian y y z hacia x y explique por qué el proceso es lento. (3) ¿Y si x–y baja de 4 a 1?",
+  hints: ["Dx(y) = min sobre vecinos de c(x,v) + Dv(y).", "z anunció 5 porque su camino pasaba por y."],
+}}>
+
+**1.** $D_u(z)=\min\{2+5,\ 1+3,\ 5+3\}=\min\{7,4,8\}=\boxed{4}$, siguiente salto **x**.
+
+**2.** y: $\min(60, 1+5)=6$ → z: $1+6=7$ → y: $1+7=8$ → z: $1+8=9$… Cada intercambio sube 2: y y z se apoyan uno en el otro (bucle) y la mala noticia avanza lento (count-to-infinity). *(derivado)* Se corta cuando z prefiere su enlace directo de 50.
+
+**3.** y: $D_y(x)=1$; z: $\min(50, 1+1) = 2$; y no cambia ($\min(1, 3)=1$) y no avisa: buenas noticias, dos pasos.
+
+[Cambios de costo](/topics/distance-vector-bellman-ford/subtopics/cambios-costo-count-to-infinity).
+</ExerciseBlock>
+
+---
+
+## Semana 15 — Capa física e inalámbrico
+
+### Ejercicio 15.1: Path loss y terminal oculto
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "(1) Según el modelo path loss ∝ (f·d)², ¿por cuánto se multiplica la pérdida si se duplica la distancia con la misma frecuencia? ¿Y si se pasa de 2,4 GHz a 5 GHz a la misma distancia? (2) A y C alcanzan al AP B pero no se escuchan entre sí. Explique qué ocurre si ambos sensan el canal y transmiten, y por qué 802.11 usa CSMA/CA en vez de detectar colisiones.",
+  hints: ["Un factor 2 dentro del cuadrado pesa 4.", "La colisión ocurre en B, no en A ni en C."],
+}}>
+
+**1.** Distancia ×2 ⇒ pérdida $\times 2^2 = \boxed{4}$. Frecuencia de 2,4 a 5 GHz ⇒ $\times (5/2{,}4)^2 \approx \boxed{4{,}3}$ *(cálculo derivado del modelo de la slide 12)*.
+
+**2.** Ambos ven el canal libre (no se oyen), transmiten y sus señales **chocan en B**; ninguno lo detecta y luego retransmiten: menos throughput. 802.11 no puede detectar colisiones (señal propia fuerte, recibida débil; terminal oculto y fading), así que busca **evitarlas**: CSMA/CA.
+
+[Terminal oculto y CSMA/CA](/topics/capa-fisica-enlace/subtopics/terminal-oculto-csma-ca).
+</ExerciseBlock>
+
+### Ejercicio 15.2: Lectura de un tester RJ45 (EF 2025-II P7)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Al probar un cable con el tester, el lado principal enciende los pines 1 a 8 en orden y el remoto enciende: 1, —, 3, —, 7, 5, 6, —. (1) Escriba la conexión pin a pin. (2) ¿Es un cable T568A correcto en ambos extremos? (3) Según la guía de la práctica, ¿qué falló?",
+  hints: ["— significa que ningún LED remoto se encendió: no hay continuidad.", "Con T568A en ambos lados se espera 1–1, 2–2, …, 8–8."],
+}}>
+
+**1.** 1–1, 3–3, 5–7, 6–5, 7–6; los pines 2, 4 y 8 abiertos.
+
+**2.** **No:** un T568A correcto (blanco/verde, verde, blanco/naranja, azul, blanco/azul, naranja, blanco/marrón, marrón en ambos extremos) enciende 1 a 8 en secuencia a ambos lados.
+
+**3.** LED fuera de orden (5, 6, 7) ⇒ hilos mezclados antes de insertar; LED que no encienden (2, 4, 8) ⇒ hilos que no llegaron al fondo o crimpado débil. Hay que cortar y rehacer el conector.
+
+[Cable UTP T568A](/topics/capa-fisica-enlace/subtopics/cable-utp-t568a).
+</ExerciseBlock>
+
+Los finales completos están en [Final 2025-II](/evaluaciones/finales/final-2025-ii) y [Final 2026-I](/evaluaciones/finales/final-2026-i); la hoja Ex5 en [Ex5 resuelto](/evaluaciones/laboratorio/ejercicios-5-capa-red).
