@@ -142,8 +142,8 @@ const expectSchema = z.record(z.number());
 const xySeries = z.object({
   id: z.string(),
   label: z.string(),
-  /** Puntos explícitos… */
-  points: z.array(z.tuple([z.number(), z.number()])).optional(),
+  /** Puntos explícitos… (scatter: tercer elemento = rótulo del punto, p. ej. '00'). */
+  points: z.array(z.union([z.tuple([z.number(), z.number()]), z.tuple([z.number(), z.number(), z.string()])])).optional(),
   /** …o una expresión en x (alias t, n) con JS Math sin prefijo (sin, cos,
    * tan, abs, sign, sqrt, exp, log, floor, ceil, round, max, min, pow, PI, E)
    * más square(x) (cuadrada ±1, período 2π), pwm(x, duty, period, low, high)
@@ -153,7 +153,7 @@ const xySeries = z.object({
   domain: z.tuple([z.number(), z.number()]).optional(),
   /** Nº de muestras para fn (default 240) o separación Ts para `samples`. */
   samples: z.number().optional(),
-  kind: z.enum(['line', 'stem', 'step', 'samples', 'area', 'bars']).default('line'),
+  kind: z.enum(['line', 'stem', 'step', 'samples', 'area', 'bars', 'scatter']).default('line'),
   /** Sólo bars: barras horizontales [from, to] por categoría (alcance de tecnologías). */
   bars: z.array(z.object({ label: z.string(), from: z.number(), to: z.number() })).optional(),
   tone: tone.optional(),
@@ -216,6 +216,8 @@ const step = z.object({
   vlines: z.array(refLine).optional(),
   bands: z.array(z.object({ from: z.number(), to: z.number(), axis: z.enum(['x', 'y']).default('x'), label: z.string().optional() })).optional(),
   params: z.record(z.number()).optional(),
+  /** `xy-chart`: 'equal' = misma escala en x e y (constelaciones I/Q). */
+  aspect: z.enum(['equal']).optional(),
   /** `sequence`: actores (líneas de vida) y mensajes en orden temporal. */
   actors: z.array(z.object({ id: z.string(), label: z.string(), state: state.optional() })).optional(),
   msgs: z.array(seqMsg).optional(),
@@ -242,6 +244,8 @@ export const visualizationSchema = z.object({
   static: z.boolean().default(false),
   /** Título corto sobre la figura. */
   title: z.string().optional(),
+  /** `memory-layout`: unidad de los tamaños ('B' por defecto; 'sím', 'bit'…). */
+  unit: z.string().optional(),
   /** `circuit`: slider que cambia el valor de una fuente y re-resuelve en
    * vivo (estados de diodos, corrientes, potenciales). Usa el ÚLTIMO paso. */
   interactive: z.object({ part: z.string(), min: z.number(), max: z.number(), step: z.number().default(0.1), label: z.string().optional() }).optional(),

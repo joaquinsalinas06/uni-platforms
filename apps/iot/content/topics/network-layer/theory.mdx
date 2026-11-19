@@ -63,18 +63,29 @@ con **MTU = 1500 B**:
 $1480 + 1480 + 1020 = 3980$ B de datos, y $1040 = 1020 + 20$ (cabecera repetida).
 
 <Visualization viz={{
-  type: 'xy-chart',
+  type: 'memory-layout',
   static: true,
-  title: 'Datagrama de 4000 B partido con MTU 1500 B',
+  title: 'Datagrama de 4000 B partido con MTU 1500 B (posición en los datos del original)',
   steps: [{
     note: 'Los 3980 B de datos se reparten 1480 + 1480 + 1020; cada fragmento lleva además su propia cabecera de 20 B. El offset (en unidades de 8 B) marca dónde empieza cada trozo: 0, 1480/8 = 185, 2960/8 = 370.',
-    series: [{ id: 'f', label: 'bytes de datos del original', kind: 'bars', bars: [
-      { label: 'frag 1 · offset 0 · flag 1', from: 0, to: 1480 },
-      { label: 'frag 2 · offset 185 · flag 1', from: 1480, to: 2960 },
-      { label: 'frag 3 · offset 370 · flag 0', from: 2960, to: 3980 },
-    ] }],
-    x: { label: 'posición en los datos del datagrama original (B)', min: 0, max: 4000 },
-    vlines: [{ at: 1480, label: '185 × 8' }, { at: 2960, label: '370 × 8' }],
+    blocks: [
+      { id: 'f1', label: 'frag 1 · offset 0 · flag 1', bytes: 1480, offset: 0 },
+      { id: 'f2', label: 'frag 2 · offset 185 · flag 1', bytes: 1480, offset: 1480 },
+      { id: 'f3', label: 'frag 3 · offset 370 · flag 0', bytes: 1020, offset: 2960, state: 'answer' },
+    ],
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'memory-layout',
+  static: true,
+  title: 'Fragmento 1 tal como sale: length = 1500 B',
+  steps: [{
+    note: '20 B de cabecera IP (repetida en cada fragmento) + 1480 B de datos = 1500 B, justo la MTU.',
+    blocks: [
+      { id: 'h', label: 'cabecera IP', bytes: 20, offset: 0, state: 'marked' },
+      { id: 'd', label: 'datos (offset 0, flag 1)', bytes: 1480, offset: 20 },
+    ],
   }],
 }} />
 

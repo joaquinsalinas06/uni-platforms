@@ -40,12 +40,22 @@ test('el nombre de cada campo se dibuja como anotación (no como `tag`, que en u
 
 test('dos campos angostos y contiguos cuyos nombres chocarían van en filas distintas', () => {
   const frame = memoryLayoutLayout([
-    { id: 'a', label: 'char', bytes: 1, offset: 0 },
-    { id: 'b', label: 'padding', bytes: 3, offset: 1 },
+    { id: 'a', label: 'char (1 byte, sin signo)', bytes: 1, offset: 0 },
+    { id: 'b', label: 'padding (3 bytes de relleno)', bytes: 3, offset: 1 },
   ]);
   const ya = frame.annotations.find((a) => a.id === 'label-a')!.y;
   const yb = frame.annotations.find((a) => a.id === 'label-b')!.y;
   assert.notEqual(ya, yb);
+});
+
+test('tres nombres largos y vecinos abren una tercera fila en vez de pisarse', () => {
+  const frame = memoryLayoutLayout([
+    { id: 'a', label: 'Byte 1: Tipo · DUP · QoS · RETAIN', bytes: 1, offset: 0 },
+    { id: 'b', label: 'Remaining Length (1-4 B)', bytes: 1, offset: 1 },
+    { id: 'c', label: 'Header variable (opcional)', bytes: 2, offset: 2 },
+  ]);
+  const ys = ['a', 'b', 'c'].map((id) => frame.annotations.find((a) => a.id === `label-${id}`)!.y);
+  assert.equal(new Set(ys).size, 3);
 });
 
 test('opts.width comparte el mismo ancho entre pasos: el offset 0 cae siempre en el mismo x, nunca se recentra', () => {
@@ -59,4 +69,27 @@ test('sin bloques no revienta', () => {
   const frame = memoryLayoutLayout([]);
   assert.equal(frame.nodes.length, 0);
   assert.ok(Number.isFinite(frame.width));
+});
+
+test('unit: el rótulo de tamaño usa la unidad dada (default B)', () => {
+  const b = memoryLayoutLayout([{ id: 'p', label: 'preámbulo', bytes: 12.25, offset: 0 }], { unit: 'sím' });
+  assert.equal(b.nodes[0].label, '12.25 sím');
+  const d = memoryLayoutLayout([{ id: 'a', label: 'double', bytes: 8, offset: 0 }]);
+  assert.equal(d.nodes[0].label, '8 B');
+});
+
+test('bloques enormes caben en el ancho y uno chico junto a ellos sigue visible, con su tamaño afuera', () => {
+  const f = memoryLayoutLayout([
+    { id: 'h', label: 'cabecera IP', bytes: 20, offset: 0 },
+    { id: 'd', label: 'datos', bytes: 1480, offset: 20 },
+  ], { width: 356 });
+  const [h, d] = f.nodes;
+  assert.ok(f.width <= 356);
+  assert.ok(h.w! >= 30);
+  assert.ok(d.w! > h.w!);
+  assert.equal(h.x + h.w! / 2, d.x - d.w! / 2); // siguen contiguos
+  assert.ok(f.annotations.some((a) => a.id === 'size-h' && a.text === '20 B'));
+  assert.equal(d.label, '1480 B');
+  // el tick del límite cae en el borde real del bloque, no en offset × escala
+  assert.equal(f.annotations.find((a) => a.id === 'tick-20')!.x, h.x + h.w! / 2);
 });

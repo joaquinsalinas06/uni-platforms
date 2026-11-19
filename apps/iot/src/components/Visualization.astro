@@ -61,7 +61,7 @@ const notImplemented = VISUALIZATIONS[viz.type] === null;
   {viz.type === 'dag' && <DagVisualization client:visible steps={steps} />}
   {viz.type === 'network-topology' && <NetworkTopologyVisualization client:visible steps={steps} />}
   {viz.type === 'timeline' && <TimelineVisualization client:visible steps={steps} />}
-  {viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} />}
+  {viz.type === 'memory-layout' && <MemoryLayoutVisualization client:visible steps={steps} unit={viz.unit} title={viz.title} static={viz.static} />}
   {/* circuit: `interactive` (slider) y `practice` (reducir) tienen su propio componente;
       el circuito normal va sólo cuando no hay ninguno de los dos. */}
   {viz.type === 'circuit' && !viz.interactive && !viz.practice && <CircuitVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}

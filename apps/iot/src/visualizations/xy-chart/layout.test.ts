@@ -92,3 +92,20 @@ test('fmt: compacto con k y signo menos tipográfico', () => {
   assert.equal(fmt(0.1), '0.1');
   assert.equal(fmt(-2.5), '−2.5');
 });
+
+test('scatter I/Q con aspect equal: misma escala en ambos ejes, ejes por el origen y rótulo por punto', () => {
+  const pts: [number, number, string][] = [[0.707, 0.707, '00'], [-0.707, 0.707, '01'], [-0.707, -0.707, '11'], [0.707, -0.707, '10']];
+  for (const width of [640, 356]) {
+    const f = xyChartLayout({
+      series: [{ id: 'c', label: 'QPSK', kind: 'scatter', points: pts }],
+      x: { label: 'I', min: -1.3, max: 1.3 }, y: { label: 'Q', min: -1.3, max: 1.3 }, aspect: 'equal',
+    }, { width });
+    const tx = f.annotations.filter((a) => a.id.startsWith('tick-x-'));
+    const ty = f.annotations.filter((a) => a.id.startsWith('tick-y-'));
+    const ux = (tx[1].x - tx[0].x) / (Number(tx[1].id.slice(7)) - Number(tx[0].id.slice(7)));
+    const uy = (ty[0].y - ty[1].y) / (Number(ty[1].id.slice(7)) - Number(ty[0].id.slice(7)));
+    assert.ok(Math.abs(ux - uy) < 0.5, `px/unidad x=${ux} y=${uy} (w=${width})`);
+    assert.ok(f.paths.some((p) => p.id === 'zero') && f.paths.some((p) => p.id === 'zero-x'));
+    assert.deepEqual(f.annotations.filter((a) => a.id.startsWith('pt-c-')).map((a) => a.text), ['00', '01', '11', '10']);
+  }
+});

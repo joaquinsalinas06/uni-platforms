@@ -1,6 +1,6 @@
 // Layout puro de `xy-chart`: señales (sin(2t)+4sin(5t)), espectros (stem),
 // cuantización/PWM (step), muestreo (samples), áreas y alcances por
-// tecnología (bars, eje x log). Todo se dibuja con CanvasPath (curvas,
+// tecnología (bars, eje x log), constelaciones I/Q (scatter + aspect equal). Todo se dibuja con CanvasPath (curvas,
 // ejes, rejilla, referencias) + CanvasText (ticks, rótulos). Sin nodos.
 // Sin React/JSX: se testea con `node --test`.
 import { charW, pathColor, type CanvasPath, type CanvasText, type Frame, type NodeState } from '../canvas-types.ts';
@@ -8,11 +8,13 @@ import { charW, pathColor, type CanvasPath, type CanvasText, type Frame, type No
 export type XyAxis = { label?: string; min?: number; max?: number; log?: boolean; ticks?: number[] };
 export type XyRef = { at: number; label?: string; state?: NodeState; tone?: string };
 export type XyBand = { from: number; to: number; axis?: 'x' | 'y'; label?: string };
-export type XyKind = 'line' | 'stem' | 'step' | 'samples' | 'area' | 'bars';
+export type XyKind = 'line' | 'stem' | 'step' | 'samples' | 'area' | 'bars' | 'scatter';
+/** [x, y] o [x, y, rótulo] (scatter: '00', '01'…). */
+export type XyPoint = [number, number] | [number, number, string];
 export type XySeries = {
   id: string;
   label: string;
-  points?: [number, number][];
+  points?: XyPoint[];
   fn?: string;
   domain?: [number, number];
   samples?: number;
@@ -30,6 +32,8 @@ export type XyChartInput = {
   bands?: XyBand[];
   params?: Record<string, number>;
   highlight?: string[];
+  /** 'equal': misma escala px/unidad en x e y (constelaciones). */
+  aspect?: 'equal';
 };
 
 // ───────────────────────── fn: expresión en x ─────────────────────────
@@ -143,7 +147,7 @@ const DEFAULT_TONES = [undefined, 'mesh1', 'mesh2', 'mesh3', 'mesh4', 'series', 
 
 /** Puntos de la serie en coordenadas de datos. */
 export function seriesPoints(s: XySeries, x: XyAxis | undefined, params: Record<string, number> = {}): [number, number][] {
-  if (s.points) return s.points;
+  if (s.points) return s.points as [number, number][];
   if (!s.fn) return [];
   const f = compileFn(s.fn, params);
   const [a, b] = s.domain ?? [x?.min ?? 0, x?.max ?? 10];
@@ -176,6 +180,8 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
   const highlight = input.highlight ?? [];
   const series = input.series ?? [];
   const barsMode = series.some((s) => s.kind === 'bars');
+  const scatterMode = series.some((s) => s.kind === 'scatter');
+  const equal = input.aspect === 'equal' && !barsMode && !input.x?.log && !input.y?.log;
 
   const paths: CanvasPath[] = [];
   const annotations: CanvasText[] = [];
@@ -226,6 +232,12 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
     if (input.x?.min === undefined) xMin -= pad;
     if (input.x?.max === undefined) xMax += pad;
   }
+  // Puntos sueltos (constelación): aire para el punto y su rótulo.
+  if (scatterMode && !input.x?.log) {
+    const pad = (xMax - xMin || 1) * 0.15;
+    if (input.x?.min === undefined) xMin -= pad;
+    if (input.x?.max === undefined) xMax += pad;
+  }
   const fy = ys.filter(Number.isFinite);
   let yMin = input.y?.min ?? (fy.length ? Math.min(...fy) : 0);
   let yMax = input.y?.max ?? (fy.length ? Math.max(...fy) : 1);
@@ -234,6 +246,11 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
   const yPad = (yMax - yMin || 1) * (series.some((s) => s.kind === 'stem') ? 0.14 : 0.04);
   if (input.y?.max === undefined && !input.y?.log) yMax += yMax > 0 || yMin === yMax ? yPad : 0;
   if (input.y?.min === undefined && !input.y?.log && yMin < 0) yMin -= yPad;
+  if (scatterMode && !input.y?.log) {
+    const pad = (yMax - yMin || 1) * 0.15;
+    if (input.y?.min === undefined) yMin -= pad;
+    if (input.y?.max === undefined) yMax += pad;
+  }
 
   // ── Márgenes.
   const cats = barsMode ? series.filter((s) => s.kind === 'bars').flatMap((s) => (s.bars ?? []).map((b) => ({ ...b, s }))) : [];
@@ -243,16 +260,26 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
   const top = 12 + legendH + yLabelH + refStrip;
   const bottom = input.x?.label ? 44 : 28;
   const H = opts.height ?? (barsMode ? top + cats.length * 30 + bottom + 8 : 300);
-  const plotTop = top, plotBottom = H - bottom;
+  let plotTop = top, plotBottom = H - bottom;
   // La escala Y hace falta antes del margen izquierdo (ancho de sus ticks).
   const yTarget = Math.max(3, Math.floor((plotBottom - plotTop) / 44));
-  const yScale = makeScale(yMin, yMax, input.y, plotBottom, plotTop, yTarget, true);
+  let yScale = makeScale(yMin, yMax, input.y, plotBottom, plotTop, yTarget, !equal);
   const leftText = barsMode
     ? Math.max(...cats.map((c) => textW(c.label, 11)), 20)
     : Math.max(...yScale.ticks.map((t) => textW(fmt(t), 10)), 10);
-  const plotLeft = Math.ceil(leftText + (barsMode ? 16 : 12));
-  const plotRight = W - 14;
-  const xTarget = Math.max(3, Math.floor((plotRight - plotLeft) / 80));
+  let plotLeft = Math.ceil(leftText + (barsMode ? 16 : 12));
+  let plotRight = W - 14;
+  let xTarget = Math.max(3, Math.floor((plotRight - plotLeft) / 80));
+  // aspect 'equal': el rectángulo de trazado se encoge (centrado) en el eje
+  // que sobra, para que 1 unidad mida lo mismo en x que en y.
+  if (equal) {
+    const u = Math.min((plotRight - plotLeft) / (xMax - xMin || 1), (plotBottom - plotTop) / (yMax - yMin || 1));
+    const cw = (xMax - xMin || 1) * u, ch = (yMax - yMin || 1) * u;
+    plotLeft += ((plotRight - plotLeft) - cw) / 2; plotRight = plotLeft + cw;
+    plotTop += ((plotBottom - plotTop) - ch) / 2; plotBottom = plotTop + ch;
+    xTarget = Math.max(3, Math.floor(Math.min(cw, ch) / 44));
+    yScale = makeScale(yMin, yMax, input.y, plotBottom, plotTop, xTarget, false);
+  }
   const xScale = makeScale(xMin, xMax, input.x, plotLeft, plotRight, xTarget, !!input.x?.log || barsMode);
   const X = xScale.toPx, Y = yScale.toPx;
 
@@ -277,9 +304,11 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
   let axisD = `M${plotLeft},${plotTop}V${plotBottom}H${plotRight}`;
   for (const t of xScale.ticks) axisD += `M${r1(X(t))},${plotBottom}v4`;
   if (!barsMode) for (const t of yScale.ticks) axisD += `M${plotLeft},${r1(Y(t))}h-4`;
-  paths.push({ id: 'axes', d: axisD, width: 1, color: 'var(--muted)' });
+  paths.push({ id: 'axes', d: axisD, width: 1, color: scatterMode ? 'var(--rule)' : 'var(--muted)' });
   const zeroY = !barsMode && yScale.min < 0 && yScale.max > 0 && !yScale.log ? Y(0) : null;
-  if (zeroY !== null) paths.push({ id: 'zero', d: `M${plotLeft},${r1(zeroY)}H${plotRight}`, width: 1, color: 'var(--muted)' });
+  if (zeroY !== null) paths.push({ id: 'zero', d: `M${plotLeft},${r1(zeroY)}H${plotRight}`, width: scatterMode ? 1.25 : 1, color: 'var(--muted)' });
+  // Plano I/Q: el eje vertical también cruza por el origen.
+  if (scatterMode && !xScale.log && xScale.min < 0 && xScale.max > 0) paths.push({ id: 'zero-x', d: `M${r1(X(0))},${plotTop}V${plotBottom}`, width: 1.25, color: 'var(--muted)' });
   const baseY = zeroY ?? (yScale.log ? plotBottom : Y(Math.max(yScale.min, Math.min(yScale.max, 0))));
 
   // Ticks X: se saltan los que chocarían con el anterior.
@@ -344,6 +373,15 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
           annotations.push({ id: `v-${s.id}-${k}`, text: fmt(y), x: X(x), y: y >= 0 ? Y(y) - 8 : Y(y) + 15, anchor: 'middle', size: 10, weight: 600, color: valueColor });
         });
       }
+    } else if (kind === 'scatter') {
+      const vis = (s.points ?? []).filter(([, y]) => inY(y));
+      paths.push({ id: `s-${s.id}-dots`, d: vis.map(([x, y]) => circle(X(x), Y(y), 4.5)).join(''), fill: true, opacity: 1, ...color });
+      // Rótulo de cada punto hacia afuera del origen (no tapa los ejes).
+      vis.forEach(([x, y, label], k) => {
+        if (!label) return;
+        const right = x >= 0;
+        annotations.push({ id: `pt-${s.id}-${k}`, text: label, x: X(x) + (right ? 8 : -8), y: y >= 0 ? Y(y) - 8 : Y(y) + 16, anchor: right ? 'start' : 'end', size: 11, weight: 600, bg: true, color: valueColor });
+      });
     } else if (kind === 'bars') {
       const rowH = (plotBottom - plotTop) / Math.max(1, cats.length);
       for (const b of s.bars ?? []) {
@@ -404,8 +442,8 @@ export function xyChartLayout(input: XyChartInput, opts: { width?: number; heigh
     const ly = 12 + l.row * 18;
     const lx = plotLeft + l.x;
     const kind = l.s.kind ?? 'line';
-    const d = kind === 'stem' || kind === 'samples' ? `M${lx + 9},${ly + 5}V${ly - 5}` + circle(lx + 9, ly - 5, 2.5) : `M${lx},${ly}H${lx + 18}`;
-    paths.push({ id: `legend-${l.s.id}`, d, width: kind === 'bars' ? 7 : 2, opacity: kind === 'bars' ? 0.5 : undefined, ...paint(l.s, l.i) });
+    const d = kind === 'scatter' ? circle(lx + 9, ly, 4) : kind === 'stem' || kind === 'samples' ? `M${lx + 9},${ly + 5}V${ly - 5}` + circle(lx + 9, ly - 5, 2.5) : `M${lx},${ly}H${lx + 18}`;
+    paths.push({ id: `legend-${l.s.id}`, d, width: kind === 'bars' ? 7 : 2, fill: kind === 'scatter' || undefined, opacity: kind === 'bars' ? 0.5 : kind === 'scatter' ? 1 : undefined, ...paint(l.s, l.i) });
     annotations.push({ id: `legend-label-${l.s.id}`, text: l.s.label, x: lx + 24, y: ly + 4, size: 11, color: 'var(--ink)' });
   }
 

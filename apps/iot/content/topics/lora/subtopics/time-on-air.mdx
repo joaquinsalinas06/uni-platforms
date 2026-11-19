@@ -70,17 +70,17 @@ $$ToA = 25.088 + 47.104 = \boxed{72.192\ \text{ms}}$$
 $$R = \frac{8\cdot 12\ \text{bits}}{72.192\ \text{ms}} = \frac{96}{0.072192\ \text{s}} \approx 1330\ \text{bps} \approx 1.33\ \text{kbps}$$
 
 <Visualization viz={{
-  type: 'xy-chart',
+  type: 'memory-layout',
   static: true,
+  unit: 'sím',
   title: 'Paquete del ejemplo en símbolos (SF 8, T_s = 2.048 ms)',
   steps: [{
-    note: '12.25 símbolos de preámbulo (25.088 ms) + 23 de payload (8 fijos + 15 de datos, 47.104 ms) = 35.25 símbolos ≈ 72.19 ms.',
-    series: [{ id: 'p', label: 'símbolos', kind: 'bars', bars: [
-      { label: 'preámbulo (8 + 4.25)', from: 0, to: 12.25 },
-      { label: 'payload: 8 fijos', from: 12.25, to: 20.25 },
-      { label: 'payload: 3 × (CR+4) = 15', from: 20.25, to: 35.25 },
-    ] }],
-    x: { label: 'símbolos (× 2.048 ms)', min: 0, max: 36 },
+    note: '12.25 símbolos de preámbulo (25.088 ms) + 23 de payload (8 fijos + 15 de datos, 47.104 ms) = 35.25 símbolos ≈ 72.19 ms. Cada símbolo dura 2.048 ms.',
+    blocks: [
+      { id: 'pre', label: 'preámbulo (8 + 4.25)', bytes: 12.25, offset: 0 },
+      { id: 'fix', label: 'payload: 8 fijos', bytes: 8, offset: 12.25 },
+      { id: 'dat', label: 'payload: 3 × (CR+4) = 15', bytes: 15, offset: 20.25, state: 'answer' },
+    ],
   }],
 }} />
 
