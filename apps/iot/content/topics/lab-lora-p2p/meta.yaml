@@ -1,0 +1,19 @@
+id: lab-lora-p2p
+title: "Laboratorio LoRa P2P: RAK3172 y comandos AT"
+type: lab
+unit: s12
+prerequisites: [lora]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: sequence
+placeholder: false
+formulas:
+  - name: Tamaño del payload hexadecimal
+    tex: "N_{hex} = 2 \\times N_{bytes}"
+    reasoning: "AT+PSEND solo acepta el payload codificado en hexadecimal: cada byte (carácter ASCII) se escribe con dos dígitos 0-9/A-F, así que un payload válido siempre tiene un número par de caracteres hex."
+    source: "Sem12_LAB4_LoRa_v2#8"
+  - name: Divisor de 5 V a 3.3 V en la línea RX del RAK
+    tex: "V_{RX} = 5\\,\\text{V}\\cdot\\dfrac{R_2}{R_1+R_2}"
+    reasoning: "El Arduino MEGA trabaja con lógica de 5 V y el RAK a 3.3 V; el divisor en la línea TX1 (MEGA) → RX2 (RAK) baja el nivel alto a un valor seguro, como con el ESP32 (1.8 kΩ y 3.3 kΩ dan ≈ 3.24 V)."
+    source: "Sem12_LAB4_LoRa_v2#10"

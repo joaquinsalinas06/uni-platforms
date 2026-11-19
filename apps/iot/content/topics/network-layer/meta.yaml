@@ -1,0 +1,27 @@
+id: network-layer
+title: "Capa de red en IoT: IPv4, IPv6, 6LoWPAN y protocolos no IP"
+type: method
+unit: s10
+prerequisites: [transport-layer]
+buildsOn: []
+usedBy: [lora]
+hasVisualization: true
+visualizationType: memory-layout
+placeholder: false
+formulas:
+  - name: Porcentaje de overhead de protocolo
+    tex: "\\%\\,\\text{overhead} = \\dfrac{\\sum H_i}{\\sum H_i + PL} \\times 100"
+    reasoning: "Mide qué fracción de los bytes transmitidos son cabeceras de todas las capas (aplicación, transporte, red, enlace) y no dato útil PL; es lo que pide el EF 2026 P1 con la pila CoAP/UDP/IPv6/802.15.4."
+    source: "EF_2026_CS5055#1"
+  - name: Offset de fragmento IP
+    tex: "\\text{offset} = \\dfrac{\\text{bytes de datos anteriores}}{8}"
+    reasoning: "El campo offset de IPv4 cuenta en unidades de 8 bytes; con MTU 1500 cada fragmento lleva 1480 B de datos, así que el segundo fragmento tiene offset 1480/8 = 185 y el tercero 370."
+    source: "Sem10_IoTT-NetworkLayerinIoT#10"
+  - name: Datos por fragmento con MTU dado
+    tex: "D_{frag} = MTU - 20\\,\\text{B}"
+    reasoning: "Cada fragmento repite la cabecera IPv4 de 20 B, así que con MTU = 1500 B solo caben 1480 B de datos por fragmento (múltiplo de 8)."
+    source: "Sem10_IoTT-NetworkLayerinIoT#10"
+  - name: Espacio de direcciones IPv4 vs IPv6
+    tex: "2^{32} \\approx 4.3\\times10^{9} \\quad\\text{vs}\\quad 2^{128} \\approx 3.4\\times10^{38}"
+    reasoning: "IPv4 usa direcciones de 32 bits (agotadas, obliga a NAT para miles de sensores); IPv6 usa 128 bits (~340 undecillones), una dirección propia por dispositivo."
+    source: "Sem10_IoTT-NetworkLayerinIoT#16"

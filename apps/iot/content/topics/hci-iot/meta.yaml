@@ -1,0 +1,11 @@
+id: hci-iot
+title: "Interacción humano-computador (HCI) en IoT"
+type: method
+unit: s14
+prerequisites: []
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: flow
+placeholder: false
+formulas: []

@@ -1,0 +1,23 @@
+id: mac-protocols
+title: "Protocolos MAC: ALOHA, CSMA/CA y terminal oculta"
+type: method
+unit: s13
+prerequisites: [physical-layer]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Throughput de Pure ALOHA
+    tex: "S = G\\,e^{-2G}, \\qquad S_{max} = \\dfrac{1}{2e} \\approx 0.184 \\ (G = 0.5)"
+    reasoning: "Una trama de duración T choca con cualquier otra que empiece en una ventana vulnerable de 2T; con intentos de Poisson (G por tiempo de trama, incluidos reintentos) la probabilidad de éxito es e^(-2G)."
+    source: "Sem13_IoTT-Wireless2#22"
+  - name: Throughput de Slotted ALOHA
+    tex: "S = G\\,e^{-G}, \\qquad S_{max} = \\dfrac{1}{e} \\approx 0.368 \\ (G = 1)"
+    reasoning: "Al obligar a empezar solo al inicio de un slot, la ventana vulnerable baja de 2T a T y el máximo se duplica (36.8 % contra 18.4 %), a cambio de necesitar sincronización."
+    source: "Sem13_IoTT-Wireless2#24"
+  - name: Ventana de contención con backoff exponencial binario
+    tex: "CW: [0,7] \\to [0,15] \\to [0,31]"
+    reasoning: "Tras cada colisión la ventana de la que se sortea el contador de backoff se duplica, lo que reduce la probabilidad de volver a elegir el mismo valor a costa de más retardo (valores ilustrativos de la slide)."
+    source: "Sem13_IoTT-Wireless2#34"

@@ -94,6 +94,76 @@
       "topics": [
         "mqtt"
       ]
+    },
+    {
+      "id": "s9",
+      "title": "Semana 9 — Capa de transporte · laboratorio MQTT",
+      "sourceFiles": [
+        "raw-materials/text/Sem9_IoTT-TransportLayerinIoT.txt",
+        "raw-materials/text/Sem09_LAB3_MQTT.txt"
+      ],
+      "topics": [
+        "transport-layer",
+        "lab-mqtt-esp32"
+      ]
+    },
+    {
+      "id": "s10",
+      "title": "Semana 10 — Capa de red en IoT",
+      "sourceFiles": [
+        "raw-materials/text/Sem10_IoTT-NetworkLayerinIoT.txt",
+        "raw-materials/text/Sem10_LAB3_MQTT.txt"
+      ],
+      "topics": [
+        "network-layer"
+      ]
+    },
+    {
+      "id": "s11",
+      "title": "Semana 11 — BLE y LoRa",
+      "sourceFiles": [
+        "raw-materials/text/Sem11_IoTT-BLE.txt",
+        "raw-materials/text/Sem12_LoRa.pptx.txt",
+        "raw-materials/text/Sem11_LAB4_LoRa.txt"
+      ],
+      "topics": [
+        "ble",
+        "lora"
+      ]
+    },
+    {
+      "id": "s12",
+      "title": "Semana 12 — Capa física · laboratorio LoRa P2P",
+      "sourceFiles": [
+        "raw-materials/text/Sem12_IoTT-PhysicalLayerinIoT.txt",
+        "raw-materials/text/Sem12_LAB4_LoRa_v2.txt"
+      ],
+      "topics": [
+        "physical-layer",
+        "lab-lora-p2p"
+      ]
+    },
+    {
+      "id": "s13",
+      "title": "Semana 13 — Modulación digital y protocolos MAC",
+      "sourceFiles": [
+        "raw-materials/text/Sem13_IoTT-Wireless2.txt"
+      ],
+      "topics": [
+        "digital-modulation",
+        "mac-protocols"
+      ]
+    },
+    {
+      "id": "s14",
+      "title": "Semana 14 — Nuevas tecnologías y HCI",
+      "sourceFiles": [
+        "raw-materials/text/Sem14_IoTT-NewTechinIoT-HCI.txt"
+      ],
+      "topics": [
+        "new-tech-iot",
+        "hci-iot"
+      ]
     }
   ],
   "topics": {
@@ -582,6 +652,233 @@
       ],
       "hasVisualization": true,
       "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "transport-layer": {
+      "type": "concept",
+      "title": "Capa de transporte en IoT: UDP, TCP, CoAP y QUIC",
+      "unit": "s9",
+      "prerequisites": [
+        "app-protocols"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "network-layer"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem9_IoTT-TransportLayerinIoT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "lab-mqtt-esp32": {
+      "type": "lab",
+      "title": "Laboratorio MQTT con ESP32: sistema completo y sus diagramas",
+      "unit": "s9",
+      "prerequisites": [
+        "mqtt",
+        "flow-block-diagrams"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem09_LAB3_MQTT",
+        "Sem10_LAB3_MQTT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "flow",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "network-layer": {
+      "type": "method",
+      "title": "Capa de red en IoT: IPv4, IPv6, 6LoWPAN y protocolos no IP",
+      "unit": "s10",
+      "prerequisites": [
+        "transport-layer"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "lora"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem10_IoTT-NetworkLayerinIoT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "memory-layout",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "ble": {
+      "type": "method",
+      "title": "Bluetooth Low Energy (BLE)",
+      "unit": "s11",
+      "prerequisites": [
+        "wireless-tech"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem11_IoTT-BLE"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "lora": {
+      "type": "method",
+      "title": "LoRa y LoRaWAN",
+      "unit": "s11",
+      "prerequisites": [
+        "wireless-tech",
+        "network-layer"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "lab-lora-p2p"
+      ],
+      "subtopics": [
+        "css-parametros",
+        "time-on-air",
+        "lorawan",
+        "propagacion-fresnel"
+      ],
+      "sourceSlides": [
+        "Sem12_LoRa.pptx",
+        "Sem9_IoTT-TransportLayerinIoT",
+        "Sem10_IoTT-NetworkLayerinIoT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "physical-layer": {
+      "type": "concept",
+      "title": "Capa física en IoT: enlace inalámbrico, WSN, 5G y LiFi",
+      "unit": "s12",
+      "prerequisites": [
+        "wireless-tech"
+      ],
+      "buildsOn": [],
+      "usedBy": [
+        "digital-modulation",
+        "mac-protocols"
+      ],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem12_IoTT-PhysicalLayerinIoT"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "network-topology",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "lab-lora-p2p": {
+      "type": "lab",
+      "title": "Laboratorio LoRa P2P: RAK3172 y comandos AT",
+      "unit": "s12",
+      "prerequisites": [
+        "lora"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem11_LAB4_LoRa",
+        "Sem12_LAB4_LoRa_v2"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "sequence",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "digital-modulation": {
+      "type": "method",
+      "title": "Modulación digital y codificación de canal",
+      "unit": "s13",
+      "prerequisites": [
+        "physical-layer"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem13_IoTT-Wireless2"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "mac-protocols": {
+      "type": "method",
+      "title": "Protocolos MAC: ALOHA, CSMA/CA y terminal oculta",
+      "unit": "s13",
+      "prerequisites": [
+        "physical-layer"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem13_IoTT-Wireless2"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "xy-chart",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "new-tech-iot": {
+      "type": "concept",
+      "title": "Nuevas tecnologías para IoT: semiconductores, fotónica y cuántica",
+      "unit": "s14",
+      "prerequisites": [
+        "physical-layer"
+      ],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem14_IoTT-NewTechinIoT-HCI"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "flow",
+      "supportConcept": false,
+      "placeholder": false,
+      "status": "generated"
+    },
+    "hci-iot": {
+      "type": "method",
+      "title": "Interacción humano-computador (HCI) en IoT",
+      "unit": "s14",
+      "prerequisites": [],
+      "buildsOn": [],
+      "usedBy": [],
+      "subtopics": [],
+      "sourceSlides": [
+        "Sem14_IoTT-NewTechinIoT-HCI"
+      ],
+      "hasVisualization": true,
+      "visualizationType": "flow",
       "supportConcept": false,
       "placeholder": false,
       "status": "generated"

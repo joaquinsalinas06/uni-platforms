@@ -1,0 +1,241 @@
+---
+kind: theory
+title: "Protocolos MAC: ALOHA, CSMA/CA y terminal oculta"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+Cuando dos sensores le hablan al mismo gateway por el mismo canal, sus paquetes pueden
+**solaparse en el receptor** (colisión) y ambos se pierden. El protocolo de **acceso al medio
+(MAC)** decide quién transmite y cuándo. Hay dos familias: **por contención** (Pure ALOHA,
+Slotted ALOHA, CSMA, CSMA/CA) y **programadas** (TDMA, polling, TSCH). Para un nodo a batería
+cada colisión es una retransmisión, es decir, energía perdida.
+
+## Conceptos
+
+### Pure ALOHA *(Sem13#20–22)*
+El nodo transmite **apenas tiene una trama**, sin escuchar el canal; si falla, espera un tiempo
+**aleatorio** y reintenta. Si una trama dura $T$, cualquier otra que empiece en una ventana de
+**$2T$** (de $-T$ a $T$) la pisa: **período vulnerable = 2T**.
+
+- $G$: intentos promedio por tiempo de trama (incluye reintentos).
+- $S$: tramas exitosas por tiempo de trama.
+
+$$S = G\,e^{-2G},\qquad S_{max} = \frac{1}{2e} \approx 0.184$$
+
+### Slotted ALOHA *(Sem13#23–24)*
+El tiempo se divide en **slots de duración $T$** y solo se puede empezar al **inicio** de un slot:
+hay colisión solo si dos nodos eligen **el mismo slot**. El período vulnerable baja a $T$:
+
+$$S = G\,e^{-G},\qquad S_{max} = \frac{1}{e} \approx 0.368$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Throughput S vs carga G (modelos ideales)',
+  steps: [{
+    note: 'Pure ALOHA alcanza su máximo 18.4 % en G = 0.5; Slotted ALOHA, 36.8 % en G = 1. Más allá del pico, más intentos solo producen más colisiones.',
+    series: [
+      { id: 'p', label: 'Pure: S = G e^(-2G)', fn: 'x*exp(-2*x)', domain: [0, 3] },
+      { id: 's', label: 'Slotted: S = G e^(-G)', fn: 'x*exp(-x)', domain: [0, 3] },
+    ],
+    x: { label: 'G (intentos por tiempo de trama)', min: 0, max: 3 },
+    y: { label: 'S (éxitos por tiempo de trama)', min: 0, max: 0.42 },
+    hlines: [{ at: 0.184, label: '0.184' }, { at: 0.368, label: '0.368' }],
+    vlines: [{ at: 0.5, label: 'G = 0.5', state: 'muted' }, { at: 1, label: 'G = 1', state: 'muted' }],
+  }],
+}} />
+
+Modelo idealizado: tramas de igual largo, intentos de Poisson, sin efecto captura.
+
+### CSMA: escuchar antes de hablar *(Sem13#26–28)*
+**Carrier Sense Multiple Access**: sensar el medio; si está libre se puede transmitir, si está
+ocupado se difiere según la regla de persistencia:
+
+| | 1-persistente | No persistente | p-persistente |
+|---|---|---|---|
+| Canal libre | transmite | transmite | transmite con probabilidad $p$ |
+| Canal ocupado | sigue sensando | espera un retardo aleatorio | difiere al siguiente slot |
+| Nota | puede chocar justo al liberarse | reduce la contención | requiere operación ranurada |
+
+**CSMA no evita todas las colisiones**: el sensado es **local** y la señal tarda en propagarse;
+A empieza a transmitir y, antes de que su señal llegue a B, B también sensa libre y transmite.
+
+### CSMA/CD vs CSMA/CA *(Sem13#29–30)*
+- **CSMA/CD** (*Collision Detection*): en Ethernet half-duplex compartido, el emisor escucha
+  mientras transmite y aborta al detectar colisión. Es **Ethernet cableado histórico, no Wi-Fi**.
+- En inalámbrico detectar la colisión es difícil: la **señal propia domina** a las débiles que
+  llegan, existen **terminales ocultas** y las radios son **half-duplex** (no escuchan mientras
+  transmiten). Por eso se usa **CSMA/CA** (*Collision Avoidance*): intentar **evitar** la colisión
+  antes de que ocurra.
+
+### Procedimiento CSMA/CA *(Sem13#31–34)*
+1. **Sense**: verificar que el canal esté libre.
+2. **Defer**: esperar el intervalo libre requerido (en 802.11, **DIFS**).
+3. **Backoff**: sortear un contador aleatorio; **se decrementa solo en slots libres** y se
+   **congela** si el canal se ocupa.
+4. **Send**: transmitir cuando el contador llega a cero.
+5. **Confirm**: el receptor responde **ACK** tras un **SIFS**; si no llega, reintentar.
+
+**Backoff exponencial binario**: tras cada fallo la ventana crece, $[0,7] \to [0,15] \to [0,31]$
+(valores ilustrativos): menos intentos simultáneos repetidos, a costa de retardo.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Dos estaciones: A sortea 2 slots, B sortea 5 (Sem13#33)',
+  steps: [
+    {
+      note: 'Ambas esperan DIFS y empiezan a descontar. Tras 2 slots libres, A llega a 0 y transmite; B lleva 2 de 5.',
+      actors: [{ id: 'a', label: 'Estación A' }, { id: 'ap', label: 'Receptor' }, { id: 'b', label: 'Estación B' }],
+      msgs: [
+        { divider: true, from: 'a', to: 'b', label: '— DIFS · A: 2→0 · B: 5→3 —' },
+        { from: 'a', to: 'ap', label: 'DATA', state: 'active' },
+        { from: 'ap', to: 'a', label: 'ACK', flags: 'tras SIFS' },
+      ],
+    },
+    {
+      note: 'Mientras A ocupa el medio, B congela su contador en 3. Al quedar libre (DIFS), B descuenta los 3 slots restantes y transmite.',
+      actors: [{ id: 'a', label: 'Estación A' }, { id: 'ap', label: 'Receptor' }, { id: 'b', label: 'Estación B' }],
+      msgs: [
+        { divider: true, from: 'a', to: 'b', label: '— B congelado en 3 mientras A transmite —' },
+        { divider: true, from: 'a', to: 'b', label: '— DIFS · B: 3→0 —' },
+        { from: 'b', to: 'ap', label: 'DATA', state: 'active' },
+        { from: 'ap', to: 'b', label: 'ACK', flags: 'tras SIFS' },
+      ],
+    },
+  ],
+}} />
+
+### Terminal oculta y RTS/CTS *(Sem13#35–37)*
+**A y C no se oyen**, pero ambos alcanzan a **B** (p. ej. dos sensores y un gateway): sus
+transmisiones chocan en B y el sensado de portadora solo **no puede resolverlo**.
+
+**RTS/CTS** reserva el medio: el emisor envía **RTS** (*Request to Send*), el receptor responde
+**CTS** (*Clear to Send*), y toda estación que oiga RTS **o CTS** difiere usando el **NAV**
+(*Network Allocation Vector*). Como C sí oye el CTS de B, se calla. Es **opcional**: para tramas
+cortas su overhead puede superar el beneficio.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Terminal oculta: el problema y la solución',
+  steps: [
+    {
+      note: 'Sin reserva: A y C sensan el canal libre (no se oyen) y transmiten a la vez; las tramas colisionan en B.',
+      actors: [{ id: 'a', label: 'Sensor A' }, { id: 'b', label: 'Gateway B' }, { id: 'c', label: 'Sensor C' }],
+      msgs: [
+        { from: 'a', to: 'b', label: 'DATA', lost: true },
+        { from: 'c', to: 'b', label: 'DATA', lost: true, store: 'colisión en B' },
+      ],
+    },
+    {
+      note: 'Con RTS/CTS: B responde CTS a todos; C lo oye y difiere (NAV) aunque nunca oyó a A. A transmite sin colisión y recibe ACK.',
+      actors: [{ id: 'a', label: 'Sensor A' }, { id: 'b', label: 'Gateway B' }, { id: 'c', label: 'Sensor C' }],
+      msgs: [
+        { from: 'a', to: 'b', label: 'RTS' },
+        { from: 'b', to: 'a', label: 'CTS' },
+        { from: 'b', to: 'c', label: 'CTS', store: 'C difiere (NAV)', state: 'marked' },
+        { from: 'a', to: 'b', label: 'DATA', state: 'active' },
+        { from: 'b', to: 'a', label: 'ACK', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+### IEEE 802.15.4: CSMA/CA no ranurado *(Sem13#39)*
+1. Inicializar **NB = 0** (número de backoffs) y **BE = macMinBE** (exponente de backoff).
+2. Esperar un número aleatorio de períodos de backoff.
+3. **CCA** (*Clear Channel Assessment*): si el canal está libre → transmitir; si está ocupado →
+   incrementar NB y BE y reintentar, o reportar fallo.
+
+### Acceso programado *(Sem13#40)*
+**TDMA**: el tiempo se divide en slots asignados a cada nodo (N1, N2, N3, N4, N1, …): sin
+colisiones si hay coordinación. **TSCH** (*Time Slotted Channel Hopping*): slots + cambio de
+canal en cada slot.
+
+### Acceso al medio por tecnología y trade-offs *(Sem13#41–42)*
+
+| Tecnología | MAC |
+|---|---|
+| Wi-Fi / 802.11 | CSMA/CA, backoff aleatorio, ACK |
+| IEEE 802.15.4 | CSMA/CA o TSCH (redes de sensores de bajo consumo) |
+| LoRaWAN | uplink tipo ALOHA, límites de duty cycle |
+| Bluetooth LE | eventos programados (timing de conexión / saltos) |
+
+| Método | Riesgo de colisión | Sincronización | Energía / retardo |
+|---|---|---|---|
+| Pure ALOHA | alto con carga | no requiere | costo de reintentos |
+| Slotted ALOHA | menor que pure | requerida | espera hasta el slot |
+| CSMA/CA | reducido, no cero | sensado local | CCA + backoff |
+| Slots programados | bajo si hay coordinación | requerida | despertar predecible |
+
+La mejor opción depende de la carga, el presupuesto de energía, la latencia y la topología.
+
+## Método paso a paso
+**Simular backoff con varias estaciones** (ejemplo de la slide):
+1. Todas esperan el intervalo libre y descuentan un slot por cada slot libre.
+2. La(s) que llega(n) a 0 transmite(n). Si son dos o más a la vez → colisión.
+3. Las demás sensan ocupado y **congelan** su contador; lo reanudan cuando el medio queda libre.
+4. Tras una colisión, quienes chocaron duplican su ventana y sortean de nuevo.
+
+## Ejemplo resuelto
+**Sem13#43:** A, B y C tienen una trama lista al mismo tiempo; backoff ranurado simplificado,
+A = 2 slots, B = 5, C = 2 *(respuesta derivada, la slide deja la pregunta abierta)*.
+
+1. Tras 2 slots libres, **A y C llegan a 0 a la vez y transmiten primero** → sus tramas
+   **colisionan** en el receptor (no llega ACK).
+2. **B** detecta el medio ocupado en el slot 3 y **congela** su contador en 3; cuando el medio
+   vuelve a estar libre lo reanuda: 3 → 0 y transmite.
+3. A y C, sin ACK, aplican backoff exponencial: sortean en $[0, 15]$, con lo que es menos probable
+   que vuelvan a coincidir.
+
+## Errores típicos
+- Decir que Wi-Fi usa CSMA/CD.
+- Creer que CSMA/CA elimina las colisiones: las **reduce**, no las anula (sensado local, terminal
+  oculta, mismo contador).
+- Decir que el contador de backoff se reinicia cuando el canal se ocupa: se **congela**.
+- Usar $S = Ge^{-G}$ para Pure ALOHA (es la de Slotted).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "40 sensores a batería envían una medición por minuto a un gateway. (1) ¿Por qué Pure ALOHA puede causar retransmisiones innecesarias? (2) ¿Cómo cambia el procedimiento el sensado de portadora? (3) ¿Por qué la terminal oculta sigue siendo un problema para CSMA/CA? (4) ¿Cuándo el acceso programado mejora el consumo? (Sem13#44)",
+  hints: [
+    "En Pure ALOHA nadie mira el canal antes de transmitir; ¿cuánto dura la ventana vulnerable?",
+    "CSMA/CA agrega sense, defer y backoff antes de enviar.",
+    "Sensar el canal es local: ¿qué pasa si dos sensores no se oyen?",
+    "Si cada nodo sabe su slot, ¿cuándo necesita despertar?",
+  ],
+}}>
+
+**1. Pure ALOHA.** Cada sensor transmite apenas mide; cualquier otra trama que empiece dentro de
+$2T$ la pisa. Con 40 nodos el throughput máximo es solo 18.4 %, y cada colisión obliga a
+retransmitir (energía gastada dos veces) tras una espera aleatoria.
+
+**2. Sensado de portadora.** Antes de enviar, el nodo sensa; si está ocupado difiere y sortea un
+backoff que se congela mientras el medio esté ocupado; transmite al llegar a 0 y espera ACK. Las
+colisiones se reducen pero no desaparecen (retardo de propagación, mismo contador).
+
+**3. Terminal oculta.** Si dos sensores no se oyen (lejos entre sí, ambos cerca del gateway), los
+dos sensan "libre" y chocan en el gateway. Se mitiga con RTS/CTS + NAV, con su overhead.
+
+**4. Acceso programado (TDMA/TSCH).** Con tráfico periódico y predecible (1 medición/min), cada
+sensor despierta **solo en su slot**: sin colisiones ni escucha previa, con despertar predecible.
+Exige sincronización.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Por qué Pure ALOHA rinde la mitad',
+  steps: [{
+    note: 'Ventana vulnerable: 2T en Pure ALOHA frente a T en Slotted; por eso el máximo pasa de 0.184 a 0.368.',
+    series: [{ id: 'v', label: 'ventana vulnerable', kind: 'bars', bars: [
+      { label: 'Pure ALOHA (2T)', from: -1, to: 1 },
+      { label: 'Slotted ALOHA (T)', from: 0, to: 1 },
+    ] }],
+    x: { label: 'inicio de otra trama (en unidades de T)', min: -1.2, max: 1.2 },
+  }],
+}} />
+
+</ExerciseBlock>

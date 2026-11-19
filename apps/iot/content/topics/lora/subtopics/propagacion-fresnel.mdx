@@ -1,0 +1,113 @@
+---
+kind: subtopic
+order: 4
+title: "Propagación y zona de Fresnel"
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+Para que un enlace LoRa de kilómetros funcione no basta con "ver" el gateway: la señal se
+debilita con la distancia (pérdida en espacio libre), los obstáculos la atenúan, reflejan o
+difractan, y cualquier objeto dentro de la **zona de Fresnel** degrada el enlace aunque la línea
+de vista esté libre. Estas fórmulas dicen cuánto se pierde y a qué altura poner las antenas.
+
+## Conceptos
+
+### Mecanismos de propagación *(Sem12_LoRa#30–33)*
+- **Espacio libre**: la onda viaja directo del emisor al receptor; al aumentar la distancia la
+  señal se debilita (**Free Space Loss**).
+- **A través de obstáculos**: la onda penetra pero pierde fuerza según la conductividad del material.
+- **Reflexión**: edificios reflejan la señal e interfieren con la directa.
+- **Difracción**: la onda se "curva" en esquinas filosas.
+
+### Pérdida en espacio libre *(Sem12_LoRa#34)*
+
+$$L_{fs} = 32.45 + 20\log(D) + 20\log(f)$$
+
+$L_{fs}$ en dB, $D$ = distancia nodo–gateway en **km**, $f$ en **MHz**.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'L_fs a 923 MHz (frecuencia del laboratorio) vs distancia',
+  steps: [{
+    note: 'Crece con el logaritmo de la distancia: de 1 a 2 km se suman ≈ 6 dB, y lo mismo de 5 a 10 km. 1 km ≈ 91.8 dB, 10 km ≈ 111.8 dB.',
+    series: [{ id: 'l', label: 'L_fs (dB)', fn: '32.45 + 20*log(x)/log(10) + 20*log(923)/log(10)', domain: [0.5, 15] }],
+    x: { label: 'D (km)', min: 0, max: 15 },
+    y: { label: 'L_fs (dB)', min: 80, max: 120 },
+  }],
+}} />
+
+### Zona de Fresnel *(Sem12_LoRa#35–40)*
+Cuerpo **elíptico** alrededor de la línea de vista entre nodo y gateway. Cualquier obstáculo en
+ese volumen debilita la señal **aunque la línea directa esté libre**. Su radio máximo está en el
+**punto medio** del enlace:
+
+$$r = 8.657\sqrt{\frac{D}{f}}$$
+
+$r$ en **metros**, $D$ en **km**, $f$ en **GHz**. Reglas del curso:
+- Mantener libre **al menos el 60 %** de la zona; bloqueos en el 40 % restante son despreciables.
+- Solución recomendada: poner la **antena del gateway más alta** que el nodo.
+- La fórmula supone **Tierra plana**; en enlaces largos hay que sumar la altura que levanta la
+  curvatura terrestre:
+
+$$H = \frac{1000\,D^2}{8R},\qquad R = 8504\ \text{km}$$
+
+| D (km) | 0.1 – 2 | 5 | 10 | 15 | 20 | 25 | 30 |
+|---|---|---|---|---|---|---|---|
+| H (m) | despreciable | 0.4 | 1.5 | 3.3 | 5.9 | 9.2 | 13.2 |
+
+*(tabla de Sem12_LoRa#39)*
+
+## Método paso a paso
+1. Pasar unidades: $D$ en km; $f$ en MHz para $L_{fs}$ y en **GHz** para Fresnel.
+2. $L_{fs}$ → cuánta señal se pierde en el trayecto.
+3. $r$ en el punto medio → $0.6\,r$ es el despeje mínimo sobre obstáculos.
+4. Si el enlace es largo, sumar $H$ por curvatura.
+5. Altura mínima de la línea de vista en el medio ≈ obstáculo $+ 0.6\,r + H$.
+
+## Ejemplo resuelto
+*(derivado)* Enlace de **2 km** a **923 MHz**:
+
+$$L_{fs} = 32.45 + 20\log 2 + 20\log 923 = 32.45 + 6.02 + 59.30 = \boxed{97.77\ \text{dB}}$$
+
+$$r = 8.657\sqrt{\frac{2}{0.923}} = 8.657 \cdot 1.472 = \boxed{12.74\ \text{m}},\qquad 0.6\,r = 7.65\ \text{m}$$
+
+$$H = \frac{1000\cdot 2^2}{8\cdot 8504} = 0.06\ \text{m}\ (\text{despreciable})$$
+
+Si en el punto medio hay un techo de 10 m, la línea de vista debería pasar a unos
+$10 + 7.65 \approx 17.7$ m: subir la antena del gateway.
+
+## Errores típicos
+- Meter $f$ en MHz en la fórmula de Fresnel (es en GHz) o en GHz en la de $L_{fs}$ (es en MHz).
+- Creer que con línea de vista libre el enlace es perfecto: falta revisar la zona de Fresnel.
+- Pedir el 100 % de la zona libre: la regla es el **60 %**.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un nodo LoRa a 915 MHz está a 10 km del gateway. Calcule la pérdida en espacio libre, el radio máximo de Fresnel, el despeje mínimo (60 %) y la altura extra por curvatura terrestre.",
+  hints: [
+    "L_fs usa D en km y f en MHz; Fresnel usa f en GHz.",
+    "El radio máximo está a mitad del enlace.",
+    "H = 1000·D²/(8·8504).",
+  ],
+}}>
+
+**1. Pérdida.**
+$$L_{fs} = 32.45 + 20\log 10 + 20\log 915 = 32.45 + 20 + 59.23 = \boxed{111.68\ \text{dB}}$$
+
+**2. Fresnel.**
+$$r = 8.657\sqrt{\frac{10}{0.915}} = 8.657\cdot 3.306 = \boxed{28.62\ \text{m}}$$
+
+**3. Despeje.** $0.6\cdot 28.62 = \boxed{17.17\ \text{m}}$ libres sobre cualquier obstáculo a mitad
+del camino.
+
+**4. Curvatura.**
+$$H = \frac{1000\cdot 10^2}{8\cdot 8504} = \boxed{1.47\ \text{m}}$$
+
+**Comprobación:** $H$ coincide con la fila de 10 km de la tabla (1.5 m).
+
+</ExerciseBlock>

@@ -1,0 +1,150 @@
+---
+kind: subtopic
+order: 3
+title: "LoRaWAN: arquitectura y clases A, B, C"
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+LoRa solo define cómo se modula. **LoRaWAN** es el protocolo LPWAN que opera en una capa
+superior y organiza la red: estructura, seguridad, autenticación y coordinación entre
+dispositivos y servidores, para desplegar IoT a gran escala *(Sem10#36, Sem12_LoRa#18)*.
+
+## Conceptos
+
+### Arquitectura *(Sem10#28, #38, #45–46; Sem12_LoRa#47)*
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'Topología estrella de estrellas de LoRaWAN',
+  steps: [{
+    note: 'El nodo transmite sin dirección destino; todos los gateways que lo oyen reenvían el paquete al network server, que descarta duplicados y elige el mejor gateway para responder.',
+    processes: [
+      { id: 'n1', label: 'nodo 1' }, { id: 'n2', label: 'nodo 2' }, { id: 'n3', label: 'nodo 3' },
+      { id: 'g1', label: 'gateway A' }, { id: 'g2', label: 'gateway B' },
+      { id: 'ns', label: 'Network Server', state: 'active' },
+      { id: 'as', label: 'Application Server' },
+    ],
+    dataFlow: [
+      { from: 'n1', to: 'g1', label: 'LoRa' }, { from: 'n2', to: 'g1', label: 'LoRa' },
+      { from: 'n2', to: 'g2', label: 'LoRa' }, { from: 'n3', to: 'g2', label: 'LoRa' },
+      { from: 'g1', to: 'ns', label: 'IP (backhaul)' }, { from: 'g2', to: 'ns', label: 'IP (backhaul)' },
+      { from: 'ns', to: 'as', label: 'datos de la app' },
+    ],
+  }],
+}} />
+
+- **Nodos finales** (end devices): sensan, procesan, envían y reciben (bidireccional), a batería
+  durante meses o años.
+- **Gateway: solo un relay.** Los paquetes del nodo **no llevan dirección destino** (ahorra
+  bytes) y **no hay asociación** nodo–gateway; varios gateways pueden recibir el mismo mensaje,
+  pero **solo uno debe responder**: lo decide el network server.
+- **Network server**: LoRaWAN no especifica su comportamiento; mantiene baja la carga de la red
+  enviando **comandos MAC** (p. ej. `LinkADRReq` pide al nodo adaptar su tasa: ADR). Cada nodo está
+  asociado a un servidor, que debe manejar **millones** de dispositivos.
+- **Application server**: recibe los datos de la aplicación.
+
+### Datos clave *(Sem10#37; Sem12_LoRa#21)*
+Tasas de 300 bps a 5.5 kbps (Sem10) / 0.3 a 50 kbps según SF (deck LoRa); comunicación
+bidireccional segura, movilidad y localización; cifrado **AES-128** extremo a extremo con
+**AppSKey** y **NwkSKey**; **ADR** (*Adaptive Data Rate*) optimiza energía y capacidad; miles de
+nodos por gateway.
+
+### Direccionamiento (no IP) *(Sem10#28, #44)*
+- **DevEUI / AppEUI**: identificadores únicos de **64 bits**.
+- **DevAddr**: dirección de **32 bits** del nodo dentro de la red actual, asignada por el network
+  server = **AddrPrefix** (tamaño variable $N \in [7, 25]$ bits, derivado del NetID del servidor)
+  + **NwkAddr** (dirección de red asignada por el network server).
+
+### Clases de dispositivos *(Sem10#40–43; Sem12_LoRa#26–29)*
+Las clases definen **cuándo puede recibir** el nodo.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Cuándo escucha cada clase',
+  steps: [
+    {
+      note: 'Clase A: tras cada uplink abre dos ventanas cortas de recepción (RX1, RX2) y responde en una de ellas. Un downlink en otro momento debe esperar al próximo uplink. Es tipo ALOHA y la de menor consumo.',
+      actors: [{ id: 'n', label: 'Nodo clase A' }, { id: 'g', label: 'Gateway / servidor' }],
+      msgs: [
+        { from: 'n', to: 'g', label: 'uplink' },
+        { divider: true, from: 'n', to: 'g', label: '— RX1 / RX2 abiertas —' },
+        { from: 'g', to: 'n', label: 'downlink', state: 'answer' },
+        { divider: true, from: 'n', to: 'g', label: '— duerme: no puede recibir —' },
+        { from: 'g', to: 'n', label: 'downlink tardío', lost: true, state: 'muted' },
+      ],
+    },
+    {
+      note: 'Clase B: como A, más ventanas extra a horas programadas (ping slots). Se sincroniza con un beacon del gateway, así el GW sabe cuándo el nodo escucha.',
+      actors: [{ id: 'n', label: 'Nodo clase B' }, { id: 'g', label: 'Gateway / servidor' }],
+      msgs: [
+        { from: 'g', to: 'n', label: 'beacon', flags: 'sincroniza' },
+        { divider: true, from: 'n', to: 'g', label: '— ping slot programado —' },
+        { from: 'g', to: 'n', label: 'downlink', state: 'answer' },
+        { from: 'n', to: 'g', label: 'uplink' },
+        { divider: true, from: 'n', to: 'g', label: '— RX1 / RX2 —' },
+      ],
+    },
+    {
+      note: 'Clase C: ventanas de recepción abiertas casi siempre (solo se cierran al transmitir): latencia mínima, consumo alto; típica de actuadores conectados a la red eléctrica.',
+      actors: [{ id: 'n', label: 'Nodo clase C' }, { id: 'g', label: 'Gateway / servidor' }],
+      msgs: [
+        { from: 'g', to: 'n', label: 'downlink', state: 'answer' },
+        { from: 'n', to: 'g', label: 'uplink' },
+        { from: 'g', to: 'n', label: 'downlink', state: 'answer' },
+        { divider: true, from: 'n', to: 'g', label: '— siempre escuchando —' },
+      ],
+    },
+  ],
+}} />
+
+| | Clase A | Clase B | Clase C |
+|---|---|---|---|
+| Ventanas RX | tras cada uplink | ping slots programados + tras uplinks | casi continuas |
+| Consumo | muy bajo | medio | alto |
+| Latencia de downlink | potencialmente alta | más predecible | generalmente baja |
+| Beacon | no | **sí** | no |
+| Batería | la más larga | intermedia | la más corta |
+| Aplicación típica | sensores a batería | sensores/actuadores con downlinks programados | actuadores enchufados que requieren downlink rápido |
+| Ventaja | máxima eficiencia | oportunidades de downlink predecibles | espera mínima |
+| Limitación | el downlink espera al próximo uplink | requiere sincronización | alto consumo |
+
+## Método paso a paso
+**Elegir clase** según el enunciado:
+1. ¿El servidor necesita mandar órdenes en cualquier momento y con poca latencia? → **C** (si hay
+   alimentación de red).
+2. ¿Necesita órdenes en horarios conocidos y el nodo es a batería? → **B**.
+3. ¿El nodo solo reporta y las respuestas pueden esperar al próximo uplink? → **A**.
+
+## Ejemplo resuelto
+*(derivado de la tabla)* Una válvula de riego enchufada que debe cerrarse en cuanto el operador
+lo pida → **clase C**. Un sensor de humedad a batería que reporta cada hora → **clase A**: el
+eventual cambio de configuración puede esperar a la ventana tras el próximo uplink.
+
+## Errores típicos
+- Decir que el gateway decide a quién responder: lo decide el **network server**.
+- Asignar direcciones IP a los nodos LoRaWAN: usan DevEUI/DevAddr.
+- Creer que clase B no tiene las ventanas de A: B y C son "A + algo".
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un mismo uplink de un nodo LoRaWAN llega a tres gateways. ¿Qué hace cada gateway, quién decide la respuesta y qué clase usaría si el nodo es una alarma a batería que solo reporta eventos?",
+  hints: [
+    "¿El paquete lleva dirección destino? ¿Hay asociación nodo-gateway?",
+    "Busca qué componente envía comandos MAC y elige gateway.",
+    "La clase de menor consumo abre ventanas solo tras su propio uplink.",
+  ],
+}}>
+
+1. **Gateways:** son solo relays; los tres reenvían el paquete al network server (el paquete
+   no tiene destino ni hay asociación nodo–gateway).
+2. **Network server:** descarta duplicados y **elige el mejor gateway** para responder (solo uno
+   debe hacerlo); también puede pedir adaptar la tasa con `LinkADRReq`.
+3. **Clase A:** el nodo solo reporta; cualquier respuesta llega en RX1/RX2 tras su uplink, con el
+   menor consumo y la batería más larga.
+
+</ExerciseBlock>

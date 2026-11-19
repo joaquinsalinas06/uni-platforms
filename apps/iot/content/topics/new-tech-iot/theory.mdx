@@ -1,0 +1,132 @@
+---
+kind: theory
+title: "Nuevas tecnologías para IoT: semiconductores, fotónica y cuántica"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+¿Qué tecnologías emergentes van a definir la próxima generación de IoT? La clase recorre tres
+frentes que mejoran **cómputo, comunicación y sensado**: los límites físicos de los
+**semiconductores** (efecto túnel), la **óptica y fotónica** (fibra, Li-Fi, chips fotónicos) y
+las **tecnologías cuánticas** (seguridad con PQC y QKD, sensores cuánticos). La pregunta de examen
+típica es comparar **PQC y QKD** y opinar sobre su relevancia en IoT.
+
+## Conceptos
+
+### Semiconductores y efecto túnel *(Sem14#4–12)*
+- El **transistor** (1947; Shockley, Brattain y Bardeen, AT&T Bell Labs; Nobel 1956) inició la
+  miniaturización.
+- Un átomo de silicio mide ≈ **0.24 nm**: un canal de 1–2 nm admite solo **4 o 5 átomos** en fila.
+  A esa escala los electrones atraviesan barreras por **efecto túnel**, con una corriente que cae
+  exponencialmente con el ancho $z$ de la barrera: $I \propto e^{-2\kappa z}$.
+- El túnel se aprovecha en memorias (SSD de *charge trap*), en el microscopio de efecto túnel (STM)
+  y en la **unión Josephson** ("túnel cuántico macroscópico y cuantización de energía en un
+  circuito eléctrico", según la cita de la slide).
+
+### Óptica y fotónica *(Sem14#14–21)*
+- **Fibra óptica**: núcleo 8–10 µm, recubrimiento 250 µm, $\Delta n = 0.007$, atenuación
+  **0.25 dB/km**. Funciona por **reflexión interna total** (sobre el ángulo crítico la onda se refleja
+  casi como en un espejo, con una **onda evanescente** que decae exponencialmente). Repetidores cada
+  **~100 km**, frente a **~1.5 km** en cable eléctrico.
+- **Li-Fi**: quirófanos y UCI donde no se permite Wi-Fi por interferencia electromagnética, cabinas
+  de avión sin afectar la navegación, y espacios que requieren comunicación segura, local y sin
+  emisión externa (ver también [capa física](/topics/physical-layer)).
+- **Photonic Lab-on-a-Chip**: integra elementos fotónicos (guías de onda, resonadores, fuentes y
+  detectores) con microcanales fluídicos: sensado miniaturizado.
+- **Óptica co-paquetada (CPO)**: electrónica y fotónica en un solo chip (p. ej. switches NVIDIA
+  Spectrum-X/Quantum-X, 2025): más de 800 Gb/s por puerto, menor latencia y consumo, para IA y HPC.
+
+### Tecnologías cuánticas *(Sem14#23–31)*
+- Un estado lógico clásico es 0 **o** 1; un **qubit** puede estar en superposición. **Medir**
+  colapsa la función de onda a un resultado.
+- **Post-Quantum Cryptography (PQC)**: conjunto de algoritmos criptográficos **clásicos** (corren en
+  computadoras normales) diseñados para ser seguros **incluso frente a computadoras cuánticas**. La
+  amenaza es el **algoritmo de Shor**, que rompería la criptografía de clave pública actual.
+  Ejemplos: **Kyber**, **Dilithium**.
+- **Quantum Key Distribution (QKD)**: técnica basada en **principios físicos cuánticos (no
+  matemáticos)** para **distribuir claves secretas** entre dos partes, con seguridad garantizada por
+  la física.
+- **Sensores cuánticos**: los centros de nitrógeno-vacancia (NV) en diamante miden campos magnéticos.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'PQC vs QKD frente a la amenaza cuántica',
+  steps: [{
+    note: 'Ambos buscan seguridad ante computadoras cuánticas, por caminos distintos: PQC cambia la matemática (software); QKD cambia el medio físico (hardware), y solo para la clave.',
+    shapes: [
+      { id: 'q', kind: 'start', label: 'Computadora cuántica (algoritmo de Shor)' },
+      { id: 'pqc', kind: 'process', label: 'PQC: algoritmos clásicos resistentes (Kyber, Dilithium)' },
+      { id: 'qkd', kind: 'process', label: 'QKD: clave distribuida con física cuántica' },
+      { id: 'sw', kind: 'end', label: 'Solo software: escala a millones de nodos IoT', state: 'answer' },
+      { id: 'hw', kind: 'end', label: 'Hardware caro, enlaces punto a punto' },
+    ],
+    arrows: [
+      { from: 'q', to: 'pqc', label: 'nueva matemática' },
+      { from: 'q', to: 'qkd', label: 'nueva física' },
+      { from: 'pqc', to: 'sw' },
+      { from: 'qkd', to: 'hw' },
+    ],
+  }],
+}} />
+
+**QKD vs PQC** (posición de la NSA citada en la slide):
+
+| | QKD | PQC |
+|---|---|---|
+| Base de la seguridad | física cuántica | problemas matemáticos difíciles incluso para una computadora cuántica |
+| Qué protege | **solo la distribución de claves**, no toda la información | cifrado y firmas completos |
+| Implementación | hardware cuántico **caro y frágil** (láseres, detectores, fibras especiales) | **solo software** |
+| Escala | **no escala**: enlaces punto a punto | se despliega como cualquier actualización |
+| Integración | difícil con redes e Internet existentes | compatible con la infraestructura actual |
+
+## Método paso a paso
+**Responder "relevancia en IoT"** de una tecnología:
+1. Definirla con las palabras del curso.
+2. Contrastar con las restricciones de IoT: nodos baratos, con poca energía y memoria, muchísimos,
+   conectados por radio.
+3. Concluir si encaja directamente en el nodo, solo en el backbone/gateway, o en nichos.
+
+## Ejemplo resuelto
+EF 2025, P6 (respuesta modelo): **PQC** son algoritmos clásicos resistentes a ataques cuánticos;
+**QKD** distribuye claves con seguridad física cuántica. Diferencia: PQC es software y protege todo;
+QKD es hardware, solo protege la clave y es punto a punto. **Opinión para IoT:** PQC es la vía
+realista, porque se instala por firmware en millones de dispositivos (aunque sus claves y firmas más
+grandes son un reto para nodos con poca memoria y radios de bajo ancho de banda como LoRa o BLE);
+QKD tiene sentido en enlaces troncales de alto valor (entre data centers o gateways críticos), no en
+un sensor a batería. Ver el [Examen Final 2025-I](/evaluaciones/finales/2025-i).
+
+> **Nota de apoyo** (no está en el material): que las claves y firmas PQC sean más grandes que las
+> de RSA/ECC es un dato general de esos algoritmos, útil para argumentar su costo en IoT.
+
+## Errores típicos
+- Decir que PQC necesita una computadora cuántica: corre en hardware **clásico**.
+- Decir que QKD cifra los datos: solo **distribuye la clave**.
+- Confundir el efecto túnel (límite de miniaturización) con la reflexión interna total (fibra).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique PQC y QKD, sus diferencias y su relevancia en tecnologías IoT. (EF 2025, P6)",
+  hints: [
+    "Uno es matemática nueva en hardware clásico; el otro es física cuántica para repartir claves.",
+    "Compara qué protege cada uno, qué hardware necesita y si escala.",
+    "Piensa en un sensor a batería con 32 KB de RAM: ¿cuál podría adoptar?",
+  ],
+}}>
+
+| | PQC | QKD |
+|---|---|---|
+| Qué es | algoritmos clásicos seguros ante computadoras cuánticas (Kyber, Dilithium) | distribución de claves con principios cuánticos |
+| Seguridad | matemática | física |
+| Alcance | todo el cifrado y firmas | solo la clave |
+| Requisitos | software | láseres, detectores, fibras especiales; punto a punto |
+
+**Relevancia en IoT:** la amenaza (Shor) afecta a todo dispositivo que use criptografía de clave
+pública. **PQC** es aplicable a IoT porque se despliega por software/firmware y escala; su costo
+está en el cómputo y el tamaño de los mensajes en nodos restringidos. **QKD** no es práctica en el
+nodo (hardware caro, frágil, sin escalar), pero puede proteger enlaces troncales.
+
+</ExerciseBlock>

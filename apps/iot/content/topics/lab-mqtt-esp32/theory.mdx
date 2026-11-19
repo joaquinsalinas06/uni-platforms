@@ -1,0 +1,175 @@
+---
+kind: theory
+title: "Laboratorio MQTT con ESP32: sistema completo y sus diagramas"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+El LAB3 (semanas 9 y 10) lleva [MQTT](/topics/mqtt) al hardware: un **ESP32** se conecta por Wi-Fi a
+un broker **Mosquitto** local, publica telemetría y recibe comandos, y un **Arduino MEGA** (sin Wi-Fi)
+le pasa datos por **UART**. Lo que más pesa en los exámenes finales no es la instalación sino el
+**diseño del sistema**: el **diagrama de bloques** (hardware e interfaces) y el **diagrama de flujo**
+(firmware con umbrales y MQTT), que valen entre 4 y 5 puntos en cada final.
+
+## Conceptos
+
+### Arquitectura del laboratorio *(Sem10_LAB3#5, #12)*
+- **Mosquitto** es el broker (en una PC, Raspberry Pi o servidor local); `listener 1883` y
+  `allow_anonymous true` en `mosquitto.conf`.
+- **ESP32/ESP8266**: clientes MQTT por Wi-Fi que publican o se suscriben a *topics*.
+- **Arduino MEGA**: sin Wi-Fi; habla con el ESP32 por UART y este hace de **puente**.
+
+Flujo: (1) el ESP32 se conecta al Wi-Fi y al broker; (2) el MEGA envía datos/comandos por UART;
+(3) el ESP32 los publica en un topic, o recibe de un topic y los reenvía al MEGA; (4) cualquier otro
+cliente (laptop u otro ESP32) se suscribe o publica en esos topics.
+
+<Visualization viz={{
+  type: 'network-topology',
+  static: true,
+  title: 'MEGA → UART → ESP32 → Wi-Fi → broker → clientes',
+  steps: [{
+    note: 'El MEGA nunca habla MQTT: el ESP32 traduce UART ↔ MQTT. Entre ambos hay un divisor de voltaje (5 V → 3.3 V) y GND común.',
+    processes: [
+      { id: 'mega', label: 'Arduino MEGA (sensores)' },
+      { id: 'esp', label: 'ESP32 (cliente MQTT)', state: 'active' },
+      { id: 'broker', label: 'Mosquitto :1883' },
+      { id: 'lap', label: 'Laptop (mosquitto_sub)' },
+    ],
+    dataFlow: [
+      { from: 'mega', to: 'esp', label: 'UART + divisor' },
+      { from: 'esp', to: 'broker', label: 'PUBLISH lab/esp32/data' },
+      { from: 'broker', to: 'lap', label: 'mensaje' },
+    ],
+  }],
+}} />
+
+### Reglas eléctricas del ESP32 *(Sem10_LAB3, anexos B–D)*
+E/S a **3.3 V** (más de 3.6 V lo daña), máximo **12 mA por GPIO**; UART con TX/RX **cruzados**, mismo
+baudrate (9600, 115200) y **divisor** 1.8 kΩ / 3.3 kΩ en la línea TX (MEGA, 5 V) → RX (ESP32). Detalle
+y circuito en [ESP32 y UART](/topics/mqtt/subtopics/esp32-y-uart). Servo en ESP32: librería
+`ESP32Servo`, 50 Hz, alimentación externa de 5 V con GND común.
+
+### Checkpoints
+- **CP2**: un sensor analógico medido periódicamente y publicado en un topic; otro cliente, en **otra
+  computadora**, lo lee. Entregables: capturas, **diagrama de bloques** y **diagrama de flujo**.
+- **CP3 — persiana inteligente**: LDR (luz) vs potenciómetro (umbral); si la luz supera el umbral,
+  servo SG90 cierra la persiana, buzzer suena, LED rojo; si no, servo a 0°, buzzer apagado, LED verde;
+  LED azul fijo mientras haya conexión al broker. Cada 5 s publica en `iluminacion/datos` un JSON con
+  `luz_actual`, `umbral` y `estado_persiana`; escucha `iluminacion/control`, donde `"cerrar"` / `"abrir"`
+  fuerzan la persiana sin importar el LDR.
+- **CP4**: MEGA → UART (con divisor) → ESP32 → topic `lab/esp32/data` (p. ej.
+  `"Temperatura:25.3,Hum:40"` cada 2 s). Se carga primero el ESP32 y luego el MEGA; solo el MEGA queda
+  por USB.
+
+## Método paso a paso
+**Diagrama de bloques** (hardware), como lo piden los finales:
+1. Un bloque central: la **unidad de procesamiento** (ESP32 o MEGA).
+2. A la izquierda los **sensores**, cada flecha rotulada con su interfaz (ADC, digital, I2C).
+3. A la derecha los **actuadores**, con su interfaz (GPIO, PWM) y su **etapa de potencia** (relé,
+   driver) y fuente externa (flecha de potencia).
+4. Arriba/abajo la **comunicación**: Wi-Fi → broker MQTT (con topics), UART a otro MCU, I2C al LCD.
+5. La **alimentación** con flechas de potencia, separando lógica (3.3/5 V) de potencia (9/12 V).
+
+**Diagrama de flujo** (firmware):
+1. **Inicio** → **inicialización** (pines, I2C/LCD, Wi-Fi, conexión al broker, suscripción).
+2. **Lazo principal**: leer sensores → mostrar/actualizar.
+3. Un **rombo por condición** con sus dos salidas rotuladas (sí/no), en el orden del enunciado.
+4. Bloque de **comunicación**: ¿pasó el período? → publicar; ¿llegó comando? → actuar.
+5. Volver al inicio del lazo (sin bloque "fin" si el sistema corre siempre).
+
+## Ejemplo resuelto
+**CP3, persiana inteligente con MQTT.**
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'CP3: diagrama de bloques del hardware',
+  steps: [{
+    note: 'ESP32 al centro; entradas analógicas a la izquierda, salidas a la derecha, el broker por Wi-Fi. El servo usa fuente externa de 5 V con GND común (flecha de potencia).',
+    shapes: [
+      { id: 'ldr', kind: 'block', label: 'LDR + divisor 10 kΩ' },
+      { id: 'pot', kind: 'block', label: 'Potenciómetro 10 kΩ (umbral)' },
+      { id: 'esp', kind: 'block', label: 'ESP32', state: 'active' },
+      { id: 'servo', kind: 'block', label: 'Servo SG90 (persiana)' },
+      { id: 'buz', kind: 'block', label: 'Buzzer' },
+      { id: 'leds', kind: 'block', label: 'LEDs rojo / verde / azul (220 Ω)' },
+      { id: 'mq', kind: 'block', label: 'Broker Mosquitto' },
+      { id: 'src', kind: 'block', label: 'Fuente externa 5 V' },
+    ],
+    arrows: [
+      { from: 'ldr', to: 'esp', label: 'ADC', kind: 'data' },
+      { from: 'pot', to: 'esp', label: 'ADC', kind: 'data' },
+      { from: 'esp', to: 'servo', label: 'PWM', kind: 'data' },
+      { from: 'esp', to: 'buz', label: 'GPIO', kind: 'data' },
+      { from: 'esp', to: 'leds', label: 'GPIO', kind: 'data' },
+      { from: 'esp', to: 'mq', label: 'Wi-Fi: pub iluminacion/datos · sub iluminacion/control', kind: 'data' },
+      { from: 'src', to: 'servo', label: '5 V + GND común', kind: 'power' },
+    ],
+  }],
+}} />
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'CP3: diagrama de flujo del firmware',
+  steps: [{
+    note: 'La anulación manual por MQTT se evalúa antes que la lógica local; la publicación ocurre cada 5 s, sin detener el lazo.',
+    shapes: [
+      { id: 'st', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'ini', kind: 'process', label: 'Config. pines, Wi-Fi, conectar broker, suscribir iluminacion/control, LED azul ON' },
+      { id: 'rd', kind: 'io', label: 'Leer luz (LDR) y umbral (pot)' },
+      { id: 'cmd', kind: 'decision', label: '¿Comando en iluminacion/control?' },
+      { id: 'force', kind: 'process', label: '"cerrar" → servo cierra / "abrir" → servo 0°' },
+      { id: 'cmp', kind: 'decision', label: '¿Luz > umbral?' },
+      { id: 'close', kind: 'process', label: 'Servo cierra, buzzer ON, LED rojo ON, verde OFF' },
+      { id: 'open', kind: 'process', label: 'Servo 0°, buzzer OFF, LED verde ON, rojo OFF' },
+      { id: 't5', kind: 'decision', label: '¿Pasaron 5 s?' },
+      { id: 'pub', kind: 'io', label: 'Publicar JSON en iluminacion/datos' },
+    ],
+    arrows: [
+      { from: 'st', to: 'ini' }, { from: 'ini', to: 'rd' }, { from: 'rd', to: 'cmd' },
+      { from: 'cmd', to: 'force', label: 'sí' }, { from: 'cmd', to: 'cmp', label: 'no' },
+      { from: 'cmp', to: 'close', label: 'sí' }, { from: 'cmp', to: 'open', label: 'no' },
+      { from: 'force', to: 't5' }, { from: 'close', to: 't5' }, { from: 'open', to: 't5' },
+      { from: 't5', to: 'pub', label: 'sí' }, { from: 't5', to: 'rd', label: 'no' },
+      { from: 'pub', to: 'rd' },
+    ],
+  }],
+}} />
+
+Payload publicado (formato del lab):
+
+```json
+{ "luz_actual": 512.0, "umbral": 400.0, "estado_persiana": "CERRADA" }
+```
+
+## Errores típicos
+- Dibujar los sensores sin decir **por qué interfaz** entran (ADC, digital, I2C): es lo que se califica.
+- Conectar la bomba o el motor directo a un GPIO: siempre relé/driver y fuente externa.
+- Diagrama de flujo sin rombos rotulados (sí/no) o con un "fin" en un sistema que corre en lazo.
+- Publicar en cada vuelta del lazo en vez de cada período pedido.
+- Conectar el TX de 5 V del MEGA al RX del ESP32 sin divisor.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Invernadero: un Arduino MEGA lee humedad de suelo, temperatura y luz; si humedad < 30 % activa una bomba por relé, si T > 35 °C abre una compuerta con un servo (0–180°), si luz < 40 % enciende un LED blanco; LED verde si no hay alertas y rojo si hay al menos una. Un ESP32 recibe los datos por UART y publica en invernadero/temperatura, invernadero/humedadSuelo, invernadero/luz e invernadero/estado. Dibuje (a) el diagrama de bloques y (b) el diagrama de flujo. (EF 2025, P9)",
+  hints: [
+    "Dos procesadores: el MEGA hace sensado y control; el ESP32 solo comunicación.",
+    "Rotula cada flecha con su interfaz; la bomba necesita relé y fuente propia; la línea UART MEGA→ESP32 necesita divisor.",
+    "En el flujo: tres rombos independientes (uno por condición) y uno final para el LED verde/rojo.",
+  ],
+}}>
+
+Resuelto completo (con ambos diagramas) en el [Examen Final 2025-I, P9](/evaluaciones/finales/2025-i).
+
+**Bloques:** sensores (humedad ADC, temperatura ADC/digital, luz ADC) → **MEGA** → relé → bomba
+(fuente externa), PWM → servo, GPIO → LED blanco/verde/rojo; MEGA TX1 → **divisor** → RX del **ESP32**
+→ Wi-Fi → broker MQTT con los cuatro topics.
+
+**Flujo:** inicio → configurar → lazo: leer → ¿$H < 30\,\%$? → ¿$T > 35$ °C? → ¿$L < 40\,\%$? → ¿alguna
+alerta? (rojo / verde) → enviar por UART → (ESP32) publicar en los topics → repetir.
+
+</ExerciseBlock>

@@ -1,0 +1,238 @@
+---
+kind: theory
+title: "Bluetooth Low Energy (BLE)"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+Bluetooth nació (Ericsson, 1994; SIG en 1998; IEEE 802.15.1 en 2002) para enlaces cortos entre
+teléfonos. Desde la versión 4.0 (2010) existe **Bluetooth Low Energy**: un PHY nuevo,
+incompatible con el clásico, pensado para **ráfagas cortas** y **años de batería**. La clave de
+BLE es que la radio pasa casi todo el tiempo **apagada** y solo despierta en instantes
+acordados (*connection events*), y que toda la información se organiza como atributos (GATT).
+
+## Conceptos
+
+### Los dos sabores *(Sem11#7)*
+- **BR/EDR**: conexión continua de corto alcance; ideal para audio en streaming.
+- **LE**: ráfagas cortas; ideal para IoT que no necesita conexión continua y depende de la batería.
+- **Dual-mode**: chips (celulares, tablets) que hablan con ambos.
+
+Hitos *(Sem11#6)*: v4.0 (2010) BLE/"Bluetooth Smart"; v4.2 (2014) privacidad, *data length
+extension*, conectividad IP; **Bluetooth 5 (2016)**: 4× alcance, 2× velocidad (2 Mbps),
+8× capacidad de broadcast.
+
+### Arquitectura: controller, host y apps *(Sem11#9–10, 28)*
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Pila BLE',
+  steps: [{
+    note: 'El controller maneja la radio de 2.4 GHz (PHY + Link Layer); el host organiza los datos (L2CAP, ATT, GATT, GAP, Security Manager). La HCI es la interfaz entre ambos; el Direct Test Mode permite a un tester ordenar al PHY transmitir/recibir secuencias por HCI o por UART de 2 hilos.',
+    shapes: [
+      { id: 'app', kind: 'block', label: 'Aplicaciones' },
+      { id: 'gap', kind: 'block', label: 'GAP: roles y descubrimiento' },
+      { id: 'gatt', kind: 'block', label: 'GATT: servicios y características' },
+      { id: 'att', kind: 'block', label: 'ATT + Security Manager' },
+      { id: 'l2', kind: 'block', label: 'L2CAP: segmenta y reensambla' },
+      { id: 'hci', kind: 'block', label: 'HCI (interfaz host ↔ controller)', state: 'marked' },
+      { id: 'll', kind: 'block', label: 'Link Layer (+ Direct Test Mode)' },
+      { id: 'phy', kind: 'block', label: 'PHY 2.4 GHz' },
+    ],
+    arrows: [
+      { from: 'app', to: 'gap', kind: 'data' }, { from: 'gap', to: 'gatt', kind: 'data' },
+      { from: 'gatt', to: 'att', kind: 'data' }, { from: 'att', to: 'l2', kind: 'data' },
+      { from: 'l2', to: 'hci', kind: 'data' }, { from: 'hci', to: 'll', kind: 'data' },
+      { from: 'll', to: 'phy', kind: 'data' },
+    ],
+  }],
+}} />
+
+### Capa física *(Sem11#10–12)*
+- Banda **ISM de 2.4 GHz**; **40 canales** separados 2 MHz (BR/EDR usa 79 más angostos):
+  **3 de advertising** (37, 38, 39) y **37 de datos** (0–36). Usa salto de frecuencia.
+- 1 Mbps teórico (5–10 KB/s reales); alcance de 30 m o más con línea de vista, típicamente 2–5 m.
+
+| PHY | Versión | Tasa | Característica |
+|---|---|---|---|
+| LE 1M | 4.0 | 1 Mbps | GFSK, modo estándar |
+| LE 2M | 5.0 | 2 Mbps | menos tiempo de TX, menor sensibilidad |
+| LE Coded S=2 | 5.0 | 500 kbps | FEC, más alcance |
+| LE Coded S=8 | 5.0 | 125 kbps | FEC, máximo alcance |
+
+### Paquetes *(Sem11#13–14)*
+Preámbulo (1–2 B, sincroniza) · Access Address (4 B; fija en advertising primario) · PDU ·
+CRC (3 B). **Advertising**: canales 37–39, PDU legacy con 2 B de header y hasta 37 B de payload,
+sirve para descubrir, difundir y conectar sin conexión. **Datos**: canales 0–36, 2 B de header,
+hasta 251 B con *Data Length Extension*.
+
+### Topologías *(Sem11#16)*
+**Piconet**: 1 master y varios slaves. **Scatternet**: un dispositivo participa en varias
+piconets (los protocolos de ruteo no están definidos).
+
+### Advertising *(Sem11#17–21)*
+Los paquetes de advertising se envían a intervalo fijo (**20 ms a 10.24 s**) para difundir datos
+sin conexión o para que un central descubra y conecte. Se clasifican por *conectable /
+no conectable*, *escaneable / no escaneable* y *dirigido / no dirigido* (el dirigido lleva solo
+las direcciones del anunciante y del escáner destino).
+
+| Ejemplo del curso | Tipo de paquete | Anotación de la slide | Según la definición del tipo |
+|---|---|---|---|
+| Pulsera que solo difunde ID y batería | `ADV_NONCONN_IND` | "escaneable, no conectable" | no conectable, **no escaneable** |
+| Termómetro: la app pide marca y última T sin conectarse | `ADV_SCAN_IND` | "no conectable, no escaneable" | no conectable, **escaneable** |
+| Smartwatch esperando que el teléfono se conecte | `ADV_IND` | "conectable, dirigido" | conectable, escaneable, **no dirigido** |
+| Audífonos ya emparejados, reconexión rápida a ese celular | `ADV_DIRECT_IND` | "conectable, escaneable" | conectable, **dirigido** |
+
+> **Inconsistencia del material** *(Sem11#21)*: las anotaciones en rojo de la slide no coinciden con
+> los tipos de paquete que la misma slide nombra (parecen desplazadas una fila). La última columna
+> sale de las definiciones de la slide anterior (Sem11#20) y del propio enunciado de cada ejemplo:
+> el termómetro "pide más información" (= scan request → escaneable), el smartwatch "acepta
+> conexiones" de cualquier teléfono (no dirigido) y los audífonos anuncian "solo hacia ese celular"
+> (dirigido). En un examen, justificar con la definición.
+
+### Conexión y sus parámetros *(Sem11#22–25)*
+1. El **initiator** escanea buscando anunciantes que acepten conexión.
+2. Al encontrar uno adecuado, envía un **connection request**.
+3. Si responde, se establece la conexión: el initiator pasa a **master** (central) y el
+   anunciante a **slave** (periférico).
+
+El master comunica tres parámetros que gobiernan cada **connection event**:
+
+| Parámetro | Significado | Efecto |
+|---|---|---|
+| **Connection interval** | tiempo entre el inicio de dos connection events consecutivos (**7.5 ms a 4 s**) | más largo = la radio despierta menos (menos consumo) pero sube la latencia |
+| **Slave (peripheral) latency** | número de connection events que el slave puede **saltarse** sin que se corte la conexión | si no tiene nada que enviar, duerme más eventos seguidos |
+| **Connection supervision timeout** | tiempo máximo entre dos paquetes válidos recibidos antes de dar la conexión por **perdida** | detecta que el otro extremo desapareció |
+
+En cada evento, el **central inicia** transmitiendo; el **periférico despierta** a la hora
+acordada, responde y pueden intercambiarse varios paquetes; entre eventos ambos duermen.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Connection events, slave latency y supervision timeout',
+  steps: [
+    {
+      note: 'Cada connection interval el central abre un evento y el periférico responde; entre eventos la radio duerme.',
+      actors: [{ id: 'c', label: 'Central (master)' }, { id: 'p', label: 'Periférico (slave)' }],
+      msgs: [
+        { from: 'c', to: 'p', label: 'evento 1', flags: 't = 0' },
+        { from: 'p', to: 'c', label: 'datos' },
+        { divider: true, from: 'c', to: 'p', label: '— duerme 1 connection interval —' },
+        { from: 'c', to: 'p', label: 'evento 2', flags: 't = T' },
+        { from: 'p', to: 'c', label: 'datos' },
+      ],
+    },
+    {
+      note: 'Con slave latency = 2, el periférico sin datos puede ignorar 2 eventos seguidos sin que se corte la conexión; vuelve en el tercero.',
+      actors: [{ id: 'c', label: 'Central (master)' }, { id: 'p', label: 'Periférico (slave)' }],
+      msgs: [
+        { from: 'c', to: 'p', label: 'evento 3', state: 'muted', lost: true },
+        { from: 'c', to: 'p', label: 'evento 4', state: 'muted', lost: true },
+        { from: 'c', to: 'p', label: 'evento 5', state: 'active' },
+        { from: 'p', to: 'c', label: 'datos' },
+      ],
+    },
+    {
+      note: 'Si pasa el supervision timeout sin ningún paquete válido (p. ej. el periférico se alejó), la conexión se considera perdida.',
+      actors: [{ id: 'c', label: 'Central (master)' }, { id: 'p', label: 'Periférico (slave)' }],
+      msgs: [
+        { from: 'c', to: 'p', label: 'evento 6', lost: true },
+        { from: 'c', to: 'p', label: 'evento 7', lost: true },
+        { divider: true, from: 'c', to: 'p', label: '— supervision timeout vencido —' },
+        { divider: true, from: 'c', to: 'p', label: '— conexión perdida —' },
+      ],
+    },
+  ],
+}} />
+
+### Consumo *(Sem11#25–27)*
+Modo activo (transmite/recibe, consumo alto) vs modo sleep (radio apagada). Intervalos largos
+y peripheral latency bajan el consumo a costa de latencia: **menos consumo ⇔ más latencia**.
+
+$$I_{avg} = \frac{I_{active}\,t_{active} + I_{sleep}\,t_{sleep}}{T},\qquad t_{sleep} = T - t_{active},\qquad T_{battery} = \frac{C}{I_{avg}}$$
+
+### Seguridad *(Sem11#35–37)*
+**Pairing** genera y distribuye claves; **bonding** (opcional) las guarda para reconectar;
+cifrado AES-CCM de 128 bits en el Link Layer. Métodos de pairing: **Just Works** (sin
+protección MITM), **Passkey Entry** (6 dígitos, protege MITM), **Numeric Comparison** (ambos
+muestran 6 dígitos, LE Secure Connections, protege MITM), **Out-of-Band** (p. ej. NFC).
+
+### GATT y GAP *(Sem11#38–45)*
+- **GATT**: los atributos de un servidor se agrupan en **servicios**; cada servicio tiene 0+
+  **características**, y cada una 0+ **descriptores**. Ej.: servicio de ritmo cardíaco con una
+  característica de ubicación del sensor y otra con la medición. Solo existe en LE.
+- **Operaciones**: **Read** (el cliente pide un valor), **Write** (el cliente modifica, con o
+  sin respuesta), **Notify** (el servidor envía actualizaciones sin ACK de ATT), **Indicate**
+  (como notify pero con confirmación del cliente). Read/Write los inicia el cliente;
+  Notify/Indicate el servidor, después de que el cliente los habilita.
+- **GAP** define cuatro roles: **Broadcaster** (envía advertising con datos), **Observer**
+  (escucha advertising), **Central** (= master del Link Layer, múltiples conexiones),
+  **Peripheral** (= slave; se anuncia para que un central lo encuentre y conecte).
+
+## Método paso a paso
+**Estimar la batería de un nodo BLE** (ejemplo de las slides):
+1. Separar el connection interval $T$ en tiempo activo $t_{active}$ y dormido $t_{sleep}=T-t_{active}$.
+2. Promediar corrientes ponderando por tiempo → $I_{avg}$.
+3. Dividir la capacidad entre $I_{avg}$ → horas; pasar a días.
+4. Para alargar la batería: subir $T$ o la slave latency (a costa de latencia).
+
+## Ejemplo resuelto
+Datos *(Sem11#26)*: $I_{active}=10$ mA, $I_{sleep}=5\,\mu$A $=0.005$ mA, $t_{active}=3$ ms,
+$T=100$ ms, $C=220$ mAh.
+
+$$I_{avg} = \frac{10\cdot 3 + 0.005\cdot(100-3)}{100} = \frac{30 + 0.485}{100} = \boxed{0.305\ \text{mA}}$$
+
+$$T_{battery} = \frac{220\ \text{mAh}}{0.305\ \text{mA}} \approx 721\ \text{h} \approx \boxed{30\ \text{días}}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Corriente del nodo en dos connection intervals',
+  steps: [{
+    note: 'Pico de 10 mA durante 3 ms y 5 µA el resto de los 100 ms: el promedio (0.305 mA) queda dominado por el pico aunque dure solo el 3 % del tiempo.',
+    series: [
+      { id: 'i', label: 'I(t) [mA]', kind: 'step', points: [[0, 10], [3, 0.005], [100, 10], [103, 0.005], [200, 0.005]] },
+      { id: 'avg', label: 'I_avg = 0.305 mA', points: [[0, 0.305], [200, 0.305]], state: 'answer' },
+    ],
+    x: { label: 't (ms)', min: 0, max: 200 },
+    y: { label: 'I (mA)', min: 0, max: 11 },
+  }],
+}} />
+
+*(derivado)* Con $T = 200$ ms: $I_{avg} = (30 + 0.005\cdot197)/200 \approx 0.155$ mA → ≈ 1420 h:
+duplicar el intervalo casi duplica la batería, a cambio de el doble de latencia.
+
+## Errores típicos
+- Confundir slave latency (eventos que se pueden **saltar**) con supervision timeout (tiempo
+  para declarar la conexión **perdida**).
+- Decir que BLE es compatible con Bluetooth clásico: el PHY de 4.0 es nuevo e incompatible.
+- Olvidar que el central es quien inicia cada connection event.
+- Confundir Notify (sin confirmación) con Indicate (con confirmación).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "En BLE, explique el significado y la función de Connection Interval, Slave Latency y Connection Supervision Timeout, con valores de ejemplo. (EF 2026, P3)",
+  hints: [
+    "Los tres los fija el master al establecer la conexión y gobiernan los connection events.",
+    "Uno es un período, otro es un número de eventos y otro es un tiempo límite.",
+    "Piensa qué pasa con el consumo y la latencia al cambiar cada uno.",
+  ],
+}}>
+
+Resuelto completo en el [Examen Final 2026-I, P3](/evaluaciones/finales/2026-i).
+
+| Parámetro | Qué es | Para qué sirve | Ejemplo |
+|---|---|---|---|
+| Connection interval | tiempo entre el inicio de dos connection events (7.5 ms – 4 s) | fija cada cuánto despierta la radio: más largo = menos consumo, más latencia | 100 ms (ejemplo de consumo de las slides) |
+| Slave latency | eventos que el slave puede saltarse sin perder la conexión | el periférico sin datos duerme varios intervalos | 4 → puede responder cada 500 ms |
+| Supervision timeout | tiempo máximo sin paquetes válidos antes de declarar la conexión perdida | detecta desconexión (batería agotada, fuera de alcance) | 2 s |
+
+> **Nota de apoyo** (no está en el material): el timeout debe ser mayor que el tiempo que el
+> slave puede quedar callado legítimamente, $(1+\text{latency})\cdot T$, con margen (la norma
+> pide el doble): $2\cdot(1+4)\cdot 100\ \text{ms} = 1\ \text{s} < 2\ \text{s}$ ✓.
+
+</ExerciseBlock>

@@ -1,0 +1,168 @@
+---
+kind: theory
+title: "Modulación digital y codificación de canal"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+La capa física responde **cómo** se transmiten los bits; la MAC, **quién** transmite y
+**cuándo**. Esta parte trata el cómo: los bits se representan como cambios medibles de una
+portadora (amplitud, frecuencia o fase), un **símbolo** puede llevar varios bits, y cuantos más
+bits por símbolo, más velocidad pero más sensibilidad al ruido. Cada tecnología IoT elige su
+modulación según alcance, tasa y energía.
+
+## Conceptos
+
+### De bits a formas de onda *(Sem13#5–6)*
+Cadena: **bits → codificación de canal → modulador → canal inalámbrico → receptor**. La
+codificación agrega redundancia; la modulación define cómo viajan los bits en la señal: un
+**modulador** asigna uno o más bits a un **símbolo** sobre una portadora.
+
+Con la misma secuencia `1 0 1 1 0 0`:
+- **ASK** (*Amplitude Shift Keying*): cambia la **amplitud**.
+- **FSK** (*Frequency Shift Keying*): cambia la **frecuencia**.
+- **BPSK** (*Phase Shift Keying* binaria): cambia la **fase en 180°**.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  title: 'La secuencia 1 0 1 1 0 0 con ASK, FSK y BPSK',
+  steps: [
+    {
+      note: 'ASK: el bit 1 es portadora con amplitud alta y el 0 amplitud baja (aquí 0.2). Un bit por intervalo de 1 unidad de tiempo.',
+      series: [
+        { id: 'b', label: 'bits', kind: 'step', points: [[0, 1.5], [1, 0], [2, 1.5], [4, 0], [6, 0]], state: 'muted' },
+        { id: 'ask', label: 'ASK', fn: '(step(x)-step(x-1)+step(x-2)-step(x-4)+0.2*(step(x-1)-step(x-2)+step(x-4)-step(x-6)))*sin(2*PI*4*x)', domain: [0, 6], samples: 600 },
+      ],
+      x: { label: 't (bits)', min: 0, max: 6, ticks: [0, 1, 2, 3, 4, 5, 6] },
+      y: { min: -1.3, max: 1.7 },
+    },
+    {
+      note: 'FSK: el bit 1 usa una frecuencia f2 (más rápida) y el 0 una f1 (más lenta); la amplitud no cambia.',
+      series: [
+        { id: 'b', label: 'bits', kind: 'step', points: [[0, 1.5], [1, 0], [2, 1.5], [4, 0], [6, 0]], state: 'muted' },
+        { id: 'fsk', label: 'FSK', fn: 'sin(2*PI*((step(x)-step(x-1)+step(x-2)-step(x-4))*6 + (step(x-1)-step(x-2)+step(x-4)-step(x-6))*2)*x)', domain: [0, 6], samples: 900 },
+      ],
+      x: { label: 't (bits)', min: 0, max: 6, ticks: [0, 1, 2, 3, 4, 5, 6] },
+      y: { min: -1.3, max: 1.7 },
+    },
+    {
+      note: 'BPSK: misma amplitud y frecuencia; el bit 0 invierte la fase 180° (la onda se da vuelta en cada cambio de bit).',
+      series: [
+        { id: 'b', label: 'bits', kind: 'step', points: [[0, 1.5], [1, 0], [2, 1.5], [4, 0], [6, 0]], state: 'muted' },
+        { id: 'psk', label: 'BPSK', fn: '(step(x)-2*step(x-1)+2*step(x-2)-2*step(x-4)+step(x-6))*sin(2*PI*4*x)', domain: [0, 6], samples: 600 },
+      ],
+      x: { label: 't (bits)', min: 0, max: 6, ticks: [0, 1, 2, 3, 4, 5, 6] },
+      y: { min: -1.3, max: 1.7 },
+    },
+  ],
+}} />
+
+### Constelaciones *(Sem13#7–9)*
+- **BPSK**: 2 fases separadas 180° → **1 bit/símbolo**.
+- **QPSK**: 4 fases → **2 bits/símbolo**, con **etiquetado Gray** (vecinos difieren en un solo bit):
+  `00 → 45°`, `01 → 135°`, `11 → 225°`, `10 → 315°`.
+- **QAM** (*Quadrature Amplitude Modulation*): combina amplitud y fase. **16-QAM → 4 bits/símbolo**,
+  **64-QAM → 6 bits/símbolo**. Más puntos = más bits por símbolo, pero exige mejor señal.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Constelación QPSK con etiquetado Gray (plano I/Q)',
+  steps: [{
+    note: '45° = 00, 135° = 01, 225° = 11, 315° = 10: pasar a un vecino cambia un solo bit, así un error de decisión cuesta un bit y no dos.',
+    series: [
+      { id: 'c', label: 'símbolos (amplitud 1, fases 45°/135°/225°/315°)', kind: 'stem', points: [[0.707, 0.707], [-0.707, 0.707], [-0.707, -0.707], [0.707, -0.707]] },
+    ],
+    x: { label: 'I', min: -1.3, max: 1.3 },
+    y: { label: 'Q', min: -1.3, max: 1.3 },
+    hlines: [{ at: 0 }],
+    vlines: [{ at: 0.707, label: '00 (45°) / 10 (315°)' }, { at: -0.707, label: '01 (135°) / 11 (225°)' }],
+  }],
+}} />
+
+### Tasa de bits y tasa de símbolos *(Sem13#10)*
+
+$$R_b = R_s \log_2(M)$$
+
+| Modulación | $M$ | bits/símbolo | $R_b$ con $R_s = 100$ ksímb/s |
+|---|---|---|---|
+| BPSK | 2 | 1 | 100 kb/s |
+| QPSK | 4 | 2 | 200 kb/s |
+| 16-QAM | 16 | 4 | 400 kb/s |
+| 64-QAM | 64 | 6 | 600 kb/s |
+
+Es la tasa **sin codificar**, sin framing, retransmisiones ni overhead de protocolo.
+
+### Ruido, SNR y BER *(Sem13#11–12)*
+El ruido mueve los valores I/Q recibidos y **ensancha** cada punto de la constelación. Con poco
+ruido los grupos siguen separados; con más ruido se solapan y los errores de decisión se vuelven
+probables. Para una misma energía por bit ($E_b/N_0$), **subir el orden de modulación sube la
+BER**: 64-QAM necesita más $E_b/N_0$ que 16-QAM, y esta más que BPSK/QPSK, para la misma BER.
+
+### Modulación en radios IoT *(Sem13#13)*
+
+| Tecnología | Técnica de capa física | Propósito |
+|---|---|---|
+| Bluetooth LE | GFSK | sensores de corto alcance |
+| IEEE 802.15.4 (2.4 GHz) | O-QPSK + DSSS | mesh de bajo consumo / Zigbee |
+| LoRa | Chirp Spread Spectrum | largo alcance, baja tasa |
+| Wi-Fi | OFDM + PSK/QAM | mayor throughput |
+
+OFDM es un método multiportadora; PSK y QAM describen los símbolos en cada subportadora.
+
+### Codificación de canal y modulación adaptativa *(Sem13#14)*
+La codificación de canal agrega redundancia para corregir algunos errores:
+
+$$R = \frac{\text{bits de información}}{\text{bits codificados transmitidos}}$$
+
+Ejemplo didáctico (código de repetición): dato `1` → se codifica `111` → llega `101` → el **voto
+de mayoría** recupera `1` pese a un error. Los sistemas reales usan FEC más eficientes.
+
+**Modulación adaptativa**: con **SNR bajo → BPSK/QPSK** (robustas); con **SNR alto → 16/64-QAM**
+(más bits por símbolo).
+
+## Método paso a paso
+1. Identificar $M$ (puntos de la constelación) → bits/símbolo $= \log_2 M$.
+2. $R_b = R_s \log_2 M$ (o despejar $R_s = R_b / \log_2 M$).
+3. Si hay codificación de canal: tasa útil $= R \cdot R_b$.
+4. Para elegir modulación: SNR bajo → robusta (BPSK/QPSK); SNR alto → QAM.
+
+## Ejemplo resuelto
+*(derivado)* Un enlace a $R_s = 250$ ksímb/s pasa de QPSK a 16-QAM al mejorar el SNR, con un
+código de tasa $R = 1/2$:
+
+$$R_b^{QPSK} = 250\cdot\log_2 4 = 500\ \text{kb/s},\quad R_b^{16QAM} = 250\cdot 4 = 1000\ \text{kb/s}$$
+
+$$\text{útil}: \tfrac12\cdot 500 = 250\ \text{kb/s} \;\to\; \tfrac12\cdot 1000 = \boxed{500\ \text{kb/s}}$$
+
+## Errores típicos
+- Confundir símbolos/s con bits/s: solo coinciden en BPSK.
+- Usar $M$ en lugar de $\log_2 M$ (16-QAM no da 16× la tasa, da 4×).
+- Creer que más orden de modulación siempre es mejor: a igual $E_b/N_0$ sube la BER.
+- Decir que la codificación de canal aumenta la tasa útil: la **reduce** (agrega redundancia) a
+  cambio de corregir errores.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un transmisor envía 100 ksímbolos/s. (a) ¿Qué tasa de bits obtiene con BPSK, QPSK, 16-QAM y 64-QAM? (b) Si el SNR cae, ¿qué modulación conviene y por qué? (c) Con un código de repetición 1→111, ¿cuál es la tasa útil con QPSK?",
+  hints: [
+    "R_b = R_s·log2(M).",
+    "Piensa qué pasa con los puntos de la constelación cuando hay más ruido.",
+    "La tasa del código de repetición es 1 bit útil por cada 3 transmitidos.",
+  ],
+}}>
+
+**(a)** $R_b = 100\cdot\log_2 M$ ksímb/s:
+BPSK $\boxed{100\ \text{kb/s}}$, QPSK $\boxed{200\ \text{kb/s}}$, 16-QAM $\boxed{400\ \text{kb/s}}$,
+64-QAM $\boxed{600\ \text{kb/s}}$.
+
+**(b)** Con SNR bajo el ruido ensancha los puntos y en QAM (puntos muy juntos) se confunden: sube
+la BER. Conviene **BPSK/QPSK**, menos bits por símbolo pero puntos más separados (modulación
+adaptativa).
+
+**(c)** $R = 1/3$: $\tfrac13\cdot 200 = \boxed{66.7\ \text{kb/s}}$ útiles.
+
+</ExerciseBlock>

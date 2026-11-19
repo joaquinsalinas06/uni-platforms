@@ -1,0 +1,89 @@
+---
+kind: theory
+title: "LoRa y LoRaWAN"
+---
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+Las **LPWAN** (*Low Power Wide Area Networks*) existen para dispositivos que envían **pocos
+datos a largas distancias consumiendo muy poca energía**, años con una sola batería
+*(Sem12_LoRa#4)*. **LoRa** es la más usada en el curso: una modulación patentada por
+**Semtech** que trabaja **solo en la capa física** (capa 1 OSI), con **Chirp Spread Spectrum**
+en bandas ISM sub-GHz sin licencia. Sobre ella corre **LoRaWAN**, el protocolo MAC/red que
+organiza nodos, gateways y servidores. **LoRa ≠ LoRaWAN.** *(Sem9#61)*
+
+## Conceptos
+Características que la distinguen *(Sem9#61–62, Sem12_LoRa#9, #21)*:
+
+| Rasgo | LoRa / LoRaWAN |
+|---|---|
+| Alcance | hasta 5 km en zona urbana densa y más de 15 km rural con línea de vista (Sem9); 15 km abierto / 25 km ciudad (deck LoRa) |
+| Consumo | muy bajo: hasta 10 años con una pila de moneda |
+| Penetración | sub-GHz atraviesa edificios, sótanos y follaje |
+| Costo | espectro libre (ISM): sin licencias ni suscripción, a diferencia del IoT celular |
+| Tasa | baja: 0.3 a 50 kbps según SF (deck LoRa); 300 bps a 5.5 kbps (Sem10#37) |
+| Bandas | ISM sin licencia: 868 MHz (Europa), 915 MHz (Norteamérica); en Perú el laboratorio usa 923 MHz |
+| Topología | estrella: nodos → gateways → servidor |
+
+> Las slides dan dos rangos de alcance y de tasa distintos (Sem9 vs deck LoRa); en el examen
+> conviene citar el orden de magnitud: **kilómetros** y **pocos kbps**.
+
+La comparación de alcance contra BLE, Wi-Fi, Zigbee o celular está graficada en
+[Tecnologías de comunicación](/topics/wireless-tech).
+
+La semana se divide en cuatro subtemas:
+
+1. **[CSS y parámetros SF, BW, CR](/topics/lora/subtopics/css-parametros)**: qué es un chirp,
+   cómo codifica bits y qué cambia al subir cada parámetro.
+2. **[Time on Air](/topics/lora/subtopics/time-on-air)**: duración del símbolo, del preámbulo y
+   del payload; el cálculo que aparece en los dos finales.
+3. **[LoRaWAN](/topics/lora/subtopics/lorawan)**: arquitectura, clases A/B/C, direccionamiento,
+   gateway y network server.
+4. **[Propagación y zona de Fresnel](/topics/lora/subtopics/propagacion-fresnel)**: pérdida en
+   espacio libre, Fresnel y curvatura terrestre.
+
+La configuración práctica (módulo RAK3172, comandos AT, P2P) está en
+[Laboratorio LoRa P2P](/topics/lab-lora-p2p).
+
+## Método paso a paso
+Ante una pregunta de LoRa, el orden del profesor es:
+1. Ubicar la capa: **LoRa = física (CSS)**; **LoRaWAN = MAC/red** encima.
+2. Si hay bits y SF: cortar en grupos de **SF bits** → símbolos.
+3. Si hay SF, BW, CR, PL: calcular $T_s$, $T_{preamble}$, $N_{payload}$, $T_{payload}$, ToA (con
+   **la fórmula que dé el enunciado**).
+4. Si pregunta por recepción de downlinks: elegir clase A/B/C según energía vs latencia.
+5. Si pregunta por instalación: Fresnel (60 % libre) y altura del gateway.
+
+## Ejemplo resuelto
+EF 2025, P1 *(¿Qué es LoRa y qué la diferencia?)*: LoRa es una tecnología de modulación de capa
+física patentada por Semtech, basada en Chirp Spread Spectrum sobre bandas ISM sub-GHz sin
+licencia. La diferencian el **largo alcance** (km), el **muy bajo consumo** (años de batería),
+la **robustez al ruido y a la interferencia** (el chirp ensancha la señal), la penetración en
+interiores y el **bajo costo** (sin licencia ni operador), a cambio de una **tasa baja** (kbps)
+que solo sirve para mensajes pequeños e infrecuentes. Ver la resolución completa en el
+[Examen Final 2025-I](/evaluaciones/finales/2025-i).
+
+## Errores típicos
+- Decir que LoRa es un protocolo de red: es **solo modulación** (capa física); la red es LoRaWAN.
+- Decir que un mayor SF aumenta la tasa: la **reduce** (más alcance y robustez, menos velocidad).
+- Usar la fórmula de $N_{payload}$ de memoria cuando el examen da otra variante.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "Explique la diferencia entre LoRa y LoRaWAN e indique en qué capa del modelo OSI opera cada uno.",
+  hints: [
+    "Uno define cómo se modula la señal; el otro cómo se organiza la red.",
+    "¿Quién decide qué gateway responde o cuándo puede recibir un nodo?",
+  ],
+}}>
+
+- **LoRa**: técnica de **modulación** (Chirp Spread Spectrum) patentada por Semtech; opera en la
+  **capa física (capa 1)**. Define chirps, SF, BW y CR.
+- **LoRaWAN**: protocolo **MAC/red** que corre encima de LoRa; define la arquitectura
+  (nodos → gateways → network server → application server), las clases A/B/C, el
+  direccionamiento (DevAddr, DevEUI) y la seguridad (AES-128 con AppSKey y NwkSKey).
+- Por eso un enlace **LoRa P2P** (como en el laboratorio) usa la modulación sin LoRaWAN.
+
+</ExerciseBlock>

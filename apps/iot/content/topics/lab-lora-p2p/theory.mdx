@@ -1,0 +1,173 @@
+---
+kind: theory
+title: "Laboratorio LoRa P2P: RAK3172 y comandos AT"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+En el laboratorio dos módulos **RAK3172 / RAK3272S** (RAKWireless, chip STM32WLE5CC) se comunican
+por **LoRa punto a punto (P2P)**, sin gateway ni LoRaWAN. No se les carga código: se configuran
+con **comandos AT** (firmware **RUI3**) enviados por UART, primero desde la PC con un conversor
+USB-TTL y luego desde un Arduino MEGA. Los dos finales tienen preguntas directas de esto:
+velocidad del puerto, coherencia de parámetros, rol TX/RX y formato del payload.
+
+## Conceptos
+
+### Conexión física *(Sem12_LAB4_LoRa_v2#3, #13, #18)*
+- **Alimentación 3.3 V** y **nunca energizar sin la antena**.
+- Los comandos AT entran **solo por UART2** (pines **TX2** y **RX2**; también llamado LPUART1).
+- Configuración por defecto de UART2: **115200 baudios, 8 bits de datos, sin paridad, 1 bit de
+  parada (8-N-1)**. Con cualquier otra velocidad no hay comunicación.
+- Con el conversor USB-TTL se cruzan las líneas: **TX → RX2**, **RX → TX2**, **GND → GND**,
+  **3V3 → 3V3**.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'PC → conversor USB-TTL → RAK3272 (Figura 5 del lab)',
+  steps: [{
+    note: 'Las líneas de datos se cruzan (lo que uno transmite el otro lo recibe); GND común; el RAK se alimenta con 3.3 V, nunca con 5 V.',
+    shapes: [
+      { id: 'pc', kind: 'block', label: 'PC (RAK Serial Port Tool / monitor serie a 115200)' },
+      { id: 'ttl', kind: 'block', label: 'Conversor USB-TTL' },
+      { id: 'rak', kind: 'block', label: 'RAK3272 (UART2)', state: 'active' },
+    ],
+    arrows: [
+      { from: 'pc', to: 'ttl', label: 'USB', kind: 'data' },
+      { from: 'ttl', to: 'rak', label: 'TX → RX2', kind: 'data' },
+      { from: 'rak', to: 'ttl', label: 'TX2 → RX', kind: 'data' },
+      { from: 'ttl', to: 'rak', label: '3V3 → 3V3 · GND → GND', kind: 'power' },
+    ],
+  }],
+}} />
+
+Con un **Arduino MEGA** en lugar del conversor *(Sem12_LAB4_LoRa_v2#10, #18)*: `Serial1` del MEGA
+(TX1 = pin 18, RX1 = pin 19) a RX2/TX2 del RAK, **GND común**, `Serial1.begin(115200)`, y un
+**divisor de voltaje obligatorio** en la línea TX1 (5 V) → RX2 (3.3 V), igual que con el ESP32
+(ver [ESP32 y UART](/topics/mqtt/subtopics/esp32-y-uart)).
+
+### Formato de los comandos AT *(Sem12_LAB4_LoRa_v2#18–19)*
+- `AT+XXX?` ayuda · `AT+XXX` ejecutar · `AT+XXX=?` leer valor · `AT+XXX=<valor>` escribir.
+- Respuestas: `OK`, `AT_ERROR` (genérico), **`AT_PARAM_ERROR`** (parámetro incorrecto),
+  `AT_BUSY_ERROR` (red ocupada), `AT_NO_NETWORK_JOINED`, `AT_RX_ERROR`, entre otros.
+- Básicos (checkpoint 1): `AT` / `ATZ` (verifica la conexión), `ATE` (eco), `AT+VER=?` (versión
+  de RUI), `AT+SN=?` (número de serie).
+
+### Comandos P2P *(Sem12_LAB4_LoRa_v2#6–8)*
+
+| Comando | Función |
+|---|---|
+| `AT+NWM=0` | **Network Work Mode**: 0 = **LoRa P2P**, 1 = **LoRaWAN**. Para P2P ambos módulos deben estar en 0. |
+| `AT+P2P=<f>:<SF>:<BW>:<CR>:<preámbulo>:<potencia>` | parámetros del enlace; **deben coincidir** en TX y RX |
+| `AT+PRECV=65534` | **receptor**: escucha de forma continua |
+| `AT+PRECV=0` | **transmisor**: sale de recepción y queda listo para transmitir |
+| `AT+PSEND=<hex>` | envía el payload, **codificado en hexadecimal** |
+
+Parámetros de `AT+P2P` (ejemplo del lab `AT+P2P=923000000:7:125:0:10:14`):
+
+| Pos. | Parámetro | Ejemplo | Rango / codificación |
+|---|---|---|---|
+| 1 | frecuencia (Hz) | 923000000 | según hardware (150–960 MHz); cada grupo usa 923X00000 |
+| 2 | SF | 7 | 5 a 12 |
+| 3 | BW (kHz) | 125 | 125 / 250 / 500 (o índice 0 / 1 / 2 según firmware) |
+| 4 | CR | 0 | **0 = 4/5**, 1 = 4/6, 2 = 4/7, 3 = 4/8 |
+| 5 | preámbulo | 10 | 2 a 65535 |
+| 6 | potencia (dBm) | 14 | 5 a 22 |
+
+**Frecuencia en Perú** *(Sem12_LoRa#16)*: el MTC tiene asignadas a un operador (Viettel) las
+bandas 899–915 MHz y 902–915 MHz; por eso el laboratorio trabaja en **923 MHz** (dentro de
+902–928 MHz pero fuera de lo asignado).
+
+### Payload hexadecimal y recepción *(Sem12_LAB4_LoRa_v2#8)*
+Cada carácter ASCII se convierte a **dos dígitos hex** (en el código del lab,
+`sprintf(hex, "%02X", c)`). Ej.: `27-1SOMOSCONTODO` →
+`AT+PSEND=32372D31534F4D4F53434F4E544F444F`. Un payload con caracteres fuera de 0–9/A–F no es
+hexadecimal → `AT_PARAM_ERROR` (*parámetro incorrecto*).
+
+> **Nota de apoyo** (no está explícito en el lab): como cada byte son dos dígitos hex, un número
+> **impar** de dígitos deja un byte incompleto y RUI3 también lo rechaza con `AT_PARAM_ERROR`.
+
+El receptor muestra: `+EVT:RXP2P:POT:SNR:PAYLOAD`, con **POT** = potencia recibida (RSSI, dBm),
+**SNR** = relación señal a ruido y **PAYLOAD** en hexadecimal. En el checkpoint 2 se grafican POT y
+SNR contra la distancia.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Enlace P2P del laboratorio',
+  steps: [
+    {
+      note: 'Ambos módulos: modo P2P y los MISMOS parámetros de enlace (frecuencia, SF, BW, CR, preámbulo).',
+      actors: [{ id: 'tx', label: 'RAK transmisor' }, { id: 'rx', label: 'RAK receptor' }],
+      msgs: [
+        { from: 'tx', to: 'tx', label: 'AT+NWM=0', store: 'OK' },
+        { from: 'rx', to: 'rx', label: 'AT+NWM=0', store: 'OK' },
+        { from: 'tx', to: 'tx', label: 'AT+P2P=923000000:7:125:0:10:14', store: 'OK' },
+        { from: 'rx', to: 'rx', label: 'AT+P2P=923000000:7:125:0:10:14', store: 'OK' },
+      ],
+    },
+    {
+      note: 'El receptor queda escuchando (65534) y el transmisor deja de escuchar (0) para poder enviar. El payload viaja en hex y llega con RSSI y SNR.',
+      actors: [{ id: 'tx', label: 'RAK transmisor' }, { id: 'rx', label: 'RAK receptor' }],
+      msgs: [
+        { divider: true, from: 'tx', to: 'rx', label: 'TX: AT+PRECV=0  ·  RX: AT+PRECV=65534' },
+        { from: 'tx', to: 'rx', label: 'AT+PSEND=486F6C61', flags: '"Hola" en hex', state: 'active', store: '+EVT:RXP2P:POT:SNR:486F6C61' },
+      ],
+    },
+  ],
+}} />
+
+## Método paso a paso
+**Revisar una configuración P2P** (tipo examen):
+1. **Puerto**: ¿115200 baudios? Si no, no hay respuesta.
+2. **Modo**: ¿`AT+NWM=0` en **ambos**?
+3. **Parámetros**: comparar campo por campo `AT+P2P` de TX y RX (frecuencia, SF, BW, CR,
+   preámbulo). Cualquier diferencia rompe el enlace. Revisar rangos (SF 5–12, potencia 5–22 dBm).
+4. **Roles**: TX con `AT+PRECV=0`, RX con `AT+PRECV=65534`.
+5. **Payload**: solo hex, número par de dígitos.
+6. **Si hay Arduino**: los comandos van por `Serial1` (no `Serial`), a 115200, con divisor en TX1→RX2.
+
+## Ejemplo resuelto
+Convertir `Hola mundo` para `AT+PSEND` *(derivado)*:
+
+| H | o | l | a | (espacio) | m | u | n | d | o |
+|---|---|---|---|---|---|---|---|---|---|
+| 48 | 6F | 6C | 61 | 20 | 6D | 75 | 6E | 64 | 6F |
+
+`AT+PSEND=486F6C61206D756E646F` (10 bytes → 20 dígitos hex). El receptor imprime ese mismo hex en
+el campo PAYLOAD; hay que decodificarlo (el lab lo hace con Python) para leer `Hola mundo`.
+
+## Errores típicos
+- Abrir el puerto a 9600: el RAK trabaja por defecto a **115200**.
+- Dejar un módulo en `AT+NWM=1` (LoRaWAN) en un enlace P2P.
+- Intercambiar los roles de `PRECV` (0 en el receptor deja de escuchar).
+- Mandar texto plano en `AT+PSEND`.
+- En el Arduino, imprimir el comando por `Serial` (va a la PC) en lugar de `Serial1` (va al RAK).
+- Conectar el TX de 5 V del MEGA directo al RX2 del RAK (3.3 V) sin divisor.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Receptor: AT+NWM=1, AT+P2P=915000000:7:125:1:8:20, AT+PRECV=0. Transmisor: AT+NWM=0, AT+P2P=915000000:7:250:1:8:20, AT+PRECV=65534. Evalúe la viabilidad del enlace y corrija los comandos. (EF 2026, P6b)",
+  hints: [
+    "Compara el modo de red de ambos nodos.",
+    "Compara campo por campo los dos AT+P2P.",
+    "¿Cuál de los dos valores de PRECV corresponde a escuchar continuamente?",
+  ],
+}}>
+
+Resuelto también en el [Examen Final 2026-I, P6](/evaluaciones/finales/2026-i). **El enlace no es
+viable**; hay tres errores:
+
+| Error | Nodo | Corrección |
+|---|---|---|
+| Modo LoRaWAN (`NWM=1`) en un enlace P2P | receptor | `AT+NWM=0` |
+| BW distinto: 125 kHz (RX) vs 250 kHz (TX) | transmisor | `AT+P2P=915000000:7:125:1:8:20` |
+| Roles de PRECV invertidos | ambos | receptor `AT+PRECV=65534`, transmisor `AT+PRECV=0` |
+
+El resto coincide (915 MHz, SF 7, CR 1 = 4/6 en RUI3, preámbulo 8, 20 dBm dentro de 5–22 dBm).
+Observación: según la slide del MTC, 902–915 MHz está asignada a un operador en Perú; el lab usa
+923 MHz (p. ej. `923000000`) en ambos nodos.
+
+</ExerciseBlock>

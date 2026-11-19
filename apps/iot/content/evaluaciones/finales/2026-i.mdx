@@ -1,0 +1,656 @@
+---
+title: "Examen Final 2026-I (20 de julio de 2026)"
+category: finales
+categoryLabel: "Exámenes finales"
+order: 1
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+CS5055 Internet de las Cosas, 26-1. Total 20 puntos: **Parte A – Teoría (10 pt)** y **Parte B –
+Laboratorio (10 pt)**. Se califica el procedimiento y **se descuenta por unidades omitidas o
+equivocadas**. Cada pregunta trae el enunciado, pistas y la solución paso a paso, que se desbloquea
+al pedir todas las pistas.
+
+**Parte A — Teoría (preguntas 1–4)**
+
+## Pregunta 1 — Overhead en protocolos de IoT (2 puntos)
+
+1. Explique qué se entiende por *overhead* de protocolo en la transmisión de datos en IoT. *(1 pt)*
+2. Un nodo envía periódicamente un payload útil de **12 B** con la pila **CoAP / UDP / IPv6** sobre
+   **IEEE 802.15.4**. Cabeceras: CoAP (básica, sin opciones) **4 B**; UDP **8 B**; IPv6 (6LoWPAN)
+   **7 B**; enlace IEEE 802.15.4 **13 B**. Calcule el porcentaje de overhead respecto del total
+   enviado. *(1 pt)*
+
+Tema: [Capa de red: 6LoWPAN y overhead](/topics/network-layer).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Defina overhead de protocolo y calcule el % de overhead de 12 B de payload con CoAP (4 B), UDP (8 B), IPv6/6LoWPAN (7 B) y 802.15.4 (13 B).",
+  hints: [
+    "Overhead = bytes que se transmiten y no son dato útil.",
+    "Suma todas las cabeceras, también la de enlace.",
+    "Total = cabeceras + payload; overhead = cabeceras / total.",
+  ],
+}}>
+
+### 1. Concepto
+
+**1. Qué es.** El *overhead* de protocolo son todos los bytes (y mensajes) que se transmiten
+**además del dato útil**: cabeceras de cada capa (aplicación, transporte, red/adaptación, enlace),
+y también los mensajes de control (handshakes, ACKs, retransmisiones). No aportan información de la
+aplicación pero ocupan el canal.
+
+**2. Por qué importa en IoT.** En un nodo a batería, transmitir es lo que más energía consume:
+cada byte de cabecera es tiempo de radio encendida. Con payloads pequeños (unos pocos bytes de un
+sensor), las cabeceras pueden ser mayores que el dato. Por eso existen CoAP sobre UDP (en lugar de
+HTTP/TCP) y 6LoWPAN, que comprime la cabecera IPv6 de 40 B a pocos bytes.
+
+### 2. Cálculo
+
+**3. Sumar cabeceras.**
+$$H = 4 + 8 + 7 + 13 = 32\ \text{B}$$
+
+**4. Total enviado.**
+$$T = H + PL = 32 + 12 = 44\ \text{B}$$
+
+**5. Porcentaje de overhead.**
+$$\%\,\text{overhead} = \frac{32\ \text{B}}{44\ \text{B}}\times 100 = \boxed{72.73\,\%}$$
+
+<Visualization viz={{
+  type: 'memory-layout',
+  static: true,
+  title: 'Trama de 44 B',
+  steps: [{
+    note: '32 B de cabeceras (gris) y solo 12 B de dato útil.',
+    blocks: [
+      { id: 'mac', label: '802.15.4 · 13 B', bytes: 13, offset: 0, state: 'muted' },
+      { id: 'ip', label: 'IPv6/6LoWPAN · 7 B', bytes: 7, offset: 13, state: 'muted' },
+      { id: 'udp', label: 'UDP · 8 B', bytes: 8, offset: 20, state: 'muted' },
+      { id: 'coap', label: 'CoAP · 4 B', bytes: 4, offset: 28, state: 'muted' },
+      { id: 'pl', label: 'payload · 12 B', bytes: 12, offset: 32, state: 'answer' },
+    ],
+  }],
+}} />
+
+**Comprobación:** eficiencia $= 12/44 = 27.27\,\%$, y $72.73 + 27.27 = 100\,\%$. Más de la mitad
+de lo transmitido es cabecera.
+
+</ExerciseBlock>
+
+## Pregunta 2 — Chirp y Time on Air en LoRa (3 puntos)
+
+1. Explique qué es un *chirp* en la modulación por espectro ensanchado (como LoRa) y cómo codifica la
+   información. Con **SF = 5**, detalle cómo se codificaría la secuencia `1001010100` en símbolos
+   LoRa (bits por símbolo y valores decimales). *(1 pt)*
+2. LoRa con **SF = 5**, **BW = 125 kHz**, **CR = 1** (4/5), **$N_{pream}$ = 8** símbolos, cabecera
+   explícita, CRC habilitado, y la fórmula simplificada para este escenario
+   $$N_{payload} = 8 + \max\left(\left\lceil\frac{8PL - 4SF + 28}{SF}\right\rceil\cdot(CR+4),\ 0\right)$$
+   Calcule el número de símbolos del preámbulo ($N_{symPreamble} = N_{pream} + 4.25$) y del payload
+   para **PL = 2 B**, y el ToA total en ms con $T_s = 2^{SF}/BW$. *(2 pt)*
+
+Tema: [CSS y parámetros](/topics/lora/subtopics/css-parametros) · [Time on Air](/topics/lora/subtopics/time-on-air).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Explique el chirp y codifique 1001010100 con SF = 5. Luego calcule N_symPreamble, N_payload (PL = 2 B) y el ToA en ms con SF = 5, BW = 125 kHz, CR = 1, N_pream = 8, usando la fórmula dada (denominador SF).",
+  hints: [
+    "En CSS el dato está en la frecuencia de inicio del chirp; cada símbolo lleva SF bits.",
+    "Corta los 10 bits en grupos de 5 y conviértelos a decimal.",
+    "Usa la fórmula tal como la da el enunciado: el denominador es SF, no 4·SF.",
+    "T_s = 2^5 / 125 000 Hz; ToA = (símbolos de preámbulo + símbolos de payload)·T_s.",
+  ],
+}}>
+
+### 1. Chirp y codificación
+
+**1. Chirp.** Es una señal cuya **frecuencia aumenta (o disminuye) linealmente con el tiempo**,
+barriendo todo el ancho de banda BW. En CSS (Chirp Spread Spectrum) cada chirp es un **símbolo**, y
+la información está en su **frecuencia de inicio**: el chirp arranca en una de $2^{SF}$ posiciones,
+sube hasta el borde superior, vuelve al inferior y completa el barrido. Ensanchar así la señal la
+hace muy robusta al ruido y a la interferencia.
+
+**2. Bits por símbolo.** $SF = 5 \Rightarrow$ **5 bits por símbolo**, $2^5 = 32$ valores posibles
+(0 a 31).
+
+**3. Agrupar los 10 bits en 2 símbolos.**
+$$\underbrace{10010}_{2}=16+2=\boxed{18},\qquad \underbrace{10100}_{2}=16+4=\boxed{20}$$
+
+Se transmiten **2 chirps**, que empiezan en las posiciones 18/32 y 20/32 de la banda.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Los dos chirps: símbolos 18 y 20 (SF = 5)',
+  steps: [{
+    note: 'Ambos chirps suben con la misma pendiente; solo cambia dónde empiezan (18/32 y 20/32 del ancho de banda). Al llegar al tope vuelven al borde inferior.',
+    series: [{ id: 'f', label: 'frecuencia instantánea', points: [
+      [0, 0.5625], [0.4375, 1], [0.4375, 0], [1, 0.5625],
+      [1, 0.625], [1.375, 1], [1.375, 0], [2, 0.625],
+    ] }],
+    x: { label: 't (símbolos, T_s = 0.256 ms)', min: 0, max: 2, ticks: [0, 1, 2] },
+    y: { label: 'f (fracción de BW)', min: 0, max: 1.05 },
+  }],
+}} />
+
+### 2. Time on Air
+
+**4. Símbolos del preámbulo.**
+$$N_{symPreamble} = 8 + 4.25 = \boxed{12.25\ \text{símbolos}}$$
+
+**5. Símbolos del payload** (fórmula del enunciado):
+$$\frac{8\cdot 2 - 4\cdot 5 + 28}{5} = \frac{16 - 20 + 28}{5} = \frac{24}{5} = 4.8 \;\to\; \lceil 4.8\rceil = 5$$
+$$N_{payload} = 8 + \max\big(5\cdot(1+4),\ 0\big) = 8 + 25 = \boxed{33\ \text{símbolos}}$$
+
+**6. Duración de un símbolo.**
+$$T_s = \frac{2^5}{125\,000\ \text{Hz}} = \frac{32}{125\,000}\ \text{s} = 0.256\ \text{ms}$$
+
+**7. Tiempo en el aire.**
+$$T_{preamble} = 12.25 \times 0.256 = 3.136\ \text{ms},\qquad T_{payload} = 33\times 0.256 = 8.448\ \text{ms}$$
+$$ToA = 3.136 + 8.448 = \boxed{11.584\ \text{ms}}$$
+
+**Comprobación:** $(12.25 + 33)\times 0.256 = 45.25 \times 0.256 = 11.584$ ms ✓.
+
+> Con la fórmula de clase (Sem10, denominador $4SF$) saldría $\lceil 24/20\rceil = 2$,
+> $N_{payload} = 18$ y $ToA = 7.744$ ms; en el examen se usa la fórmula que da el enunciado.
+> Ojo con CR: en esta fórmula CR = 1 es 4/5; en el comando `AT+P2P` del RAK, 4/5 es CR = 0.
+
+</ExerciseBlock>
+
+## Pregunta 3 — Parámetros de conexión en BLE (2 puntos)
+
+Explique el significado y la función de **Connection Interval**, **Slave Latency** y **Connection
+Supervision Timeout**, que gobiernan un evento de conexión BLE. Dé valores de ejemplo.
+
+Tema: [Bluetooth Low Energy](/topics/ble).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique Connection Interval, Slave Latency y Connection Supervision Timeout en BLE, con valores de ejemplo.",
+  hints: [
+    "Los tres los fija el master (central) al crear la conexión.",
+    "Uno es cada cuánto hay un connection event; otro cuántos eventos puede saltarse el slave; otro cuánto silencio se tolera.",
+    "Relaciona cada uno con consumo y latencia.",
+  ],
+}}>
+
+**Contexto.** En una conexión BLE el central (master) y el periférico (slave) solo encienden la radio
+en los **connection events**: el central inicia el evento transmitiendo, el periférico despierta a la
+hora acordada y responde (puede haber varios paquetes), y entre eventos ambos duermen. Los tres
+parámetros los comunica el master al establecer la conexión.
+
+**1. Connection Interval.** Tiempo entre el **inicio de dos connection events consecutivos**; va de
+**7.5 ms a 4 s**. Fija cada cuánto despierta la radio: un intervalo largo reduce el consumo pero
+aumenta la latencia; uno corto da respuesta rápida pero gasta más. *Ejemplo:* **100 ms** (un sensor
+con $I_{active}=10$ mA durante 3 ms y 5 µA el resto promedia 0.305 mA y dura ≈ 30 días con 220 mAh).
+
+**2. Slave Latency.** **Número de connection events que el slave puede saltarse** sin que la conexión
+se dé por perdida. Si el periférico no tiene datos, sigue durmiendo esos eventos y ahorra energía,
+pero puede contestar en cualquier evento si lo necesita. *Ejemplo:* **4** → con intervalo de 100 ms,
+el sensor puede responder solo cada 500 ms.
+
+**3. Connection Supervision Timeout.** **Tiempo máximo entre dos paquetes válidos recibidos** antes de
+considerar la conexión **perdida**. Detecta que el otro extremo desapareció (fuera de alcance, sin
+batería). *Ejemplo:* **2 s**.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Interval = 100 ms, latency = 4, timeout = 2 s',
+  steps: [{
+    note: 'El central abre un evento cada 100 ms; el periférico sin datos se salta hasta 4 y responde en el quinto (cada 500 ms). Si pasaran 2 s sin paquetes válidos, la conexión se declararía perdida.',
+    actors: [{ id: 'c', label: 'Central (master)' }, { id: 'p', label: 'Periférico (slave)' }],
+    msgs: [
+      { from: 'c', to: 'p', label: 'evento 0 ms' },
+      { from: 'p', to: 'c', label: 'datos' },
+      { from: 'c', to: 'p', label: 'eventos 100–400 ms', lost: true, state: 'muted', flags: 'slave latency = 4: los ignora' },
+      { from: 'c', to: 'p', label: 'evento 500 ms', state: 'active' },
+      { from: 'p', to: 'c', label: 'datos' },
+      { divider: true, from: 'c', to: 'p', label: '— 2 s sin paquetes válidos → conexión perdida —' },
+    ],
+  }],
+}} />
+
+> **Nota de apoyo** (no está en el material): el timeout debe superar el tiempo que el slave puede
+> callar legítimamente, $(1+\text{latency})\cdot\text{interval} = 5 \cdot 100\ \text{ms} = 0.5$ s
+> (la norma exige al menos el doble, 1 s); 2 s cumple.
+
+</ExerciseBlock>
+
+## Pregunta 4 — Principios universales de HCI en IoT (3 puntos)
+
+Un termostato inteligente tiene problemas: los usuarios **no saben si está encendido**, **configuran la
+temperatura al revés** (suben cuando quieren bajar), **se ejecutan acciones no deseadas al rozar la
+pantalla**, y **la interfaz cambia colores y tipografías sin lógica** entre pantallas. Proponga un
+rediseño aplicando **exactamente cuatro** de: 1. Visibilidad, 2. Feedback, 3. Restricciones,
+4. Consistencia, 5. Mapeo natural, 6. Affordances. Para cada uno: qué problema resuelve y qué cambio
+concreto implementaría.
+
+Tema: [HCI en IoT](/topics/hci-iot).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Rediseñe el termostato con exactamente cuatro principios HCI: problema que resuelve y cambio concreto para cada uno.",
+  hints: [
+    "Son cuatro quejas: busca el principio cuyo 'si falla' coincide con cada una.",
+    "'No sabe si está encendido' → el estado no está a la vista.",
+    "'Sube cuando quiere bajar' → el control no corresponde con el efecto. 'Acciones al rozar' → falta limitar acciones incorrectas. 'Colores sin lógica' → cada pantalla se comporta distinto.",
+  ],
+}}>
+
+**1. Visibilidad**: *el usuario debe saber qué puede hacer y el estado actual del dispositivo*.
+- **Problema:** no saben si el termostato está encendido.
+- **Cambio:** pantalla con estado permanente (modo calor/frío/apagado, temperatura actual y objetivo)
+  y un **LED de encendido/conexión** visible a distancia, incluso con la pantalla en reposo; el mismo
+  estado en la app.
+
+**2. Mapeo natural**: *el control debe "sentirse" intuitivo*.
+- **Problema:** suben la temperatura cuando quieren bajarla.
+- **Cambio:** control físico circular que se **gira a la derecha para subir** (o deslizar **hacia
+  arriba = más calor**), con flecha ↑ en color cálido y ↓ en color frío junto al número.
+
+**3. Restricciones**: *limitar acciones incorrectas previene accidentes*.
+- **Problema:** acciones no deseadas al rozar la pantalla.
+- **Cambio:** **bloqueo de pantalla** que se libera manteniendo presionado 2 s; ignorar toques muy
+  breves; pedir confirmación para cambios grandes (p. ej. más de 3 °C o apagar).
+
+**4. Consistencia**: *todos los dispositivos y pantallas deben comportarse igual*.
+- **Problema:** colores y tipografías cambian sin lógica entre pantallas.
+- **Cambio:** **guía de estilo única**: una sola tipografía, el mismo color para calor (rojo/naranja)
+  y frío (azul) en todas las pantallas y en la app, botones siempre en la misma posición.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Queja → principio → cambio',
+  steps: [{
+    note: 'Cada principio elegido ataca una queja distinta; se eligen exactamente cuatro.',
+    shapes: [
+      { id: 'q1', kind: 'io', label: '¿Está encendido?' },
+      { id: 'q2', kind: 'io', label: 'Sube cuando quiere bajar' },
+      { id: 'q3', kind: 'io', label: 'Acciones al rozar' },
+      { id: 'q4', kind: 'io', label: 'Colores sin lógica' },
+      { id: 'p1', kind: 'process', label: 'Visibilidad: LED + estado siempre visible' },
+      { id: 'p2', kind: 'process', label: 'Mapeo natural: girar a la derecha / arriba = subir' },
+      { id: 'p3', kind: 'process', label: 'Restricciones: bloqueo y confirmación' },
+      { id: 'p4', kind: 'process', label: 'Consistencia: guía de estilo única' },
+    ],
+    arrows: [
+      { from: 'q1', to: 'p1' }, { from: 'q2', to: 'p2' }, { from: 'q3', to: 'p3' }, { from: 'q4', to: 'p4' },
+    ],
+  }],
+}} />
+
+**Comprobación:** cuatro principios, cuatro quejas cubiertas, cada cambio es concreto (físico o
+digital). Feedback (pitido y número que parpadea al aceptar un cambio) sería válido, pero el
+enunciado pide exactamente cuatro.
+
+</ExerciseBlock>
+
+**Parte B — Laboratorio (preguntas 5–7)**
+
+## Pregunta 5 — Conexión, actuadores y sensores (3 puntos)
+
+Figura del examen: Arduino (TX0/RX0, TX1/RX1, GND, 5V, 3V3, A0, RST) conectado a una laptop por USB;
+ESP32 (TX2/RX2, VIN/5V, 3V3, GND, A2, A1, D1, D2); y un divisor con $R_{LDR}$ hacia $V+$ y **240 kΩ**
+hacia GND, cuyo punto medio "?" va al ADC.
+
+- a) Dibuje el esquema de conexiones para una comunicación **UART** mediante **Serial1** del Arduino
+  Mega al ESP32, con cualquier componente adicional necesario y sus valores. *(1 pt)*
+- b) El Mega debe controlar un **calefactor resistivo de 8 W** con un pin digital (fuente externa de
+  **5 V**). Calcule la corriente del calefactor y justifique qué componente(s) interponer. *(1 pt)*
+- c) En el ESP32, LDR a Vcc y $R = 240$ kΩ a GND; el nodo central va al ADC. El LDR cumple
+  $E = \left(\frac{A}{R_{LDR}}\right)^{1/\alpha}$ lux, con $A = 5\cdot 10^5$ y $\alpha = 0.7$. El ADC, en
+  su resolución máxima por defecto, lee exactamente **800**:
+  (a) resolución en bits y niveles *(0.25 pt)*; (b) $R_{LDR}$ en kΩ *(0.5 pt)*; (c) iluminación en
+  lux *(0.75 pt)*.
+
+Temas: [ESP32 y UART](/topics/mqtt/subtopics/esp32-y-uart) · [Motor, relé y driver](/topics/lab-actuators/subtopics/motor-rele-driver) · [Arduino y sensores](/topics/arduino-sensors).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "(a) UART Serial1 del Mega ↔ ESP32 con componentes y valores. (b) Corriente de un calefactor de 8 W a 5 V y qué interponer. (c) ADC del ESP32 con lectura 800, divisor LDR–240 kΩ: bits y niveles, R_LDR en kΩ y lux con E = (A/R_LDR)^(1/α).",
+  hints: [
+    "UART: cruzar TX y RX, GND común. ¿Qué línea lleva 5 V hacia un pin que solo tolera 3.3 V?",
+    "I = P/V. Compárala con lo que entrega un pin del Mega (40 mA).",
+    "El ADC del ESP32 es de 12 bits: V = lectura·3.3/4096.",
+    "Divisor con LDR arriba: V = 3.3·R/(R + R_LDR); despeja R_LDR. Luego E = (A/R_LDR)^(1/0.7) con R_LDR en Ω.",
+  ],
+}}>
+
+### a) UART Serial1 (Mega) ↔ ESP32
+
+**1. Pines.** `Serial1` del Mega: **TX1 (pin 18)** y **RX1 (pin 19)**. En el ESP32 se usa su segundo
+puerto: **RX2** y **TX2**. Las líneas se **cruzan** y se comparte **GND**.
+
+**2. Niveles.** El Mega transmite 5 V; el ESP32 tolera como máximo 3.6 V en sus pines → en la línea
+**TX1 (Mega) → RX2 (ESP32)** va un **divisor**: $R_1 = 1.8$ kΩ en serie desde TX1 y $R_2 = 3.3$ kΩ del
+nodo a GND.
+
+$$V_{RX2} = 5\ \text{V}\cdot\frac{3.3}{1.8+3.3} = \boxed{3.24\ \text{V}} \le 3.6\ \text{V}$$
+
+**3. Sentido inverso.** **TX2 (ESP32) → RX1 (Mega)** va directo: el Mega lee 3.3 V como HIGH.
+Ambos a la misma velocidad (p. ej. 115200 baudios).
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Divisor en la línea TX1 (Mega, 5 V) → RX2 (ESP32)',
+  steps: [{
+    note: 'El HIGH de 5 V del TX1 llega al RX2 como ≈ 3.24 V. TX2 → RX1 y GND ↔ GND se cablean directo.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true, label: 'GND común' },
+        { id: 't', x: 0, y: 0, label: 'TX1 Mega (5 V)' },
+        { id: 'mid', x: 5, y: 3, label: 'RX2 ESP32', showPotential: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'TX1' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'mid', value: 1800, label: 'R1 1.8k' },
+        { id: 'R2', kind: 'resistor', from: 'mid', to: 'g', value: 3300, label: 'R2 3.3k' },
+      ],
+    },
+    expect: { 'V(mid)': 3.235 },
+  }],
+}} />
+
+| Mega | Componente | ESP32 |
+|---|---|---|
+| TX1 (18) | 1.8 kΩ serie + 3.3 kΩ a GND | RX2 |
+| RX1 (19) | directo | TX2 |
+| GND | directo | GND |
+
+### b) Calefactor de 8 W
+
+**4. Corriente.**
+$$I = \frac{P}{V} = \frac{8\ \text{W}}{5\ \text{V}} = \boxed{1.6\ \text{A}}\qquad \left(R = \frac{V^2}{P} = 3.125\ \Omega\right)$$
+
+**5. Comparar con el pin.** Un pin digital del Mega entrega **como máximo 40 mA**:
+$1.6\ \text{A} / 40\ \text{mA} = 40$ veces más. Conectarlo directo dañaría el microcontrolador.
+
+**6. Qué interponer.** Un **módulo relé** (o un driver/transistor MOSFET de potencia): el pin solo
+maneja la bobina/entrada de control (IN, con VCC y GND del módulo), y los contactos **COM–NO**
+conmutan el circuito **fuente externa de 5 V → calefactor**. GND de la fuente y del Mega en común si se
+usa transistor. El relé además **aísla** la etapa de potencia del microcontrolador.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Mando y potencia separados',
+  steps: [{
+    note: 'El pin solo da la orden (mA); los 1.6 A salen de la fuente externa a través de los contactos del relé.',
+    shapes: [
+      { id: 'mega', kind: 'block', label: 'Arduino Mega (pin digital)' },
+      { id: 'rel', kind: 'block', label: 'Módulo relé (IN · COM/NO)', state: 'active' },
+      { id: 'src', kind: 'block', label: 'Fuente externa 5 V' },
+      { id: 'h', kind: 'block', label: 'Calefactor 8 W (1.6 A)' },
+    ],
+    arrows: [
+      { from: 'mega', to: 'rel', label: 'señal de control', kind: 'data' },
+      { from: 'src', to: 'rel', label: '5 V', kind: 'power' },
+      { from: 'rel', to: 'h', label: '1.6 A por COM–NO', kind: 'power' },
+    ],
+  }],
+}} />
+
+### c) LDR en el ADC del ESP32
+
+**7. Resolución.** El ADC del ESP32 trabaja por defecto a su máxima resolución, **12 bits**:
+$$2^{12} = \boxed{4096\ \text{niveles}}\quad(\text{códigos } 0 \text{ a } 4095)$$
+
+**8. Tensión leída** (referencia 3.3 V):
+$$V = 800\cdot\frac{3.3\ \text{V}}{4096} = 0.6445\ \text{V}$$
+
+**9. Despejar $R_{LDR}$.** Con el LDR arriba y $R$ abajo, $V = 3.3\,\frac{R}{R+R_{LDR}}$:
+$$R_{LDR} = R\left(\frac{3.3}{V} - 1\right) = 240\ \text{k}\Omega\left(\frac{4096}{800} - 1\right) = 240\cdot 4.12 = \boxed{988.8\ \text{k}\Omega}$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Divisor LDR–240 kΩ con R_LDR = 988.8 kΩ',
+  steps: [{
+    note: 'Con R_LDR = 988.8 kΩ el nodo central queda en 0.6445 V, que es exactamente la lectura 800 de 4096.',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true, label: 'GND' },
+        { id: 'v', x: 0, y: 0, label: 'V+ 3.3 V' },
+        { id: 'mid', x: 5, y: 3, label: 'ADC', showPotential: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 'v', value: 3.3, label: '3.3 V' },
+        { id: 'RL', kind: 'resistor', from: 'v', to: 'mid', value: 988800, label: 'R_LDR' },
+        { id: 'R', kind: 'resistor', from: 'mid', to: 'g', value: 240000, label: '240k' },
+      ],
+    },
+    expect: { 'V(mid)': 0.6445 },
+  }],
+}} />
+
+**10. Iluminación** (con $R_{LDR}$ en Ω, unidades SI):
+$$E = \left(\frac{5\cdot 10^5}{988\,800}\right)^{1/0.7} = (0.5057)^{1.4286} = \boxed{0.378\ \text{lux}}$$
+
+Un valor muy bajo, coherente con un LDR de casi 1 MΩ (casi oscuridad).
+
+> El enunciado no fija la unidad de $R_{LDR}$ en la ecuación. Si se reemplazara en kΩ
+> ($5\cdot 10^5/988.8$) saldría ≈ 7289 lux; conviene declarar la unidad usada. Con ambos criterios el
+> procedimiento (lectura → tensión → divisor → ecuación) es el mismo.
+
+</ExerciseBlock>
+
+## Pregunta 6 — Configuración LoRa P2P (3 puntos)
+
+Enlace P2P en el Perú con dos módulos **RAK3172 (RAK3272S)**. El transmisor está en **COM9** y se abre
+una terminal serial a **9600 baudios**.
+
+- a) ¿Se pueden enviar comandos AT a 9600? Si no, ¿cuál es la tasa nativa? *(0.5 pt)*
+- b) Evalúe la viabilidad del enlace y corrija los comandos: *(1 pt)*
+
+| Nodo receptor | Nodo transmisor |
+|---|---|
+| `AT+NWM=1` | `AT+NWM=0` |
+| `AT+P2P=915000000:7:125:1:8:20` | `AT+P2P=915000000:7:250:1:8:20` |
+| `AT+PRECV=0` | `AT+PRECV=65534` |
+
+- c) Función de `AT+NWM` y consecuencia de configurarlo en 0 frente a 1. *(0.5 pt)*
+- d) ¿Cuáles de estos envíos darán `AT_PARAM_ERROR`? `AT+PSEND=DATA TEMP`, `AT+PSEND=5A3C8`,
+  `AT+PSEND=00AA11`. *(0.5 pt)*
+
+Tema: [Laboratorio LoRa P2P](/topics/lab-lora-p2p).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "RAK3172 por COM9 a 9600 baudios: (a) ¿funciona? (b) corrija la configuración RX/TX dada; (c) explique AT+NWM 0 vs 1; (d) ¿qué PSEND fallan: DATA TEMP, 5A3C8, 00AA11?",
+  hints: [
+    "UART2 del RAK por defecto: 115200 8-N-1.",
+    "Compara modo, cada campo de AT+P2P y el papel de PRECV=0 vs 65534.",
+    "AT+PSEND solo acepta hexadecimal: 2 dígitos 0-9/A-F por byte.",
+  ],
+}}>
+
+### a) Velocidad del puerto
+
+**1.** **No.** La UART2 del RAK3172 (RUI3) trabaja por defecto a **115200 baudios, 8-N-1**; a 9600 el
+módulo no interpreta los comandos (no responde `OK` o se ve basura). Hay que abrir COM9 a
+**115200 baudios**.
+
+### b) Viabilidad del enlace
+
+**2. Revisar campo por campo.** El enlace **no es viable**:
+
+| # | Error | Nodo | Corrección explícita |
+|---|---|---|---|
+| 1 | `NWM=1` pone el receptor en **LoRaWAN**, no en P2P | receptor | `AT+NWM=0` |
+| 2 | **BW distinto**: 125 kHz (RX) vs 250 kHz (TX); los parámetros P2P deben coincidir | transmisor | `AT+P2P=915000000:7:125:1:8:20` |
+| 3 | **Roles de PRECV invertidos**: `0` deja de escuchar (modo TX) y `65534` escucha continuamente (modo RX) | ambos | receptor `AT+PRECV=65534`; transmisor `AT+PRECV=0` |
+
+Lo demás coincide: 915 MHz, SF 7, CR 1 (= 4/6 en la codificación de RUI3), preámbulo 8 y 20 dBm
+(dentro de 5–22 dBm).
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Configuración corregida',
+  steps: [{
+    note: 'Ambos en P2P, mismos parámetros; el receptor escucha (65534) y el transmisor envía (0) un payload en hex.',
+    actors: [{ id: 'tx', label: 'Transmisor (COM9, 115200)' }, { id: 'rx', label: 'Receptor' }],
+    msgs: [
+      { divider: true, from: 'tx', to: 'rx', label: 'ambos: AT+NWM=0 · AT+P2P=915000000:7:125:1:8:20' },
+      { divider: true, from: 'tx', to: 'rx', label: 'TX: AT+PRECV=0 · RX: AT+PRECV=65534' },
+      { from: 'tx', to: 'rx', label: 'AT+PSEND=00AA11', state: 'active', store: '+EVT:RXP2P:POT:SNR:00AA11' },
+    ],
+  }],
+}} />
+
+**Observación (frecuencia en Perú):** la slide de bandas del MTC muestra 902–915 MHz asignada a un
+operador; el laboratorio usa 923 MHz (formato `923X00000`). Cambiar a `923000000` en **ambos** nodos
+sería lo recomendable, aunque no es lo que impide el enlace.
+
+### c) AT+NWM
+
+**3.** `AT+NWM` (*Network Work Mode*) elige el modo de trabajo del módulo: **`0` = LoRa P2P**
+(enlace directo entre módulos con `AT+P2P`, `PRECV` y `PSEND`, sin gateway ni servidor) y
+**`1` = LoRaWAN** (el módulo actúa como nodo de una red LoRaWAN: necesita gateway, network server y
+unirse a la red; los comandos P2P no aplican). Si un nodo queda en 1 y el otro en 0, no se comunican.
+
+### d) Formato de PSEND
+
+**4.** `AT+PSEND` exige el payload en **hexadecimal**, con **dos dígitos (0–9, A–F) por byte**:
+
+| Comando | ¿Válido? | Motivo |
+|---|---|---|
+| `AT+PSEND=DATA TEMP` | **error** | contiene caracteres no hex (T, M, P) y un espacio |
+| `AT+PSEND=5A3C8` | **error** | 5 dígitos: número impar, el último byte queda incompleto |
+| `AT+PSEND=00AA11` | **válido** | 6 dígitos hex = 3 bytes (`00`, `AA`, `11`) |
+
+</ExerciseBlock>
+
+## Pregunta 7 — Diseño de un sistema IoT con MQTT (4 puntos)
+
+Nodo supervisor de invernadero con **ESP32**, MQTT sobre Wi-Fi:
+
+| Componente | Función |
+|---|---|
+| DHT22 (digital) | temperatura $T$ (°C) |
+| Higrómetro de suelo (ADC) | humedad $H_{suelo}$ (%) |
+| LDR (ADC) | luz $L$ (lux) |
+| Relé + bomba 12 V | riego (fuente externa 12 V) |
+| Servomotor (PWM) | compuerta de ventilación (0° a 90°) |
+| Buzzer activo (digital) | alerta sonora |
+| LCD 16×2 I2C y Wi-Fi | métricas locales y conexión al broker |
+
+Reglas: (1) **Inicialización**: pines, I2C, Wi-Fi, conexión al broker y suscripción a
+`invernadero/cmd`. (2) **Monitoreo**: leer $T$, $H_{suelo}$, $L$ y actualizar el LCD. (3) **Control
+local**: si $H_{suelo} < 40\,\%$ enciende la bomba; si $H_{suelo} \ge 60\,\%$ la apaga. Si $T > 35$ °C
+**o** $L > 800$ lux: servo a 90° y buzzer intermitente; si no ($T \le 35$ °C y $L \le 800$ lux): servo a
+0° y buzzer apagado. (4) **MQTT**: cada 10 s publicar un JSON en `invernadero/telemetria`; si llega
+`"STOP"` en `invernadero/cmd`, apagar el relé y cerrar el servo.
+
+- a) Diagrama de bloques del hardware: unidad central e interfaces (I2C, PWM, GPIO, ADC). *(2 pt)*
+- b) Diagrama de flujo del firmware: inicialización, lazo, decisiones por umbral y MQTT asíncrono. *(2 pt)*
+
+Temas: [Laboratorio MQTT con ESP32](/topics/lab-mqtt-esp32) · [Diagramas de flujo y de bloques](/topics/flow-block-diagrams).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Dibuje el diagrama de bloques (con interfaces) y el diagrama de flujo del firmware del supervisor de invernadero con ESP32 y MQTT.",
+  hints: [
+    "Bloques: ESP32 al centro; sensores a la izquierda con DIGITAL/ADC; actuadores a la derecha con GPIO/PWM; LCD por I2C; broker por Wi-Fi; fuente de 12 V solo para la bomba.",
+    "El riego tiene histéresis: dos umbrales (40 % y 60 %), y entre ambos no se cambia el estado.",
+    "Ventilación: una sola decisión con OR (T > 35 °C o L > 800 lux).",
+    "MQTT: el comando STOP se atiende cuando llega (callback) y tiene prioridad; la publicación ocurre solo cada 10 s.",
+  ],
+}}>
+
+### a) Diagrama de bloques
+
+**1. Unidad central:** ESP32. **2. Entradas** con su interfaz. **3. Salidas** con su interfaz y la
+etapa de potencia de la bomba. **4. Comunicación** I2C (LCD) y Wi-Fi/MQTT (broker).
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Hardware del supervisor de invernadero',
+  steps: [{
+    note: 'Flechas finas = datos/control con la interfaz rotulada; flechas gruesas = potencia. La bomba de 12 V nunca sale de un GPIO: la conmuta el relé desde una fuente externa.',
+    shapes: [
+      { id: 'dht', kind: 'block', label: 'DHT22 (T)' },
+      { id: 'hum', kind: 'block', label: 'Higrómetro (H suelo)' },
+      { id: 'ldr', kind: 'block', label: 'LDR + divisor (L)' },
+      { id: 'esp', kind: 'block', label: 'ESP32 (unidad central)', state: 'active' },
+      { id: 'lcd', kind: 'block', label: 'LCD 16×2' },
+      { id: 'rel', kind: 'block', label: 'Módulo relé (+ fuente externa 12 V)' },
+      { id: 'pump', kind: 'block', label: 'Bomba 12 V' },
+      { id: 'servo', kind: 'block', label: 'Servo (compuerta 0°/90°)' },
+      { id: 'buz', kind: 'block', label: 'Buzzer activo' },
+      { id: 'mq', kind: 'block', label: 'Broker MQTT' },
+    ],
+    arrows: [
+      { from: 'dht', to: 'esp', label: 'DIGITAL (1 hilo)', kind: 'data' },
+      { from: 'hum', to: 'esp', label: 'ADC', kind: 'data' },
+      { from: 'ldr', to: 'esp', label: 'ADC', kind: 'data' },
+      { from: 'esp', to: 'lcd', label: 'I2C (SDA/SCL)', kind: 'data' },
+      { from: 'esp', to: 'rel', label: 'GPIO', kind: 'data' },
+      { from: 'rel', to: 'pump', label: '12 V de la fuente externa, conmutados', kind: 'power' },
+      { from: 'esp', to: 'servo', label: 'PWM', kind: 'data' },
+      { from: 'esp', to: 'buz', label: 'GPIO', kind: 'data' },
+      { from: 'esp', to: 'mq', label: 'Wi-Fi: pub telemetria · sub cmd', kind: 'data' },
+    ],
+  }],
+}} />
+
+### b) Diagrama de flujo
+
+**5. Inicialización** una sola vez; **6. lazo** con lectura y LCD; **7. riego con histéresis** (dos
+rombos); **8. ventilación** (un rombo con OR); **9. MQTT**: el STOP llega de forma asíncrona (callback)
+y fuerza el estado seguro; la publicación cada 10 s se controla con un temporizador sin bloquear el lazo.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Firmware del ESP32',
+  steps: [{
+    note: 'El callback de MQTT solo marca el STOP; el lazo lo atiende primero. El riego tiene histéresis: entre 40 % y 60 % el relé conserva su estado.',
+    shapes: [
+      { id: 'st', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'ini', kind: 'process', label: 'Pines E/S, I2C + LCD, Wi-Fi, conectar broker, suscribir invernadero/cmd' },
+      { id: 'loop', kind: 'process', label: 'client.loop(): atender MQTT (callback: si msg = STOP → stop = true)' },
+      { id: 'rd', kind: 'io', label: 'Leer T (DHT22), H suelo y L (ADC); mostrar en LCD' },
+      { id: 'stop', kind: 'decision', label: '¿stop?' },
+      { id: 'safe', kind: 'process', label: 'Relé OFF, servo 0° (cerrado)' },
+      { id: 'h40', kind: 'decision', label: '¿H < 40 %?' },
+      { id: 'on', kind: 'process', label: 'Relé ON (bomba)' },
+      { id: 'h60', kind: 'decision', label: '¿H ≥ 60 %?' },
+      { id: 'off', kind: 'process', label: 'Relé OFF' },
+      { id: 'vent', kind: 'decision', label: '¿T > 35 °C o L > 800 lux?' },
+      { id: 'open', kind: 'process', label: 'Servo 90°, buzzer intermitente' },
+      { id: 'close', kind: 'process', label: 'Servo 0°, buzzer OFF' },
+      { id: 't10', kind: 'decision', label: '¿Pasaron 10 s?' },
+      { id: 'pub', kind: 'io', label: 'Publicar JSON en invernadero/telemetria' },
+    ],
+    arrows: [
+      { from: 'st', to: 'ini' }, { from: 'ini', to: 'loop' }, { from: 'loop', to: 'rd' }, { from: 'rd', to: 'stop' },
+      { from: 'stop', to: 'safe', label: 'sí' }, { from: 'stop', to: 'h40', label: 'no' },
+      { from: 'safe', to: 't10' },
+      { from: 'h40', to: 'on', label: 'sí' }, { from: 'h40', to: 'h60', label: 'no' },
+      { from: 'h60', to: 'off', label: 'sí' }, { from: 'h60', to: 'vent', label: 'no (mantiene)' },
+      { from: 'on', to: 'vent' }, { from: 'off', to: 'vent' },
+      { from: 'vent', to: 'open', label: 'sí' }, { from: 'vent', to: 'close', label: 'no' },
+      { from: 'open', to: 't10' }, { from: 'close', to: 't10' },
+      { from: 't10', to: 'pub', label: 'sí' }, { from: 't10', to: 'loop', label: 'no' },
+      { from: 'pub', to: 'loop' },
+    ],
+  }],
+}} />
+
+Ejemplo de payload publicado:
+
+```json
+{ "T": 36.2, "H_suelo": 38, "L": 650, "bomba": "ON", "compuerta": 90 }
+```
+
+**Comprobación:** cada regla del enunciado aparece como un rombo o proceso: inicialización con
+suscripción, lectura + LCD, histéresis 40/60 %, OR de ventilación, STOP con prioridad y publicación
+cada 10 s.
+
+</ExerciseBlock>

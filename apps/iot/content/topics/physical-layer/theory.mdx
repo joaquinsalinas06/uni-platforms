@@ -1,0 +1,197 @@
+---
+kind: theory
+title: "Capa física en IoT: enlace inalámbrico, WSN, 5G y LiFi"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+Casi todo nodo IoT transmite por aire, y el enlace inalámbrico no se comporta como un cable:
+la señal se atenúa, otros equipos interfieren, los reflejos llegan desfasados y no todos los
+nodos se escuchan entre sí. Esta semana repasa esas características, cómo se organiza una red
+de sensores inalámbricos (WSN) y cómo se integra a Internet, y dos tecnologías de capa física
+para IoT: **5G** y **LiFi**.
+
+## Conceptos
+
+### Inalámbrico ≠ móvil *(Sem12_Phys#6–7)*
+- **Wireless**: comunicar por un enlace inalámbrico. **Mobility**: manejar un usuario que
+  cambia de punto de conexión. Son dos desafíos distintos.
+- Para las capas superiores el modelo best effort no cambia y TCP/UDP funcionan igual, pero el
+  rendimiento sufre: pérdidas y retardos por errores de bit y por *handoff*, y **TCP interpreta la
+  pérdida como congestión** y reduce su ventana sin necesidad.
+
+### Elementos y taxonomía *(Sem12_Phys#9–16)*
+- Hosts inalámbricos, **estación base** (conecta los móviles a la red cableada) y enlaces
+  inalámbricos.
+- **Modo infraestructura**: la estación base conecta a la red cableada; *handoff* = el móvil
+  cambia de estación base. **Modo ad hoc**: sin estaciones base; los nodos solo alcanzan a los que
+  están en cobertura y se organizan y rutean entre ellos.
+
+| | Un salto | Múltiples saltos |
+|---|---|---|
+| **Con infraestructura** | el host se conecta a una estación base (Wi-Fi, WiMAX, celular) | el host puede tener que retransmitir por varios nodos (red mesh) |
+| **Sin infraestructura** | sin estación base ni conexión a Internet (redes ad hoc) | sin estación base; hay que retransmitir para llegar a un nodo |
+
+### Características del enlace inalámbrico *(Sem12_Phys#17–19)*
+- **Atenuación (path loss)**: la señal se debilita al propagarse por la materia.
+- **Interferencia**: frecuencias estandarizadas (p. ej. **2.4 GHz**) compartidas con otros
+  equipos; los motores también interfieren.
+- **Propagación multicamino (multipath)**: la señal rebota en objetos y suelo y llega en tiempos
+  ligeramente distintos.
+- **SNR** (relación señal a ruido): más SNR = más fácil extraer la señal. Compromiso **SNR vs
+  BER**: con una capa física dada, **subir potencia → sube SNR → baja BER**; con un SNR dado, elegir
+  la capa física que cumpla la BER con el mayor throughput. Con movilidad el SNR cambia: hay que
+  **adaptar** modulación y tasa (ver [Modulación digital](/topics/digital-modulation)).
+- **Terminal oculta** y **atenuación**: A y B se oyen, B y C se oyen, pero A y C no; no saben que
+  interfieren en B. Se mitiga con **CSMA/CA** (ver [Protocolos MAC](/topics/mac-protocols)).
+
+### Redes de sensores inalámbricos (WSN) *(Sem12_Phys#21–29)*
+Aplicaciones: agricultura, industria, medio ambiente. Arquitectura: un **campo de sensores**
+envía datos a un **nodo sink**, que los lleva por Internet al **task manager** del usuario.
+
+Patrones de comunicación (según aplicación, confiabilidad y consumo):
+
+<Visualization viz={{
+  type: 'network-topology',
+  title: 'Patrones de comunicación en una WSN',
+  steps: [
+    {
+      note: 'Many-to-one (recolección): árbol con raíz en el sink; los nodos envían estado periódico. Entrega no confiable: el sink no puede confirmar cada mensaje.',
+      processes: [
+        { id: 'sink', label: 'sink', state: 'active' },
+        { id: 'a', label: 'nodo A' }, { id: 'b', label: 'nodo B' }, { id: 'c', label: 'nodo C' }, { id: 'd', label: 'nodo D' },
+      ],
+      dataFlow: [{ from: 'c', to: 'a' }, { from: 'd', to: 'b' }, { from: 'a', to: 'sink' }, { from: 'b', to: 'sink' }],
+    },
+    {
+      note: 'One-to-many (diseminación): comandos o reconfiguración desde el sink. Tampoco hay ACK, y con flooding el número de mensajes puede ser alto.',
+      processes: [
+        { id: 'sink', label: 'sink', state: 'active' },
+        { id: 'a', label: 'nodo A' }, { id: 'b', label: 'nodo B' }, { id: 'c', label: 'nodo C' }, { id: 'd', label: 'nodo D' },
+      ],
+      dataFlow: [{ from: 'sink', to: 'a' }, { from: 'sink', to: 'b' }, { from: 'a', to: 'c' }, { from: 'b', to: 'd' }],
+    },
+    {
+      note: 'One-to-one: cualquier par de nodos se comunica. Más flexible pero más complejo: más recursos y rutas almacenadas hacia todos los nodos alcanzables.',
+      processes: [
+        { id: 'sink', label: 'sink' },
+        { id: 'a', label: 'nodo A' }, { id: 'b', label: 'nodo B' }, { id: 'c', label: 'nodo C', state: 'active' }, { id: 'd', label: 'nodo D', state: 'active' },
+      ],
+      dataFlow: [{ from: 'c', to: 'a' }, { from: 'a', to: 'sink' }, { from: 'sink', to: 'b' }, { from: 'b', to: 'd' }],
+    },
+  ],
+}} />
+
+Integración WSN–Internet:
+
+| Enfoque | Cómo funciona |
+|---|---|
+| **Front-end** | hosts externos y sensores nunca hablan directo; la WSN usa sus propios protocolos; una estación base centraliza y puede almacenar todos los datos |
+| **Gateway** | un dispositivo actúa como gateway de aplicación: traduce los protocolos de ambas redes (TCP/IP y propietario) y rutea |
+| **TCP/IP** | los nodos implementan TCP/IP (o 6LoWPAN en 802.15.4); son elementos plenos de Internet y cualquier host puede conectarse directo: integración total con IoT |
+
+### 5G *(Sem12_Phys#31–35)*
+La ITU-R lanzó en 2012 el programa "IMT for 2020 and beyond" (**IMT-2020**). Indicadores clave
+frente a IMT-Advanced (4G):
+
+| KPI | 5G | IMT-Advanced |
+|---|---|---|
+| Tasa experimentada por usuario | 100 Mbps – 1 Gbps | 10 Mbps |
+| Tasa pico | 20 Gbps | 1 Gbps |
+| Movilidad | 500 km/h | 350 km/h |
+| Latencia (interfaz radio) | 1 ms | 10 ms |
+| Densidad de conexiones | $10^6$ /km² | $10^5$ /km² |
+| Eficiencia energética | 100× | — |
+| Eficiencia espectral | 3× | — |
+| Capacidad de tráfico por área | 10 Mbps/m² | 0.1 Mbps/m² |
+
+Tecnologías habilitadoras de 5G *(Sem12_Phys#34)*: **ondas milimétricas**, **small cells**,
+**MIMO masivo**, **beamforming** y **full duplex** (la slide solo las nombra con íconos). La que el
+curso destaca es **small cells**: del aumento histórico de capacidad inalámbrica,
+la capa física aportó **5×**, el espectro **25×** y el despliegue masivo de celdas reducidas
+**1600×**.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Factores del aumento de capacidad inalámbrica (Sem12_Phys#35)',
+  steps: [{
+    note: 'Achicar las celdas (reusar el espectro en más lugares) pesa mucho más que mejorar la modulación o conseguir más espectro.',
+    series: [{ id: 'c', label: 'factor', kind: 'bars', bars: [
+      { label: 'capa física', from: 1, to: 5 },
+      { label: 'espectro', from: 1, to: 25 },
+      { label: 'celdas reducidas', from: 1, to: 1600 },
+    ] }],
+    x: { label: 'factor de aumento (×)', log: true },
+  }],
+}} />
+
+> **Nota de apoyo** (no está en el material): la slide escribe la *area traffic capacity* como
+> 10 Mbps/Km² (5G) y 0.1 Mbps/Km² (4G); el valor de la norma IMT-2020 es 10 Mbps/m², por eso la tabla
+> usa m².
+
+La slide 36 compara 5G con **6G** (Giordani et al., 2020): tasa por usuario 100 Mbps → 1 Gbps, pico
+20 Gbps → más de 1 Tbps, latencia de más de 1 ms → ~100 µs, $10^6$ → $10^7$ conexiones/km², velocidad
+500 → 1000 km/h, eficiencia espectral 5× y energética 10–100×.
+
+### LiFi / IEEE 802.15.7 *(Sem12_Phys#38–53)*
+Comunicación inalámbrica **con luz**, rápida, bidireccional, en red y móvil:
+- **Alta velocidad**: al menos **10 Mbps por punto de acceso**.
+- **Bidireccional**: espectro de luz de **190 nm a 10 000 nm**; uplink y downlink sin recursos RF.
+- **En red y móvil**: roaming, handover y varios usuarios por punto de acceso.
+- Ventajas: no genera **interferencia electromagnética**, más **seguridad** y localización.
+  *(Nota de apoyo: la seguridad viene de que la luz no atraviesa paredes, así que la señal no sale de la sala.)* Casos: salas de conferencia seguras, aviones y aeropuertos, entornos
+  sensibles a EMI (hospitales, petroquímicas, instalaciones nucleares).
+- Acceso al medio estudiado en 802.15.7: **Pure ALOHA** y **CSMA/CA no ranurado** (ver
+  [Protocolos MAC](/topics/mac-protocols)).
+
+## Método paso a paso
+**Clasificar una red inalámbrica** (pregunta típica):
+1. ¿Hay estación base? → con / sin infraestructura.
+2. ¿El paquete cruza uno o varios saltos inalámbricos? → un salto / multisalto.
+3. Ubicar en la tabla (Wi-Fi/celular, mesh, ad hoc).
+4. Si es una WSN: identificar el patrón (recolección, diseminación, punto a punto) y el enfoque de
+   integración a Internet (front-end, gateway, TCP/IP).
+
+## Ejemplo resuelto
+*(derivado de las slides)* Una granja con 200 sensores de humedad que reportan cada 10 min a un
+nodo central con salida a Internet, y que de vez en cuando reciben un nuevo umbral:
+- Taxonomía: **con infraestructura y multisalto** (los lejanos retransmiten por otros): **mesh**.
+- Patrones: reportes = **many-to-one** (árbol hacia el sink); nuevo umbral = **one-to-many**
+  (diseminación, posible flooding).
+- Integración: si el nodo central traduce de un protocolo propio a MQTT/TCP, es **gateway**; si
+  los sensores hablan 6LoWPAN, es **TCP/IP**.
+
+## Errores típicos
+- Confundir wireless con mobility.
+- Decir que subir potencia baja el SNR: lo **sube** y baja la BER.
+- Creer que en many-to-one el sink confirma cada mensaje: la entrega es no confiable.
+- Atribuir a LiFi interferencia EMI: es justo lo que evita.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique el problema de la terminal oculta en comunicaciones inalámbricas. (EF 2025, P5)",
+  hints: [
+    "Dibuja tres nodos A, B, C en línea: ¿quién oye a quién?",
+    "Si A y C no se oyen, ¿qué pasa cuando ambos 'escuchan el canal' antes de transmitir a B?",
+    "¿Qué mecanismo reserva el medio para que C se calle?",
+  ],
+}}>
+
+Resuelto completo (con RTS/CTS) en [Protocolos MAC](/topics/mac-protocols) y en el
+[Examen Final 2025-I](/evaluaciones/finales/2025-i).
+
+**1. Escenario.** A y B se oyen, B y C se oyen, pero **A y C no** (distancia, obstáculo o
+atenuación).
+
+**2. El problema.** A sensa el canal, lo encuentra libre y transmite a B; C también lo encuentra
+libre (no oye a A) y transmite a B. Las tramas **colisionan en B** y ninguno de los dos se entera:
+la detección de portadora es local.
+
+**3. Solución del curso.** CSMA/CA con **RTS/CTS**: B responde con CTS, que **sí oye C**, y C difiere
+la duración indicada (NAV).
+
+</ExerciseBlock>

@@ -1,0 +1,15 @@
+id: transport-layer
+title: "Capa de transporte en IoT: UDP, TCP, CoAP y QUIC"
+type: concept
+unit: s9
+prerequisites: [app-protocols]
+buildsOn: []
+usedBy: [network-layer]
+hasVisualization: true
+visualizationType: sequence
+placeholder: false
+formulas:
+  - name: Cabecera mínima de TCP sobre IP
+    tex: "H_{TCP/IP} = 20\\,\\text{B}_{TCP} + 20\\,\\text{B}_{IP} = 40\\,\\text{B}"
+    reasoning: "Cada segmento TCP lleva al menos 20 bytes de cabecera TCP más 20 de IP; para un sensor que envía pocos bytes, estos 40 B pesan más que el dato y justifican pasar a UDP o salir del stack IP."
+    source: "Sem9_IoTT-TransportLayerinIoT#57"

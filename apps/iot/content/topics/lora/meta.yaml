@@ -1,0 +1,47 @@
+id: lora
+title: "LoRa y LoRaWAN"
+type: method
+unit: s11
+prerequisites: [wireless-tech, network-layer]
+buildsOn: []
+usedBy: [lab-lora-p2p]
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Bits por símbolo LoRa
+    tex: "\\text{bits/símbolo} = SF, \\qquad \\text{valores posibles} = 2^{SF}"
+    reasoning: "Cada chirp codifica SF bits mediante su frecuencia de inicio, que puede tomar 2^SF posiciones; un mensaje se corta en grupos de SF bits y cada grupo, leído en decimal, es el símbolo (ej. 110011001 con SF=3 → 6, 3, 1)."
+    source: "Sem9_IoTT-TransportLayerinIoT#69"
+  - name: Duración de un símbolo
+    tex: "T_{s} = \\dfrac{2^{SF}}{BW}"
+    reasoning: "Subir SF en 1 duplica los valores posibles del símbolo y su duración (32×SF7 caben en el tiempo de 1×SF12); subir BW la acorta. Es la base de todo el Time on Air; la dan ambos exámenes finales."
+    source: "CS5055_EF_2025#1"
+  - name: Duración del preámbulo
+    tex: "T_{preamble} = (N_{preamble} + 4.25) \\times T_{symbol}"
+    reasoning: "Al preámbulo configurado (típicamente 6 a 12 símbolos, por defecto 8) el receptor LoRa suma 4.25 símbolos fijos de sincronización interna."
+    source: "Sem10_IoTT-NetworkLayerinIoT#33"
+  - name: Símbolos del payload (fórmula simplificada, CRC=0, H=0, DE=0)
+    tex: "N_{payload} = 8 + \\max\\left(\\left\\lceil \\dfrac{8PL - 4SF + 28}{4\\,SF} \\right\\rceil (CR + 4),\\ 0\\right)"
+    reasoning: "8 símbolos fijos más los bloques de 4·SF bits que ocupa el payload (redondeados hacia arriba), cada bloque expandido a CR+4 símbolos por la corrección de errores; es la versión de clase y del EF 2025."
+    source: "Sem10_IoTT-NetworkLayerinIoT#34"
+  - name: Símbolos del payload (variante del EF 2026)
+    tex: "N_{payload} = 8 + \\max\\left(\\left\\lceil \\dfrac{8PL - 4SF + 28}{SF} \\right\\rceil (CR + 4),\\ 0\\right)"
+    reasoning: "El EF 2026 dio esta fórmula 'simplificada para este escenario' con SF (no 4·SF) en el denominador; en el examen se usa la fórmula provista, así que hay que leer cuál da el enunciado."
+    source: "EF_2026_CS5055#1"
+  - name: Tiempo del payload y Time on Air
+    tex: "T_{payload} = N_{payload} \\times T_{symbol}, \\qquad ToA = T_{preamble} + T_{payload}"
+    reasoning: "El paquete completo dura el preámbulo más los símbolos del payload, todos de la misma duración T_symbol; el ToA limita cuántos mensajes puede enviar un nodo y cuánta energía gasta."
+    source: "Sem10_IoTT-NetworkLayerinIoT#34"
+  - name: Pérdida en espacio libre
+    tex: "L_{fs} = 32.45 + 20\\log(D) + 20\\log(f)"
+    reasoning: "La señal se debilita con la distancia y la frecuencia: con D en km y f en MHz, L_fs sale en dB; cada vez que se duplica la distancia se pierden unos 6 dB."
+    source: "Sem12_LoRa.pptx#34"
+  - name: Radio máximo de la zona de Fresnel
+    tex: "r = 8.657\\sqrt{\\dfrac{D}{f}}"
+    reasoning: "Radio (m) del elipsoide de Fresnel en el punto medio del enlace, con D en km y f en GHz; hay que mantener libre al menos el 60 % de ese radio para no degradar el enlace aunque haya línea de vista."
+    source: "Sem12_LoRa.pptx#35"
+  - name: Altura extra por curvatura terrestre
+    tex: "H = \\dfrac{1000\\,D^{2}}{8R}, \\quad R = 8504\\,\\text{km}"
+    reasoning: "La fórmula de Fresnel supone Tierra plana; para enlaces largos la curvatura levanta el terreno a mitad del camino H metros (D en km), que hay que sumar a la altura de las antenas."
+    source: "Sem12_LoRa.pptx#39"

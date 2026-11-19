@@ -1,0 +1,19 @@
+id: ble
+title: "Bluetooth Low Energy (BLE)"
+type: method
+unit: s11
+prerequisites: [wireless-tech]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: sequence
+placeholder: false
+formulas:
+  - name: Corriente promedio de un nodo BLE con connection interval T
+    tex: "I_{avg} = \\dfrac{I_{active}\\,t_{active} + I_{sleep}\\,t_{sleep}}{T}, \\quad t_{sleep} = T - t_{active}"
+    reasoning: "En cada connection interval el periférico está activo t_active (radio encendida) y duerme el resto; el promedio ponderado por tiempo da la corriente media que ve la batería."
+    source: "Sem11_IoTT-BLE#27"
+  - name: Autonomía de la batería
+    tex: "T_{battery} = \\dfrac{C}{I_{avg}}"
+    reasoning: "Una batería de capacidad C (mAh) entrega I_avg (mA) durante C/I_avg horas; con 220 mAh y 0.305 mA da ≈ 721 h ≈ 30 días."
+    source: "Sem11_IoTT-BLE#27"

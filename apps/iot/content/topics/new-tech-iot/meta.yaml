@@ -1,0 +1,15 @@
+id: new-tech-iot
+title: "Nuevas tecnologías para IoT: semiconductores, fotónica y cuántica"
+type: concept
+unit: s14
+prerequisites: [physical-layer]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: flow
+placeholder: false
+formulas:
+  - name: Corriente de túnel (proporcionalidad)
+    tex: "I \\propto \\rho(z) \\propto e^{-2\\kappa z}"
+    reasoning: "La corriente que atraviesa una barrera por efecto túnel cae exponencialmente con el ancho z de la barrera; por eso un canal de pocos átomos deja de aislar y limita la miniaturización del transistor."
+    source: "Sem14_IoTT-NewTechinIoT-HCI#8"

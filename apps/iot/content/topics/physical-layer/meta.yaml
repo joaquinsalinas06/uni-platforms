@@ -1,0 +1,11 @@
+id: physical-layer
+title: "Capa física en IoT: enlace inalámbrico, WSN, 5G y LiFi"
+type: concept
+unit: s12
+prerequisites: [wireless-tech]
+buildsOn: []
+usedBy: [digital-modulation, mac-protocols]
+hasVisualization: true
+visualizationType: network-topology
+placeholder: false
+formulas: []

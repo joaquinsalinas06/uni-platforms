@@ -1,0 +1,19 @@
+id: digital-modulation
+title: "Modulación digital y codificación de canal"
+type: method
+unit: s13
+prerequisites: [physical-layer]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: xy-chart
+placeholder: false
+formulas:
+  - name: Tasa de bits a partir de la tasa de símbolos
+    tex: "R_b = R_s \\log_2(M)"
+    reasoning: "Cada símbolo de una constelación de M puntos transporta log2(M) bits; con 100 ksímbolos/s, BPSK da 100 kb/s, QPSK 200, 16-QAM 400 y 64-QAM 600 kb/s (tasa sin codificar, sin framing ni retransmisiones)."
+    source: "Sem13_IoTT-Wireless2#10"
+  - name: Tasa de código
+    tex: "R = \\dfrac{\\text{bits de información}}{\\text{bits codificados transmitidos}}"
+    reasoning: "La codificación de canal agrega redundancia para corregir errores; R mide qué fracción de lo transmitido es información útil (el código de repetición 1 → 111 tiene R = 1/3)."
+    source: "Sem13_IoTT-Wireless2#14"

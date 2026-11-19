@@ -1,0 +1,139 @@
+---
+kind: subtopic
+order: 2
+title: "Time on Air (ToA)"
+---
+import Visualization from '../../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../../src/components/ExerciseBlock';
+
+## Idea
+El **Time on Air** es cuánto tiempo ocupa el canal un paquete LoRa. Importa porque mientras
+transmite el nodo gasta su máxima corriente, y porque el canal compartido y los límites de
+*duty cycle* acotan cuántos mensajes puede mandar. Se calcula sumando el **preámbulo** y el
+**payload**, ambos medidos en símbolos de duración $T_s$.
+
+## Conceptos
+
+$$T_s = \frac{2^{SF}}{BW}$$
+
+$$T_{preamble} = (N_{preamble} + 4.25)\times T_{symbol}$$
+
+- $N_{preamble}$: símbolos de preámbulo configurados (típicamente **6 a 12**, por defecto 8).
+- **4.25**: símbolos fijos adicionales para la sincronización interna del receptor. *(Sem10#33)*
+
+Fórmula simplificada del número de símbolos del payload, con **CRC = 0, H = 0, DE = 0**
+*(Sem10#34, EF 2025)*:
+
+$$N_{payload} = 8 + \max\left(\left\lceil \frac{8PL - 4SF + 28}{4\,SF}\right\rceil (CR+4),\ 0\right)$$
+
+$$T_{payload} = N_{payload}\times T_{symbol},\qquad ToA = T_{preamble} + T_{payload}$$
+
+- $PL$: payload en **bytes** ($8PL$ = bits).
+- $CR$: aquí es un índice **1 a 4** que corresponde a 4/5 … 4/8 ($CR + 4$ = 5 … 8 símbolos por
+  bloque). **Cuidado:** en el comando `AT+P2P` del RAK3172 la codificación es otra: **0 = 4/5**,
+  1 = 4/6, 2 = 4/7, 3 = 4/8 *(Sem12_LAB4_LoRa_v2#7)*. Ambos finales escriben "CR = 1 (4/5)",
+  que es la convención de la fórmula.
+
+> **Variante del EF 2026.** El examen dio, "simplificada para este escenario", la misma fórmula
+> pero con **$SF$ (no $4SF$) en el denominador**. En el examen se usa **la fórmula que da el
+> enunciado**; abajo se muestran ambas para que se note la diferencia.
+
+## Método paso a paso
+1. $T_s = 2^{SF}/BW$ (BW en Hz → $T_s$ en s; pasar a ms).
+2. Símbolos de preámbulo: $N_{preamble} + 4.25$; multiplicar por $T_s$.
+3. $N_{payload}$: numerador $8PL - 4SF + 28$; dividir; **techo**; multiplicar por $CR+4$;
+   comparar con 0; sumar 8.
+4. $T_{payload} = N_{payload}\,T_s$.
+5. $ToA = T_{preamble} + T_{payload}$ (con unidades).
+6. Si piden **tasa efectiva**: $R = 8PL / ToA$ (bits útiles por segundo).
+
+## Ejemplo resuelto
+**Slides Sem10#33–35 y EF 2025, P3:** $PL = 12$ B, $SF = 8$, $BW = 125$ kHz, $CR = 1$ (4/5),
+preámbulo de 8 símbolos.
+
+**1. Símbolo.**
+$$T_s = \frac{2^8}{125\,000\ \text{Hz}} = \frac{256}{125\,000} = 2.048\ \text{ms}$$
+
+**2. Preámbulo.**
+$$T_{preamble} = (8 + 4.25)\times 2.048 = 12.25 \times 2.048 = 25.088\ \text{ms}$$
+
+**3. Símbolos del payload.**
+$$\frac{8\cdot 12 - 4\cdot 8 + 28}{4\cdot 8} = \frac{96 - 32 + 28}{32} = \frac{92}{32} = 2.875 \;\to\; \lceil 2.875\rceil = 3$$
+$$N_{payload} = 8 + \max(3\cdot(1+4),\,0) = 8 + 15 = 23\ \text{símbolos}$$
+
+**4. Payload.** $T_{payload} = 23 \times 2.048 = 47.104$ ms.
+
+**5. Total.**
+$$ToA = 25.088 + 47.104 = \boxed{72.192\ \text{ms}}$$
+
+**6. Tasa efectiva** (pregunta abierta de Sem10#35, *derivado*):
+$$R = \frac{8\cdot 12\ \text{bits}}{72.192\ \text{ms}} = \frac{96}{0.072192\ \text{s}} \approx 1330\ \text{bps} \approx 1.33\ \text{kbps}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Paquete del ejemplo en símbolos (SF 8, T_s = 2.048 ms)',
+  steps: [{
+    note: '12.25 símbolos de preámbulo (25.088 ms) + 23 de payload (8 fijos + 15 de datos, 47.104 ms) = 35.25 símbolos ≈ 72.19 ms.',
+    series: [{ id: 'p', label: 'símbolos', kind: 'bars', bars: [
+      { label: 'preámbulo (8 + 4.25)', from: 0, to: 12.25 },
+      { label: 'payload: 8 fijos', from: 12.25, to: 20.25 },
+      { label: 'payload: 3 × (CR+4) = 15', from: 20.25, to: 35.25 },
+    ] }],
+    x: { label: 'símbolos (× 2.048 ms)', min: 0, max: 36 },
+  }],
+}} />
+
+**Cómo cambia el ToA con SF** *(derivado, mismo paquete)*: al subir SF, $T_s$ se duplica y el
+ToA crece casi exponencialmente: más alcance, más tiempo en el aire y más energía.
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'ToA del paquete de 12 B vs SF (BW 125 kHz, CR 4/5, preámbulo 8)',
+  steps: [{
+    note: 'SF7 ≈ 41 ms, SF8 ≈ 72 ms (ejemplo de clase), SF12 ≈ 991 ms: cada paso de SF casi duplica el tiempo en el aire.',
+    series: [{ id: 'toa', label: 'ToA (ms)', kind: 'stem', points: [[7, 41.216], [8, 72.192], [9, 144.384], [10, 288.768], [11, 495.616], [12, 991.232]] }],
+    x: { label: 'SF', min: 6.5, max: 12.5, ticks: [7, 8, 9, 10, 11, 12] },
+    y: { label: 'ToA (ms)', min: 0, max: 1050 },
+  }],
+}} />
+
+## Errores típicos
+- Olvidar el **techo** (⌈ ⌉): 2.875 se vuelve 3, no 2.875 ni 2.
+- Olvidar el 4.25 del preámbulo o sumarlo a $N_{payload}$.
+- Usar BW en kHz dentro de $2^{SF}/BW$ sin cuidar unidades: $256/125 = 2.048$ **ms**.
+- Mezclar la convención de CR de la fórmula (1 = 4/5) con la del comando AT (0 = 4/5).
+- Usar $4SF$ en el denominador cuando el enunciado dio $SF$ (o al revés).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "LoRa con SF = 5, BW = 125 kHz, CR = 1 (4/5), N_pream = 8, cabecera explícita, CRC habilitado y PL = 2 B. Con N_payload = 8 + max(⌈(8PL − 4SF + 28)/SF⌉·(CR+4), 0), N_symPreamble = N_pream + 4.25 y T_s = 2^SF/BW, calcule los símbolos de preámbulo y de payload y el ToA total en ms. (EF 2026, P2.2)",
+  hints: [
+    "Empieza por T_s = 2^5 / 125 000 Hz.",
+    "Numerador: 8·2 − 4·5 + 28. Ojo: el denominador de ESTA fórmula es SF, no 4·SF.",
+    "Suma símbolos de preámbulo y de payload y multiplica por T_s.",
+  ],
+}}>
+
+Resuelto también en el [Examen Final 2026-I, P2](/evaluaciones/finales/2026-i).
+
+**1. Preámbulo.** $N_{symPreamble} = 8 + 4.25 = 12.25$ símbolos.
+
+**2. Payload** (fórmula del enunciado):
+$$\left\lceil\frac{8\cdot 2 - 4\cdot 5 + 28}{5}\right\rceil = \left\lceil\frac{24}{5}\right\rceil = \lceil 4.8\rceil = 5$$
+
+$$N_{payload} = 8 + 5\cdot(1+4) = \boxed{33\ \text{símbolos}}$$
+
+**3. Símbolo.** $T_s = 2^5/125\,000 = 32/125\,000\ \text{s} = 0.256$ ms.
+
+**4. ToA.**
+$$ToA = (12.25 + 33)\times 0.256\ \text{ms} = 45.25 \times 0.256 = \boxed{11.584\ \text{ms}}$$
+($T_{preamble} = 3.136$ ms, $T_{payload} = 8.448$ ms.)
+
+**Comparación** con la fórmula de clase ($4SF$ abajo): $\lceil 24/20\rceil = 2$,
+$N_{payload} = 18$, $ToA = 30.25\times 0.256 = 7.744$ ms. En el examen vale la del enunciado.
+
+</ExerciseBlock>

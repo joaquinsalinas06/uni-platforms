@@ -1,0 +1,619 @@
+---
+title: "Examen Final 2025-I (14 de julio de 2025)"
+category: finales
+categoryLabel: "Exámenes finales"
+order: 2
+---
+
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+CS5055 Internet de las Cosas, 2025-I. **Sección teórica** (preguntas 1–6) y **sección de
+laboratorio** (7–11). Se califica el procedimiento: una respuesta final sin procedimiento no cuenta.
+Cada pregunta trae el enunciado, pistas y la solución paso a paso, que se desbloquea al pedir todas
+las pistas.
+
+## Pregunta 1 — ¿Qué es LoRa? (1 punto)
+
+¿Qué es LoRa y qué características lo diferencian de otras tecnologías de comunicación?
+
+Tema: [LoRa y LoRaWAN](/topics/lora).
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "¿Qué es LoRa y qué características lo diferencian de otras tecnologías de comunicación?",
+  hints: [
+    "¿En qué capa OSI trabaja y quién la patentó?",
+    "Compárala con Wi-Fi/BLE (alcance) y con celular (costo, licencia).",
+  ],
+}}>
+
+**Definición.** LoRa (*Long Range*) es una tecnología de **modulación** inalámbrica patentada por
+**Semtech** que opera **solo en la capa física** (capa 1 OSI), usando **Chirp Spread Spectrum (CSS)**
+en **bandas ISM sub-GHz sin licencia** (868 MHz en Europa, 915 MHz en Norteamérica; 923 MHz en el
+laboratorio). No es lo mismo que **LoRaWAN**, el protocolo MAC/red que corre encima.
+
+**Lo que la diferencia:**
+
+| Característica | LoRa | Comparación |
+|---|---|---|
+| Alcance | km: hasta 5 km urbano, más de 15 km rural con línea de vista | BLE/Wi-Fi: metros a decenas de metros |
+| Consumo | muy bajo: hasta 10 años con una pila | Wi-Fi y celular consumen mucho más |
+| Robustez | CSS resiste ruido e interferencia; buena penetración en edificios | — |
+| Costo | espectro libre, sin licencia ni suscripción | IoT celular paga operador |
+| Tasa | baja (0.3–50 kbps según SF) | solo para mensajes pequeños e infrecuentes |
+
+</ExerciseBlock>
+
+## Pregunta 2 — Modulación de LoRa y sus parámetros (1.5 puntos)
+
+Explique con sus palabras la técnica de modulación de LoRa y defina **spreading factor**,
+**bandwidth** y **coding rate**.
+
+Tema: [CSS y parámetros](/topics/lora/subtopics/css-parametros).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique la modulación CSS de LoRa y defina SF, BW y CR.",
+  hints: [
+    "¿Qué es un chirp y dónde está la información?",
+    "Para cada parámetro di qué es y qué pasa si aumenta.",
+  ],
+}}>
+
+**Modulación (CSS).** LoRa usa *Chirp Spread Spectrum*: cada símbolo es un **chirp**, una señal cuya
+frecuencia sube (o baja) linealmente recorriendo todo el ancho de banda. La información está en la
+**frecuencia de inicio** del chirp: con $SF$ bits por símbolo hay $2^{SF}$ posiciones posibles.
+Ensanchar la señal la hace muy robusta al ruido y a la interferencia; el receptor la demodula
+multiplicándola por un chirp inverso.
+
+| Parámetro | Qué es | Si aumenta |
+|---|---|---|
+| **Spreading Factor (SF)** | cuántos chirps por símbolo / bits por símbolo (5–12); $T_s = 2^{SF}/BW$ | más alcance y robustez, **menos tasa** (el símbolo dura el doble por cada +1) |
+| **Bandwidth (BW)** | ancho de banda de la modulación (125/250/500 kHz) | **más tasa**, menos sensibilidad del receptor |
+| **Coding Rate (CR)** | fracción de redundancia para corrección de errores (FEC): 4/5 … 4/8 | más protección contra interferencia, **más overhead** |
+
+</ExerciseBlock>
+
+## Pregunta 3 — Time on Air (2 puntos)
+
+Calcule $ToA = T_{preamble} + T_{payload}$ de un paquete LoRa con la fórmula simplificada de
+$N_{payload}$ (CRC = 0, H = 0, DE = 0):
+
+$$N_{payload} = 8 + \max\left(\left\lceil\frac{8PL - 4SF + 28}{4SF}\right\rceil\times(CR+4),\ 0\right),\qquad T_{symbol} = \frac{2^{SF}}{BW}$$
+
+Datos: $PL = 12$ B, $SF = 8$, $BW = 125$ kHz, $CR = 1$ (4/5), preámbulo de 8 símbolos.
+
+Tema: [Time on Air](/topics/lora/subtopics/time-on-air).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "ToA de un paquete LoRa con PL = 12 B, SF = 8, BW = 125 kHz, CR = 1 (4/5), preámbulo 8 símbolos.",
+  hints: [
+    "T_symbol = 2^8 / 125 000 Hz.",
+    "T_preamble = (N_preamble + 4.25)·T_symbol.",
+    "Numerador 8·12 − 4·8 + 28; denominador 4·8; aplica el techo.",
+  ],
+}}>
+
+**1. Símbolo.**
+$$T_{symbol} = \frac{2^8}{125\,000\ \text{Hz}} = \frac{256}{125\,000}\ \text{s} = 2.048\ \text{ms}$$
+
+**2. Preámbulo.**
+$$T_{preamble} = (8 + 4.25)\times 2.048\ \text{ms} = 12.25\times 2.048 = 25.088\ \text{ms}$$
+
+**3. Símbolos del payload.**
+$$\left\lceil\frac{8\cdot 12 - 4\cdot 8 + 28}{4\cdot 8}\right\rceil = \left\lceil\frac{92}{32}\right\rceil = \lceil 2.875\rceil = 3$$
+$$N_{payload} = 8 + \max(3\cdot(1+4),\ 0) = 8 + 15 = 23\ \text{símbolos}$$
+
+**4. Payload.** $T_{payload} = 23\times 2.048 = 47.104$ ms.
+
+**5. Total.**
+$$ToA = 25.088 + 47.104 = \boxed{72.192\ \text{ms}}$$
+
+**Comprobación:** $(12.25 + 23)\times 2.048 = 35.25 \times 2.048 = 72.192$ ms ✓. Tasa efectiva
+*(derivado)*: $96\ \text{bits}/72.192\ \text{ms} \approx 1.33$ kbps.
+
+</ExerciseBlock>
+
+## Pregunta 4 — Beamforming en 5G (1.5 puntos)
+
+Explique el concepto y el funcionamiento de **beamforming** en 5G con un ejemplo.
+
+Tema relacionado: [Capa física: 5G](/topics/physical-layer).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique beamforming en 5G y dé un ejemplo de su funcionamiento.",
+  hints: [
+    "Piensa en una antena con muchos elementos en lugar de una sola.",
+    "Si cada elemento emite con un pequeño desfase, ¿dónde se suman las ondas?",
+    "Relaciónalo con los KPIs de 5G (tasa, densidad de conexiones) y con las small cells.",
+  ],
+}}>
+
+> El material 2026 solo **nombra** beamforming entre las tecnologías habilitadoras de 5G (junto con
+> ondas milimétricas, small cells, MIMO masivo y full duplex, Sem12_Phys#34) sin explicarlo.
+> **Nota de apoyo** (la explicación no está en el material): respuesta modelo con conocimiento estándar.
+
+**1. Concepto.** *Beamforming* (conformación de haz) es una técnica de antenas en la que la estación
+base usa un **arreglo de muchos elementos** (MIMO masivo) y ajusta la **fase y amplitud** de la señal
+en cada elemento para que las ondas se **sumen constructivamente en la dirección del usuario** y se
+cancelen en otras. En lugar de irradiar en todas direcciones, concentra la energía en un **haz
+dirigido**.
+
+**2. Funcionamiento.** La estación estima dónde está cada usuario (a partir de las señales que este
+envía) y calcula los desfases; si el usuario se mueve, el haz se reorienta. Puede formar **varios
+haces simultáneos** para distintos usuarios con las mismas frecuencias (multiplexación espacial).
+
+**3. Ventajas.** Más señal útil (mayor SNR) y menos interferencia para los demás, lo que permite más
+tasa por usuario y más dispositivos por km² (KPIs de 5G: hasta 20 Gbps pico y $10^6$
+conexiones/km²); compensa la mayor atenuación de las frecuencias altas (ondas milimétricas).
+
+**4. Ejemplo.** En un estadio, una celda 5G con un arreglo de 64 antenas apunta un haz a un hincha que
+transmite video en una tribuna y otro haz a un sensor IoT en otra zona, al mismo tiempo y en la misma
+banda; cuando el hincha camina, el haz lo sigue.
+
+</ExerciseBlock>
+
+## Pregunta 5 — Terminal oculta (1.5 puntos)
+
+Explique el problema de *hidden terminal* en comunicaciones inalámbricas.
+
+Tema: [Protocolos MAC](/topics/mac-protocols).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique el problema de la terminal oculta en comunicaciones inalámbricas.",
+  hints: [
+    "Tres nodos A, B, C: A y C alcanzan a B, pero no se oyen entre sí.",
+    "¿Qué falla en 'escuchar antes de transmitir' en ese caso?",
+    "¿Qué mensaje de B sí escucha C?",
+  ],
+}}>
+
+**1. Escenario.** A y B se oyen; B y C se oyen; **A y C no se oyen** (por distancia, obstáculo o
+atenuación). Ej.: dos sensores a lados opuestos de un gateway.
+
+**2. Problema.** Con CSMA, A sensa el canal, lo encuentra libre y transmite a B. C también sensa:
+como **no oye a A**, cree que el canal está libre y transmite a B. Las dos tramas **colisionan en B**,
+y ninguno de los emisores lo detecta porque el sensado de portadora es **local**. El sensado por sí
+solo no puede resolver esta topología; además, en inalámbrico no se puede detectar colisiones como en
+Ethernet (CSMA/CD).
+
+**3. Solución: RTS/CTS** (opcional en CSMA/CA). A envía **RTS**; B responde **CTS**, que oyen **A y C**;
+C difiere su transmisión durante el tiempo indicado (**NAV**). Para tramas cortas el overhead de
+RTS/CTS puede no compensar.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'Terminal oculta y RTS/CTS',
+  steps: [
+    {
+      note: 'A y C no se oyen: ambos sensan libre y transmiten; colisión en B.',
+      actors: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B (gateway)' }, { id: 'c', label: 'C' }],
+      msgs: [
+        { from: 'a', to: 'b', label: 'DATA', lost: true },
+        { from: 'c', to: 'b', label: 'DATA', lost: true, store: 'colisión en B' },
+      ],
+    },
+    {
+      note: 'Con RTS/CTS: C oye el CTS de B y difiere (NAV); A transmite sin colisión.',
+      actors: [{ id: 'a', label: 'A' }, { id: 'b', label: 'B (gateway)' }, { id: 'c', label: 'C' }],
+      msgs: [
+        { from: 'a', to: 'b', label: 'RTS' },
+        { from: 'b', to: 'a', label: 'CTS' },
+        { from: 'b', to: 'c', label: 'CTS', store: 'difiere (NAV)', state: 'marked' },
+        { from: 'a', to: 'b', label: 'DATA', state: 'active' },
+        { from: 'b', to: 'a', label: 'ACK', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+</ExerciseBlock>
+
+## Pregunta 6 — PQC y QKD (1.5 puntos)
+
+Explique **Post-Quantum Cryptography (PQC)** y **Quantum Key Distribution (QKD)**, sus diferencias y su
+opinión sobre su relevancia en IoT.
+
+Tema: [Nuevas tecnologías](/topics/new-tech-iot).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Explique PQC y QKD, sus diferencias y su relevancia en IoT.",
+  hints: [
+    "¿Cuál corre en computadoras normales y cuál necesita física cuántica?",
+    "¿Qué protege cada uno: todo el cifrado o solo la clave?",
+    "Piensa en millones de sensores baratos.",
+  ],
+}}>
+
+**PQC.** Conjunto de algoritmos criptográficos **clásicos** (corren en computadoras normales)
+diseñados para seguir siendo seguros **incluso frente a computadoras cuánticas**, que con el algoritmo
+de **Shor** romperían la criptografía de clave pública actual. Ej.: Kyber, Dilithium.
+
+**QKD.** Técnica basada en **principios físicos cuánticos (no matemáticos)** para **distribuir claves
+secretas** entre dos partes, con seguridad garantizada por la física (medir un estado cuántico lo
+perturba, así que un espía se delata; *Nota de apoyo: esta justificación no está en la slide*).
+
+| | PQC | QKD |
+|---|---|---|
+| Seguridad | matemática | física |
+| Protege | cifrado y firmas completos | solo la distribución de claves |
+| Implementación | software | hardware caro y frágil (láseres, detectores, fibras especiales) |
+| Escala | se despliega como actualización | enlaces punto a punto, no escala |
+
+**Relevancia en IoT (opinión).** PQC es la opción realista: se instala por firmware en millones de
+nodos y es compatible con la infraestructura existente; su desafío es el costo de cómputo y el tamaño
+de claves/firmas en nodos con poca memoria y radios lentas (LoRa, BLE). QKD no es práctica en sensores
+baratos y a batería; puede tener sentido en enlaces troncales críticos (data centers, gateways de
+infraestructura). La NSA, citada en el curso, recomienda PQC sobre QKD.
+
+</ExerciseBlock>
+
+## Pregunta 7 — Código Arduino MEGA + RAK (LoRa P2P) (1.5 puntos)
+
+Arduino MEGA como microcontrolador principal, RAK en **Serial1**, sensor analógico en **A0**. ¿Se enviará
+correctamente el mensaje? Si no, ¿qué cambiaría?
+
+```cpp
+void setup{
+    Serial.begin(115200);
+    Serial1.begin(9600);
+    // Configuración de parámetros LoRa P2P con RUI3:
+    Serial1.println("AT+NWM=0");
+    delay(1000);
+    Serial1.println("AT+P2P=923000000:7:125:0:10:14");
+    delay(1000);
+    Serial1.println("AT+PRECV=0");
+    delay(3000);
+}
+void loop{
+    val = analogRead(A0); // Lectura analógica de 0 a 1024
+    Serial.println("<   LECTURA:   " + A0); // Impresión en monitor serial
+    msg = String(val); // Variable a String
+    Serial.println("> ENVIO DE MENSAJE");
+    Serial.println("Valor enviado: " + msg); // Impresión en monitor serial
+    Serial.println("AT+PSEND=" + msg); // Envío de mensaje
+    delay(5000);
+}
+```
+
+Tema: [Laboratorio LoRa P2P](/topics/lab-lora-p2p).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "¿El código envía correctamente la lectura de A0 por LoRa P2P a través del RAK en Serial1? Liste los errores y cómo corregirlos.",
+  hints: [
+    "Revisa la sintaxis de setup y loop, y las variables.",
+    "¿A qué velocidad escucha el RAK por defecto?",
+    "¿Por qué puerto sale el AT+PSEND: hacia la PC o hacia el RAK?",
+    "¿En qué formato acepta el payload AT+PSEND?",
+  ],
+}}>
+
+**No se enviará.** Errores, en orden de gravedad:
+
+| # | Error | Corrección |
+|---|---|---|
+| 1 | `void setup{` y `void loop{` sin paréntesis: no compila | `void setup()` y `void loop()` |
+| 2 | `val` y `msg` no están declaradas | `int val;` y `String msg;` |
+| 3 | `Serial1.begin(9600)`: el RAK trabaja por defecto a **115200** baudios | `Serial1.begin(115200)` |
+| 4 | `Serial.println("AT+PSEND=" + msg)` sale por **Serial** (monitor de la PC), no llega al RAK | `Serial1.println(...)` |
+| 5 | `msg = String(val)` es texto decimal; `AT+PSEND` exige **hexadecimal** (2 dígitos por byte). Ej.: 512 → `"512"` (3 caracteres, impar) → `AT_PARAM_ERROR` | convertir cada carácter con `%02X`: `"512"` → `"353132"` |
+| 6 | `"< LECTURA: " + A0` imprime el número del pin, no la lectura; el comentario dice 0 a 1024 | usar `val`; el rango de `analogRead` es **0 a 1023** |
+| 7 | Hardware: TX1 del MEGA (5 V) → RX2 del RAK (3.3 V) | **divisor de voltaje** en esa línea y GND común |
+
+Además, la frecuencia y demás parámetros de `AT+P2P` deben coincidir con los del receptor.
+
+Código corregido (lo esencial):
+
+```cpp
+int val;
+String msg;
+
+String stringToHex(String s) {          // como en el lab
+  String out = "";
+  for (unsigned int i = 0; i < s.length(); i++) {
+    char h[3];
+    sprintf(h, "%02X", (unsigned char)s[i]);
+    out += h;
+  }
+  return out;
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial1.begin(115200);                 // RUI3: 115200 8-N-1
+  Serial1.println("AT+NWM=0");          delay(1000);
+  Serial1.println("AT+P2P=923000000:7:125:0:10:14"); delay(1000);
+  Serial1.println("AT+PRECV=0");        delay(3000);
+}
+
+void loop() {
+  val = analogRead(A0);                  // 0..1023
+  msg = String(val);
+  Serial.println("Valor enviado: " + msg);
+  Serial1.println("AT+PSEND=" + stringToHex(msg));   // al RAK, en hex
+  delay(5000);
+}
+```
+
+</ExerciseBlock>
+
+## Pregunta 8 — UART entre Arduino MEGA (Serial1) y ESP32 (1.5 puntos)
+
+Dibuje el esquema de comunicación UART entre un Arduino MEGA (Serial1) y un ESP32 a nivel de
+conexión, con toda la información relevante y componentes adicionales.
+
+Tema: [ESP32 y UART](/topics/mqtt/subtopics/esp32-y-uart).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Dibuje la conexión UART Arduino MEGA (Serial1) ↔ ESP32 con los componentes necesarios.",
+  hints: [
+    "TX de uno al RX del otro; GND común.",
+    "El ESP32 tolera como máximo 3.6 V en sus pines.",
+    "Divisor de la guía: 1.8 kΩ y 3.3 kΩ.",
+  ],
+}}>
+
+| Arduino MEGA | Componente | ESP32 |
+|---|---|---|
+| **TX1 (pin 18)**, 5 V | divisor: **1.8 kΩ** en serie y **3.3 kΩ** a GND | **RX2** (≈ 3.24 V) |
+| **RX1 (pin 19)** | directo (3.3 V se lee como HIGH) | **TX2** |
+| **GND** | directo | **GND** |
+
+Misma velocidad en ambos (p. ej. `Serial1.begin(115200)` y el puerto del ESP32 a 115200), 8-N-1.
+
+$$V_{RX2} = 5\ \text{V}\cdot\frac{3.3\ \text{k}\Omega}{1.8\ \text{k}\Omega + 3.3\ \text{k}\Omega} = \boxed{3.24\ \text{V}} \le 3.6\ \text{V}$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Divisor TX1 (MEGA) → RX2 (ESP32)',
+  steps: [{
+    note: 'Única línea que necesita adaptación: la que va del MEGA (5 V) al ESP32 (3.3 V).',
+    circuit: {
+      nodes: [
+        { id: 'g', x: 0, y: 6, ground: true, label: 'GND común' },
+        { id: 't', x: 0, y: 0, label: 'TX1 MEGA (5 V)' },
+        { id: 'mid', x: 5, y: 3, label: 'RX2 ESP32', showPotential: true },
+      ],
+      parts: [
+        { id: 'E', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'TX1' },
+        { id: 'R1', kind: 'resistor', from: 't', to: 'mid', value: 1800, label: 'R1 1.8k' },
+        { id: 'R2', kind: 'resistor', from: 'mid', to: 'g', value: 3300, label: 'R2 3.3k' },
+      ],
+    },
+    expect: { 'V(mid)': 3.235 },
+  }],
+}} />
+
+</ExerciseBlock>
+
+## Pregunta 9 — Invernadero: diagrama de bloques y de flujo (5 puntos)
+
+Control automático de riego y ventilación:
+- Sensor de **humedad de suelo** (cada 30 s), sensor de **temperatura** (cada 30 s), sensor de **luz**
+  (tiempo real).
+- **Arduino Mega**: adquiere y preprocesa. Humedad $< 30\,\%$ → bomba por **relé**. Temperatura
+  $> 35$ °C → abre una compuerta con un **servo** (0 a 180°). Luz $< 40\,\%$ → **LED blanco** de apoyo.
+  Sin alertas → **LED verde**; al menos una condición fuera de rango → **LED rojo**.
+- **ESP32**: recibe los datos del Mega por **UART**, se conecta a Wi-Fi y publica en MQTT en
+  `invernadero/temperatura`, `invernadero/humedadSuelo`, `invernadero/luz` e `invernadero/estado`.
+
+a) Diagrama de bloques de componentes e interconexiones. *(2.5 pt)*
+b) Diagrama de flujo de la lógica, desde el sensado hasta los LEDs. *(2.5 pt)*
+
+Temas: [Laboratorio MQTT con ESP32](/topics/lab-mqtt-esp32) · [Diagramas de flujo y de bloques](/topics/flow-block-diagrams).
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Dibuje el diagrama de bloques y el de flujo del invernadero con Arduino Mega (sensado y control) y ESP32 (MQTT por Wi-Fi).",
+  hints: [
+    "Dos unidades: el Mega controla, el ESP32 solo comunica. Rotula cada interfaz (ADC, GPIO, PWM, UART, Wi-Fi).",
+    "La bomba necesita relé y fuente externa; la línea UART Mega→ESP32, divisor.",
+    "En el flujo las tres condiciones son independientes (pueden cumplirse varias a la vez); al final un rombo '¿alguna alerta?' decide verde o rojo.",
+    "Humedad y temperatura se leen cada 30 s; la luz en cada vuelta.",
+  ],
+}}>
+
+### a) Diagrama de bloques
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Hardware del invernadero (Mega + ESP32)',
+  steps: [{
+    note: 'El Mega hace sensado y control local; el ESP32 es solo la pasarela UART → MQTT. La bomba se alimenta de una fuente externa a través del relé.',
+    shapes: [
+      { id: 'hs', kind: 'block', label: 'Sensor humedad de suelo' },
+      { id: 'ts', kind: 'block', label: 'Sensor de temperatura' },
+      { id: 'ls', kind: 'block', label: 'Sensor de luz (LDR)' },
+      { id: 'mega', kind: 'block', label: 'Arduino Mega (control)', state: 'active' },
+      { id: 'rel', kind: 'block', label: 'Relé (+ fuente externa)' },
+      { id: 'pump', kind: 'block', label: 'Bomba de agua' },
+      { id: 'servo', kind: 'block', label: 'Servo compuerta (0–180°)' },
+      { id: 'leds', kind: 'block', label: 'LED blanco / verde / rojo' },
+      { id: 'div', kind: 'block', label: 'Divisor 1.8k / 3.3k' },
+      { id: 'esp', kind: 'block', label: 'ESP32 (Wi-Fi)' },
+      { id: 'mq', kind: 'block', label: 'Broker MQTT (4 topics)' },
+    ],
+    arrows: [
+      { from: 'hs', to: 'mega', label: 'ADC', kind: 'data' },
+      { from: 'ts', to: 'mega', label: 'ADC', kind: 'data' },
+      { from: 'ls', to: 'mega', label: 'ADC', kind: 'data' },
+      { from: 'mega', to: 'rel', label: 'GPIO', kind: 'data' },
+      { from: 'rel', to: 'pump', label: 'alimentación externa conmutada', kind: 'power' },
+      { from: 'mega', to: 'servo', label: 'PWM', kind: 'data' },
+      { from: 'mega', to: 'leds', label: 'GPIO + 220 Ω', kind: 'data' },
+      { from: 'mega', to: 'div', label: 'UART TX1', kind: 'data' },
+      { from: 'div', to: 'esp', label: 'RX2 (3.3 V)', kind: 'data' },
+      { from: 'esp', to: 'mq', label: 'Wi-Fi · PUBLISH', kind: 'data' },
+    ],
+  }],
+}} />
+
+### b) Diagrama de flujo
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'Lógica del Mega (y publicación del ESP32)',
+  steps: [{
+    note: 'Las tres condiciones se evalúan siempre (no son excluyentes); la bandera alerta acumula si alguna se cumplió y decide el LED verde o rojo.',
+    shapes: [
+      { id: 'st', kind: 'start', label: 'Inicio', initial: true },
+      { id: 'ini', kind: 'process', label: 'Configurar pines, Serial1; ESP32: Wi-Fi + broker' },
+      { id: 't30', kind: 'decision', label: '¿Pasaron 30 s?' },
+      { id: 'rht', kind: 'io', label: 'Leer humedad y temperatura' },
+      { id: 'rl', kind: 'io', label: 'Leer luz; alerta = falso' },
+      { id: 'ch', kind: 'decision', label: '¿Humedad < 30 %?' },
+      { id: 'pon', kind: 'process', label: 'Relé ON (bomba); alerta = verdadero' },
+      { id: 'poff', kind: 'process', label: 'Relé OFF' },
+      { id: 'ct', kind: 'decision', label: '¿T > 35 °C?' },
+      { id: 'sopen', kind: 'process', label: 'Servo abre compuerta; alerta = verdadero' },
+      { id: 'sclose', kind: 'process', label: 'Servo cierra' },
+      { id: 'cl', kind: 'decision', label: '¿Luz < 40 %?' },
+      { id: 'won', kind: 'process', label: 'LED blanco ON; alerta = verdadero' },
+      { id: 'woff', kind: 'process', label: 'LED blanco OFF' },
+      { id: 'ca', kind: 'decision', label: '¿alerta?' },
+      { id: 'red', kind: 'process', label: 'LED rojo ON, verde OFF' },
+      { id: 'green', kind: 'process', label: 'LED verde ON, rojo OFF' },
+      { id: 'tx', kind: 'io', label: 'Enviar datos y estado por UART → ESP32 publica en invernadero/*' },
+    ],
+    arrows: [
+      { from: 'st', to: 'ini' }, { from: 'ini', to: 't30' },
+      { from: 't30', to: 'rht', label: 'sí' }, { from: 't30', to: 'rl', label: 'no' },
+      { from: 'rht', to: 'rl' }, { from: 'rl', to: 'ch' },
+      { from: 'ch', to: 'pon', label: 'sí' }, { from: 'ch', to: 'poff', label: 'no' },
+      { from: 'pon', to: 'ct' }, { from: 'poff', to: 'ct' },
+      { from: 'ct', to: 'sopen', label: 'sí' }, { from: 'ct', to: 'sclose', label: 'no' },
+      { from: 'sopen', to: 'cl' }, { from: 'sclose', to: 'cl' },
+      { from: 'cl', to: 'won', label: 'sí' }, { from: 'cl', to: 'woff', label: 'no' },
+      { from: 'won', to: 'ca' }, { from: 'woff', to: 'ca' },
+      { from: 'ca', to: 'red', label: 'sí' }, { from: 'ca', to: 'green', label: 'no' },
+      { from: 'red', to: 'tx' }, { from: 'green', to: 'tx' }, { from: 'tx', to: 't30' },
+    ],
+  }],
+}} />
+
+> La bandera `alerta` se reinicia en cada vuelta para que el LED verde vuelva cuando todo esté en rango.
+> El enunciado no pide histéresis; si se agregara (como el EF 2026 con 40/60 %), evitaría que la bomba
+> conmute continuamente cerca del 30 %.
+
+</ExerciseBlock>
+
+## Pregunta 10 — RAK3272S por COM9 (3 puntos)
+
+RAK3272S en **COM9**; se quiere enviar `Hola mundo` por LoRa P2P. Se abre COM9 a **9600 baudios** (p. ej.
+con RAK Serial Port Tool).
+
+1. ¿Se podrá comunicar con el RAK? Si no, ¿qué cambiar? *(0.5 pt)*
+2. Configuración (el **receptor está en 923.2 MHz**): `AT+NWM=0`, `AT+P2P=923000000:7:125:0:10:14`,
+   `AT+PRECV=0`. ¿Es correcta? Si no, ¿qué cambiar? *(1 pt)*
+3. ¿Qué hace `AT+NWM`? *(0.5 pt)*
+4. ¿Qué función cumple `PRECV`? *(0.5 pt)*
+5. Se envía `AT+PSEND=Hola_mundo`. ¿Qué mensaje se recibirá? *(0.5 pt)*
+
+Tema: [Laboratorio LoRa P2P](/topics/lab-lora-p2p).
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "RAK3272S en COM9 a 9600 baudios, receptor en 923.2 MHz: velocidad, configuración AT+NWM=0 / AT+P2P=923000000:7:125:0:10:14 / AT+PRECV=0, función de NWM y PRECV, y qué se recibe con AT+PSEND=Hola_mundo.",
+  hints: [
+    "Velocidad por defecto de la UART2 del RAK: 115200.",
+    "923.2 MHz en Hz son 923200000.",
+    "PRECV = 0 vs 65534.",
+    "AT+PSEND solo acepta hexadecimal.",
+  ],
+}}>
+
+**1. Velocidad.** **No.** El RAK (RUI3) usa por defecto **115200 baudios, 8-N-1** en UART2; hay que
+abrir COM9 a **115200**.
+
+**2. Configuración.** `AT+NWM=0` (P2P) y `AT+PRECV=0` (modo transmisor) son correctos, pero la
+**frecuencia no coincide**: el receptor está en 923.2 MHz y el transmisor en 923.0 MHz. Corrección:
+
+```
+AT+P2P=923200000:7:125:0:10:14
+```
+
+(SF, BW, CR, preámbulo y potencia también deben ser iguales a los del receptor.)
+
+**3. `AT+NWM`.** *Network Work Mode*: `0` = **LoRa P2P**, `1` = **LoRaWAN**. Para enviar entre dos
+módulos sin gateway ambos deben estar en 0.
+
+**4. `PRECV`.** Controla la recepción P2P: `AT+PRECV=65534` deja el módulo **escuchando
+continuamente** (receptor); `AT+PRECV=0` **detiene la recepción** para poder transmitir (transmisor).
+
+**5. `AT+PSEND=Hola_mundo`.** El payload **no es hexadecimal** (`H`, `o`, `l`, `_`, `m`, `u`, `n` no son
+dígitos hex) → el módulo responde **`AT_PARAM_ERROR`** y **el receptor no recibe nada**. Lo correcto es
+codificar cada carácter ASCII en dos dígitos hex:
+
+| H | o | l | a | _ | m | u | n | d | o |
+|---|---|---|---|---|---|---|---|---|---|
+| 48 | 6F | 6C | 61 | 5F | 6D | 75 | 6E | 64 | 6F |
+
+```
+AT+PSEND=486F6C615F6D756E646F
+```
+
+y el receptor mostrará `+EVT:RXP2P:<RSSI>:<SNR>:486F6C615F6D756E646F`, que decodificado es `Hola_mundo`.
+
+</ExerciseBlock>
+
+## Pregunta 11 — Conversor USB-TTL ↔ RAK (1 punto)
+
+Explique gráficamente la comunicación serial entre el dispositivo LoRa (RAK3172, pinout de la figura:
+UART1_RX/TX, UART2_TX/RX, GND, 3.3V, …) y su conversor USB a TTL. Indique qué pines se usan y cómo se
+conectan.
+
+Tema: [Laboratorio LoRa P2P](/topics/lab-lora-p2p).
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "¿Qué pines del RAK3172 se conectan al conversor USB-TTL y cómo?",
+  hints: [
+    "Los comandos AT solo entran por una de las dos UART del RAK.",
+    "TX con RX cruzados, GND común, y la alimentación correcta del RAK.",
+  ],
+}}>
+
+Los comandos AT (RUI3) solo se aceptan por **UART2** (pines **UART2_TX** y **UART2_RX**), así que esa es
+la UART que se usa. Conexión (Figura 5 del lab):
+
+| Conversor USB-TTL | RAK3172 |
+|---|---|
+| TX | **UART2_RX** (RX2) |
+| RX | **UART2_TX** (TX2) |
+| GND | **GND** |
+| 3V3 | **3.3V** |
+
+Líneas de datos **cruzadas**, **GND común**, alimentación a **3.3 V** (nunca 5 V) y **nunca energizar
+sin la antena**. En la PC, el puerto COM a **115200 baudios, 8-N-1**.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: 'PC → USB-TTL → RAK3172 (UART2)',
+  steps: [{
+    note: 'Lo que transmite el conversor lo recibe el RAK por RX2 y viceversa.',
+    shapes: [
+      { id: 'pc', kind: 'block', label: 'PC (COM, 115200)' },
+      { id: 'ttl', kind: 'block', label: 'Conversor USB-TTL' },
+      { id: 'rak', kind: 'block', label: 'RAK3172 (UART2)', state: 'active' },
+    ],
+    arrows: [
+      { from: 'pc', to: 'ttl', label: 'USB', kind: 'data' },
+      { from: 'ttl', to: 'rak', label: 'TX → UART2_RX', kind: 'data' },
+      { from: 'rak', to: 'ttl', label: 'UART2_TX → RX', kind: 'data' },
+      { from: 'ttl', to: 'rak', label: '3V3 → 3.3V · GND → GND', kind: 'power' },
+    ],
+  }],
+}} />
+
+</ExerciseBlock>

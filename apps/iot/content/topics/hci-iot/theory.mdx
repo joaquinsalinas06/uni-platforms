@@ -1,0 +1,153 @@
+---
+kind: theory
+title: "Interacción humano-computador (HCI) en IoT"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+Cuando ocurre un accidente técnico se suele culpar al "error humano", pero si falla el ala de un
+avión culpamos al **diseño**, no al metal *(Sem14#34–36)*. Diseñar para personas es aún más
+difícil: hay que considerar psicología, fisiología, atención, memoria y estrés. **HCI** estudia
+cómo las personas interactúan con la tecnología para que sea **útil, usable, segura y agradable**.
+En IoT es más difícil todavía: muchos dispositivos no tienen pantalla y el usuario interactúa con
+un ecosistema, no con un aparato.
+
+## Conceptos
+
+### HCI en IoT *(Sem14#37–39)*
+- Los dispositivos no siempre tienen pantalla: algunos solo un **LED**, un **botón** o una **app**
+  externa; otros no tienen interfaz directa y operan solos con sensores.
+- Es más complejo porque el usuario interactúa con un **ecosistema**, muchas interacciones son
+  **indirectas o automáticas**, la experiencia depende de cómo se integran los dispositivos, y un mal
+  diseño genera **desconfianza, frustración o riesgos de seguridad**.
+
+### Por qué importa *(Sem14#40–44)*
+1. **Decide si el producto se adopta o fracasa**: la mayoría de productos IoT fallan no por la
+   tecnología sino porque son difíciles de entender o configurar, requieren demasiados pasos, no
+   comunican bien los errores o no muestran su estado.
+2. **Reduce errores y mejora la seguridad**: un mal diseño lleva a desactivar sensores,
+   configuraciones incorrectas, fallas de red o puertas bloqueadas.
+3. **Mejora la accesibilidad**: discapacidades auditivas, visuales, motoras y cognitivas.
+4. **Reduce costos de soporte**: si el usuario se guía solo, hay menos soporte técnico.
+5. **Genera confianza**: si no entiende qué hace el dispositivo, no lo adopta.
+
+Rasgos de un buen diseño IoT: interfaz **minimalista**, **feedback claro**, **curva de aprendizaje
+baja**, estado entendible **de un vistazo**. HCI no es hacer una interfaz bonita: es diseñar cómo el
+usuario piensa, percibe e interactúa.
+
+### Modelo de interacción *(Sem14#45–47)*
+Cuatro componentes: **Usuario** (conocimientos, objetivos, planes, percepciones; decide), **Entrada**
+(botones, teclado, sensores, voz), **Sistema** (lógica que procesa y responde) y **Salida**
+(pantallas, LEDs, sonidos, notificaciones).
+
+<Visualization viz={{
+  type: 'flow',
+  title: 'Ciclo de ejecución y ciclo de evaluación',
+  steps: [
+    {
+      note: 'Ciclo de ejecución: el usuario transforma un objetivo en una acción física sobre la entrada. Ej.: "quiero encender la lámpara" → "voy a presionar el botón" → lo presiona.',
+      shapes: [
+        { id: 'goal', kind: 'start', label: 'Objetivo: encender la lámpara', state: 'active' },
+        { id: 'int', kind: 'process', label: 'Intención: presionar el botón', state: 'active' },
+        { id: 'act', kind: 'io', label: 'Acción en la ENTRADA (botón)', state: 'active' },
+        { id: 'sys', kind: 'process', label: 'SISTEMA: el MCU activa el relé', state: 'muted' },
+        { id: 'out', kind: 'io', label: 'SALIDA: LED y luz encendidos', state: 'muted' },
+        { id: 'perc', kind: 'process', label: 'Percibe: "la lámpara se encendió"', state: 'muted' },
+        { id: 'eval', kind: 'decision', label: '¿Se cumplió el objetivo?', state: 'muted' },
+      ],
+      arrows: [
+        { from: 'goal', to: 'int' }, { from: 'int', to: 'act' }, { from: 'act', to: 'sys' },
+        { from: 'sys', to: 'out' }, { from: 'out', to: 'perc' }, { from: 'perc', to: 'eval' },
+        { from: 'eval', to: 'goal', label: 'no: nuevo intento' },
+      ],
+    },
+    {
+      note: 'Ciclo de evaluación: el sistema procesa, actualiza la salida y el usuario interpreta si logró su meta. Si la salida no es visible o llega tarde, el ciclo se rompe y el usuario repite la acción.',
+      shapes: [
+        { id: 'goal', kind: 'start', label: 'Objetivo: encender la lámpara', state: 'muted' },
+        { id: 'int', kind: 'process', label: 'Intención: presionar el botón', state: 'muted' },
+        { id: 'act', kind: 'io', label: 'Acción en la ENTRADA (botón)', state: 'muted' },
+        { id: 'sys', kind: 'process', label: 'SISTEMA: el MCU activa el relé', state: 'active' },
+        { id: 'out', kind: 'io', label: 'SALIDA: LED y luz encendidos', state: 'active' },
+        { id: 'perc', kind: 'process', label: 'Percibe: "la lámpara se encendió"', state: 'active' },
+        { id: 'eval', kind: 'decision', label: '¿Se cumplió el objetivo?', state: 'active' },
+      ],
+      arrows: [
+        { from: 'goal', to: 'int' }, { from: 'int', to: 'act' }, { from: 'act', to: 'sys' },
+        { from: 'sys', to: 'out' }, { from: 'out', to: 'perc' }, { from: 'perc', to: 'eval' },
+        { from: 'eval', to: 'goal', label: 'no: nuevo intento' },
+      ],
+    },
+  ],
+}} />
+
+### Desafíos propios de IoT *(Sem14#49)*
+Latencia (rompe el feedback) · acciones remotas (mapeo y visibilidad críticos) · múltiples
+dispositivos (consistencia) · sensores automáticos (evitar malinterpretaciones) · sin pantalla
+(feedback alternativo: LED, sonido, vibración).
+
+### Los seis principios de diseño *(Sem14#50–55)*
+
+| Principio | Regla | Aplicaciones IoT | Si falla |
+|---|---|---|---|
+| **1. Visibilidad** | el usuario debe saber qué puede hacer y el estado actual | LED online/offline; app que avisa sensor sin batería; indicador del motor o relé | cree que "no funciona" |
+| **2. Feedback** | toda acción genera respuesta inmediata | "Procesando…" si hay latencia; vibración en wearables; sonido/LED al recibir un comando | presiona dos veces: acciones duplicadas |
+| **3. Restricciones** | limitar acciones incorrectas previene accidentes | bloquear opciones si está offline; desactivar "abrir puerta" si hay obstrucción; mostrar solo lo relevante al modo | daño físico o acciones inútiles |
+| **4. Consistencia** | todos los dispositivos y apps se comportan igual | misma iconografía; misma lógica de encender/apagar; misma notificación de error | confusión; evita el sistema |
+| **5. Affordances** | el diseño sugiere cómo interactuar | botón con relieve → presionar; anillo de luz → escuchar; termostato circular → girar | "no sabe qué hacer" |
+| **6. Mapeo natural** | el control se "siente" intuitivo | deslizar arriba = subir temperatura; girar dial = más volumen; luz más brillante = más energía | hace lo contrario de lo esperado |
+
+## Método paso a paso
+**Rediseñar un dispositivo con principios HCI** (EF 2026 P4, caso smart lock de la slide 56):
+1. Listar cada **queja** del enunciado por separado.
+2. Asociar cada queja al principio cuya **"si falla"** la describe (tabla de arriba).
+3. Para cada principio elegido escribir: **problema que resuelve** + **cambio concreto** (físico o
+   digital), tomando como modelo las "aplicaciones IoT" de la slide.
+4. Respetar la cantidad pedida (p. ej. **exactamente cuatro**).
+
+## Ejemplo resuelto
+**Smart lock** de la slide 56 *(solución derivada; la slide plantea el caso sin resolverlo)*:
+
+| Queja | Principio | Cambio concreto |
+|---|---|---|
+| no saben si la puerta quedó cerrada | Visibilidad | LED rojo/verde de estado en la cerradura y estado en la portada de la app |
+| la app no muestra si alguien la abrió desde fuera | Visibilidad / Feedback | notificación push "abierta con código a las 18:05" e historial visible |
+| el teclado no ilumina bien los números | Affordances | teclas retroiluminadas y con relieve, que invitan a presionar |
+| no hay feedback si el motor se atasca | Feedback | pitido y LED ámbar intermitente + alerta "cerrojo atascado" |
+| usuarios mayores fallan el código | Restricciones / Feedback | tono por tecla, mostrar dígitos ingresados, permitir borrar; bloqueo temporal solo tras varios intentos |
+| funciones escondidas en la app | Consistencia / Visibilidad | mismo ícono y ubicación para abrir/cerrar en la app y en el aparato; acciones principales en la primera pantalla |
+
+## Errores típicos
+- Elegir un principio sin decir **qué problema** concreto resuelve.
+- Proponer cambios vagos ("mejorar la interfaz") en vez de cambios concretos (LED, relieve, mensaje).
+- Confundir **affordance** (la forma sugiere la acción) con **mapeo natural** (la dirección del control
+  coincide con el efecto).
+- Confundir **visibilidad** (el estado está a la vista) con **feedback** (respuesta a una acción).
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 3,
+  statement: "Un termostato inteligente: los usuarios no saben si está encendido, suben la temperatura cuando quieren bajarla, rozan la pantalla y se ejecutan acciones no deseadas, y los colores y tipografías cambian sin lógica entre pantallas. Rediseñe aplicando exactamente cuatro principios (visibilidad, feedback, restricciones, consistencia, mapeo natural, affordances): problema que resuelve y cambio concreto. (EF 2026, P4)",
+  hints: [
+    "Hay cuatro quejas: busca para cada una el principio cuyo 'si falla' la describe.",
+    "'Suben cuando quieren bajar' es un problema de correspondencia entre el control y el efecto.",
+    "'Acciones accidentales al rozar' se evita limitando lo que se puede hacer sin querer.",
+  ],
+}}>
+
+Resuelto también en el [Examen Final 2026-I, P4](/evaluaciones/finales/2026-i).
+
+| Principio | Problema que resuelve | Cambio concreto |
+|---|---|---|
+| **Visibilidad** | no saben si está encendido | pantalla siempre mostrando estado (modo, temperatura actual y objetivo) y un LED de encendido/conexión visible a distancia |
+| **Mapeo natural** | suben cuando quieren bajar | dial que se gira a la derecha para subir (o deslizar hacia arriba = subir), con flecha ↑ en rojo/cálido y ↓ en azul/frío |
+| **Restricciones** | acciones accidentales al rozar | bloqueo de pantalla que se libera con mantener presionado 2 s; confirmación para cambios grandes; ignorar toques muy breves |
+| **Consistencia** | colores y tipografías cambian sin lógica | guía de estilo única: misma tipografía, mismo color para calor/frío y misma ubicación de botones en todas las pantallas y en la app |
+
+**Comprobación:** cada principio cubre una queja distinta y se eligieron exactamente cuatro.
+(Feedback, por ejemplo un pitido y el número que parpadea al aceptar el cambio, sería un buen quinto
+principio, pero el enunciado pide cuatro.)
+
+</ExerciseBlock>

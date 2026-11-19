@@ -1,0 +1,238 @@
+---
+kind: theory
+title: "Capa de red en IoT: IPv4, IPv6, 6LoWPAN y protocolos no IP"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+La capa de red lleva cada datagrama **desde el host origen hasta el host destino**, pasando por
+routers. En IoT aparecen dos problemas que no tiene una PC: **escala** (miles o millones de
+nodos que necesitan dirección) y **energía** (cada byte de cabecera cuesta batería). La semana
+recorre IP clásico (direcciones, DHCP, fragmentación, NAT, IPv6), cómo **6LoWPAN** comprime
+IPv6 para radios de 127 bytes y por qué redes como **Zigbee** y **LoRaWAN** directamente no
+usan IP.
+
+## Conceptos
+
+### Funciones de la capa de red *(Sem10#4–6)*
+- **Forwarding** (reenvío): mover un paquete desde el enlace de entrada de un router al enlace
+  de salida correcto, mirando la cabecera y una **tabla local**. Analogía: pasar un cruce.
+- **Routing** (ruteo): determinar la ruta completa de origen a destino con **algoritmos de
+  ruteo**, que llenan esas tablas. Analogía: planificar el viaje.
+- Los routers examinan las cabeceras de todos los datagramas que los atraviesan.
+
+### Direccionamiento IPv4 y DHCP *(Sem10#7–8)*
+- Una **dirección IP** es un identificador de **32 bits** asociado a cada **interfaz** (no al
+  host): un router tiene varias; un host, una o dos (Ethernet, 802.11). Notación decimal con
+  puntos: `223.1.1.1 = 11011111 00000001 00000001 00000001`.
+- **DHCP** asigna la dirección automáticamente en cuatro mensajes:
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'DHCP: discover, offer, request, ACK',
+  steps: [{
+    note: 'El cliente aún no tiene IP (0.0.0.0) y habla por broadcast. El servidor 223.1.2.5 ofrece 223.1.2.4 con lifetime de 3600 s. Discover/offer se pueden saltar si el cliente reutiliza una dirección (RFC 2131).',
+    actors: [{ id: 'c', label: 'Cliente nuevo' }, { id: 's', label: 'Servidor DHCP 223.1.2.5' }],
+    msgs: [
+      { from: 'c', to: 's', label: 'DHCP discover', flags: 'src 0.0.0.0:68 → 255.255.255.255:67 · ID 654' },
+      { from: 's', to: 'c', label: 'DHCP offer', flags: 'yiaddr 223.1.2.4 · ID 654 · 3600 s' },
+      { from: 'c', to: 's', label: 'DHCP request', flags: 'yiaddr 223.1.2.4 · ID 655' },
+      { from: 's', to: 'c', label: 'DHCP ACK', flags: 'yiaddr 223.1.2.4 · ID 655', state: 'answer' },
+    ],
+  }],
+}} />
+
+### Fragmentación y overhead IP *(Sem10#9–11)*
+Cada tipo de enlace tiene un **MTU** (*max transfer size*, la trama más grande posible). Un
+datagrama más grande se **fragmenta dentro de la red** y se **reensambla solo en el destino**;
+los campos de la cabecera IP (ID, flag, offset) identifican y ordenan los fragmentos.
+
+Ejemplo de la slide: datagrama de **4000 B** (20 de cabecera + 3980 de datos) por un enlace
+con **MTU = 1500 B**:
+
+| Fragmento | length | ID | fragflag | offset | datos |
+|---|---|---|---|---|---|
+| original | 4000 | x | 0 | 0 | 3980 B |
+| 1 | 1500 | x | 1 | 0 | 1480 B |
+| 2 | 1500 | x | 1 | 1480/8 = **185** | 1480 B |
+| 3 | 1040 | x | 0 | 2960/8 = **370** | 1020 B |
+
+`fragflag = 1` significa "vienen más fragmentos"; el último lleva 0. Comprobación:
+$1480 + 1480 + 1020 = 3980$ B de datos, y $1040 = 1020 + 20$ (cabecera repetida).
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'Datagrama de 4000 B partido con MTU 1500 B',
+  steps: [{
+    note: 'Los 3980 B de datos se reparten 1480 + 1480 + 1020; cada fragmento lleva además su propia cabecera de 20 B. El offset (en unidades de 8 B) marca dónde empieza cada trozo: 0, 1480/8 = 185, 2960/8 = 370.',
+    series: [{ id: 'f', label: 'bytes de datos del original', kind: 'bars', bars: [
+      { label: 'frag 1 · offset 0 · flag 1', from: 0, to: 1480 },
+      { label: 'frag 2 · offset 185 · flag 1', from: 1480, to: 2960 },
+      { label: 'frag 3 · offset 370 · flag 0', from: 2960, to: 3980 },
+    ] }],
+    x: { label: 'posición en los datos del datagrama original (B)', min: 0, max: 4000 },
+    vlines: [{ at: 1480, label: '185 × 8' }, { at: 2960, label: '370 × 8' }],
+  }],
+}} />
+
+**Overhead IP** *(Sem10#11)*: 20 B de TCP + 20 B de IP = **40 B** más el overhead de la capa de
+aplicación, por cada paquete.
+
+### NAT *(Sem10#12)*
+Con **NAT** todos los dispositivos de la red local comparten **una sola IPv4 pública** hacia
+afuera; se distinguen por el **puerto origen**. Tabla de la slide:
+
+| IP/puerto local | IP/puerto global |
+|---|---|
+| 10.0.0.1 : 532 | 138.76.29.7 : 100 |
+| 10.0.0.1 : 400 | 138.76.29.7 : 568 |
+
+### IPv6 y la transición *(Sem10#13–14)*
+- Direcciones de **128 bits**. Cabecera: versión, prioridad, *flow label*, longitud del payload,
+  *next header*, *hop limit*, origen y destino.
+- Respecto de IPv4 **no tiene**: checksum (para acelerar los routers), fragmentación/reensamblado
+  en routers, ni opciones (van como *next header*).
+- **Tunneling**: mientras convivan routers IPv4 e IPv6, el datagrama IPv6 viaja como payload
+  dentro de uno IPv4 ("paquete dentro de un paquete").
+
+### Desafíos IoT: escala y energía *(Sem10#16–19)*
+- **Direcciones**: IPv4 tiene ≈ 4.3 mil millones (agotadas desde 2019); 100 000 sensores en una
+  ciudad exigirían NAT y jerarquías artificiales. IPv6 da ≈ **340 undecillones** y elimina el NAT.
+- **Sobrecarga de red**: protocolos como ARP generan *broadcast storms*; 10 000 dispositivos
+  enviando mensajes de descubrimiento tumbarían la red. Los servidores centralizados se vuelven
+  cuello de botella.
+- **Jerarquías**: los gateways (p. ej. en LoRaWAN) agregan y preprocesan antes de subir a la nube.
+- **Energía**: handshakes, ACKs y retransmisiones de TCP/IP drenan la batería; los nodos deben
+  dormir casi siempre (*duty cycling*: más sueño = menos consumo, pero puede perder eventos).
+  Soluciones: LPWAN (LoRa/LoRaWAN con más de 10 años de batería y ADR; Sigfox/NB-IoT), MQTT-SN
+  (MQTT sin el overhead de TCP), CoAP sobre UDP (sin setup de conexión, **90 % menos energía que
+  HTTP**).
+
+### IP en IoT: IPv6 + 6LoWPAN *(Sem10#21–25)*
+Ventajas de usar IP: conectividad extremo a extremo con la nube, interoperabilidad con la
+infraestructura existente (routers, firewalls), seguridad estándar (TLS/DTLS, OAuth 2.0, IPSec)
+y escalabilidad con IPv6.
+
+**6LoWPAN** (*IPv6 over Low-Power Wireless Personal Area Networks*) es una **capa de
+adaptación** entre IPv6 y el enlace IEEE 802.15.4: **comprime la cabecera IPv6 de 40 B a
+2–4 B** y **fragmenta** cuando el MTU es pequeño. **No reemplaza a IPv6**: lo adapta.
+
+<Visualization viz={{
+  type: 'flow',
+  static: true,
+  title: '6LoWPAN en la pila IoT',
+  steps: [{
+    note: 'La capa de adaptación se mete entre red y enlace: IPv6 sigue dando direccionamiento y ruteo; 6LoWPAN solo comprime y fragmenta para que quepa en 802.15.4.',
+    shapes: [
+      { id: 'app', kind: 'block', label: 'Aplicación: CoAP, telemetría' },
+      { id: 'tr', kind: 'block', label: 'Transporte: UDP' },
+      { id: 'net', kind: 'block', label: 'Red: IPv6 (direcciones, ruteo)' },
+      { id: 'ad', kind: 'block', label: 'Adaptación: 6LoWPAN (comprime, fragmenta)', state: 'active' },
+      { id: 'lk', kind: 'block', label: 'Enlace: IEEE 802.15.4 (bajo consumo)' },
+    ],
+    arrows: [
+      { from: 'app', to: 'tr', kind: 'data' },
+      { from: 'tr', to: 'net', kind: 'data' },
+      { from: 'net', to: 'ad', kind: 'data' },
+      { from: 'ad', to: 'lk', kind: 'data' },
+    ],
+  }],
+}} />
+
+| Componente | Sin compresión | Con compresión (ejemplo) |
+|---|---|---|
+| Cabecera IPv6 | 40 B | 2 B |
+| Cabecera UDP | 8 B | 4 B |
+| Payload del sensor | 4 B | 4 B |
+| **Total** | **52 B** | **10 B** |
+
+*(Sem10#25; ilustrativo, sin el overhead MAC.)* Beneficios: menos overhead, mejor uso de la
+trama 802.15.4 (**máximo 127 B**) y menos energía. **6LoWPAN comprime cabeceras, no el dato del
+sensor.**
+
+| | Bluetooth LE | 6LoWPAN sobre 802.15.4 | Wi-Fi |
+|---|---|---|---|
+| Tecnología | Bluetooth Low Energy | IEEE 802.15.4 | IEEE 802.11 |
+| Uso típico | periféricos y sensores de bajo consumo | redes de sensores de bajo consumo | computadoras, cámaras, Internet |
+| Conectividad IP | requiere mecanismos adicionales | IPv6 vía 6LoWPAN | IP nativo |
+| Multisalto | con Bluetooth Mesh | con arquitectura de ruteo apropiada | con configuraciones específicas |
+
+*(Sem10#24.)* BLE, 802.15.4 y Wi-Fi son tecnologías inalámbricas; 6LoWPAN es una capa de
+adaptación. **CoAP** (Sem10#26) es la alternativa liviana a HTTP sobre UDP, con multicast,
+*observe* (push del servidor) y DTLS; p. ej. Philips Hue usa CoAP sobre Zigbee IP.
+
+### Protocolos no IP *(Sem10#27–28)*
+- **Zigbee**: malla **no IP** de corto alcance con direcciones cortas de **16 bits** gestionadas
+  por un **coordinador**; Zigbee PRO (redes grandes) y Zigbee 3.0 (unifica perfiles).
+- **LoRaWAN**: sin direcciones IP; identificadores únicos **DevEUI/AppEUI de 64 bits**;
+  arquitectura End nodes → Gateways → Network Server → Application Server. Se estudia completo en
+  [LoRa y LoRaWAN](/topics/lora).
+
+## Método paso a paso
+**Cálculo de overhead de una pila** (tipo EF 2026 P1):
+1. Listar las cabeceras de **todas** las capas que viajan en la trama (aplicación, transporte,
+   red/adaptación, enlace) con sus bytes.
+2. Sumarlas: $H = \sum H_i$.
+3. Total enviado: $T = H + PL$.
+4. Overhead: $H/T \times 100$ (y eficiencia $PL/T \times 100$, que suman 100 %).
+5. Interpretar: si el overhead supera el 50 %, se transmiten más cabeceras que datos.
+
+**Fragmentación**: datos por fragmento $= MTU - 20$ (múltiplo de 8); offset $=$ datos previos
+$/8$; flag 1 en todos menos el último.
+
+## Ejemplo resuelto
+**Overhead del sensor de la tabla de 6LoWPAN** (Sem10#25), sin MAC:
+
+$$\text{sin compresión: } \frac{40+8}{52} = 92.3\,\% \qquad \text{con compresión: } \frac{2+4}{10} = 60\,\%$$
+
+*(derivado)* La compresión no toca los 4 B de dato, pero baja el overhead de 92 % a 60 %.
+
+## Errores típicos
+- Olvidar la cabecera de enlace (802.15.4) cuando el enunciado la da: el overhead es de **toda**
+  la trama, no solo de IP/UDP.
+- Calcular el offset en bytes (1480) en vez de en unidades de 8 B (185).
+- Decir que 6LoWPAN reemplaza IPv6 o que comprime el payload.
+- Decir que IPv6 fragmenta en los routers: IPv6 eliminó la fragmentación en ruta.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un nodo envía un payload de 12 B con CoAP (4 B) / UDP (8 B) / IPv6 comprimido con 6LoWPAN (7 B) / IEEE 802.15.4 (13 B). (a) ¿Qué es el overhead de protocolo? (b) Calcule el porcentaje de overhead respecto del total enviado. (EF 2026, P1)",
+  hints: [
+    "Overhead = todo lo que se transmite y no es dato útil.",
+    "Suma las cuatro cabeceras y luego súmale el payload para el total.",
+    "Divide cabeceras entre total.",
+  ],
+}}>
+
+Resuelto completo en el [Examen Final 2026-I, P1](/evaluaciones/finales/2026-i).
+
+**1. Cabeceras.** $H = 4 + 8 + 7 + 13 = 32\,\text{B}$.
+
+**2. Total.** $T = 32 + 12 = 44\,\text{B}$.
+
+$$\%\,\text{overhead} = \frac{32}{44}\times 100 = \boxed{72.73\,\%}$$
+
+<Visualization viz={{
+  type: 'memory-layout',
+  static: true,
+  title: 'Trama de 44 B: 32 B de cabeceras + 12 B de dato',
+  steps: [{
+    note: 'Casi tres cuartos de lo que sale por la radio son cabeceras.',
+    blocks: [
+      { id: 'mac', label: '802.15.4 · 13 B', bytes: 13, offset: 0, state: 'muted' },
+      { id: 'ip', label: 'IPv6/6LoWPAN · 7 B', bytes: 7, offset: 13, state: 'muted' },
+      { id: 'udp', label: 'UDP · 8 B', bytes: 8, offset: 20, state: 'muted' },
+      { id: 'coap', label: 'CoAP · 4 B', bytes: 4, offset: 28, state: 'muted' },
+      { id: 'pl', label: 'payload · 12 B', bytes: 12, offset: 32, state: 'answer' },
+    ],
+  }],
+}} />
+
+**Comprobación:** eficiencia $= 12/44 = 27.27\,\%$; $72.73 + 27.27 = 100\,\%$.
+
+</ExerciseBlock>

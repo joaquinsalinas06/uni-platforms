@@ -1,0 +1,11 @@
+id: lab-mqtt-esp32
+title: "Laboratorio MQTT con ESP32: sistema completo y sus diagramas"
+type: lab
+unit: s9
+prerequisites: [mqtt, flow-block-diagrams]
+buildsOn: []
+usedBy: []
+hasVisualization: true
+visualizationType: flow
+placeholder: false
+formulas: []

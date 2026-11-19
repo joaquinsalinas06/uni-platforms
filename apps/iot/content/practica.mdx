@@ -1103,3 +1103,167 @@ $$
 **Comprobación (pico positivo):** validación de D2 OFF: $V_{AK}^{D2} = 2 - 10 = -8\,\text{V} < 0.7\,\text{V}$ ✓; LKV en la rama de D1: $10 - 0.7 - 0.043 \cdot 100 = 5\,\text{V} = E_3$ ✓.
 
 </ExerciseBlock>
+
+## Semana 8 — Repaso de laboratorio (ejercicios resueltos y test de salida)
+
+Ejercicios de `Sem08_LAB_EjerciciosResueltos` y del solucionario del test de salida del
+laboratorio 2 (`Sem08_LAB2_TESTSOLVER`). Repasan diodos, ADC y PWM antes de la parte de redes.
+
+### Rama con diodo de germanio (Sem08 resueltos, 1a)
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'V1 = 5 V, R1 = 10 kΩ en paralelo con R2 = 1 kΩ + D1 (Ge)',
+  steps: [{
+    note: 'Dos ramas en paralelo sobre la misma fuente de 5 V: R1 sola, y R2 en serie con un diodo de germanio.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0, label: '+5 V' }, { id: 'a', x: 5, y: 0 }, { id: 'b', x: 10, y: 0 },
+        { id: 'm', x: 10, y: 4 },
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 'ga', x: 5, y: 8 }, { id: 'gb', x: 10, y: 8 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+        { id: 'w1', kind: 'wire', from: 't', to: 'a' }, { id: 'w2', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'ga', value: 10000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'm', value: 1000, label: 'R2' },
+        { id: 'D1', kind: 'diode', model: 'ge', vf: 0.3, from: 'm', to: 'gb', label: 'D1', tone: 'ge' },
+        { id: 'w3', kind: 'wire', from: 'g', to: 'ga' }, { id: 'w4', kind: 'wire', from: 'ga', to: 'gb' },
+      ],
+    },
+  }],
+}} />
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "En el circuito ($V_1 = 5$ V, $R_1 = 10$ kΩ, $R_2 = 1$ kΩ, $D_1$ de germanio) calcule la corriente por $R_1$ y por $R_2$.",
+  hints: [
+    "R1 está directamente entre +5 V y tierra.",
+    "Supón D1 ON: se reemplaza por una fuente de 0.3 V.",
+    "Valida: la corriente por el diodo debe salir positiva.",
+  ],
+}}>
+
+**1. Rama de $R_1$.** Tiene los 5 V completos:
+$$I_{R1} = \frac{5\ \text{V}}{10\ \text{k}\Omega} = \boxed{0.5\ \text{mA}}$$
+
+**2. Rama de $R_2$, hipótesis D1 ON** (Ge, $V_\gamma = 0.3$ V):
+$$5 = 1\ \text{k}\Omega\cdot i + 0.3 \;\Rightarrow\; i = \boxed{4.7\ \text{mA}}$$
+
+<Visualization viz={{
+  type: 'circuit',
+  static: true,
+  title: 'Resuelto con D1 ON',
+  steps: [{
+    note: 'D1 conduce (i > 0): la hipótesis es válida.',
+    circuit: {
+      nodes: [
+        { id: 't', x: 0, y: 0, label: '+5 V' }, { id: 'a', x: 5, y: 0 }, { id: 'b', x: 10, y: 0 },
+        { id: 'm', x: 10, y: 4, showPotential: true },
+        { id: 'g', x: 0, y: 8, ground: true }, { id: 'ga', x: 5, y: 8 }, { id: 'gb', x: 10, y: 8 },
+      ],
+      parts: [
+        { id: 'V1', kind: 'vsource', from: 'g', to: 't', value: 5, label: 'V1' },
+        { id: 'w1', kind: 'wire', from: 't', to: 'a' }, { id: 'w2', kind: 'wire', from: 'a', to: 'b' },
+        { id: 'R1', kind: 'resistor', from: 'a', to: 'ga', value: 10000, label: 'R1' },
+        { id: 'R2', kind: 'resistor', from: 'b', to: 'm', value: 1000, label: 'R2' },
+        { id: 'D1', kind: 'diode', model: 'ge', vf: 0.3, from: 'm', to: 'gb', label: 'D1', tone: 'ge' },
+        { id: 'w3', kind: 'wire', from: 'g', to: 'ga' }, { id: 'w4', kind: 'wire', from: 'ga', to: 'gb' },
+      ],
+      diodes: [{ part: 'D1', assume: 'on' }],
+      hypothesis: 'D1 ON',
+      currents: [{ part: 'R1', label: 'I_{R1}', showValue: true }, { part: 'R2', label: 'i', showValue: true }],
+    },
+    expect: { 'I(R1)': 0.0005, 'I(R2)': 0.0047, 'V(m)': 0.3 },
+  }],
+}} />
+
+**Comprobación:** $i = 4.7\ \text{mA} > 0$ ✓ (D1 ON es correcto); la fuente entrega
+$0.5 + 4.7 = 5.2$ mA.
+
+</ExerciseBlock>
+
+### ADC de 8 bits (Sem08 resueltos, P1 · test de salida, P5)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un sensor entrega de $V_L = 0$ V a $V_H = 5$ V a un ADC de 8 bits. (A) ¿Cuál es el menor cambio de voltaje detectable? (a) 9.76 mV (b) 19.53 mV (c) 39.06 mV (d) 78.12 mV (e) N.A. (B) ¿Cuántos valores discretos? (a) 128 (b) 511 (c) 512 (d) 1023 (e) N.A. (C) Si el sensor entrega 2.15 V, ¿qué código binario lee el microcontrolador? (a) 01101100 (b) 01101110 (c) 01110110 (d) 10101110 (e) N.A.",
+  hints: [
+    "$V_{out} = V_L + \\frac{V_H - V_L}{2^n}\\,L$.",
+    "Niveles = $2^n$.",
+    "Despeja L y pásalo a binario de 8 bits.",
+  ],
+}}>
+
+**A.** $\Delta V = \frac{5 - 0}{2^8} = \frac{5}{256} = \boxed{19.53\ \text{mV}}$ → **(b)**.
+
+**B.** $2^8 = \boxed{256}$ niveles → ninguna opción → **(e) N.A.**
+
+**C.** $2.15 = \frac{5}{256}\,L \Rightarrow L = 110.08$. El ADC entrega un entero: $L = 110$,
+$$110 = 64 + 32 + 8 + 4 + 2 = \boxed{01101110_2}\ \to\ \textbf{(b)}$$
+
+> **Inconsistencia del material:** la anotación manuscrita dice "110.08 ≈ 111 (techo)", pero 111 sería
+> $01101111_2$, que no está entre las opciones; la clave marca (b), que corresponde a truncar a 110,
+> como hace un ADC real.
+
+</ExerciseBlock>
+
+### PWM entre 0.5 V y 12 V (Sem08 resueltos, P2 · test de salida, P2)
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Una señal PWM conmuta entre $V_L = 0.5$ V y $V_H = 12$ V a 2 kHz. (A) Valor medio con $D = 75\\%$. (B) $D$ para un valor medio de 5.1 V. (C) $t_{ON}$ y $t_{OFF}$ en µs para ese $D$.",
+  hints: [
+    "$V_{out} = V_L + (V_H - V_L)\\,D$.",
+    "T = 1/f.",
+    "$t_{ON} = D\\,T$ y $t_{OFF} = T - t_{ON}$.",
+  ],
+}}>
+
+**A.** $V_{out} = 0.5 + 11.5\cdot 0.75 = \boxed{9.125\ \text{V}}$ (no está entre las opciones → N.A.).
+
+**B.** $5.1 = 0.5 + 11.5\,D \Rightarrow D = \frac{4.6}{11.5} = \boxed{40\,\%}$.
+
+**C.** $T = \frac{1}{2\ \text{kHz}} = 500\ \mu\text{s}$:
+$$t_{ON} = 0.4\cdot 500 = \boxed{200\ \mu\text{s}},\qquad t_{OFF} = 500 - 200 = \boxed{300\ \mu\text{s}}$$
+
+<Visualization viz={{
+  type: 'xy-chart',
+  static: true,
+  title: 'PWM con D = 40 %, T = 500 µs',
+  steps: [{
+    note: '200 µs en 12 V y 300 µs en 0.5 V: el promedio es 5.1 V.',
+    series: [{ id: 'v', label: 'v(t)', kind: 'step', points: [[0, 12], [200, 0.5], [500, 12], [700, 0.5], [1000, 0.5]] }],
+    x: { label: 't (µs)', min: 0, max: 1000 },
+    y: { label: 'V', min: 0, max: 13 },
+    hlines: [{ at: 5.1, label: 'V medio = 5.1 V', state: 'answer' }],
+  }],
+}} />
+
+</ExerciseBlock>
+
+### Verdadero o falso de hardware (test de salida, P4)
+
+<ExerciseBlock client:visible exercise={{
+  level: 1,
+  statement: "V o F: (1) un ADC de 10 bits representa exactamente 1024 niveles; (2) la resistencia de un LDR disminuye al aumentar la luz; (3) el duty cycle es t_OFF / T; (4) analogWrite() sirve en cualquier pin digital; (5) un LED directo desde un pin necesita resistencia en serie; (6) la referencia por defecto de analogRead() en MEGA/UNO es 3.3 V; (7) PWM de 0–5 V al 50 % da 2.5 V medios; (8) analogWrite() genera una tensión continua real (DAC).",
+  hints: [
+    "Niveles = 2^n.",
+    "El duty cycle se mide con el tiempo en ALTO.",
+    "PWM solo existe en los pines marcados (~) y no es un DAC.",
+  ],
+}}>
+
+| # | V/F | Justificación |
+|---|---|---|
+| 1 | V | $2^{10} = 1024$ niveles |
+| 2 | V | más luz → menor resistencia |
+| 3 | F | $D = t_{ON}/T$ |
+| 4 | F | solo en los pines con PWM |
+| 5 | V | limita la corriente del LED |
+| 6 | F | es 5 V en MEGA/UNO |
+| 7 | V | $0.5\cdot 5 = 2.5$ V |
+| 8 | F | es PWM (conmuta), no un DAC |
+
+</ExerciseBlock>

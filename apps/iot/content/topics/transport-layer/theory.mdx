@@ -1,0 +1,262 @@
+---
+kind: theory
+title: "Capa de transporte en IoT: UDP, TCP, CoAP y QUIC"
+---
+import Visualization from '../../../src/components/Visualization.astro';
+import ExerciseBlock from '../../../src/components/ExerciseBlock';
+
+## Idea
+La capa de transporte da **comunicación lógica extremo a extremo entre procesos** que corren
+en hosts distintos: el emisor parte el mensaje de la aplicación en segmentos y el receptor los
+reensambla. En Internet hay dos opciones, **UDP** y **TCP**, y para un nodo IoT la elección
+pesa directamente en la batería: cada byte de cabecera y cada mensaje de control es tiempo de
+radio encendida. Esta semana compara ambos, muestra cómo **CoAP** recupera confiabilidad sobre
+UDP y cómo **QUIC** construye un transporte moderno también sobre UDP.
+
+## Conceptos
+
+### Servicios de transporte
+- Comunicación **extremo a extremo** entre procesos de aplicación; **multiplexa/demultiplexa**
+  (varias aplicaciones comparten la red, identificadas por **puertos**).
+- Abstrae los detalles de la red para la aplicación y viceversa.
+- El emisor divide los mensajes en **segmentos** y los pasa a la capa de red; el receptor los
+  reensambla y los entrega a la aplicación. *(Sem9#11–12)*
+
+### UDP (User Datagram Protocol)
+- El protocolo más simple de la suite TCP/IP (RFC 768). Direccionamiento por proceso con
+  **puertos de 16 bits**. *(Sem9#14)*
+- **Best effort**: la red hace lo posible, pero **no garantiza** que el datagrama llegue ni que
+  llegue en el orden enviado. *(Sem9#15)*
+- Cabecera: puerto origen, puerto destino y otros campos; luego el payload. *(Sem9#16)*
+
+### Transferencia confiable: rdt1.0 y rdt2.0
+- **rdt1.0**: canal perfectamente confiable; el emisor solo espera datos de arriba y el
+  receptor solo espera datos de abajo (una máquina de estados por lado). *(Sem9#18)*
+- **rdt2.0**: canal con **errores de bit**. Necesita tres cosas *(Sem9#19)*:
+  1. **Detección de errores** (como el checksum de UDP; requiere bits extra).
+  2. **Realimentación del receptor**: ACK (positivo) o NAK (negativo); basta **1 bit**.
+  3. **Retransmisión** de los paquetes con error → **ARQ** (*Automatic Repeat reQuest*).
+- Mientras espera ACK/NAK el emisor no acepta más datos de arriba: es un protocolo
+  **stop-and-wait**. *(Sem9#20)*
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'rdt2.0: stop-and-wait con ACK/NAK',
+  steps: [
+    {
+      note: 'El paquete llega bien (checksum correcto): el receptor responde ACK y recién entonces el emisor toma el siguiente dato.',
+      actors: [{ id: 's', label: 'Emisor' }, { id: 'r', label: 'Receptor' }],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt 1', flags: 'datos + checksum' },
+        { from: 'r', to: 's', label: 'ACK', state: 'answer' },
+      ],
+    },
+    {
+      note: 'El paquete llega con error de bit: el receptor responde NAK y el emisor retransmite (ARQ). Mientras espera, no acepta datos nuevos.',
+      actors: [{ id: 's', label: 'Emisor' }, { id: 'r', label: 'Receptor' }],
+      msgs: [
+        { from: 's', to: 'r', label: 'pkt 2', flags: 'llega corrupto', store: 'checksum falla' },
+        { from: 'r', to: 's', label: 'NAK', state: 'marked' },
+        { from: 's', to: 'r', label: 'pkt 2', flags: 'retransmisión', state: 'active' },
+        { from: 'r', to: 's', label: 'ACK', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+### TCP (Transmission Control Protocol)
+- **Flujo de bytes confiable** sobre el servicio best effort de IP; oculta la red de paquetes
+  tras una abstracción de **circuito virtual** (conexión), identificada por las IP y los puertos
+  de ambos extremos. *(Sem9#21)*
+- Confiabilidad mediante **ACKs y retransmisiones**, **números de secuencia** y **ventana
+  deslizante**. *(Sem9#22)*
+- Antes de enviar datos abre la conexión con el **handshake de tres vías**. *(Sem9#23)*
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Handshake de tres vías de TCP',
+  steps: [{
+    note: 'Tres mensajes de control antes del primer byte útil, y luego un ACK por los datos: todo eso es tiempo de radio que un sensor paga en batería.',
+    actors: [{ id: 'c', label: 'Nodo (cliente)' }, { id: 'sv', label: 'Servidor' }],
+    msgs: [
+      { from: 'c', to: 'sv', label: 'SYN' },
+      { from: 'sv', to: 'c', label: 'SYN-ACK' },
+      { from: 'c', to: 'sv', label: 'ACK' },
+      { from: 'c', to: 'sv', label: 'DATOS', state: 'active' },
+      { from: 'sv', to: 'c', label: 'ACK' },
+    ],
+  }],
+}} />
+
+> **Nota de apoyo** (no está en el texto de las slides, que solo muestran la figura): los
+> nombres SYN, SYN-ACK y ACK son los estándar del handshake de TCP.
+
+### UDP vs TCP en IoT *(Sem9#34–40)*
+
+| | UDP | TCP |
+|---|---|---|
+| Cabecera | pequeña | mínimo **20 B** + mensajes de control (handshake, ACKs) |
+| Energía | menor: menos bytes, radio menos tiempo encendida | mayor: más bytes y más tiempo de radio |
+| Conexión | no hay setup | handshake antes de enviar |
+| Lógica / memoria | pocos pasos, sin estados complejos; cabe en pocos KB (UDP, CoAP, MQTT-SN) | mantiene estado, ventana y timers de retransmisión; más RAM y flash |
+| Garantías | ninguna (best effort) | detección de errores, retransmisión, orden, sin pérdidas ni duplicados |
+| Dónde encaja | telemetría periódica: un sensor que manda una lectura por minuto puede perder una | firmware updates, aprovisionamiento, configuración remota, cámara o medidor que no puede perder datos |
+| Hardware típico | microcontroladores con poca RAM/flash | gateways, nodos edge (p. ej. un gateway con Linux) |
+
+**MQTT** usa TCP: obtiene entrega confiable y ordenada y el desacople en tiempo, espacio y
+sincronización del broker, pero por depender de TCP es **menos eficiente en energía** que
+alternativas sobre UDP como CoAP. *(Sem9#41–42)*
+
+### CoAP sobre UDP *(Sem9#45–49)*
+CoAP (*Constrained Application Protocol*) es un protocolo de aplicación liviano para
+dispositivos con poca CPU, memoria y energía. Usa **UDP** y ofrece un modelo **REST
+request/response** como HTTP (GET, POST, PUT, DELETE; p. ej. `GET /temperature` →
+`Temperature = 24.5 °C`). Como UDP no da ACKs, retransmisiones, garantía ni orden, CoAP agrega
+**confiabilidad en la capa de aplicación** con cuatro tipos de mensaje:
+
+| Tipo | Qué hace |
+|---|---|
+| **CON** (confirmable) | Requiere ACK; se retransmite si no llega. Para entrega confiable. |
+| **NON** (non-confirmable) | Sin ACK ni retransmisión. Para datos donde perder alguno es aceptable. |
+| **ACK** | Confirma la recepción de un CON. |
+| **RST** (reset) | El mensaje llegó pero no se pudo procesar. |
+
+Retransmisión de un CON: un **timeout** decide cuándo reenviar, el timeout **crece tras cada
+reintento**, hay un **número máximo de intentos** y, si se agotan sin ACK, el intercambio falla.
+
+<Visualization viz={{
+  type: 'sequence',
+  title: 'CoAP: mensaje CON con retransmisión',
+  steps: [
+    {
+      note: 'El nodo envía un CON y arranca el timeout. El mensaje se pierde: no llega ACK.',
+      actors: [{ id: 'n', label: 'Nodo CoAP' }, { id: 's', label: 'Servidor CoAP' }],
+      msgs: [
+        { from: 'n', to: 's', label: 'CON PUT /temp', flags: 'timeout T', lost: true },
+        { divider: true, from: 'n', to: 's', label: '— vence T sin ACK —' },
+      ],
+    },
+    {
+      note: 'Retransmite con un timeout mayor (crece tras cada intento). Esta vez llega y el servidor confirma con ACK. Si se agotaran los intentos, el intercambio fallaría.',
+      actors: [{ id: 'n', label: 'Nodo CoAP' }, { id: 's', label: 'Servidor CoAP' }],
+      msgs: [
+        { from: 'n', to: 's', label: 'CON PUT /temp', flags: 'timeout T', lost: true },
+        { divider: true, from: 'n', to: 's', label: '— vence T sin ACK —' },
+        { from: 'n', to: 's', label: 'CON PUT /temp', flags: 'reintento · timeout 2T', state: 'active' },
+        { from: 's', to: 'n', label: 'ACK', state: 'answer' },
+      ],
+    },
+  ],
+}} />
+
+> **Nota de apoyo** (no está en el material): que el timeout se duplique (T → 2T) es la regla
+> habitual de CoAP; la slide solo dice que "crece tras cada retransmisión".
+
+### QUIC *(Sem9#51–56)*
+**QUIC** (*Quick UDP Internet Connections*) es un protocolo de transporte moderno construido
+**sobre UDP** que da entrega confiable, **TLS 1.3 integrado**, **streams multiplexados**,
+control de congestión y conexiones de baja latencia.
+
+- **¿Por qué sobre UDP y no TCP?** UDP es un transporte mínimo (sin conexión, sin
+  retransmisiones, sin orden, sin control de congestión, poco overhead): QUIC controla él
+  mismo esos mecanismos sin quedar atado al diseño de TCP.
+- **Menos latencia de conexión**: TCP + TLS requiere **dos handshakes** separados; en QUIC el
+  establecimiento de conexión y el de TLS están integrados.
+- **Head-of-Line (HOL) blocking**: en TCP, si se pierde un segmento, todos los datos
+  posteriores esperan al faltante. QUIC lo reduce porque cada **stream avanza
+  independientemente**.
+
+| | CoAP | QUIC |
+|---|---|---|
+| Entorno típico | redes IoT restringidas | Internet moderna |
+| Dispositivos | sensores, actuadores, embebidos | PCs, smartphones, servidores |
+| Red | poco ancho de banda, muchas restricciones | mucho ancho de banda, latencia variable |
+| Mensajes | request/response pequeños | datos continuos y multiplexados |
+| Prioridad | bajo overhead | baja latencia + rendimiento |
+| Aplicaciones | smart home, IoT industrial, redes de sensores | web, HTTP/3, video, servicios cloud |
+
+### ¿TCP o UDP? Por qué TCP/IP suele ser demasiado pesado *(Sem9#57–58, 72)*
+TCP/IP supone conectividad permanente, transferencia confiable y cabeceras ricas: ideal para
+computadoras, caro para sensores simples. Cabeceras: **TCP ≈ 20 B, IP ≈ 20 B**; mantener la
+sesión exige ACKs y retransmisiones. Pasar a **UDP/IP** quita el costo de conexión y ACK, pero
+**la capa IP sigue** (direccionamiento, ruteo, fragmentación), con su memoria y energía. Por eso
+muchas redes IoT, sobre todo las **LPWAN** como [LoRa](/topics/lora), **saltan el stack IP
+completo** y usan capas propias optimizadas para alcance y energía.
+
+## Método paso a paso
+Para elegir el transporte de una aplicación IoT (pregunta típica):
+1. **¿Puede perderse un mensaje?** Si el siguiente lo reemplaza (telemetría periódica) → UDP
+   (o CoAP NON). Si no (firmware, configuración, medición facturable) → TCP o CoAP CON.
+2. **¿Qué recursos tiene el dispositivo?** Microcontrolador a batería → UDP/CoAP; gateway o
+   nodo edge → TCP sin problema.
+3. **¿Qué patrón de comunicación?** Request/response a un recurso → CoAP; pub/sub con broker →
+   MQTT (TCP) o MQTT-SN.
+4. **Cuantificar el overhead** cuando hay números: sumar cabeceras y compararlas con el payload
+   (ver [Capa de red](/topics/network-layer) para el cálculo completo con 6LoWPAN).
+
+## Ejemplo resuelto
+**Sensor de temperatura que reporta cada minuto con un payload de 4 B** *(derivado, con los
+tamaños de las slides)*. Con TCP/IP cada segmento lleva al menos
+
+$$H_{TCP/IP} = 20\,\text{B} + 20\,\text{B} = 40\,\text{B}$$
+
+de cabecera, diez veces el dato, y además el handshake (3 mensajes) y los ACKs. Como perder una
+lectura no importa (la siguiente la reemplaza, *Sem9#36*), conviene **UDP** (o CoAP NON). En
+cambio, la **actualización de firmware** del mismo nodo debe ir por TCP (o CoAP CON): un archivo
+incompleto deja el equipo inutilizable (*Sem9#39*).
+
+## Errores típicos
+- Decir que UDP "no sirve" para IoT: es la base de CoAP y de QUIC; la confiabilidad se puede
+  agregar arriba cuando hace falta.
+- Creer que pasar a UDP resuelve todo el overhead: la cabecera IP y sus funciones siguen; por
+  eso las LPWAN abandonan IP.
+- Confundir CON/NON de CoAP con los QoS de MQTT: son mecanismos distintos (CoAP va sobre UDP).
+- Decir que QUIC es "UDP sin confiabilidad": QUIC agrega confiabilidad, TLS y control de
+  congestión **encima** de UDP.
+
+## Pregunta tipo examen
+
+<ExerciseBlock client:visible exercise={{
+  level: 2,
+  statement: "Un nodo a batería envía cada 30 s la humedad del suelo (2 B) y una vez al mes recibe una actualización de firmware de 200 kB. ¿Qué transporte usaría para cada flujo y por qué? Mencione el mecanismo de CoAP que permitiría usar UDP en el segundo caso.",
+  hints: [
+    "Pregúntate qué pasa si se pierde una lectura de humedad, y qué pasa si se pierde un trozo del firmware.",
+    "Compara cabecera y mensajes de control de TCP con UDP.",
+    "CoAP tiene un tipo de mensaje que exige ACK y se retransmite.",
+  ],
+}}>
+
+**1. Telemetría (2 B cada 30 s) → UDP.** Perder una lectura no es grave: la siguiente la
+reemplaza. TCP pagaría el handshake, los ACKs y al menos 20 B de cabecera TCP por 2 B de dato,
+con la radio más tiempo encendida.
+
+**2. Firmware (200 kB) → TCP.** No se puede perder ni desordenar ningún byte: TCP da detección
+de errores, retransmisión y entrega ordenada sin duplicados.
+
+**3. Alternativa sobre UDP: CoAP CON.** Cada mensaje confirmable exige ACK y se retransmite con
+un timeout creciente hasta un máximo de intentos, así se obtiene confiabilidad en la capa de
+aplicación sin TCP.
+
+<Visualization viz={{
+  type: 'sequence',
+  static: true,
+  title: 'Dos flujos, dos transportes',
+  steps: [{
+    note: 'La telemetría va sin confirmación; el firmware abre conexión y cada bloque se confirma.',
+    actors: [{ id: 'n', label: 'Nodo' }, { id: 's', label: 'Servidor' }],
+    msgs: [
+      { from: 'n', to: 's', label: 'UDP: humedad (2 B)', flags: 'sin ACK' },
+      { divider: true, from: 'n', to: 's', label: '— una vez al mes —' },
+      { from: 'n', to: 's', label: 'SYN' },
+      { from: 's', to: 'n', label: 'SYN-ACK' },
+      { from: 'n', to: 's', label: 'ACK' },
+      { from: 's', to: 'n', label: 'bloque de firmware', state: 'active' },
+      { from: 'n', to: 's', label: 'ACK' },
+    ],
+  }],
+}} />
+
+**Comprobación:** cada elección se justifica con la fila "Garantías" de la tabla UDP vs TCP.
+
+</ExerciseBlock>
