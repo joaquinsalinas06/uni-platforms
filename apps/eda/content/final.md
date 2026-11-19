@@ -1039,6 +1039,19 @@ items:
   - level: 2
     etiqueta: "Simulacro · P6 Dynamic Graphs · (a) Conocimientos"
     href: "/structures/heavy-light-decomposition"
+    visualization:
+      type: tree
+      steps:
+        - note: >-
+            El árbol ponderado del enunciado, enraizado en 1: cada arista lleva su peso w.
+          nodes:
+            - { id: "1", value: "1", parent: null }
+            - { id: "2", value: "2", parent: "1", edgeLabel: "4" }
+            - { id: "3", value: "3", parent: "1", edgeLabel: "8" }
+            - { id: "4", value: "4", parent: "2", edgeLabel: "6" }
+            - { id: "5", value: "5", parent: "2", edgeLabel: "3" }
+            - { id: "6", value: "6", parent: "3", edgeLabel: "7" }
+            - { id: "7", value: "7", parent: "6", edgeLabel: "5" }
     statement: >-
       (S6a) En la Heavy-Light Decomposition, $s(v)$ es el tamaño del subárbol de $v$ y el hijo pesado es el de mayor subárbol (empate: menor índice); los vértices se numeran con un DFS que visita primero al hijo pesado y se usa un segment tree sobre ese orden. El árbol ponderado, enraizado en 1, tiene aristas $(u, v, w)$: $(1,2,4)$, $(1,3,8)$, $(2,4,6)$, $(2,5,3)$, $(3,6,7)$, $(6,7,5)$. Indica los tamaños, las aristas pesadas y ligeras, las cadenas y la posición de cada vértice. Determina el máximo peso de arista en los caminos de 4 a 7 y de 4 a 5.
     hints:

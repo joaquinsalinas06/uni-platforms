@@ -30,6 +30,11 @@ export type TreeNode = {
    * cuántos punteros existen de verdad — eso se dibuja aparte, con
    * `links`. Default `true` (el comportamiento de siempre). */
   edge?: boolean;
+  /** Rótulo de la arista padre→hijo (la subcadena de un suffix tree, la
+   * letra de un trie, el peso de una arista). Se dibuja en el punto medio
+   * de la arista, con un chip de fondo; el layout ensancha columnas para
+   * que los rótulos de una misma franja no se pisen. */
+  edgeLabel?: string;
 };
 export type LaidOut = {
   id: string;
@@ -43,6 +48,25 @@ export type LaidOut = {
 
 export const W = 640;
 const ROW = 56;
+/** Fila más alta cuando hay rótulos de arista: el chip vive entre filas. */
+export const ROW_LABELED = 72;
+/** Rótulo de arista: IBM Plex Mono 10px ≈ 6px por carácter + relleno del chip. */
+export const LABEL_FONT = 10;
+export const labelWidth = (text: string) => text.length * LABEL_FONT * 0.6 + 8;
+const LABEL_PAD = 6;
+
+export type LayoutOptions = {
+  /** Orden de los árboles de un bosque, de izquierda a derecha. Un id listado
+   * se trata como raíz aunque tenga `parent` (su arista no se dibuja: es un
+   * path-parent, no una relación de hijo). Entre árboles queda una columna
+   * libre. Sin esto, las raíces van en orden de declaración, como siempre. */
+  roots?: string[];
+  /** Alto de fila en px (default ROW). */
+  row?: number;
+};
+
+/** El padre que cuenta para el layout: `null` si el nodo es raíz forzada. */
+export const layoutParent = (n: TreeNode, roots?: string[]) => (roots?.includes(n.id) ? null : n.parent);
 
 /**
  * Convierte {id, value, parent} en coordenadas.
@@ -60,12 +84,14 @@ const ROW = 56;
  * media columna sólo si el nodo declara `side`, que es el único caso donde el
  * lado importa y el orden no lo revela (un BST con un hijo).
  */
-export function layout(nodes: TreeNode[]): LaidOut[] {
+export function layout(nodes: TreeNode[], opts: LayoutOptions = {}): LaidOut[] {
+  const { roots } = opts;
   const children = new Map<string | null, TreeNode[]>();
   for (const n of nodes) {
-    const list = children.get(n.parent) ?? [];
+    const p = layoutParent(n, roots);
+    const list = children.get(p) ?? [];
     list.push(n);
-    children.set(n.parent, list);
+    children.set(p, list);
   }
   const out: LaidOut[] = [];
   let column = 0;
@@ -96,7 +122,15 @@ export function layout(nodes: TreeNode[]): LaidOut[] {
     return cx;
   };
 
-  for (const root of children.get(null) ?? []) visit(root, 0);
+  let top = children.get(null) ?? [];
+  if (roots) {
+    const rank = (n: TreeNode) => (roots.includes(n.id) ? roots.indexOf(n.id) : roots.length);
+    top = [...top].sort((a, b) => rank(a) - rank(b));
+  }
+  top.forEach((root, i) => {
+    if (roots && i > 0) column++; // columna libre entre árboles del bosque
+    visit(root, 0);
+  });
   if (out.length === 0) return out;
 
   // Un hijo único que se desplaza media columna puede caer sobre una hoja de
@@ -112,6 +146,30 @@ export function layout(nodes: TreeNode[]): LaidOut[] {
   // Normaliza: los desplazamientos de hijo único pueden dar columnas negativas.
   const min = Math.min(...out.map((n) => n.x));
   const max = Math.max(...out.map((n) => n.x));
-  const gap = W / (max - min + 2);
-  return out.map((n) => ({ ...n, x: gap * (n.x - min + 1), y: 34 + n.y * ROW }));
+  let gap = W / (max - min + 2);
+
+  // Rótulos de arista: todos los de una franja (entre la fila d y la d+1)
+  // quedan a la misma altura, en el punto medio x de su arista. Si dos
+  // vecinos no caben, se ensancha la columna (el lienzo crece más allá de W)
+  // en vez de solaparlos. Sin rótulos, el layout es idéntico al de siempre.
+  const at = new Map(out.map((n) => [n.id, n]));
+  const bands = new Map<number, { x: number; w: number }[]>();
+  for (const n of nodes) {
+    const p = layoutParent(n, roots);
+    if (!n.edgeLabel || n.edge === false || !p || !at.has(p)) continue;
+    const c = at.get(n.id)!;
+    const band = bands.get(c.y) ?? [];
+    band.push({ x: (c.x + at.get(p)!.x) / 2, w: labelWidth(n.edgeLabel) });
+    bands.set(c.y, band);
+  }
+  for (const band of bands.values()) {
+    band.sort((a, b) => a.x - b.x);
+    for (let i = 1; i < band.length; i++) {
+      const dx = band[i].x - band[i - 1].x;
+      if (dx > 0) gap = Math.max(gap, ((band[i].w + band[i - 1].w) / 2 + LABEL_PAD) / dx);
+    }
+  }
+
+  const row = opts.row ?? ROW;
+  return out.map((n) => ({ ...n, x: gap * (n.x - min + 1), y: 34 + n.y * row }));
 }

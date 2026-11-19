@@ -16,6 +16,39 @@ Cada nodo tiene un solo hijo, que es pesado: **una sola cadena** y ninguna arist
 Aristas $(u, v, w)$: $(1,2,4)$, $(1,3,8)$, $(2,4,6)$, $(2,5,3)$, $(3,6,7)$, $(6,7,5)$, raíz 1. Tamaños: $s(1) = 7$, $s(2) = s(3) = 3$, $s(6) = 2$; empates al menor índice. Cadenas $[1, 2, 4]$, $[5]$, $[3, 6, 7]$. El peso de cada arista va en la posición de su hijo.
 
 <Visualization viz={{
+  type: "tree",
+  steps: [
+    {
+      note: "El árbol ponderado: cada arista lleva su peso. Pesadas 1–2, 2–4, 3–6 y 6–7; ligeras 1–3 y 2–5. En ámbar, las cabezas de cadena: 1, 5 y 3.",
+      nodes: [
+        { id: "1", value: "1", parent: null, state: "marked" },
+        { id: "2", value: "2", parent: "1", edgeLabel: "4" },
+        { id: "3", value: "3", parent: "1", edgeLabel: "8", state: "marked" },
+        { id: "4", value: "4", parent: "2", edgeLabel: "6" },
+        { id: "5", value: "5", parent: "2", edgeLabel: "3", state: "marked" },
+        { id: "6", value: "6", parent: "3", edgeLabel: "7" },
+        { id: "7", value: "7", parent: "6", edgeLabel: "5" },
+      ],
+      caption: "Cadenas [1, 2, 4], [5], [3, 6, 7].",
+    },
+    {
+      note: "Máximo(4, 7): el camino 4 → 2 → 1 → 3 → 6 → 7 cruza las aristas de pesos 6, 4, 8, 7 y 5. La de 1–3 (peso 8, en carmesí) es el máximo; en el arreglo vive en la posición de 3.",
+      nodes: [
+        { id: "1", value: "1", parent: null },
+        { id: "2", value: "2", parent: "1", edgeLabel: "4" },
+        { id: "3", value: "3", parent: "1", edgeLabel: "8", state: "answer" },
+        { id: "4", value: "4", parent: "2", edgeLabel: "6" },
+        { id: "5", value: "5", parent: "2", edgeLabel: "3", state: "muted" },
+        { id: "6", value: "6", parent: "3", edgeLabel: "7" },
+        { id: "7", value: "7", parent: "6", edgeLabel: "5" },
+      ],
+      highlight: ["4", "2", "1", "3", "6", "7"],
+      caption: "Máximo(4, 7) = 8.",
+    },
+  ],
+}} />
+
+<Visualization viz={{
   type: "array",
   steps: [
     {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { layout, W, type TreeNode } from './layout.ts';
+import { layout, labelWidth, ROW_LABELED, W, type TreeNode } from './layout.ts';
 
 const byId = (nodes: ReturnType<typeof layout>) => new Map(nodes.map((n) => [n.id, n]));
 
@@ -137,4 +137,51 @@ test('un `state` explícito sobrevive al layout — no sólo el derivado de high
 test('sin `state`, el nodo no lo trae (queda para que highlight decida)', () => {
   const n = byId(layout([{ id: 'a', value: 1, parent: null }]));
   assert.equal(n.get('a')!.state, undefined);
+});
+
+test('sin rótulos de arista el layout no cambia: ocupa exactamente W', () => {
+  const tree: TreeNode[] = [
+    { id: 'r', value: 'r', parent: null },
+    { id: 'a', value: 'a', parent: 'r' },
+    { id: 'b', value: 'b', parent: 'r' },
+    { id: 'c', value: 'c', parent: 'a' },
+  ];
+  const plain = layout(tree);
+  assert.deepEqual(layout(tree, {}), plain);
+  const xs = plain.map((n) => n.x);
+  assert.ok(Math.abs(Math.min(...xs) + Math.max(...xs) - W) < 1e-9);
+  assert.deepEqual(plain.map((n) => n.y).sort(), [34, 34 + 56, 34 + 56, 34 + 112].sort());
+});
+
+test('rótulos de arista largos: la franja se ensancha y los chips vecinos no se pisan', () => {
+  const labels = ['abxabcd$', 'd$', 'xabcd$', 'abxabcd$', 'd$', 'xabcd$', 'abxabcd$', 'd$', 'xabcd$', 'd$', '$'];
+  const tree: TreeNode[] = [{ id: 'r', value: 'raíz', parent: null }];
+  labels.forEach((l, i) => tree.push({ id: `l${i}`, value: i, parent: 'r', edgeLabel: l }));
+  const n = byId(layout(tree, { row: ROW_LABELED }));
+  const r = n.get('r')!;
+  const chips = labels
+    .map((l, i) => ({ x: (n.get(`l${i}`)!.x + r.x) / 2, w: labelWidth(l) }))
+    .sort((a, b) => a.x - b.x);
+  for (let i = 1; i < chips.length; i++) {
+    assert.ok(chips[i].x - chips[i - 1].x >= (chips[i].w + chips[i - 1].w) / 2, `chips ${i - 1} y ${i} se solapan`);
+  }
+  assert.equal(n.get('l0')!.y - r.y, ROW_LABELED);
+});
+
+test('roots ordena el bosque, separa los árboles y vuelve raíz a un nodo con padre', () => {
+  // Link-cut: el auxiliar {3, 6} cuelga de 1 por path-parent; NO es hijo de 1.
+  const forest: TreeNode[] = [
+    { id: '2', value: 2, parent: null },
+    { id: '1', value: 1, parent: '2' },
+    { id: '4', value: 4, parent: '2' },
+    { id: '3', value: 3, parent: '1' },
+    { id: '6', value: 6, parent: '3' },
+    { id: '5', value: 5, parent: null },
+  ];
+  const n = byId(layout(forest, { roots: ['2', '5', '3'] }));
+  assert.equal(n.get('3')!.y, n.get('2')!.y, '3 es raíz de su propio árbol');
+  assert.ok(n.get('2')!.x < n.get('5')!.x && n.get('5')!.x < n.get('3')!.x, 'orden de roots');
+  // Columna libre entre árboles: más separación que entre hermanos.
+  const sib = n.get('4')!.x - n.get('1')!.x;
+  assert.ok(n.get('5')!.x - n.get('4')!.x > sib, 'los árboles del bosque quedan separados');
 });

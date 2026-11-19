@@ -19,7 +19,7 @@ items:
     Para $S = \mathtt{abcabxabcd}$ da resto y el punto activo al final de las fases 3, 4, 7 y 8.
   hints:
   - >-
-    En las fases 3 y 4 las letras a, b ya están al inicio de la arista abc….
+    En las fases 3 y 4 las letras a, b ya están al inicio de la arista de la hoja 0 (abca, luego abcab).
   - >-
     En la fase 8 la longitud activa iguala el largo de la arista ab.
   solution: >-

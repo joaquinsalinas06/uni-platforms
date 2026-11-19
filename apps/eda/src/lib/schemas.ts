@@ -46,12 +46,17 @@ const vizNode = z.object({
    * para un padre que sólo guarda un puntero a un hijo cualquiera (el
    * resto enlazado por `links`), no uno por hijo. Default `true`. */
   edge: z.boolean().default(true),
+  /** Rótulo de la arista padre→hijo (subcadena de un suffix tree, letra de
+   * un trie, peso): se dibuja en el punto medio de esa arista (familia `tree`). */
+  edgeLabel: z.string().optional(),
 });
 
 const vizLink = z.object({
   from: z.string(),
   to: z.string(),
-  kind: z.enum(['tree', 'shared', 'pointer']).default('tree'),
+  /** `path-parent` (familia `tree`, link-cut): línea discontinua del hijo a
+   * su padre en el árbol representado, sin relación de hijo. */
+  kind: z.enum(['tree', 'shared', 'pointer', 'path-parent']).default('tree'),
   label: z.string().optional(),
   /** Curvatura explícita (family `tree`; persistent/range-tree ya la
    * calculan solos). Para un par de punteros opuestos entre los mismos dos
@@ -151,6 +156,9 @@ export const visualizationSchema = z.object({
         highlight: z.array(z.string()).default([]),
         mode: z.enum(VISUALIZATION_MODES).optional(),
         links: z.array(vizLink).optional(),
+        /** `tree`: bosque — orden de los árboles de izquierda a derecha; un id
+         * listado es raíz aunque tenga `parent` (ver tree/layout.ts). */
+        roots: z.array(z.string()).optional(),
         /** Paneles de versión, en orden de izquierda a derecha (persistent: path-copying). */
         versions: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
         /** Paneles del 2D anidado (range-tree), colgados de `anchor`. */
