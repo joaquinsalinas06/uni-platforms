@@ -72,6 +72,65 @@ function Packet({ p, k, i, ghost }: { p: PacketL; k: number; i: number; ghost?: 
   );
 }
 
+/** Capa SVG de una escena (coordenadas 640×H). La reusa `routing-table` para su grafo. */
+export function NetSceneLayer({ frames, i, k, prev }: { frames: NetFrame[]; i: number; k: number; prev?: number }) {
+  const f = frames[i];
+  const arriving = new Set(f.packets.filter((p) => !p.lost && (p.state === 'active' || p.state === 'answer')).map((p) => p.to));
+  const ids = new Set(f.packets.map((p) => p.id));
+  const ghosts = prev !== undefined && prev !== i ? frames[prev].packets.filter((p) => !ids.has(p.id)) : [];
+  return (
+    <>
+      {f.zones.map((z) => (
+        <g key={`z-${z.label}`} className="net-in">
+          <rect x={z.x} y={z.y} width={z.w} height={z.h} rx={12} fill="color-mix(in srgb, var(--muted) 7%, transparent)" stroke="var(--rule)" strokeWidth={1.2} />
+          <text x={z.x + 12} y={z.y + 14} fontSize={10 * k} fontFamily="var(--font-mono)" letterSpacing="0.06em" fill="var(--muted)" style={{ textTransform: 'uppercase' }}>
+            {z.label}
+          </text>
+        </g>
+      ))}
+      {f.cables.map((c) => {
+        const ink = inkOf(c.state);
+        return <path key={c.id} d={`M${c.a.x},${c.a.y}L${c.b.x},${c.b.y}`} stroke={c.state ? ink.stroke : 'var(--muted)'} strokeWidth={c.state === 'active' ? 2.5 : 2} opacity={ink.opacity} strokeLinecap="round" className="net-in" />;
+      })}
+      {f.devices.map((d) => {
+        const ink = inkOf(d.state);
+        const lit = d.state === 'active' || d.state === 'answer';
+        return (
+          <g key={`d-${d.id}`} className="net-pop-in" opacity={ink.opacity}>
+            <g style={{ transform: `translate(${d.cx}px, ${d.cy}px)`, transition: 'transform 450ms cubic-bezier(.2,.7,.3,1)' }}>
+              <circle r={R + 6} fill="var(--marked)" opacity={ink.halo ? 0.2 : 0} stroke="var(--marked)" strokeOpacity={ink.halo ? 0.6 : 0} strokeWidth={1.5} />
+              <circle r={R - 2} fill={lit ? ink.fill : 'var(--fill)'} stroke={lit ? ink.stroke : 'var(--fill)'} strokeWidth={1.5} />
+              {arriving.has(d.id) && <circle key={`ping-${i}`} r={R - 2} fill="none" stroke={ink.stroke === 'var(--ink)' ? 'var(--accent)' : ink.stroke} strokeWidth={2} className="net-ping" style={{ '--delay': `${TRAVEL}ms` } as CSSProperties} />}
+              <g transform={`scale(${ICON})`}>
+                <DeviceIcon kind={d.kind} stroke={ink.stroke} fill="var(--paper)" screen={lit ? wash(ink.stroke, 22) : 'var(--sunken)'} />
+              </g>
+            </g>
+            {d.lines.map((l, j) => (
+              <text
+                key={j}
+                x={d.block.x + d.block.w / 2}
+                y={l.y}
+                textAnchor="middle"
+                fontSize={l.size}
+                fontWeight={l.sub ? 400 : 650}
+                fontFamily={l.sub ? 'var(--font-mono)' : 'var(--font-sans)'}
+                fill={l.sub ? 'var(--muted)' : lit ? ink.text : 'var(--ink)'}
+                style={haloText}
+              >
+                {l.text}
+              </text>
+            ))}
+          </g>
+        );
+      })}
+      {f.cables.map((c) => c.chip && <ChipView key={`${c.id}-chip`} c={c.chip} fs={10.5 * k} fill="var(--paper)" stroke="var(--rule)" color="var(--muted)" weight={400} />)}
+      {ghosts.map((p) => <Packet key={`ghost-${p.id}-${i}`} p={p} k={k} i={i} ghost />)}
+      {/* Orden estable: reordenar nodos del DOM reinicia sus animaciones. */}
+      {f.packets.map((p) => <Packet key={p.id} p={p} k={k} i={i} />)}
+    </>
+  );
+}
+
 export default function NetSceneVisualization({ steps, title, static: isStatic }: { steps: Step[]; title?: string; static?: boolean }) {
   // Dos juegos de fotogramas: texto normal y texto agrandado de móvil (el auditor revisa ambos).
   const sets = new Map<number, NetFrame[]>();
@@ -88,62 +147,7 @@ export default function NetSceneVisualization({ steps, title, static: isStatic }
       static={isStatic}
       draw={(i, kRaw, prev) => {
         const k = kRaw > 1 ? MAX_BOOST : 1;
-        const frames = framesFor(k);
-        const f = frames[i];
-        const arriving = new Set(f.packets.filter((p) => !p.lost && (p.state === 'active' || p.state === 'answer')).map((p) => p.to));
-        const ids = new Set(f.packets.map((p) => p.id));
-        const ghosts = prev !== undefined && prev !== i ? frames[prev].packets.filter((p) => !ids.has(p.id)) : [];
-        return (
-          <>
-            {f.zones.map((z) => (
-              <g key={`z-${z.label}`} className="net-in">
-                <rect x={z.x} y={z.y} width={z.w} height={z.h} rx={12} fill="color-mix(in srgb, var(--muted) 7%, transparent)" stroke="var(--rule)" strokeWidth={1.2} />
-                <text x={z.x + 12} y={z.y + 14} fontSize={10 * k} fontFamily="var(--font-mono)" letterSpacing="0.06em" fill="var(--muted)" style={{ textTransform: 'uppercase' }}>
-                  {z.label}
-                </text>
-              </g>
-            ))}
-            {f.cables.map((c) => {
-              const ink = inkOf(c.state);
-              return <path key={c.id} d={`M${c.a.x},${c.a.y}L${c.b.x},${c.b.y}`} stroke={c.state ? ink.stroke : 'var(--muted)'} strokeWidth={c.state === 'active' ? 2.5 : 2} opacity={ink.opacity} strokeLinecap="round" className="net-in" />;
-            })}
-            {f.devices.map((d) => {
-              const ink = inkOf(d.state);
-              const lit = d.state === 'active' || d.state === 'answer';
-              return (
-                <g key={`d-${d.id}`} className="net-pop-in" opacity={ink.opacity}>
-                  <g style={{ transform: `translate(${d.cx}px, ${d.cy}px)`, transition: 'transform 450ms cubic-bezier(.2,.7,.3,1)' }}>
-                    <circle r={R + 6} fill="var(--marked)" opacity={ink.halo ? 0.2 : 0} stroke="var(--marked)" strokeOpacity={ink.halo ? 0.6 : 0} strokeWidth={1.5} />
-                    <circle r={R - 2} fill={lit ? ink.fill : 'var(--fill)'} stroke={lit ? ink.stroke : 'var(--fill)'} strokeWidth={1.5} />
-                    {arriving.has(d.id) && <circle key={`ping-${i}`} r={R - 2} fill="none" stroke={ink.stroke === 'var(--ink)' ? 'var(--accent)' : ink.stroke} strokeWidth={2} className="net-ping" style={{ '--delay': `${TRAVEL}ms` } as CSSProperties} />}
-                    <g transform={`scale(${ICON})`}>
-                      <DeviceIcon kind={d.kind} stroke={ink.stroke} fill="var(--paper)" screen={lit ? wash(ink.stroke, 22) : 'var(--sunken)'} />
-                    </g>
-                  </g>
-                  {d.lines.map((l, j) => (
-                    <text
-                      key={j}
-                      x={d.block.x + d.block.w / 2}
-                      y={l.y}
-                      textAnchor="middle"
-                      fontSize={l.size}
-                      fontWeight={l.sub ? 400 : 650}
-                      fontFamily={l.sub ? 'var(--font-mono)' : 'var(--font-sans)'}
-                      fill={l.sub ? 'var(--muted)' : lit ? ink.text : 'var(--ink)'}
-                      style={haloText}
-                    >
-                      {l.text}
-                    </text>
-                  ))}
-                </g>
-              );
-            })}
-            {f.cables.map((c) => c.chip && <ChipView key={`${c.id}-chip`} c={c.chip} fs={10.5 * k} fill="var(--paper)" stroke="var(--rule)" color="var(--muted)" weight={400} />)}
-            {ghosts.map((p) => <Packet key={`ghost-${p.id}-${i}`} p={p} k={k} i={i} ghost />)}
-            {/* Orden estable: reordenar nodos del DOM reinicia sus animaciones. */}
-            {f.packets.map((p) => <Packet key={p.id} p={p} k={k} i={i} />)}
-          </>
-        );
+        return <NetSceneLayer frames={framesFor(k)} i={i} k={k} prev={prev} />;
       }}
     />
   );

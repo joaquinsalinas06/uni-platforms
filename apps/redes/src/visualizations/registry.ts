@@ -16,6 +16,7 @@ import SpacetimeVisualization from './spacetime/SpacetimeVisualization';
 import WindowVisualization from './window/WindowVisualization';
 import PacketVisualization from './packet/PacketVisualization';
 import FsmVisualization from './fsm/FsmVisualization';
+import RoutingTableVisualization from './routing-table/RoutingTableVisualization';
 
 type Family = (typeof VISUALIZATION_TYPES)[number];
 
@@ -33,4 +34,5 @@ export const VISUALIZATIONS = {
   window: WindowVisualization,
   packet: PacketVisualization,
   fsm: FsmVisualization,
+  'routing-table': RoutingTableVisualization,
 } satisfies Record<Family, ComponentType<{ steps: any[] }> | null>;

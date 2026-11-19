@@ -11,6 +11,7 @@ const { windowIssues } = await import('../src/visualizations/window/layout.ts');
 const { packetIssues } = await import('../src/visualizations/packet/layout.ts');
 const { flowIssues } = await import('../src/visualizations/flow/layout.ts');
 const { fsmIssues } = await import('../src/visualizations/fsm/layout.ts');
+const { routingTableIssues } = await import('../src/visualizations/routing-table/layout.ts');
 const only = process.env.FAMILY;
 
 /** familia → (pasos) → issues por paso (string[][]) */
@@ -22,6 +23,8 @@ const AUDIT = {
   packet: packetIssues,
   flow: flowIssues,
   fsm: fsmIssues,
+  // Tabla (ancha y apilada) + el grafo embebido, que siempre se dibuja con texto ×1.25.
+  'routing-table': (steps) => routingTableIssues(steps).map((list, i) => [...list, ...(steps[i].graph ? netSceneIssues(netSceneLayout(steps[i].graph, 1.25)).map((m) => `[grafo] ${m}`) : [])]),
 };
 
 const args = process.argv.slice(2);

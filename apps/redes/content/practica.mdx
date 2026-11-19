@@ -748,14 +748,7 @@ Los nueve ejercicios de Ex4, incluidos GBN/SR/TCP, NAK y las experiencias de pro
   hints: ["En cada paso cierre el nodo de menor D fuera de N.", "Relaje solo a los vecinos del nodo que acaba de entrar."],
 }}>
 
-| Paso | N' | v | w | x | y | z |
-|---|---|---|---|---|---|---|
-| 0 | u | 7,u | **3,u** | 5,u | ∞ | ∞ |
-| 1 | uw | 6,w | | **5,u** | 11,w | ∞ |
-| 2 | uwx | **6,w** | | | 11,w | 14,x |
-| 3 | uwxv | | | | **10,v** | 14,x |
-| 4 | uwxvy | | | | | **12,y** |
-| 5 | uwxvyz | | | | | |
+<Visualization viz={{ type: "routing-table", static: true, title: "Dijkstra desde u (slide 14)", steps: [{"note": "Tabla completa: celda = D,p; en naranja, el mínimo que entra a N′ en el paso siguiente; rayado = nodo ya en N′.", "mode": "dijkstra", "columns": ["v", "w", "x", "y", "z"], "rows": [{"label": "0 · u", "cells": [{"value": "7,u"}, {"value": "3,u", "state": "marked"}, {"value": "5,u"}, {"value": "∞"}, {"value": "∞"}]}, {"label": "1 · uw", "cells": [{"value": "6,w"}, {"value": "", "closed": true}, {"value": "5,u", "state": "marked"}, {"value": "11,w"}, {"value": "∞"}]}, {"label": "2 · uwx", "cells": [{"value": "6,w", "state": "marked"}, {"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "11,w"}, {"value": "14,x"}]}, {"label": "3 · uwxv", "cells": [{"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "10,v", "state": "marked"}, {"value": "14,x"}]}, {"label": "4 · uwxvy", "cells": [{"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "12,y", "state": "marked"}]}, {"label": "5 · uwxvyz", "cells": [{"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "", "closed": true}, {"value": "", "closed": true}]}]}] }} />
 
 **Camino a z:** $z \leftarrow y \leftarrow v \leftarrow w \leftarrow u$: u–w–v–y–z, costo $3+3+4+2 = \boxed{12}$.
 

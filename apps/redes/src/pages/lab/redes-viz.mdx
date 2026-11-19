@@ -203,4 +203,15 @@ Banco de pruebas visual de las cuatro familias de redes (contrato en
     layers: [{ label: 'aplicación' }, { label: 'transporte', state: 'active' }, { label: 'red' }, { label: 'enlace' }, { label: 'física' }] },
 ]}} />
 
+## routing-table
+
+<Visualization viz={{ type: 'routing-table', title: 'Dijkstra desde u (slide 12)', steps: [
+  { note: 'Paso 0: N′ = {u}.', mode: 'dijkstra', columns: ['v', 'w', 'x', 'y', 'z'],
+    rows: [{ label: '0 · u', cells: [{ value: '2,u' }, { value: '5,u' }, { value: '1,u', state: 'marked' }, { value: '∞' }, { value: '∞' }] }] },
+  { note: 'Paso 1: entra x; mejoran w e y.', mode: 'dijkstra', columns: ['v', 'w', 'x', 'y', 'z'],
+    rows: [
+      { label: '0 · u', cells: [{ value: '2,u' }, { value: '5,u' }, { value: '1,u', state: 'marked' }, { value: '∞' }, { value: '∞' }] },
+      { label: '1 · ux', cells: [{ value: '2,u' }, { value: '4,x', state: 'active' }, { value: '', closed: true }, { value: '2,x', state: 'active' }, { value: '∞' }] } ] },
+]}} />
+
 </Base>

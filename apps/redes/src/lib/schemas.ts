@@ -19,6 +19,7 @@ export const VISUALIZATION_TYPES = [
   'window',
   'packet',
   'fsm',
+  'routing-table',
 ] as const;
 
 /** Canal de COLOR SEMÁNTICO, separado de `state` (que sigue siendo el rol del
@@ -255,6 +256,10 @@ const pktLayer = z.object({
 const fsmState = z.object({ id: z.string(), label: z.string(), initial: z.boolean().optional(), final: z.boolean().optional(), x: z.number().optional(), y: z.number().optional(), state: state.optional() });
 const fsmTransition = z.object({ from: z.string(), to: z.string(), event: z.string(), action: z.string().optional(), state: state.optional(), bend: z.number().optional() });
 
+/** `routing-table`: celda de la tabla D,p (Dijkstra) o del vector de distancias (DV). */
+const rtCell = z.object({ value: z.string().default(''), state: state.optional(), closed: z.boolean().optional() });
+const rtRow = z.object({ label: z.string(), cells: z.array(rtCell) });
+
 const step = z.object({
   note: z.string(),
   nodes: z.array(vizNode).default([]),
@@ -292,8 +297,8 @@ const step = z.object({
   cables: z.array(netCable).optional(),
   packets: z.array(netPacket).optional(),
   zones: z.array(netZone).optional(),
-  /** `spacetime` */
-  columns: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  /** `spacetime`: `{id,label}[]`; `routing-table`: destinos (`string[]`). */
+  columns: z.union([z.array(z.object({ id: z.string(), label: z.string() })), z.array(z.string())]).optional(),
   time: z.object({ unit: z.enum(['ms', 'µs', 'μs', 'us', 'ns', 's']).default('ms'), max: z.number().positive(), ticks: z.array(z.number()).optional() }).optional(),
   sends: z.array(stSend).optional(),
   spans: z.array(stSpan).optional(),
@@ -305,6 +310,9 @@ const step = z.object({
   /** `fsm` */
   states: z.array(fsmState).optional(),
   transitions: z.array(fsmTransition).optional(),
+  /** `routing-table` (+ `columns` y `mode: 'dijkstra' | 'dv'`) */
+  rows: z.array(rtRow).optional(),
+  graph: z.object({ devices: z.array(netDevice).default([]), cables: z.array(netCable).default([]) }).optional(),
   /** Nota acumulada del paso. */
   caption: z.string().optional(),
 });

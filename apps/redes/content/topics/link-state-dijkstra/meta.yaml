@@ -14,7 +14,7 @@
     "distance-vector-bellman-ford"
   ],
   "hasVisualization": true,
-  "visualizationType": "net-scene",
+  "visualizationType": "routing-table",
   "formulas": [
     {
       "name": "Costo de un camino",

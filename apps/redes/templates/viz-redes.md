@@ -295,7 +295,48 @@ transitions: { from; to; event; action?; state?; bend? }[]   // bend: curvatura 
 
 ---
 
-## 6. Familias existentes que también se usan
+## 6. `routing-table`: tabla de Dijkstra (D,p por paso) y vectores de distancia (DV)
+
+### Cómo se ve
+
+```
+ paso · N′ │  v    w    x    y    z            (grafo de net-scene al lado;
+ 0 · u     │ 2,u  5,u [1,u]  ∞    ∞             debajo si el contenedor < 620 px)
+ 1 · ux    │ 2,u {4,x} ░░░ {2,x}  ∞
+```
+
+- Tabla en SVG con los mismos controles ◀ ⏯ ▶ que las demás familias. Cada paso es un fotograma completo: repite las filas anteriores y añade la nueva.
+- Estados de celda: `active` (carmesí) = mejoró/cambió en este paso; `marked` (ámbar) = el mínimo que entra a N′; `answer` (verde) = resultado; `muted` = tenue; `closed: true` = nodo ya en N′ (celda rayada, normalmente `value: ""`). `"∞"` se dibuja más grande y en gris para que se lea. La leyenda sale sola con los estados usados.
+- `mode: 'dijkstra'`: filas = pasos (rótulo `"k · N′"`, p.ej. `"2 · uxy"`), columnas = destinos, celda = `D,p`. Esquina: «paso · N′».
+- `mode: 'dv'`: filas = nodos, columnas = destinos, un paso por instante t (o por actualización). Esquina: «nodo».
+- `graph` (opcional): `{ devices, cables }` con el MISMO esquema de `net-scene` (sin `packets`/`zones`). Va a la derecha de la tabla; en móvil (contenedor < 620 px) debajo, sin scroll horizontal a 390 px. No repetir `D,p` en `sub`: la tabla ya lo dice; usa `state` en nodos/cables para marcar quién entra o qué cambió.
+- Anchos de columna y alto se calculan sobre todos los pasos: la tabla no salta. Rótulos de fila cortos (≤ 10 caracteres) para que el apilado quepa en un móvil.
+
+### Campos del paso
+
+```ts
+mode:    'dijkstra' | 'dv'
+columns: string[]                                   // destinos
+rows:    { label; cells: { value?; state?; closed? }[] }[]   // cells.length === columns.length
+graph?:  { devices: NetDevice[]; cables: NetCable[] }
+```
+
+### Ejemplo (slide 12, dos primeros pasos)
+
+```mdx
+<Visualization viz={{ type: 'routing-table', title: 'Dijkstra desde u (slide 12)', steps: [
+  { note: 'Paso 0: N′ = {u}.', mode: 'dijkstra', columns: ['v', 'w', 'x', 'y', 'z'],
+    rows: [{ label: '0 · u', cells: [{ value: '2,u' }, { value: '5,u' }, { value: '1,u', state: 'marked' }, { value: '∞' }, { value: '∞' }] }] },
+  { note: 'Paso 1: entra x; mejoran w e y.', mode: 'dijkstra', columns: ['v', 'w', 'x', 'y', 'z'],
+    rows: [
+      { label: '0 · u', cells: [{ value: '2,u' }, { value: '5,u' }, { value: '1,u', state: 'marked' }, { value: '∞' }, { value: '∞' }] },
+      { label: '1 · ux', cells: [{ value: '2,u' }, { value: '4,x', state: 'active' }, { value: '', closed: true }, { value: '2,x', state: 'active' }, { value: '∞' }] } ] },
+]}} />
+```
+
+---
+
+## 7. Familias existentes que también se usan
 
 - `xy-chart`: curvas.
   - Usos: tiempo de distribución C/S vs P2P en función de N (con `fn`), EstimatedRTT vs SampleRTT (con `points` reales), utilización.
@@ -322,3 +363,5 @@ Ningún campo del contrato cambió de nombre ni de forma. Sólo hay añadidos op
 - `packet` con `fields` y `layers` en el mismo paso: las capas van debajo de la rejilla.
 
 - `fsm` (nuevo, §5): reemplaza a `flow` + `mode: 'fsm'`. El rótulo `"evento\n/ acción"` pasa a `event` + `action`. Todos los bloques de `content/` se migraron.
+
+- `routing-table` (nuevo, §6): `columns` acepta además `string[]` (en `spacetime` sigue siendo `{id,label}[]`). Añadidos `rows` y `graph` al paso; `graph` reusa `netDevice`/`netCable`. Bloques migrados: `dijkstra-paso-a-paso` (slides 12 y 14), `practica.mdx` 13.1, `iteraciones-dv-grilla` y `cambios-costo-count-to-infinity`.

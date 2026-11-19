@@ -1027,7 +1027,7 @@
         "Sem13_NetT-Dijkstra_OSPF_ISIS"
       ],
       "hasVisualization": true,
-      "visualizationType": "net-scene",
+      "visualizationType": "routing-table",
       "status": "generated"
     },
     "ospf-isis-autenticacion": {
@@ -1102,7 +1102,7 @@
         "Sem14_NetT-DistanceVector_BGPAuthentication"
       ],
       "hasVisualization": true,
-      "visualizationType": "net-scene",
+      "visualizationType": "routing-table",
       "status": "generated"
     },
     "bgp-autenticacion-sesion": {

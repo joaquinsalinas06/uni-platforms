@@ -13,7 +13,7 @@
 // es una cadena de ifs — pero acotada a este único archivo, y sigue siendo
 // el registro quien decide qué familias existen.
 //
-// Las 13 familias están implementadas (ver registry.ts); si se añade una
+// Las 14 familias están implementadas (ver registry.ts); si se añade una
 // nueva, su import + línea de despacho van aquí, siguiendo el patrón de
 // abajo.
 import { VISUALIZATIONS } from '../visualizations/registry';
@@ -34,6 +34,7 @@ import SpacetimeVisualization from '../visualizations/spacetime/SpacetimeVisuali
 import WindowVisualization from '../visualizations/window/WindowVisualization';
 import PacketVisualization from '../visualizations/packet/PacketVisualization';
 import FsmVisualization from '../visualizations/fsm/FsmVisualization';
+import RoutingTableVisualization from '../visualizations/routing-table/RoutingTableVisualization';
 
 interface Props {
   viz: { type: keyof typeof VISUALIZATIONS; mode?: string; steps: any[] };
@@ -79,6 +80,7 @@ const notImplemented = VISUALIZATIONS[viz.type] === null;
   {viz.type === 'window' && <WindowVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
   {viz.type === 'packet' && <PacketVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
   {viz.type === 'fsm' && <FsmVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
+  {viz.type === 'routing-table' && <RoutingTableVisualization client:visible steps={steps} title={viz.title} static={viz.static} />}
 
   {
     notImplemented && (

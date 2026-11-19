@@ -13,7 +13,7 @@
     "bgp-autenticacion-sesion"
   ],
   "hasVisualization": true,
-  "visualizationType": "net-scene",
+  "visualizationType": "routing-table",
   "formulas": [
     {
       "name": "Ecuación de Bellman-Ford",
